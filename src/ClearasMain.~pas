@@ -2,7 +2,7 @@
 {                                                                         }
 { Clearas Main Unit                                                       }
 {                                                                         }
-{ Copyright (c) 2011-2013 P.Meisberger (PM Code Works)                    }
+{ Copyright (c) 2011-2014 P.Meisberger (PM Code Works)                    }
 {                                                                         }
 { *********************************************************************** }
 
@@ -11,11 +11,12 @@ unit ClearasMain;
 interface
 
 uses
-  Windows, SysUtils, Classes, Controls, Forms, Dialogs, ComCtrls, StdCtrls,
-  ExtCtrls, ClearasAPI, Menus, Graphics, ShellAPI;
+  Windows, SysUtils, Classes, Controls, Forms, ComCtrls, StdCtrls, ExtCtrls,
+  Dialogs, Menus, Graphics, ShellAPI, ClearasAPI, ClearasInfo, LanguageFile,
+  OSUtils, Updater;
 
 type
-  TForm1 = class(TForm)
+  TMain = class(TForm, IChangeLanguageListener, IUpdateListener)
     PopupMenu: TPopupMenu;
     pmDeactivate: TMenuItem;
     N1: TMenuItem;
@@ -78,7 +79,7 @@ type
     mmFra: TMenuItem;
     mmUpdate: TMenuItem;
     N9: TMenuItem;
-    mmDwnldCert: TMenuItem;
+    mmDownloadCert: TMenuItem;
     N10: TMenuItem;
     pmEdit: TMenuItem;
     mmReport: TMenuItem;
@@ -123,7 +124,7 @@ type
     procedure mmDelBackupClick(Sender: TObject);
     procedure mmInfoClick(Sender: TObject);
     procedure mmUpdateClick(Sender: TObject);
-    procedure mmDwnldCertClick(Sender: TObject);
+    procedure mmDownloadCertClick(Sender: TObject);
     procedure mmReportClick(Sender: TObject);
     procedure PageControlChange(Sender: TObject);
     procedure cbExpertClick(Sender: TObject);
@@ -132,13 +133,16 @@ type
     procedure lCopy1MouseLeave(Sender: TObject);
     procedure lCopy1MouseEnter(Sender: TObject);
     procedure bCloseClick(Sender: TObject);
-    procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
     procedure lCopy1Click(Sender: TObject);
   private
-    FLang, FColumnToSort: Word;
+    FColumnToSort: Word;
     Startup: TStartupList;
     Context: TContextList;
     FTab: TTabSheet;
+    FLang: TLanguageFile;
+    FUpdateCheck: TUpdateCheck;
+    procedure AfterUpdate(Sender: TObject; ADownloadedFileName: string);
+    procedure BeforeUpdate(Sender: TObject; const ANewBuild: Cardinal);
     procedure ButtonHandle;
     procedure CountContext;
     procedure CountStartups;
@@ -149,29 +153,127 @@ type
     procedure OnSearchStart(Sender: TObject; AWorkCountMax: integer);
     procedure OnSearchEnd(Sender: TObject);
     procedure RegExport;
-    procedure SetLanguage(ALangID: integer);
+    procedure SetLanguage(Sender: TObject);
   public
-    procedure ChangeLanguage(AMenuItem: TMenuItem; ALangID: integer);
-    function MessageBox(AText: string; ACaptionID: Word = 0; AUpdate: Boolean = false): Integer; overload;
-    function MessageBox(ATextID: Word; ACaptionID: Word = 0; AUpdate: Boolean = false): Integer; overload;
-    function MessageBox(AText, ACaption: string; AFlags: Integer = MB_ICONINFORMATION): Integer; overload;
-    property StartupProp: TStartupList read Startup;
-    property Lang: Word read FLang;
+    property Lang: TLanguageFile read FLang;
   end;
 
 var
-  Form1: TForm1;
+  Main: TMain;
 
 implementation
 
-uses ClearasInfo, ClearasUpdate;
-
 {$R *.dfm}
 {$R manifest.res}
-{$R lang.res}
 
-{ private }
-procedure TForm1.ButtonHandle;                          //Buttons de-/aktivieren
+{ TMain }
+
+{ TMain.FormCreate
+
+  VCL event that is called when form is being created. }
+
+procedure TMain.FormCreate(Sender: TObject);
+begin
+  // German language default
+  FLang := TLanguageFile.Create(100, Application);
+  FLang.AddListener(Self);
+  SetLanguage(Self);
+
+  // Init update notificator
+  FUpdateCheck := TUpdateCheck.Create(Self, 'Clearas', FLang);
+
+  // Check for update on startup
+  FUpdateCheck.CheckForUpdate(False);
+
+  // Init Clearas instances
+  FTab := tsStartup;
+  Startup := TStartupList.Create;
+  Context := TContextList.Create;
+
+  // Set title
+  Caption := Application.Title + TOSUtils.GetArchitecture();
+end;
+
+{ TMain.FormDestroy
+
+  VCL event that is called when form is being destroyed. }
+
+procedure TMain.FormDestroy(Sender: TObject);
+begin
+  Startup.Free;
+  Context.Free;
+end;
+
+{ TMain.FormShow
+
+  VCL event that is called when form is shown. }
+
+procedure TMain.FormShow(Sender: TObject);
+var
+  windows: string;
+  newWindows: Boolean;
+
+begin
+  windows := TOSUtils.GetWinVersion();
+  newWindows := TOSUtils.CheckWindows();
+
+  // Check for incompatibility
+  if not (newWindows or (windows[1] in ['X','2'])) then
+  begin
+    Flang.MessageBox(FLang.GetString(74) + windows + FLang.GetString(75), mtError);
+    mmExportList.Enabled := false;
+    mmRefresh.Enabled := false;
+    mmContext.Enabled := false;
+    lwList.Enabled := false;
+    lwContext.Enabled := false;
+    cbExpert.Enabled := false;
+    Exit;
+  end;  //of if
+
+  //"Deaktivierungsdatum" nur ab Vista
+  mmDate.Enabled := newWindows;
+
+  //Pfad in Kontextmenü aktualisieren
+  mmContext.Checked := TClearas.UpdateContextPath;
+
+  // Auslesen
+  GetStartups;
+end;
+
+{ private TMain.AfterUpdate
+
+  Event method that is called by TUpdate when download is finished. }
+
+procedure TMain.AfterUpdate(Sender: TObject; ADownloadedFileName: string);
+begin
+  if (ExtractFileExt(ADownloadedFileName) <> '.reg') then
+  begin
+    // Caption "Search for update"
+    mmUpdate.Caption := FLang.GetString(15);
+    mmUpdate.Enabled := False;
+  end  //of begin
+  else
+    mmDownloadCert.Enabled := False;
+end;
+
+{ private TMain.BeforeUpdate
+
+  Event that is called by TUpdateCheck when TUpdateCheckThread finds an update. }
+
+procedure TMain.BeforeUpdate(Sender: TObject; const ANewBuild: Cardinal);
+begin
+  // Show dialog: Ask for permitting download
+  with FLang do
+    if (MessageBox(Format(GetString(21) +^J+ GetString(22), [ANewBuild]),
+      mtQuestion, True) = IDYES) then
+      with TUpdate.Create(Self, FLang, FLang.GetString(24)) do
+        Download('sit.exe', 'SIT.exe')
+    else
+      mmUpdate.Caption := FLang.GetString(24);
+end;
+
+
+procedure TMain.ButtonHandle;                          //Buttons de-/aktivieren
 begin
   if (FTab = tsStartup) then                            //welche Page?
      begin
@@ -210,21 +312,21 @@ begin
 end;
 
 
-procedure TForm1.CountContext;
+procedure TMain.CountContext;
 begin
-  lwContext.Columns[1].Caption := TClearas.GetString(87) +' ('+IntToStr(Context.ActCount)
+  lwContext.Columns[1].Caption := FLang.GetString(87) +' ('+IntToStr(Context.ActCount)
                                    +'/'+ IntToStr(Context.Count)+')';     //Kontextmenü-Einträge zählen
 end;
 
 
-procedure TForm1.CountStartups;
+procedure TMain.CountStartups;
 begin
-  lwList.Columns[1].Caption := TClearas.GetString(2)+'('+IntToStr(Startup.ActCount)
+  lwList.Columns[1].Caption := FLang.GetString(2)+'('+IntToStr(Startup.ActCount)
                                +'/'+IntToStr(Startup.Count)+')';        //aktive Programme zählen
 end;
 
 
-procedure TForm1.EditPath(APath: string);
+procedure TMain.EditPath(APath: string);
 var
   FullPath: string;
 
@@ -239,7 +341,7 @@ var
 begin
   with Startup do
     begin
-    FullPath := InputBox(TClearas.GetString(53), TClearas.GetString(54), AddCommas(APath));  //Pfad bearbeiten Dialog
+    FullPath := InputBox(FLang.GetString(53), FLang.GetString(54), AddCommas(APath));  //Pfad bearbeiten Dialog
 
     if ((FullPath = '') or (FullPath = ' '))then
        FullPath := AddCommas(APath);                                   //Fehlervermeidung: Standard-Wert
@@ -257,7 +359,7 @@ begin
 end;
 
 
-procedure TForm1.GetContext;                             //Kontextmenüs auslesen
+procedure TMain.GetContext;                             //Kontextmenüs auslesen
 var
   i: integer;
 
@@ -296,7 +398,7 @@ begin
 end;
 
 
-procedure TForm1.GetStartups(AGetNewData: Boolean = true);  //Autostart auslesen
+procedure TMain.GetStartups(AGetNewData: Boolean = true);  //Autostart auslesen
 var
   i: integer;
 
@@ -333,26 +435,26 @@ begin
 end;
 
 { Thread Events }
-procedure TForm1.OnSearchProgress(Sender: TObject; AWorkCount: integer);
+procedure TMain.OnSearchProgress(Sender: TObject; AWorkCount: integer);
 begin
   pbLoad.Position := AWorkCount;                //ProgressBar Position
 end;
 
 
-procedure TForm1.OnSearchStart(Sender: TObject; AWorkCountMax: integer);
+procedure TMain.OnSearchStart(Sender: TObject; AWorkCountMax: integer);
 begin
   pbLoad.Max := AWorkCountMax;                  //ProgressBar Ende
 end;
 
 
-procedure TForm1.OnSearchEnd(Sender: TObject);
+procedure TMain.OnSearchEnd(Sender: TObject);
 begin
   pbLoad.Visible := false;
   pbLoad.Position := 0;
 end;
 
 
-procedure TForm1.RegExport;                                         //REG-Export
+procedure TMain.RegExport;                                         //REG-Export
 var
   SaveDialog: TSaveDialog;
 
@@ -362,9 +464,9 @@ begin
   with SaveDialog do
     begin
     Options := Options + [ofOverwritePrompt];       //Überschreiben-Dialog
-    Filter := TClearas.GetString(36);                //Filter nur für *.reg festlegen
+    Filter := FLang.GetString(36);                  //Filter nur für *.reg festlegen
     DefaultExt := '.reg';                           //*.reg-Endung
-    Title := TClearas.GetString(33);                 //Fenstername
+    Title := FLang.GetString(33);                   //Fenstername
 
     if (FTab = tsStartup) then
        FileName := Startup.Item.Name + DefaultExt   //default-Name
@@ -385,62 +487,60 @@ begin
 end;
 
 
-procedure TForm1.SetLanguage(ALangID: integer);           //Sprache lokalisieren
+procedure TMain.SetLanguage(Sender: TObject);           //Sprache lokalisieren
 begin
-  FLang := ALangID;                                       //Sprache wählen
-
-  with TClearas do
-    begin
+  with FLang do
+  begin
     tsContext.Caption := GetString(84);                   //Buttons Autostart
-    bActivate.Caption := GetString(6);
-    bDeactivate.Caption := GetString(7);
-    bExport.Caption := GetString(8);
-    bDelete.Caption := GetString(9);
-    bClose.Caption := GetString(10);
+    bActivate.Caption := GetString(96);
+    bDeactivate.Caption := GetString(97);
+    bExport.Caption := GetString(98);
+    bDelete.Caption := GetString(99);
+    bClose.Caption := GetString(100);
 
-    lStartup.Caption := GetString(0);                     //Liste Autostart
-    lwList.Columns[0].Caption := GetString(1);
-    lwList.Columns[2].Caption := GetString(11);
-    lwList.Columns[3].Caption := GetString(4);
+    lStartup.Caption := GetString(90);                     //Liste Autostart
+    lwList.Columns[0].Caption := GetString(91);
+    lwList.Columns[2].Caption := GetString(101);
+    lwList.Columns[3].Caption := GetString(94);
 
     bActContext.Caption := bActivate.Caption;             //Buttons Kontextmenü
     bDeactContext.Caption := bDeactivate.Caption;
     bExportContext.Caption := bExport.Caption;
     bDeleteContext.Caption := bDelete.Caption;
     bClose2.Caption := bClose.Caption;
-    cbExpert.Caption := GetString(90);
+    cbExpert.Caption := GetString(89);
     tsStartup.Caption := GetString(83);
 
     lContext.Caption := GetString(86);                    //Liste Kontextmenü
     lwContext.Columns[0].Caption := lwList.Columns[0].Caption;
     lwContext.Columns[1].Caption := GetString(87);
     lwContext.Columns[2].Caption := GetString(88);
-    lwContext.Columns[3].Caption := GetString(4);
+    lwContext.Columns[3].Caption := GetString(94);
 
-    mmFile.Caption := GetString(11);                      //"Datei"-Menü
-    mmAdd.Caption := GetString(15);
-    mmImport.Caption := GetString(16);
-    mmExport.Caption := GetString(17);
-    mmExportlist.Caption := GetString(18);
-    mmClose.Caption := GetString(10);
+    mmFile.Caption := GetString(101);                      //"Datei"-Menü
+    mmAdd.Caption := GetString(111);
+    mmImport.Caption := GetString(112);
+    mmExport.Caption := GetString(113);
+    mmExportlist.Caption := GetString(114);
+    mmClose.Caption := GetString(100);
 
-    mmEdit.Caption := GetString(12);                      //"Bearbeiten"-Menü
-    mmContext.Caption := GetString(19);
-    mmDelBackup.Caption := GetString(20);
+    mmEdit.Caption := GetString(102);                      //"Bearbeiten"-Menü
+    mmContext.Caption := GetString(104);
+    mmDelBackup.Caption := GetString(105);
 
-    mmView.Caption := GetString(13);                      //"Ansicht"-Menü
-    mmRefresh.Caption := GetString(21);
-    mmStandard.Caption := GetString(22);
-    mmOptimate.Caption := GetString(23);
-    mmDate.Caption := GetString(24);
+    mmView.Caption := GetString(20);                      //"Ansicht"-Menü
+    mmRefresh.Caption := GetString(115);
+    mmStandard.Caption := GetString(116);
+    mmOptimate.Caption := GetString(117);
+    mmDate.Caption := GetString(118);
     mmRunOnce.Caption := GetString(37);
-    mmLang.Caption := GetString(3);
+    mmLang.Caption := GetString(119);
 
     mmHelp.Caption := GetString(14);                      //"Hilfe"-Menü
-    mmUpdate.Caption := GetString(91);
-    mmDwnldCert.Caption := GetString(97);
-    mmReport.Caption := GetString(108);
-    mmInfo.Caption := GetString(26);
+    mmUpdate.Caption := GetString(15);
+    mmDownloadCert.Caption := GetString(16);
+    mmReport.Caption := GetString(26);
+    mmInfo.Caption := GetString(17);
 
     pmDeactivate.Caption := GetString(6);                 //Kontextmenü
     pmSearch.Caption := GetString(34);
@@ -448,141 +548,36 @@ begin
     pmExport.Caption := GetString(8);
     pmDelete.Caption := GetString(9);
     pmInfos.Caption := GetString(35);
-    end;  //of with
-end;
-{ of private }
-
-{ public }
-procedure TForm1.ChangeLanguage(AMenuItem: TMenuItem; ALangID: integer);
-begin
-  AMenuItem.Checked := not AMenuItem.Checked;
-  SetLanguage(ALangID);
-  GetStartups;
-  GetContext;
-end;
-
-
-function TForm1.MessageBox(AText: string; ACaptionID: Word = 0; AUpdate: Boolean = false): Integer;
-var
-  Title: string;
-  Flags: Integer;
-
-begin
-  case ACaptionID of
-    0: begin
-       Title := TClearas.GetString(28);
-       Flags := MB_ICONINFORMATION;
-       end;
-
-    1: begin
-       Title := TClearas.GetString(29);
-       Flags := MB_ICONWARNING;
-       end;
-
-    2: begin
-       Title := TClearas.GetString(27);
-       Flags := MB_ICONQUESTION or MB_YESNO or MB_DEFBUTTON1;
-       end;
-
-    3: begin
-       Title := TClearas.GetString(30);
-       Flags := MB_ICONERROR;
-       Beep;
-       end;
-    else
-      Flags := 0;
-  end;  //of case
-
-  if AUpdate then
-     Title := TClearas.GetString(100);
-
-  result := Application.MessageBox(PChar(AText), PChar(Title), Flags);
-end;
-
-
-function TForm1.MessageBox(ATextID: Word; ACaptionID: Word = 0; AUpdate: Boolean = false): Integer;
-begin
-  result := MessageBox(TClearas.GetString(ATextID), ACaptionID, AUpdate);
-end;
-
-
-function TForm1.MessageBox(AText, ACaption: string; AFlags: Integer = MB_ICONINFORMATION): Integer;
-begin
-  result := Application.MessageBox(PChar(AText), PChar(ACaption), AFlags);
-end;
-{ of public }
-
-{##############################################################################}
-{ Events }
-
-procedure TForm1.FormCreate(Sender: TObject);
-begin
-  FTab := tsStartup;                            //ActivePage auf Autostart
-  Startup := TStartupList.Create;               //init Autostart-Objekt
-  Context := TContextList.Create;               //init Kontextmenü-Objekt
-  Caption := Caption + TClearas.GetArchitecture; //Bits in Caption schreiben
-end;
-
-
-procedure TForm1.FormDestroy(Sender: TObject);      //Objekte + Listen freigeben
-begin
-  Startup.Free;
-  Context.Free;
-end;
-
-
-procedure TForm1.FormShow(Sender: TObject);
-begin
-  BringToFront;                              //Form in Vordergrund
-  lWindows.Caption := 'Windows '+ TClearas.GetWinVersion(true);  //Windows-Version in Label
-  lWindows2.Caption := lWindows.Caption;
-  mmDate.Enabled := TClearas.CheckWindows;   //"Deaktivierungsdatum" nur ab Vista
-
-  if (TClearas.CheckWindows or (TClearas.GetWinVersion(false)[1] in ['X','2'])) then
-     begin
-     SetLanguage(100);                       //Standard Sprache (Deutsch)
-     mmContext.Checked := TClearas.UpdateContextPath;  //Pfad in Kontextmenü aktualisieren
-     GetStartups;
-     end  //of begin
-  else                                       //bei falschem Betriebssystem
-     begin                                   //Message ausgeben
-     MessageBox(TClearas.GetString(81) + TClearas.GetWinVersion(false)
-               + TClearas.GetString(82), 1);
-     mmExportList.Enabled := false;
-     mmRefresh.Enabled := false;
-     mmContext.Enabled := false;
-     lwList.Enabled := false;
-     lwContext.Enabled := false;
-     cbExpert.Enabled := false;
-     end;  //of if
+  end;  //of with
 end;
 
 { Exportieren Events }
-procedure TForm1.bExportClick(Sender: TObject);              //Export als Backup
+procedure TMain.bExportClick(Sender: TObject);              //Export als Backup
 begin
   with Startup do
     if (Item.Enabled and Item.StartupUser) then
-       begin
-       if CreateBackup() then                                //Backup erstellen
+      begin
+        if CreateBackup() then                                //Backup erstellen
+          with Flang do
           begin
-          MessageBox(TClearas.GetString(44) +'"'+ TClearas.GetWinDir +'\pss\"'+ TClearas.GetString(45));
-          bExport.Enabled := false;
-          end  //of begin
-       else
-          MessageBox(46, 3);
-       end  //of begin
-  else
-     RegExport;                                              //Export als *.reg
+            MessageBox(GetString(44) +'"'+ TClearas.GetWinDir +'\pss\"'+ GetString(45));
+            bExport.Enabled := false;
+          end  //of with
+        else
+          Flang.MessageBox(46, mtError);
+        end  //of begin
+    else
+      RegExport;                                              //Export als *.reg
 end;
 
 
-procedure TForm1.bExportContextClick(Sender: TObject);     //Kontextmenü-Eintrag
+procedure TMain.bExportContextClick(Sender: TObject);     //Kontextmenü-Eintrag
 begin                                                      //exportieren
   RegExport;
 end;
 
 { Löschen Events }
-procedure TForm1.bDeleteClick(Sender: TObject);
+procedure TMain.bDeleteClick(Sender: TObject);
 var
   DelBackup, Exported: Boolean;
 
@@ -590,45 +585,47 @@ begin
   DelBackup := Startup.DeleteBackup;                     //Backup löschen speichern
   Exported := false;
 
-  with TClearas do
-    begin
+  with FLang do
+  begin
     if (MessageBox(GetString(48) +'"'+ Startup.Item.Name +'"'+ GetString(49) +^J
-       + GetString(50) + GetString(57), GetString(27), MB_ICONWARNING or MB_YESNO or
-       MB_DEFBUTTON2) = IDYES) then                      //wirklich löschen?
-       begin
-       if (bExport.Enabled and (MessageBox(GetString(52), 2) = IDYES)) then  //existiert Backup?
-          begin
-          bExport.Click;                                                     //falls nein: Backup erstellen?
+       + GetString(50) + GetString(57), mtConfirm) = IDYES) then  //wirklich löschen?
+      begin
+        //existiert Backup?
+        if (bExport.Enabled and (MessageBox(GetString(52), mtQuestion) = IDYES)) then
+        begin
+          bExport.Click;
           DelBackup := false;
           Exported := true;
-          end;  //of begin
+        end;  //of begin
 
-       if ((not Exported) and Startup.Item.StartupUser and Startup.BackupExists) then
-          Startup.DeleteBackup := (MessageBox(GetString(47), 2) = IDYES);  //Backup löschen?
+        if ((not Exported) and Startup.Item.StartupUser and Startup.BackupExists) then
+           Startup.DeleteBackup := (MessageBox(GetString(47), mtQuestion) = IDYES);  //Backup löschen?
 
-       if Startup.DeleteItem() then                      //Löschen + auf Fehler prüfen
-          begin
+        //Löschen + auf Fehler prüfen
+        if Startup.DeleteItem() then
+        begin
           lwList.DeleteSelected;                         //Element aus ListView löschen
           CountStartups;                                 //Zähler Refresh
-          end  //of begin
-       else
-          MessageBox(TClearas.GetString(65) + TClearas.GetString(66), 3);
-       end;  //of if
-    end;  //of with
+        end  //of begin
+        else
+          FLang.MessageBox(FLang.GetString(65) + FLang.GetString(66), mtError);
+      end;  //of if
+  end;  //of with
 
   Startup.DeleteBackup := DelBackup;                     //Backup löschen zurücksetzen
 end;
 
 
-procedure TForm1.bDeleteContextClick(Sender: TObject);     //Kontextmenü-Eintrag
+procedure TMain.bDeleteContextClick(Sender: TObject);     //Kontextmenü-Eintrag
 begin                                                      //löschen
-  with TClearas do
-    begin
+  with FLang do
+  begin
+    // wirklich löschen?
     if (MessageBox(GetString(85) +'"'+ Context.Item.Name +'"'+ GetString(49) +^J
-       + GetString(50), GetString(27), MB_ICONWARNING or MB_YESNO or
-       MB_DEFBUTTON2) = IDYES) then                       //wirklich löschen?
-       begin
-       if (MessageBox(GetString(52), 2) = IDYES) then     //exportieren?
+       + GetString(50), mtConfirm) = IDYES) then
+      begin
+        // exportieren?
+        if (MessageBox(GetString(52), mtQuestion) = IDYES) then
           RegExport;
 
        if Context.DeleteItem() then                       //löschen
@@ -637,71 +634,71 @@ begin                                                      //löschen
           CountContext;                                   //Zähler Refresh
           end  //of begin
        else
-          MessageBox(TClearas.GetString(65) + TClearas.GetString(66), 3);
+          MessageBox(GetString(65) + GetString(66), mtError);
        end;  //of begin
     end;  //of with
 end;
 
 { Aktivieren Events }
-procedure TForm1.bActivateClick(Sender: TObject);
+procedure TMain.bActivateClick(Sender: TObject);
 begin
   if Startup.ChangeItemStatus() then                       //aktivieren + auf Fehler prüfen
-     begin
-     lwList.ItemFocused.Caption := Startup.Item.GetStatus; //optisch "Aktiviert" setzen
-     ButtonHandle;                                         //"aktivieren"-Button deaktivieren
-     bExport.Enabled := not Startup.BackupExists;
+  begin
+    lwList.ItemFocused.Caption := Startup.Item.GetStatus; //optisch "Aktiviert" setzen
+    ButtonHandle;                                         //"aktivieren"-Button deaktivieren
+    bExport.Enabled := not Startup.BackupExists;
 
-     if mmDate.Checked then                                //Deaktivierungsdatum verfügbar?
-        lwList.ItemFocused.SubItems[3] := '';              //...dann Zeitpunkt aus Liste löschen
-     end  //of begin
+    if mmDate.Checked then                                //Deaktivierungsdatum verfügbar?
+      lwList.ItemFocused.SubItems[3] := '';              //...dann Zeitpunkt aus Liste löschen
+  end  //of begin
   else
-     MessageBox(TClearas.GetString(63) + TClearas.GetString(66), 3);
+    FLang.MessageBox(FLang.GetString(63) + FLang.GetString(66), mtError);
 end;
 
 
-procedure TForm1.bActContextClick(Sender: TObject);        //Kontextmenü-Eintrag
+procedure TMain.bActContextClick(Sender: TObject);        //Kontextmenü-Eintrag
 begin                                                      //aktivieren
   if Context.ChangeItemStatus() then
-     begin
-     lwContext.ItemFocused.Caption := Context.Item.GetStatus;
-     ButtonHandle;
-     end  //of begin
+  begin
+    lwContext.ItemFocused.Caption := Context.Item.GetStatus;
+    ButtonHandle;
+  end  //of begin
   else
-     MessageBox(TClearas.GetString(63) + TClearas.GetString(66), 3);
+    FLang.MessageBox(FLang.GetString(63) + FLang.GetString(66), mtError);
 end;
 
 { Deaktivieren Events }
-procedure TForm1.bDeactivateClick(Sender: TObject);
+procedure TMain.bDeactivateClick(Sender: TObject);
 begin
   if Startup.ChangeItemStatus() then                        //Deaktivieren!
-     begin
-     lwList.ItemFocused.Caption := Startup.Item.GetStatus;  //optisch "Deaktiviert" setzen
-     ButtonHandle;                                          //"deaktivieren"-Button deaktivieren
+  begin
+    lwList.ItemFocused.Caption := Startup.Item.GetStatus;  //optisch "Deaktiviert" setzen
+    ButtonHandle;                                          //"deaktivieren"-Button deaktivieren
 
-     if mmDate.Checked then                                 //Deaktivierungsdatum verfügbar
-        lwList.ItemFocused.SubItems[3] := Startup.Item.Time;  //...dann in Liste schreiben
+    if mmDate.Checked then                                 //Deaktivierungsdatum verfügbar
+      lwList.ItemFocused.SubItems[3] := Startup.Item.Time;  //...dann in Liste schreiben
 
-     if (Startup.Item.StartupUser and not bExport.Enabled) then
-        bExport.Enabled := true;
-     end  //of begin
+    if (Startup.Item.StartupUser and not bExport.Enabled) then
+      bExport.Enabled := true;
+  end  //of begin
   else
-     MessageBox(TClearas.GetString(64) + TClearas.GetString(66), 3);
+    FLang.MessageBox(FLang.GetString(64) + FLang.GetString(66), mtError);
 end;
 
 
-procedure TForm1.bDeactContextClick(Sender: TObject);      //Kontextmenü-Eintrag
+procedure TMain.bDeactContextClick(Sender: TObject);      //Kontextmenü-Eintrag
 begin                                                      //deaktivieren
   if Context.ChangeItemStatus() then
-     begin
-     lwContext.ItemFocused.Caption := Context.Item.GetStatus;
-     ButtonHandle;
-     end  //of begin
+  begin
+    lwContext.ItemFocused.Caption := Context.Item.GetStatus;
+    ButtonHandle;
+  end  //of begin
   else
-     MessageBox(TClearas.GetString(64) + TClearas.GetString(66), 3);
+    FLang.MessageBox(FLang.GetString(64) + FLang.GetString(66), mtError);
 end;
 
 { Selektion Events }
-procedure TForm1.lwListSelectItem(Sender: TObject; Item: TListItem;
+procedure TMain.lwListSelectItem(Sender: TObject; Item: TListItem;
   Selected: Boolean);
 var
   Index: Word;
@@ -734,7 +731,7 @@ var
 begin
   if (Selected and (Item <> nil)) then         //Item selektiert?
       begin
-      Index := Startup.IndexOf(Item.SubItems[0], (Item.Caption = TClearas.GetString(31)));
+      Index := Startup.IndexOf(Item.SubItems[0], (Item.Caption = FLang.GetString(31)));
       Startup.Item := Startup.Items[Index];    //Pointer setzen
       bClose.Default := false;
 
@@ -809,7 +806,7 @@ begin
                   bDeactivate.Enabled := true;
                   bDeactivate.Default := true;
                   pmDeactivate.Enabled := true;
-                  pmDeactivate.Caption := TClearas.GetString(7);  //Beschriftung ändern
+                  pmDeactivate.Caption := FLang.GetString(7);  //Beschriftung ändern
                   end //of begin
                else
                   begin                                           //NEIN
@@ -818,7 +815,7 @@ begin
                   bDeactivate.Enabled := false;
                   bActivate.Default := true;
                   pmDeactivate.Enabled := true;
-                  pmDeactivate.Caption := TClearas.GetString(6);  //Beschriftung ändern
+                  pmDeactivate.Caption := FLang.GetString(6);  //Beschriftung ändern
                   end; //of if
 
                if not KeyPreview then                 //Hotkeys aktiviert?
@@ -851,7 +848,7 @@ begin
 end;
 
 
-procedure TForm1.lwContextSelectItem(Sender: TObject; Item: TListItem;
+procedure TMain.lwContextSelectItem(Sender: TObject; Item: TListItem;
   Selected: Boolean);
 var
   Index: Word;
@@ -872,13 +869,13 @@ begin
       if bDeletecontext.Default then
          bDeletecontext.Default := false;
 
-      if (Item.Caption = TClearas.GetString(31)) then    //aktiviert?
+      if (Item.Caption = FLang.GetString(31)) then    //aktiviert?
          begin
          bActContext.Enabled := false;                  //JA
          bDeactContext.Enabled := true;
          bDeactContext.Default := true;
          pmDeactivate.Enabled := true;
-         pmDeactivate.Caption := TClearas.GetString(7);  //Beschriftung ändern
+         pmDeactivate.Caption := FLang.GetString(7);  //Beschriftung ändern
          end //of begin
       else
          begin                                          //NEIN
@@ -886,7 +883,7 @@ begin
          bDeactContext.Enabled := false;
          bActContext.Default := true;
          pmDeactivate.Enabled := true;
-         pmDeactivate.Caption := TClearas.GetString(6);  //Beschriftung ändern
+         pmDeactivate.Caption := FLang.GetString(6);  //Beschriftung ändern
          end; //of if
       end  //of begin
   else                                                  //nichts angewählt, dann
@@ -913,7 +910,7 @@ begin
 end;
 
 { Doppelklick Events }
-procedure TForm1.lwListDblClick(Sender: TObject);
+procedure TMain.lwListDblClick(Sender: TObject);
 begin
   if bActivate.Enabled then
      bActivate.Click
@@ -926,7 +923,7 @@ begin
 end;
 
 
-procedure TForm1.lwContextDblClick(Sender: TObject);
+procedure TMain.lwContextDblClick(Sender: TObject);
 begin
   if bActContext.Default then
      bActContext.Click
@@ -939,14 +936,14 @@ begin
 end;
 
 { Liste sortieren Event }
-procedure TForm1.lwListColumnClick(Sender: TObject; Column: TListColumn);
+procedure TMain.lwListColumnClick(Sender: TObject; Column: TListColumn);
 begin
   FColumnToSort := Column.Index;
   (Sender as TCustomListView).AlphaSort;
 end;
 
 
-procedure TForm1.lwListCompare(Sender: TObject; Item1, Item2: TListItem;
+procedure TMain.lwListCompare(Sender: TObject; Item1, Item2: TListItem;
   Data: Integer; var Compare: Integer);                     //ListView sortieren
 begin
   if (FColumnToSort = 0) then                               //"Aktiv"-Spalte
@@ -963,7 +960,7 @@ end;
 {##############################################################################}
 { Kontextmenü }
 
-procedure TForm1.pmDeactivateClick(Sender: TObject);            //de-/aktivieren
+procedure TMain.pmDeactivateClick(Sender: TObject);            //de-/aktivieren
 begin
   if (FTab = tsStartup) then                    //Autostart
      lwListDblClick(Sender)
@@ -972,7 +969,7 @@ begin
 end;
 
 
-procedure TForm1.pmDeleteClick(Sender: TObject);                       //löschen
+procedure TMain.pmDeleteClick(Sender: TObject);                       //löschen
 begin
   if (FTab = tsStartup) then                    //Autostart
      bDelete.Click
@@ -981,7 +978,7 @@ begin
 end;
 
 
-procedure TForm1.pmInfosClick(Sender: TObject);                  //Eigenschaften
+procedure TMain.pmInfosClick(Sender: TObject);                  //Eigenschaften
 var
   Path, Name: string;
 
@@ -991,11 +988,11 @@ begin
   else
     Context.Item.GetItemInfo(Name, Path);
 
-  MessageBox(Path, Name);        //Text ausgeben
+  FLang.MessageBox(Name +^J+ Path);
 end;
 
 
-procedure TForm1.pmSearchClick(Sender: TObject);          //nach Programm suchen
+procedure TMain.pmSearchClick(Sender: TObject);          //nach Programm suchen
 var
   OpenDialog: TOpenDialog;
   index: integer;
@@ -1006,8 +1003,8 @@ begin
   with OpenDialog do
     begin
     InitialDir := TClearas.GetWinDir[1] +':\Program Files';  //Programme Verzeichnis
-    Filter := TClearas.GetString(38);                        //Filter
-    Title := TClearas.GetString(34);                         //Fenstername
+    Filter := FLang.GetString(38);                        //Filter
+    Title := FLang.GetString(34);                         //Fenstername
     end;  //of with
 
   try
@@ -1027,7 +1024,7 @@ begin
 end;
 
 
-procedure TForm1.pmEditClick(Sender: TObject);               //"Pfad bearbeiten"
+procedure TMain.pmEditClick(Sender: TObject);               //"Pfad bearbeiten"
 begin
   EditPath(lwList.ItemFocused.SubItems[1]);
 end;
@@ -1036,21 +1033,20 @@ end;
 {##############################################################################}
 { Mainmenu }
 
-procedure TForm1.mmAddClick(Sender: TObject);              //Programm hinzufügen
+procedure TMain.mmAddClick(Sender: TObject);              //Programm hinzufügen
 var
   OpenDialog: TOpenDialog;
   Name, Params: string;
   
   procedure CreateLnkFile(AErrorID: Integer = 55);       //*.Lnk Datei erstellen
   begin
-    with TClearas do
 	  if (Startup.IndexOf(Name) = -1) then                  //existiert Programm?
-         if not CreateLnk(OpenDialog.FileName, TClearas.GetStartUpDir(false) + Name) then
-            MessageBox(GetString(AErrorID), 3)
-         else
-            GetStartups
+      if not TClearas.CreateLnk(OpenDialog.FileName, TClearas.GetStartUpDir(false) + Name) then
+        FLang.MessageBox(AErrorID, mtError)
       else
-         MessageBox(GetString(40) +'"'+ Name +'" '+ GetString(42), 1);
+        GetStartups
+    else
+      FLang.MessageBox(FLang.GetString(40) +'"'+ Name +'" '+ FLang.GetString(42));
   end;
   
 begin
@@ -1059,8 +1055,8 @@ begin
   with OpenDialog do
     begin
     InitialDir := TClearas.GetWinDir[1] +':\Program Files';  //Programme Verzeichnis
-    Filter := TClearas.GetString(38);                        //Filter
-    Title := TClearas.GetString(15);                         //Fenstername
+    Filter := FLang.GetString(38);                        //Filter
+    Title := FLang.GetString(15);                         //Fenstername
     end;  //of with
 
   try
@@ -1079,12 +1075,12 @@ begin
 
            3: begin
               Name := DeleteExt(ExtractFileName(OpenDialog.FileName));  //Name für Eintrag vorschlagen
-              Name := InputBox(GetString(106), GetString(107), Name);   //Name bearbeiten
+              Name := InputBox(FLang.GetString(106), FLang.GetString(107), Name);   //Name bearbeiten
 
               if (Name = '') then
                  Exit;
                  
-              if not InputQuery(GetString(109), GetString(110), Params) then  //evtl. Parameter
+              if not InputQuery(FLang.GetString(109), FLang.GetString(110), Params) then  //evtl. Parameter
                  Exit;
 
               if (Startup.IndexOf(Name) = -1) then                      //existiert Programm?
@@ -1093,7 +1089,7 @@ begin
                    GetStartups;
 
                  except
-                   MessageBox(GetString(40) +'"'+ Name +'" '+ GetString(42), 1);
+                   FLang.MessageBox(FLang.GetString(40) +'"'+ Name +'" '+ FLang.GetString(42), mtError);
                  end;  //of except
               end;  //of begin
          end;  //of case
@@ -1104,21 +1100,20 @@ begin
 end;
 
 
-procedure TForm1.mmImportClick(Sender: TObject);            //Backup importieren
+procedure TMain.mmImportClick(Sender: TObject);            //Backup importieren
 var
   OpenDialog: TOpenDialog;
   Path, Name: string;
   
   procedure CreateLnkFile(AAllUsers: Boolean);      //*.Lnk Datei erstellen
   begin
-    with TClearas do
-      if (Startup.IndexOf(Name) = -1) then                  //existiert Programm?
-         begin
-         CreateLnk(Path, GetStartupDir(AAllUsers) + Name); //Currnt User Dir
-         GetStartups;                                       //aktualisieren
-         end  //of begin
-      else
-         MessageBox(GetString(40) +'"'+ Name +'" '+ GetString(42), 1);
+    if (Startup.IndexOf(Name) = -1) then                  //existiert Programm?
+    begin
+      TClearas.CreateLnk(Path, TClearas.GetStartupDir(AAllUsers) + Name); //Currnt User Dir
+      GetStartups;                                       //aktualisieren
+    end  //of begin
+    else
+      FLang.MessageBox(FLang.GetString(40) +'"'+ Name +'" '+ FLang.GetString(42), mtError);
   end;
   
 begin
@@ -1130,18 +1125,18 @@ begin
   with OpenDialog do
     begin
     InitialDir := TClearas.GetWinDir +'\pss';               //Zeiger auf Dir
-    Filter := TClearas.GetString(39) +' *'+ COMMON_EXT +'|*'+ COMMON_EXT;
-    Title := TClearas.GetString(16);
+    Filter := FLang.GetString(39) +' *'+ COMMON_EXT +'|*'+ COMMON_EXT;
+    Title := FLang.GetString(16);
     end;  //of with
 
   try
     if OpenDialog.Execute then                              //"speichern" Klick
-       with TClearas do
-         begin
-         ReadLnkFile(OpenDialog.FileName, Path);            //Verknüpfung auslesen
-         Name := ExtractFileName(DeleteExt(OpenDialog.FileName));
-         CreateLnkFile(OpenDialog.FilterIndex = 2);
-         end;  //of with
+      with TClearas do
+      begin
+        ReadLnkFile(OpenDialog.FileName, Path);            //Verknüpfung auslesen
+        Name := ExtractFileName(DeleteExt(OpenDialog.FileName));
+        CreateLnkFile(OpenDialog.FilterIndex = 2);
+      end;  //of with
 
   finally                             //freigeben
     OpenDialog.Free;
@@ -1149,20 +1144,20 @@ begin
 end;
 
 
-procedure TForm1.mmExportClick(Sender: TObject);         //exportieren als *.reg
+procedure TMain.mmExportClick(Sender: TObject);         //exportieren als *.reg
 begin
   if ((FTab = tsStartup) and bExport.Enabled) then
-     bExport.Click
+    bExport.Click
   else
-     if ((FTab = tsContext) and bExportContext.Enabled) then
-        RegExport
-     else
-        MessageBox(TClearas.GetString(58) + TClearas.GetString(66) +^J
-                  + TClearas.GetString(59), 1);
+    if ((FTab = tsContext) and bExportContext.Enabled) then
+      RegExport
+    else
+      FLang.MessageBox(FLang.GetString(58) + FLang.GetString(66) +^J
+                  + FLang.GetString(59), mtWarning);
 end;
 
 
-procedure TForm1.mmExportListClick(Sender: TObject);     //exportieren als Liste
+procedure TMain.mmExportListClick(Sender: TObject);     //exportieren als Liste
 var
   SaveDialog: TSaveDialog;
 
@@ -1170,17 +1165,17 @@ begin
   SaveDialog := TSaveDialog.Create(Self);           //init SaveDialog
 
   with SaveDialog do
-    begin
+  begin
     Options := Options + [ofOverwritePrompt];       //Überschreiben-Dialog
-    Filter := TClearas.GetString(36);               //Filter festlegen
+    Filter := FLang.GetString(36);                 //Filter festlegen
     DefaultExt := '.reg';                           //*.reg-Endung
-    Title := TClearas.GetString(18);                 //Fenstername
-    FileName := TClearas.GetString(11) + DefaultExt; //default-Name
-    end;  //of with
+    Title := FLang.GetString(18);                 //Fenstername
+    FileName := FLang.GetString(11) + DefaultExt; //default-Name
+  end;  //of with
 
   try
     if SaveDialog.Execute then                      //"speichern" Klick
-       Startup.ExportList(SaveDialog.FileName);     //speichern als *.reg
+      Startup.ExportList(SaveDialog.FileName);     //speichern als *.reg
 
   finally
     SaveDialog.Free;
@@ -1188,19 +1183,19 @@ begin
 end;
 
 
-procedure TForm1.mmDelBackupClick(Sender: TObject);
+procedure TMain.mmDelBackupClick(Sender: TObject);
 begin
   Startup.DeleteBackup := not Startup.DeleteBackup;
 end;
 
 
-procedure TForm1.mmContextClick(Sender: TObject);          //Kontextmenü-Eintrag
+procedure TMain.mmContextClick(Sender: TObject);          //Kontextmenü-Eintrag
 begin
   mmContext.Checked := TClearas.RegisterInContextMenu(mmContext.Checked);
 end;
 
 
-procedure TForm1.mmRefreshClick(Sender: TObject);              //"aktualisieren"
+procedure TMain.mmRefreshClick(Sender: TObject);              //"aktualisieren"
 begin
   if (FTab = tsStartup) then              //Reiter Autostart aktiv?
      GetStartups
@@ -1209,7 +1204,7 @@ begin
 end;
 
 
-procedure TForm1.mmStandardClick(Sender: TObject);       //Standard Spaltengröße
+procedure TMain.mmStandardClick(Sender: TObject);       //Standard Spaltengröße
 begin
   if (FTab = tsStartup) then                             //Reiter Autostart
      begin
@@ -1226,7 +1221,7 @@ begin
 end;
 
 
-procedure TForm1.mmOptimateClick(Sender: TObject);     //Spaltengröße optimieren
+procedure TMain.mmOptimateClick(Sender: TObject);     //Spaltengröße optimieren
 begin
   if (FTab = tsStartup) then                           //Reiter Autostart
      begin
@@ -1242,7 +1237,7 @@ begin
 end;
 
 
-procedure TForm1.mmDateClick(Sender: TObject);                  //Datum anzeigen
+procedure TMain.mmDateClick(Sender: TObject);                  //Datum anzeigen
 var
   endOf: integer;
 
@@ -1280,7 +1275,7 @@ begin
   else
      begin                            //neue Spalte anlegen
      mmDate.Checked := true;
-     lwList.Columns.Add.Caption := TClearas.GetString(5);
+     lwList.Columns.Add.Caption := FLang.GetString(95);
      endOf := Width + 120;
 
      if (WindowState = wsMaximized) then
@@ -1309,61 +1304,120 @@ begin
 end;
 
 
-procedure TForm1.mmGerClick(Sender: TObject);                //Sprache "Deutsch"
+{ TMain.mmGerClick
+
+  MainMenu entry that allows to change the current language to german. }
+
+procedure TMain.mmGerClick(Sender: TObject);
 begin
-  ChangeLanguage(mmGer, 100);
+  FLang.ChangeLanguage(Sender, 100);
+end;
+
+{ TMain.mmEngClick
+
+  MainMenu entry that allows to change the current language to english. }
+
+procedure TMain.mmEngClick(Sender: TObject);
+begin
+  FLang.ChangeLanguage(Sender, 300);
+end;
+
+{ TMain.mmFraClick
+
+  MainMenu entry that allows to change the current language to french. }
+
+procedure TMain.mmFraClick(Sender: TObject);
+begin
+  FLang.ChangeLanguage(Sender, 500);
 end;
 
 
-procedure TForm1.mmEngClick(Sender: TObject);               //Sprache "Englisch"
+{ TMain.mmDownloadCertClick
+
+  MainMenu entry that allows to download the PM Code Works certificate. }
+
+procedure TMain.mmDownloadCertClick(Sender: TObject);
 begin
-  ChangeLanguage(mmEng, 300);
+  // Certificate already installed?
+  if (TOSUtils.PMCertExists() and (FLang.MessageBox(FLang.GetString(27) +^J+
+    FLang.GetString(28), mtQuestion) = IDYES)) then
+    // Download certificate
+    with TUpdate.Create(Self, FLang, FLang.GetString(16)) do
+      DownloadCertificate();
+end;
+
+{ TMain.mmUpdateClick
+
+  MainMenu entry that allows users to manually search for updates. }
+
+procedure TMain.mmUpdateClick(Sender: TObject);
+begin
+  FUpdateCheck.CheckForUpdate(True);
+end;
+
+{ TMain.mmReportClick
+
+  MainMenu entry that allows users to easily report a bug by opening the web
+  browser and using the "report bug" formular. }
+
+procedure TMain.mmReportClick(Sender: TObject);
+begin
+  TOSUtils.OpenUrl(URL_CONTACT);
+end;
+
+{ TMain.mmInfoClick
+
+  MainMenu entry that shows a info page with build number and version history. }
+
+procedure TMain.mmInfoClick(Sender: TObject);
+var
+  Info: TInfo;
+
+begin
+  Application.CreateForm(TInfo, Info);
+  Info.ShowModal;
+  Info.Free;
+end;
+
+{ TMain.lCopyClick
+
+  Opens the homepage of PM Code Works in a web browser. }
+
+procedure TMain.lCopy1Click(Sender: TObject);
+begin
+  TOSUtils.OpenUrl(URL_BASE);
+end;
+
+{ TMain.lCopyMouseEnter
+
+  Allows a label to have the look like a hyperlink. }
+
+procedure TMain.lCopy1MouseEnter(Sender: TObject);
+begin
+  with (Sender as TLabel) do
+  begin
+    Font.Style := Font.Style + [fsUnderline];
+    Font.Color := clBlue;
+    Cursor := crHandPoint;
+  end;  //of with
+end;
+
+{ TMain.lCopyMouseLeave
+
+  Allows a label to have the look of a normal label again. }
+
+procedure TMain.lCopy1MouseLeave(Sender: TObject);
+begin
+  with (Sender as TLabel) do
+  begin
+    Font.Style := Font.Style - [fsUnderline];
+    Font.Color := clBlack;
+    Cursor := crDefault;
+  end;  //of with
 end;
 
 
-procedure TForm1.mmFraClick(Sender: TObject);            //Sprache "Französisch"
-begin
-  ChangeLanguage(mmFra, 500);
-end;
-
-
-procedure TForm1.mmUpdateClick(Sender: TObject);                        //Update
-begin
-  with Form3 do
-    begin
-    UserUpdate := true;             //Messaging einschalten
-
-    if UpdateExists then            //falls Update existiert...
-       DoUpdate                     //Download
-    else
-       CheckForUpdate;              //andernfalls danach suchen
-	end;  //of with
-end;
-
-
-procedure TForm1.mmDwnldCertClick(Sender: TObject);      //Zertifikat downloaden
-begin
-  mmDwnldCert.Enabled := false;
-  Enabled := false;
-  Form3.Initialize(97, utCert);
-end;
-
-
-procedure TForm1.mmReportClick(Sender: TObject);
-begin
-  ShellExecute(Application.Handle, 'open', PChar(URL_CONTACT), nil, nil,
-    SW_ShowNormal);
-end;
-
-
-procedure TForm1.mmInfoClick(Sender: TObject);              //Info-Form anzeigen
-begin
-  Application.CreateForm(TForm2, Form2);
-  Form2.ShowModal;
-end;
-
-
-procedure TForm1.PageControlChange(Sender: TObject);            //Modus wechseln
+procedure TMain.PageControlChange(Sender: TObject);            //Modus wechseln
 begin
   FTab := PageControl.ActivePage;
   mmExport.Enabled := true;
@@ -1395,13 +1449,13 @@ begin
 end;
 
 
-procedure TForm1.cbExpertClick(Sender: TObject);
+procedure TMain.cbExpertClick(Sender: TObject);
 begin
   GetContext;
 end;
 
 
-procedure TForm1.FormKeyDown(Sender: TObject; var Key: Word;
+procedure TMain.FormKeyDown(Sender: TObject; var Key: Word;
   Shift: TShiftState);                                                  //Hotkey
 begin
   if (Key = VK_DELETE) then                   //"löschen"-Hotkey
@@ -1413,44 +1467,9 @@ begin
 end;
 
 
-{ Hyperlink zur Website }
-procedure TForm1.lCopy1Click(Sender: TObject);
-begin
-  ShellExecute(Application.Handle, 'open', PChar(URL_BASE), nil, nil, SW_ShowNormal);
-end;
-
-
-procedure TForm1.lCopy1MouseEnter(Sender: TObject);
-begin
-  with (Sender as TLabel) do
-    begin
-    Font.Style := Font.Style + [fsUnderline];
-    Font.Color := clBlue;
-    Cursor := crHandPoint;
-    end;  //of with
-end;
-
-
-procedure TForm1.lCopy1MouseLeave(Sender: TObject);
-begin
-  with (Sender as TLabel) do
-    begin
-    Font.Style := Font.Style - [fsUnderline];
-    Font.Color := clBlack;
-    Cursor := crDefault;
-    end;  //of with
-end;
-
-
-procedure TForm1.bCloseClick(Sender: TObject);
+procedure TMain.bCloseClick(Sender: TObject);
 begin
   Close;
-end;
-
-
-procedure TForm1.FormCloseQuery(Sender: TObject; var CanClose: Boolean);
-begin
-  Form3.Close;
 end;
 
 end.

@@ -1,4 +1,4 @@
-object Form1: TForm1
+object Main: TMain
   Left = 444
   Top = 187
   Width = 557
@@ -271,7 +271,6 @@ object Form1: TForm1
   OldCreateOrder = False
   Position = poScreenCenter
   Visible = True
-  OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnKeyDown = FormKeyDown
@@ -311,7 +310,7 @@ object Form1: TForm1
         Height = 14
         Hint = 'Zur Website'
         Anchors = [akBottom]
-        Caption = #169' P.Meisberger 2013'
+        Caption = #169' P.Meisberger 2014'
         Font.Charset = ANSI_CHARSET
         Font.Color = clBlack
         Font.Height = -11
@@ -453,7 +452,7 @@ object Form1: TForm1
         Height = 14
         Hint = 'Zur Website'
         Anchors = [akBottom]
-        Caption = #169' P.Meisberger 2013'
+        Caption = #169' P.Meisberger 2014'
         Font.Charset = ANSI_CHARSET
         Font.Color = clBlack
         Font.Height = -11
@@ -764,9 +763,9 @@ object Form1: TForm1
       object N9: TMenuItem
         Caption = '-'
       end
-      object mmDwnldCert: TMenuItem
+      object mmDownloadCert: TMenuItem
         Caption = 'Zertifikat herunterladen'
-        OnClick = mmDwnldCertClick
+        OnClick = mmDownloadCertClick
       end
       object mmReport: TMenuItem
         Caption = 'Fehler melden'

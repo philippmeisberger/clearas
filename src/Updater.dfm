@@ -1,9 +1,9 @@
-object Form3: TForm3
+object Update: TUpdate
   Left = 525
-  Top = 298
-  BorderIcons = []
-  BorderStyle = bsSingle
-  Caption = 'Clearas Update'
+  Top = 308
+  BorderIcons = [biSystemMenu]
+  BorderStyle = bsDialog
+  Caption = 'Update'
   ClientHeight = 110
   ClientWidth = 362
   Color = clBtnFace
@@ -14,8 +14,8 @@ object Form3: TForm3
   Font.Style = []
   OldCreateOrder = False
   Position = poScreenCenter
-  OnActivate = FormActivate
-  OnCreate = FormCreate
+  Visible = True
+  OnCloseQuery = FormCloseQuery
   PixelsPerInch = 96
   TextHeight = 14
   object lSize: TLabel
@@ -24,6 +24,7 @@ object Form3: TForm3
     Width = 53
     Height = 14
     Caption = '000/000KB'
+    Transparent = True
   end
   object pbProgress: TProgressBar
     Left = 24
@@ -38,7 +39,6 @@ object Form3: TForm3
     Width = 78
     Height = 33
     Caption = 'Fertig!'
-    Enabled = False
     TabOrder = 1
     OnClick = bFinishedClick
   end

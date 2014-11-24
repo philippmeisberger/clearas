@@ -1,4 +1,4 @@
-object Form2: TForm2
+object Info: TInfo
   Left = 248
   Top = 197
   BorderIcons = [biSystemMenu, biMinimize]
@@ -46,7 +46,7 @@ object Form2: TForm2
         Width = 112
         Height = 14
         Anchors = [akBottom]
-        Caption = #169' P.Meisberger 2013'
+        Caption = #169' P.Meisberger 2014'
         Font.Charset = ANSI_CHARSET
         Font.Color = clBlack
         Font.Height = -11
@@ -364,7 +364,7 @@ object Form2: TForm2
             '.'
           'F'#252'r Sch'#228'den an Hard- und Software, die durch die Benutzung'
           'dieses Programms entstehen, wird keine Haftung '#252'bernommen.'
-          '10/2013')
+          '11/2014')
         ReadOnly = True
         TabOrder = 1
       end
@@ -381,7 +381,7 @@ object Form2: TForm2
         Width = 112
         Height = 14
         Anchors = [akBottom]
-        Caption = #169' P.Meisberger 2013'
+        Caption = #169' P.Meisberger 2014'
         Font.Charset = ANSI_CHARSET
         Font.Color = clBlack
         Font.Height = -11
@@ -411,6 +411,12 @@ object Form2: TForm2
           ''
           'History'
           '--------'
+          ''
+          'Version 3.1  [24.11.14]'
+          ''
+          '- Updater v2.2'
+          ''
+          '---------------------------------'
           ''
           'Version 3.0  [03.10.13]'
           ''
@@ -606,7 +612,7 @@ object Form2: TForm2
             'hicken.'
           'Meine Adresse erfahren Sie unter team@pm-codeworks.de.'
           ''
-          '10/2013')
+          '11/2014')
         ReadOnly = True
         ScrollBars = ssVertical
         TabOrder = 1

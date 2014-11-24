@@ -1,6 +1,6 @@
 { *********************************************************************** }
 {                                                                         }
-{ Clearas API Interface Unit v4.0                                         }
+{ Clearas API Interface Unit v4.1                                         }
 {                                                                         }
 { Copyright (c) 2011-2013 P.Meisberger (PM Code Works)                    }
 {                                                                         }
@@ -12,7 +12,7 @@ interface
 
 uses
   Windows, Classes, SysUtils, Registry, ShlObj, ActiveX, ComObj, CommCtrl,
-  Contnrs, WinUtils;
+  Contnrs, OSUtils;
 
 const
   { Registry Keys }
@@ -23,11 +23,6 @@ const
   DEACT_KEY = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\startupreg\';
   DEACT_FOLDER = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\startupfolder\';
   CONTEXTMENU_KEY = '\shellex\ContextMenuHandlers';
-
-  { URL }
-  URL_BASE = 'http://www.pm-codeworks.de/';
-  URL_DIR = URL_BASE +'media/';
-  URL_CONTACT = URL_BASE +'kontakt.html';
 
   { Extensions von Backup-Dateien }
   COMMON_EXT = '.CommonStartup';
@@ -42,12 +37,11 @@ type
   EClearasError = class(Exception);
 
   { Base class }
-  TClearas = class(TWinUtils)
+  TClearas = class(TOSUtils)
   protected
     class function AddPathDelimiter(APath: string): string;
     class function DeleteKey(AMainKey, AKeyPath, AKeyName: string): Boolean;
     class function DeleteValue(AMainKey, AKeyName, AValueName: string): Boolean;
-    class function SetKeyAccessMode(AKeyName: string): Cardinal; overload;
   public
     class function CreateError(AMsgType, AContent, AName: string): Boolean;
     class function CreateLnk(const AExeFilename, ALinkFilename: string): Boolean;
@@ -55,7 +49,6 @@ type
     class function ExpandHKey(const ARootKey: string): string;
     class function GetKeyValue(AMainKey, AKeyPath, AValueName: string): string;
     class function GetStartUpDir(AAllUsers: Boolean): string;
-    class function GetString(const AIndex: integer): string;
     class function ReadLnkFile(const ALnkFileName: string; out APath: string): Boolean;
     class function RegisterInContextMenu(ACheck: Boolean): Boolean;
     class function UpdateContextPath: Boolean;
@@ -294,7 +287,7 @@ var
   reg: TRegistry;
 
 begin
-  reg := TRegistry.Create(SetKeyAccessMode);      //init von reg mit setzen der Rechte
+  reg := TRegistry.Create(DenyWOW64Redirection(KEY_ALL_ACCESS));      //init von reg mit setzen der Rechte
 
   try
     reg.RootKey := StrToHKey(AMainKey);           //HKEY öffnen
@@ -312,7 +305,7 @@ var
   reg: TRegistry;
 
 begin
-  reg := TRegistry.Create(SetKeyAccessMode);      //init von reg mit setzen der Rechte
+  reg := TRegistry.Create(DenyWOW64Redirection(KEY_ALL_ACCESS));      //init von reg mit setzen der Rechte
 
   try
     reg.RootKey := StrToHKey(AMainKey);           //HKEY öffnen
@@ -324,34 +317,17 @@ begin
   end;  //of finally
 end;
 
-
-class function TClearas.SetKeyAccessMode(AKeyName: string): Cardinal;
-const
-  KEY_WOW64_64KEY = $0100;
-  KEY_WOW64_32KEY = $0200;
-
-begin
-  if IsWindows64 then
-     if (AKeyName = STARTUP_KEY64) then
-        result := KEY_WOW64_32KEY or KEY_ALL_ACCESS
-     else
-        result := KEY_ALL_ACCESS or KEY_WOW64_64KEY
-  else
-     result := SetKeyAccessMode;
-end;
-
 { public }
 class function TClearas.CreateError(AMsgType, AContent, AName: string): Boolean;
 begin
   if (AName <> '') then
-     raise EClearasError.Create(AMsgType + GetString(66) +^J+^J+ GetString(67)
+     raise EClearasError.Create(AMsgType + Main.Lang.GetString(66) +^J+^J+ Main.Lang.GetString(67)
                              + AContent +^J+'('+ AName +')')
   else
-     raise EClearasError.Create(AMsgType + GetString(66) +^J+^J + GetString(67)
+     raise EClearasError.Create(AMsgType + Main.Lang.GetString(66) +^J+^J + Main.Lang.GetString(67)
                              + AContent);   
   result := false;
 end;
-
 
 class function TClearas.CreateLnk(const AExeFilename, ALinkFilename: string): Boolean;
 var
@@ -412,7 +388,7 @@ var
   reg: TRegistry;
 
 begin
-  reg := TRegistry.Create(SetKeyAccessMode);    //init von reg mit setzen der Rechte
+  reg := TRegistry.Create(DenyWOW64Redirection(KEY_READ));    //init von reg mit setzen der Rechte
 
   try
     reg.RootKey := StrToHKey(AMainKey);         //HKEY öffnen
@@ -457,20 +433,6 @@ begin
 end;
 
 
-class function TClearas.GetString(const AIndex: integer) : string;   //Zugriff auf Stringtable
-var
-  Buffer : array[0..85] of char;
-  ls : integer;
-
-begin
-  result := '';
-  ls := LoadString(hInstance, AIndex + Form1.Lang, Buffer, SizeOf(buffer));  //String laden
-
-  if (ls <> 0) then
-     result := Buffer;
-end;
-
-
 class function TClearas.ReadLnkFile(const ALnkFileName: string; out APath: string): Boolean;
 var
   ShellLink: IShellLink;
@@ -505,7 +467,7 @@ var
   reg: TRegistry;
 
 begin
-  reg := TRegistry.Create(SetKeyAccessMode);                //init reg
+  reg := TRegistry.Create(DenyWOW64Redirection(KEY_ALL_ACCESS));                //init reg
   reg.RootKey := HKEY_CLASSES_ROOT;                         //Root Key festlegen
   reg.OpenKey(RECYCLEBIN_KEY, false);                       //SubKey festlegen
 
@@ -514,12 +476,12 @@ begin
        try
          with reg do
            begin
-           CreateKey(GetString(71));
+           CreateKey( Main.Lang.GetString(71));
            CloseKey;
-           OpenKey(RECYCLEBIN_KEY +'\'+ GetString(71), true);
+           OpenKey(RECYCLEBIN_KEY +'\'+  Main.Lang.GetString(71), True);
            CreateKey('command');
            CloseKey;
-           OpenKey(RECYCLEBIN_KEY + GetString(72), true);
+           OpenKey(RECYCLEBIN_KEY +  Main.Lang.GetString(72), True);
            WriteString('', ParamStr(0));
            CloseKey;
            end;  //of with
@@ -533,7 +495,7 @@ begin
   else
      begin
        try
-         reg.DeleteKey(GetString(71));
+         reg.DeleteKey( Main.Lang.GetString(71));
          reg.CloseKey;
          result := false;
 
@@ -551,19 +513,19 @@ var
   reg: TRegistry;
 
 begin
-  reg := TRegistry.Create(SetKeyAccessMode);
+  reg := TRegistry.Create(DenyWOW64Redirection(KEY_ALL_ACCESS));
   reg.RootKey := HKEY_CLASSES_ROOT;
 
   try
     reg.OpenKey(RECYCLEBIN_KEY, false);
 
-    if (reg.KeyExists(GetString(71))) then      //Falls Kontextmenü-Eintrag
-       begin                                    //existiert
-       reg.CloseKey;
-       reg.OpenKey(RECYCLEBIN_KEY + GetString(72), false);
-       reg.WriteString('', ParamStr(0));        //aktuellen Pfad speichern
-       result := true;
-       end  //of begin
+    if (reg.KeyExists( Main.Lang.GetString(71))) then  //Falls Kontextmenü-Eintrag
+    begin                                    //existiert
+      reg.CloseKey;
+      reg.OpenKey(RECYCLEBIN_KEY +  Main.Lang.GetString(72), false);
+      reg.WriteString('', ParamStr(0));        //aktuellen Pfad speichern
+      result := true;
+    end  //of begin
     else
        result := false;
 
@@ -578,7 +540,7 @@ var
   reg: TRegistry;
 
 begin
-  reg := TRegistry.Create(SetKeyAccessMode);      //init von reg mit setzen der Rechte
+  reg := TRegistry.Create(DenyWOW64Redirection(KEY_WRITE));      //init von reg mit setzen der Rechte
 
   try
     reg.RootKey := StrToHKey(AMainKey);         //HKEY öffnen
@@ -620,9 +582,9 @@ end;
 function TRootItem.GetStatus(): string;
 begin
   if FEnabled then
-    result := TClearas.GetString(31)
+    result := Main.Lang.GetString(31)
   else
-    result := TClearas.GetString(32);
+    result :=  Main.Lang.GetString(32);
 end;
 { of TRootItem }
 
@@ -659,7 +621,7 @@ var
   Date, Time: string;
 
 begin
-  reg := TRegistry.Create(SetKeyAccessMode);             //init reg-Object
+  reg := TRegistry.Create(DenyWOW64Redirection(KEY_READ));        //init reg-Object
 
   try
     if not FEnabled then
@@ -691,7 +653,7 @@ end;
 
 function TStartupListItem.MakeHeadLine(): string;
 begin
-  result := '['+ ExpandHKey(FRootKey) +'\'+ FKeyPath +']';
+  result := '['+ HKeyToStr(StrToHKey(FRootKey)) +'\'+ FKeyPath +']';
 end;
 
 
@@ -702,7 +664,7 @@ var
   TimeNow: TDateTime;
 
 begin
-  reg := TRegistry.Create(SetKeyAccessMode);      //init REG-Object
+  reg := TRegistry.Create(DenyWOW64Redirection(KEY_WRITE));      //init REG-Object
   reg.RootKey := HKEY_LOCAL_MACHINE;              //HKEY öffnen
 
   try
@@ -735,7 +697,7 @@ var
   i: Word;
 
 begin
-  reg := TRegistry.Create(SetKeyAccessMode);          //init reg Objekt
+  reg := TRegistry.Create(DenyWOW64Redirection(KEY_READ));    //init reg Objekt
 
   try
     reg.RootKey := StrToHKey(FRootKey);               //RootKey setzen
@@ -756,11 +718,11 @@ begin
       if not FEnabled then                            //deaktivierte Einträge
          for i := 0 to List.Count -1 do
            case reg.GetDataType(List[i]) of
-             rdString : ARegFile.Append('"'+ List[i] +'"='+ AddPathDelimiter(reg.ReadString(List[i])));
+             rdString : ARegFile.Append('"'+ List[i] +'"='+ TClearas.AddPathDelimiter(reg.ReadString(List[i])));
              rdInteger: ARegFile.Append('"'+ List[i] +'"=dword:'+ IntToHex(reg.ReadInteger(List[i]), 8));
            end  //of case
       else                                            //aktivierte Einträge
-         Append('"'+ FName +'"='+ AddPathDelimiter(FFilePath));
+         Append('"'+ FName +'"='+ TClearas.AddPathDelimiter(FFilePath));
 
   finally
     reg.Free;
@@ -782,7 +744,7 @@ var
   reg: TRegistry;
 
 begin
-  reg := TRegistry.Create(SetKeyAccessMode);          //init REG-Zugriff
+  reg := TRegistry.Create(DenyWOW64Redirection(KEY_ALL_ACCESS));          //init REG-Zugriff
 
   try
     reg.RootKey := HKEY_LOCAL_MACHINE;                //RootKey setzen
@@ -805,7 +767,7 @@ begin
        result := true;
        end  //of begin
     else
-       result := CreateError(GetString(64), GetString(78), '');  //Fehlererkennung
+       result := CreateError(Main.Lang.GetString(64), Main.Lang.GetString(78), '');  //Fehlererkennung
 
   except
     result := false;
@@ -821,7 +783,7 @@ var
   NewHKey, NewKeyPath: string;
 
 begin
-  reg := TRegistry.Create(SetKeyAccessMode);      //init REG-Object
+  reg := TRegistry.Create(DenyWOW64Redirection(KEY_ALL_ACCESS));      //init REG-Object
 
   try
     reg.RootKey := HKEY_LOCAL_MACHINE;
@@ -831,7 +793,7 @@ begin
     reg.CloseKey;
 
     if ((NewHKey = '') or (NewKeyPath = '')) then //Fehlererkennung
-       result := CreateError(GetString(63), GetString(74), '')
+       result := CreateError(Main.Lang.GetString(63), Main.Lang.GetString(74), '')
     else
        begin
        reg.RootKey := StrToHKey(NewHKey);
@@ -847,7 +809,7 @@ begin
           FTime := '';
           end  //of begin
        else
-          result := CreateError(GetString(63), GetString(78), FFilePath);  //Fehlererkennung
+          result := CreateError(Main.Lang.GetString(63), Main.Lang.GetString(78), FFilePath);  //Fehlererkennung
        end;  //of if
 
   except
@@ -872,11 +834,11 @@ begin
     if FEnabled then
        begin
        if not DeleteValue(FRootKey, FKeyPath, FName) then
-          result := CreateError(GetString(65), GetString(75), FName);
+          result := CreateError(Main.Lang.GetString(65), Main.Lang.GetString(75), FName);
        end  //of begin
     else
        if not DeleteKey('HKLM', DEACT_KEY, FName) then
-          result := CreateError(GetString(65), GetString(77), FName);
+          result := CreateError(Main.Lang.GetString(65), Main.Lang.GetString(77), FName);
 
   except
     result := false;
@@ -906,8 +868,8 @@ end;
 
 procedure TStartupItem.GetItemInfo(var AName, APath: string);
 begin
-  APath := TClearas.GetString(61) +^J+^J+ ExpandHKey(FRootKey) +'\'+ FKeyPath;
-  AName := TClearas.GetString(62) +'"'+ FName +'"';
+  APath := Main.Lang.GetString(61) +^J+^J+ ExpandHKey(FRootKey) +'\'+ FKeyPath;
+  AName := Main.Lang.GetString(62) +'"'+ FName +'"';
 end;
 { of TStartupItem }
 
@@ -947,7 +909,7 @@ var
   Path, KeyName, PssDir, BackupLnk: string;
 
 begin
-  reg := TRegistry.Create(SetKeyAccessMode);            //init REG-Zugriff
+  reg := TRegistry.Create(DenyWOW64Redirection(KEY_ALL_ACCESS));            //init REG-Zugriff
 
   try
     reg.RootKey := HKEY_LOCAL_MACHINE;                  //RootKey setzen
@@ -983,7 +945,7 @@ begin
        result := true;
        end  //of begin
     else
-       result := CreateError(GetString(64), GetString(76), KeyName);  //Fehlererkennung
+       result := CreateError(Main.Lang.GetString(64), Main.Lang.GetString(76), KeyName);  //Fehlererkennung
 
   except
     result := false
@@ -1004,7 +966,7 @@ begin
     if CreateLnk(FFilePath, Path) then                     //Verknüpfung anlegen
        begin
        if not DeleteKey('HKLM', DEACT_FOLDER, AddCircumflex(Path)) then
-          result := CreateError(GetString(63), GetString(78), FKeyPath)  //Fehlererkennung
+          result := CreateError(Main.Lang.GetString(63), Main.Lang.GetString(78), FKeyPath)  //Fehlererkennung
        else
           begin
           FKeyPath := Path;                                //aktualisieren
@@ -1014,7 +976,7 @@ begin
           end;  //of if
        end  //of begin
     else
-       result := CreateError(GetString(63), GetString(79), '');  //Fehlererkennung
+       result := CreateError(Main.Lang.GetString(63), Main.Lang.GetString(79), '');  //Fehlererkennung
 
   except
     result := false;
@@ -1042,11 +1004,11 @@ begin
     if FEnabled then                           //Schlüssel oder Datei löschen
        begin
        if not DeleteFile(FKeyPath) then        //*.lnk löschen
-          result := CreateError(GetString(65), GetString(79), FName);  //Fehlererkennung
+          result := CreateError(Main.Lang.GetString(65), Main.Lang.GetString(79), FName);  //Fehlererkennung
        end  //of begin
     else
        if not DeleteKey('HKLM', DEACT_FOLDER, GetKeyName()) then
-          result := CreateError(GetString(65), GetString(77), FKeyPath);  //Fehlererkennung
+          result := CreateError(Main.Lang.GetString(65), Main.Lang.GetString(77), FKeyPath);  //Fehlererkennung
 
   except
     result := false;
@@ -1077,11 +1039,11 @@ end;
 procedure TStartupUserItem.GetItemInfo(var AName, APath: string);
 begin
   if FEnabled then
-     APath := TClearas.GetString(60) +^J+^J+ FKeyPath
+     APath := Main.Lang.GetString(60) +^J+^J+ FKeyPath
   else
-     APath := TClearas.GetString(61) +^J+^J+ ExpandHKey(FRootKey) +'\'+ FKeyPath;
+     APath := Main.Lang.GetString(61) +^J+^J+ ExpandHKey(FRootKey) +'\'+ FKeyPath;
 
-  AName := TClearas.GetString(62) +'"'+ FName +'"';
+  AName := Main.Lang.GetString(62) +'"'+ FName +'"';
 end;
 { of TStartupUserItem }
 
@@ -1292,7 +1254,7 @@ var
 
 begin
   List := TStringList.Create;                       //init Liste
-  reg := TRegistry.Create(TClearas.SetKeyAccessMode); //init REG-Objekt
+  reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));  //init REG-Objekt
   reg.RootKey := HKEY_LOCAL_MACHINE;                //Root Key setzen
 
   try
@@ -1341,7 +1303,7 @@ var
 
 begin
   List := TStringList.Create;                       //init Liste
-  reg := TRegistry.Create(TClearas.SetKeyAccessMode(AKeyPath));  //init REG-Objekt
+  reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_ALL_ACCESS));  //init REG-Objekt
 
   try
     reg.RootKey := TClearas.StrToHKey(ARootKey);    //Root Key setzen
@@ -1542,7 +1504,7 @@ end;
 function TContextListItem.Delete(): Boolean;
 begin
   if not DeleteKey('HKCR', ExtractFileDir(KeyPath), FName) then  //Schlüssel löschen
-     result := CreateError(GetString(65), GetString(77), '')     //Fehlererkennung
+     result := CreateError(Main.Lang.GetString(65), Main.Lang.GetString(77), '')     //Fehlererkennung
   else
      result := true;
 end;
@@ -1571,8 +1533,8 @@ var
 
 begin
   Text := TClearas.GetKeyValue('HKCR', GetKeyPath(), '');
-  APath := GetString(87) +':'+ ^J+^J +'"'+ Text +'"';
-  AName := GetString(62) +'"'+ FName +'"';
+  APath := Main.Lang.GetString(87) +':'+ ^J+^J +'"'+ Text +'"';
+  AName := Main.Lang.GetString(62) +'"'+ FName +'"';
 end;
 
 
@@ -1598,7 +1560,7 @@ var
 
 begin
   List := TStringList.Create;
-  reg := TRegistry.Create(SetKeyAccessMode);          //init reg Objekt
+  reg := TRegistry.Create(DenyWOW64Redirection(KEY_READ));          //init reg Objekt
 
   try
     reg.RootKey := HKEY_CLASSES_ROOT;                 //RootKey setzen
@@ -1652,7 +1614,7 @@ function TShellItem.Enable(): Boolean;
 begin
   try
     if not DeleteValue('HKCR', KeyPath, 'LegacyDisable') then
-       result := CreateError(GetString(65), GetString(75), '')
+       result := CreateError(Main.Lang.GetString(65), Main.Lang.GetString(75), '')
     else
        result := true;
 
@@ -1791,7 +1753,7 @@ var
   Enabled: Boolean;
 
 begin
-  reg := TRegistry.Create(TClearas.SetKeyAccessMode);     //init REG-Objekt
+  reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));     //init REG-Objekt
   List := TStringList.Create;                             //init Liste
 
   if AShell then

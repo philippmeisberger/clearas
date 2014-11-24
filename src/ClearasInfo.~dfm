@@ -1,4 +1,4 @@
-object Form2: TForm2
+object Info: TInfo
   Left = 248
   Top = 197
   BorderIcons = [biSystemMenu, biMinimize]
@@ -46,7 +46,7 @@ object Form2: TForm2
         Width = 112
         Height = 14
         Anchors = [akBottom]
-        Caption = #169' P.Meisberger 2013'
+        Caption = #169' P.Meisberger 2014'
         Font.Charset = ANSI_CHARSET
         Font.Color = clBlack
         Font.Height = -11
@@ -319,7 +319,7 @@ object Form2: TForm2
         Top = 68
         Width = 21
         Height = 14
-        Caption = 'v3.0'
+        Caption = 'v3.1'
       end
       object lBuild: TLabel
         Left = 14
@@ -364,7 +364,7 @@ object Form2: TForm2
             '.'
           'F'#252'r Sch'#228'den an Hard- und Software, die durch die Benutzung'
           'dieses Programms entstehen, wird keine Haftung '#252'bernommen.'
-          '09/2013')
+          '11/2014')
         ReadOnly = True
         TabOrder = 1
       end
@@ -381,7 +381,7 @@ object Form2: TForm2
         Width = 112
         Height = 14
         Anchors = [akBottom]
-        Caption = #169' P.Meisberger 2013'
+        Caption = #169' P.Meisberger 2014'
         Font.Charset = ANSI_CHARSET
         Font.Color = clBlack
         Font.Height = -11
@@ -407,12 +407,18 @@ object Form2: TForm2
         Height = 177
         Lines.Strings = (
           'Clearas'
-          'Ein Freeware-Programm von Philipp Meisberger (PM Code Works)'
+          'Ein Freeware-Programm von PM Code Works'
           ''
           'History'
           '--------'
           ''
-          'Version 3.0  [30.09.13]'
+          'Version 3.1  [24.11.14]'
+          ''
+          '- Updater v2.2'
+          ''
+          '---------------------------------'
+          ''
+          'Version 3.0  [03.10.13]'
           ''
           '- API Version 4'
           '- Bei "Programm hinzuf'#252'gen" k'#246'nnen Parameter angegeben werden'
@@ -604,9 +610,9 @@ object Form2: TForm2
           
             'w'#228're es nett, mir eine Ausgabe dieser CD-ROM (mit Magazin) zu sc' +
             'hicken.'
-          'Meine Adresse erfahren Sie unter p.meisberger91@web.de.'
+          'Meine Adresse erfahren Sie unter team@pm-codeworks.de.'
           ''
-          '05/2013')
+          '11/2014')
         ReadOnly = True
         ScrollBars = ssVertical
         TabOrder = 1

@@ -2,7 +2,7 @@
 {                                                                         }
 { Clearas Info Pages                                                      }
 {                                                                         }
-{ Copyright (c) 2011-2013 P.Meisberger (PM Code Works)                    }
+{ Copyright (c) 2011-2014 P.Meisberger (PM Code Works)                    }
 {                                                                         }
 { *********************************************************************** }
 
@@ -12,10 +12,10 @@ interface
 
 uses
   Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, StdCtrls,
-  ExtCtrls, ComCtrls, ClearasAPI;
+  ExtCtrls, ComCtrls, OSUtils;
 
 type
-  TForm2 = class(TForm)
+  TInfo = class(TForm)
     PageControl: TPageControl;
     tsInfo: TTabSheet;
     tsHistory: TTabSheet;
@@ -30,30 +30,25 @@ type
     reHistory: TRichEdit;
     procedure bOkClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
-  private
-    { Private declarations }
-  public
-    { Public declarations }
   end;
 
 var
-  Form2: TForm2;
+  Info: TInfo;
+
 
 implementation
 
-uses ClearasMain;
-
 {$R *.dfm}
 
-procedure TForm2.bOkClick(Sender: TObject);
+procedure TInfo.bOkClick(Sender: TObject);
 begin
   Close;
 end;
 
 
-procedure TForm2.FormCreate(Sender: TObject);
+procedure TInfo.FormCreate(Sender: TObject);
 begin
-  lBuild.Caption := '(Build: '+ IntToStr(TClearas.GetBuildNumber) +')';
+  lBuild.Caption := '(Build: '+ IntToStr(TOSUtils.GetBuildNumber()) +')';
 end;
 
 end.

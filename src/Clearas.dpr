@@ -2,21 +2,17 @@ program Clearas;
 
 uses
   Forms,
-  ClearasMutex in 'ClearasMutex.pas',
-  ClearasInfo in 'ClearasInfo.pas' {Form2},
-  ClearasAPI in 'ClearasAPI.pas',
-  ClearasMain in 'ClearasMain.pas' {Form1},
-  UpdateCheckThread in 'UpdateCheckThread.pas',
-  ClearasUpdate in 'ClearasUpdate.pas' {Form3},
-  ClearasUpdateThread in 'ClearasUpdateThread.pas',
-  WinUtils in 'WinUtils.pas';
+  Mutex in 'Mutex.pas',
+  ClearasMain in 'ClearasMain.pas' {Main},
+  ClearasInfo in 'ClearasInfo.pas' {Info},
+  Updater in 'Updater.pas' {Update},
+  ClearasAPI in 'ClearasAPI.pas';
 
 {$R *.res}
 
 begin
   Application.Initialize;
   Application.Title := 'Clearas';
-  Application.CreateForm(TForm1, Form1);
-  Application.CreateForm(TForm3, Form3);
+  Application.CreateForm(TMain, Main);
   Application.Run;
 end.
