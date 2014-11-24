@@ -267,7 +267,7 @@ begin
     if (MessageBox(Format(GetString(21) +^J+ GetString(22), [ANewBuild]),
       mtQuestion, True) = IDYES) then
       with TUpdate.Create(Self, FLang, FLang.GetString(24)) do
-        Download('sit.exe', 'SIT.exe')
+        Download('clearas.exe', 'Clearas.exe')
     else
       mmUpdate.Caption := FLang.GetString(24);
 end;
