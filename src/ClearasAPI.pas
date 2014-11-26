@@ -12,7 +12,7 @@ interface
 
 uses
   Windows, Classes, SysUtils, Registry, ShlObj, ActiveX, ComObj, CommCtrl,
-  Contnrs, OSUtils, LanguageFile;
+  Contnrs, OSUtils, LanguageFile, IniFileParser;
 
 const
   { Registry Keys }
@@ -184,6 +184,9 @@ type
     property Items[AIndex: Word]: TStartupListItem read GetItem; default;
     property Item: TStartupListItem read FItem write FItem;
   end;
+
+  { class alias }
+  TAutostart = TStartupList;
 
   { Exception class }
   EContextMenuException = class(Exception);
@@ -557,18 +560,21 @@ var
   reg: TRegistry;
 
 begin
-  reg := TRegistry.Create(SetKeyAccessMode);
+  reg := TRegistry.Create(DenyWOW64Redirection(KEY_WRITE));
 
   try
-    reg.RootKey := StrToHKey(AMainKey);
-    reg.OpenKey(AKeyName, True);
-    reg.WriteString(AName, AValue);
-    reg.Free;
+    try
+      reg.RootKey := StrToHKey(AMainKey);
+      reg.OpenKey(AKeyName, True);
+      reg.WriteString(AName, AValue);
+
+    finally
+      reg.Free;
+    end;  //of try
 
   except
     on E: Exception do
     begin
-      reg.Free;
       E.Message := 'Could not write "'+ AName +'" with value "'+ AValue +'": '+ E.Message;
       raise;
     end;  //of begin
@@ -668,35 +674,36 @@ var
   Date, Time: string;
 
 begin
-  reg := TRegistry.Create(SetKeyAccessMode);             //init reg-Object
+  // Deactivation timestamp only available for disabled items
+  if FEnabled then
+  begin
+    result := '';
+    Exit;
+  end;  //of begin
+
+  result := '00.00.0000 00:00:00';
+  reg := TRegistry.Create(DenyWOW64Redirection(KEY_READ));
 
   try
-    if not FEnabled then
-       begin
-       reg.RootKey := StrToHKey(FRootKey);               //HKEY öffnen
-       reg.OpenKey(FKeyPath, False);                     //SubKey öffnen
+    reg.RootKey := StrToHKey(FRootKey);
+    reg.OpenKey(FKeyPath, False);
 
-       if not reg.ValueExists('YEAR') then               //Wert existiert?
-          result := '00.00.0000 00:00:00'
-       else
-          begin
-          Year := reg.ReadInteger('YEAR');               //auslesen...
-          Month := reg.ReadInteger('MONTH');
-          Day := reg.ReadInteger('DAY');
-          Hour := reg.ReadInteger('HOUR');
-          Min := reg.ReadInteger('MINUTE');
-          Sec := reg.ReadInteger('SECOND');
-          Date := FormatDateTime('c', EncodeDate(Year, Month, Day));
-          Time := FormatDateTime('tt', EncodeTime(Hour, Min, Sec, 0));
-          result := Date +'  '+ Time;
-          end;  //of if
-       end;  //of if
+    // At least one valid date entry exists?
+    if reg.ValueExists('YEAR') then
+    begin
+      Year := reg.ReadInteger('YEAR');
+      Month := reg.ReadInteger('MONTH');
+      Day := reg.ReadInteger('DAY');
+      Hour := reg.ReadInteger('HOUR');
+      Min := reg.ReadInteger('MINUTE');
+      Sec := reg.ReadInteger('SECOND');
+      Date := FormatDateTime('c', EncodeDate(Year, Month, Day));
+      Time := FormatDateTime('tt', EncodeTime(Hour, Min, Sec, 0));
+      result := Date +'  '+ Time;
+    end;  //of if
 
+  finally
     reg.Free;
-
-  except
-    reg.Free;
-    result := '00.00.0000 00:00:00';
   end;  //of try
 end;
 
@@ -711,32 +718,41 @@ var
   TimeNow: TDateTime;
 
 begin
-  reg := TRegistry.Create(SetKeyAccessMode);      //init REG-Object
-  reg.RootKey := HKEY_LOCAL_MACHINE;              //HKEY öffnen
+  reg := TRegistry.Create(DenyWOW64Redirection(KEY_WRITE));
+  reg.RootKey := HKEY_LOCAL_MACHINE;
 
   try
-    reg.OpenKey(AKeyPath, True);                  //SubKey öffnen
-    TimeNow := Now();
-    FTime := FormatDateTime('c', TimeNow);        //Deaktivierungsdatum
-    DecodeDate(TimeNow, Year, Month, Day);        //Datum auslesen
-    DecodeTime(TimeNow, Hour, Min, Sec, MSec);    //Zeit auslesen
+    try
+      reg.OpenKey(AKeyPath, True);
 
-    with reg do
-      begin                                       //Deaktivierungsdatum speichern
-      WriteInteger('YEAR', Year);
-      WriteInteger('MONTH', Month);
-      WriteInteger('DAY', Day);
-      WriteInteger('HOUR', Hour);
-      WriteInteger('MINUTE', Min);
-      WriteInteger('SECOND', Sec);
+      // Read current time
+      TimeNow := Now();
+      FTime := FormatDateTime('c', TimeNow);
+
+      // Split current date
+      DecodeDate(TimeNow, Year, Month, Day);
+
+      // Split current time
+      DecodeTime(TimeNow, Hour, Min, Sec, MSec);
+
+      // Write time stamp
+      with reg do
+      begin
+        WriteInteger('YEAR', Year);
+        WriteInteger('MONTH', Month);
+        WriteInteger('DAY', Day);
+        WriteInteger('HOUR', Hour);
+        WriteInteger('MINUTE', Min);
+        WriteInteger('SECOND', Sec);
       end;  //of with
 
-    reg.Free;
+    finally
+      reg.Free;
+    end;  //of try
 
   except
     on E: Exception do
     begin
-      reg.Free;
       E.Message := 'Error while writing deactivation time to "'+ AKeyPath +'": '+ E.Message;
       raise;
     end;  //of begin
@@ -762,53 +778,51 @@ end;
 function TStartupItem.Disable(): Boolean;
 var
   reg: TRegistry;
-  deleted, created: Boolean;
 
 begin
-  reg := TRegistry.Create(SetKeyAccessMode);
+  reg := TRegistry.Create(DenyWOW64Redirection(KEY_WRITE));
 
   try
     reg.RootKey := HKEY_LOCAL_MACHINE;
 
-    // Eintrag löschen
-    deleted := DeleteValue(FRootKey, FKeyPath, FName);
-
-    // Neuen Schlüssel erstellen
-    if deleted then
-      created := reg.OpenKey(KEY_DEACT + FName, True)
-    else
-      created := False;
-
-    // Autostarteintrag gelöscht und neuer Schlüssel erstellt?
-    if ( deleted and created ) then
-      begin
-      reg.WriteString('hkey', FRootKey);             //Werte schreiben...
+    // Successfully created new key?
+    if (reg.OpenKey(KEY_DEACT + FName, True)) then
+    begin
+      // Write values
+      reg.WriteString('hkey', FRootKey);
       reg.WriteString('key', FKeyPath);
       reg.WriteString('item', FName);
       reg.WriteString('command', FFilePath);
       reg.WriteString('inimapping', '0');
 
-      if CheckWindows then                           //nur ab Windows Vista:
-         WriteTime(KEY_DEACT + FName);               //Deaktivierungsdatum speichern
+      // Windows >= Vista?
+      if CheckWindows then
+        // Save deactivation time stamp
+        WriteTime(KEY_DEACT + FName);
 
-      FRootKey := 'HKLM';                            //Daten aktualisieren
+      // Update information
+      FRootKey := 'HKLM';
       FKeyPath := KEY_DEACT + FName;
-      FEnabled := False;                             //Status aktualisieren
-      reg.Free;                                      //Objekt freigeben
+      FEnabled := False;
+      reg.Free;
       result := True;
-      end  //of begin
+    end  //of begin
     else
       raise EStartupException.Create('Could not create "'+ KEY_DEACT + FName +'"!');
+
+    // Successfully deleted old entry?
+    if not DeleteValue(FRootKey, FKeyPath, FName) then
+      raise EStartupException.Create('Could not delete value!');
 
   except
     on E: Exception do
     begin
-      reg.Free;                                      //Objekt freigeben
+      reg.Free;
       result := False;
       E.Message := 'Error while disabling "'+ FName +'": '+ E.Message;
       raise;
     end;  //of begin
-  end;  //of except
+  end;  //of try
 end;
 
 { protected TStartupItem.Enable
@@ -821,40 +835,45 @@ var
   NewHKey, NewKeyPath: string;
 
 begin
-  reg := TRegistry.Create(SetKeyAccessMode);      //init REG-Object
+  reg := TRegistry.Create(DenyWOW64Redirection(KEY_ALL_ACCESS));
 
   try
     reg.RootKey := HKEY_LOCAL_MACHINE;
-    reg.OpenKey(FKeyPath, False);                 //alten Schlüssel öffnen
-    NewHKey := reg.ReadString('hkey');            //neuer HKEY auslesen
-    NewKeyPath := reg.ReadString('key');          //neuer Pfad auslesen
+    reg.OpenKey(FKeyPath, False);
+
+    // Set new values
+    NewHKey := reg.ReadString('hkey');
+    NewKeyPath := reg.ReadString('key');
     reg.CloseKey;
 
-    if ((NewHKey = '') or (NewKeyPath = '')) then //Fehlererkennung
-       raise EStartupException.Create('Could not access registry!')
+    if ((NewHKey = '') or (NewKeyPath = '')) then
+       raise EStartupException.Create('Could not access registry!');
+
+    reg.RootKey := StrToHKey(NewHKey);
+
+    // Successfully created new key?
+    if reg.OpenKey(NewKeyPath, True) then
+    begin
+      // Write startup entry
+      reg.WriteString(FName, FFilePath);
+
+      // Delete old key
+      result := DeleteKey('HKLM', KEY_DEACT, FName);
+
+      // Update information
+      FRootKey := NewHKey;
+      FKeyPath := NewKeyPath;
+      FEnabled := True;
+      FTime := '';
+      reg.Free;
+    end  //of begin
     else
-       begin
-       reg.RootKey := StrToHKey(NewHKey);
-
-       if reg.OpenKey(NewKeyPath, True) then
-          begin
-          reg.WriteString(FName, FFilePath);      //Autostarteintrag schreiben
-          result := DeleteKey('HKLM', KEY_DEACT, FName);  //alten Schlüssel löschen
-
-          FRootKey := NewHKey;                    //Daten aktualisieren
-          FKeyPath := NewKeyPath;
-          FEnabled := True;                       //Status aktualisieren
-          FTime := '';
-          reg.Free;                               //freigeben
-          end  //of begin
-       else
-          raise EStartupException.Create('Could not create key "'+ NewKeyPath +'"!')
-       end;  //of if
+      raise EStartupException.Create('Could not create key "'+ NewKeyPath +'"!');
 
   except
     on E: Exception do
     begin
-      reg.Free;                                   //freigeben
+      reg.Free;
       result := False;
       E.Message := 'Error while enabling "'+ FName +'": '+ E.Message;
       raise;
@@ -961,49 +980,52 @@ var
   Path, KeyName, PssDir, BackupLnk: string;
 
 begin
-  reg := TRegistry.Create(SetKeyAccessMode);            //init REG-Zugriff
+  reg := TRegistry.Create(DenyWOW64Redirection(WRITE_KEY));
 
   try
-    reg.RootKey := HKEY_LOCAL_MACHINE;                  //RootKey setzen
-    KeyName := AddCircumflex(FKeyPath);
-    PssDir := GetWinDir +'\pss';
-    BackupLnk := GetBackupLnk();
+    try
+      reg.RootKey := HKEY_LOCAL_MACHINE;
+      KeyName := AddCircumflex(FKeyPath);
+      PssDir := GetWinDir +'\pss';
+      BackupLnk := GetBackupLnk();
 
-    if (reg.OpenKey(KEY_DEACT_FOLDER + KeyName, True) and
-       ReadLnkFile(FKeyPath, Path)) then
-       begin                                            //Daten schreiben
-       reg.WriteString('path', FKeyPath);
-       reg.WriteString('item', DeleteExt(ExtractFileName(FName)));
-       reg.WriteString('command', FFilePath);
-       reg.WriteString('backup', BackupLnk);
+      if (reg.OpenKey(KEY_DEACT_FOLDER + KeyName, True) and
+        ReadLnkFile(FKeyPath, Path)) then
+      begin
+        reg.WriteString('path', FKeyPath);
+        reg.WriteString('item', DeleteExt(ExtractFileName(FName)));
+        reg.WriteString('command', FFilePath);
+        reg.WriteString('backup', BackupLnk);
 
-       if CheckWindows then                             //nur ab Windows Vista
-          begin
+        if CheckWindows() then                            //nur ab Windows Vista
+        begin
           reg.WriteString('backupExtension', GetExtension());
           reg.WriteString('location', ExtractFileDir(FKeyPath));
           WriteTime(KEY_DEACT_FOLDER + KeyName);            //Deaktivierungsdatum speichern
-          end  //of begin
-       else                                             // <= Windows XP
+        end  //of begin
+        else                                             // <= Windows XP
           reg.WriteString('location', FType);
 
-       if not DirectoryExists(PssDir) then              //existiert Dir nicht?
+        if not DirectoryExists(PssDir) then              //existiert Dir nicht?
           ForceDirectories(PssDir);                     //dann Dir erstellen
 
-       CreateLnk(FFilePath, BackupLnk);                 //Backup *.lnk erstellen
-       DeleteFile(FKeyPath);                            //*.lnk löschen
-       FKeyPath := KEY_DEACT_FOLDER + KeyName;              //Reg-Pfad aktualisieren
-       FRootKey := 'HKLM';
-       FEnabled := False;
-       reg.Free;                                        //freigeben
-       result := True;
-       end  //of begin
-    else
-       raise EStartupException.Create('Could not create key "'+ FName +'"!');
+        CreateLnk(FFilePath, BackupLnk);                 //Backup *.lnk erstellen
+        DeleteFile(FKeyPath);                            //*.lnk löschen
+        FKeyPath := KEY_DEACT_FOLDER + KeyName;              //Reg-Pfad aktualisieren
+        FRootKey := 'HKLM';
+        FEnabled := False;
+        result := True;
+      end  //of begin
+      else
+        raise EStartupException.Create('Could not create key "'+ FName +'"!');
+
+    finally
+      reg.Free;
+    end;  //of try
 
   except
     on E: Exception do
     begin
-      reg.Free;                                         //freigeben
       result := False;
       E.Message := 'Error while disabling "'+ FName +'": '+ E.Message;
       raise;
@@ -1023,20 +1045,23 @@ begin
   try
     Path := GetKeyValue('HKLM', FKeyPath, 'path');
 
-    if CreateLnk(FFilePath, Path) then                     //Verknüpfung anlegen
-       begin
-       if not DeleteKey('HKLM', KEY_DEACT_FOLDER, AddCircumflex(Path)) then
-          raise EStartupException.Create('Could not delete key "'+ FKeyPath +'"!')
-       else
-          begin
-          FKeyPath := Path;                                //aktualisieren
+    // Successfully created .lnk?
+    if CreateLnk(FFilePath, Path) then
+    begin
+      // Could not delete old key?
+      if not DeleteKey('HKLM', KEY_DEACT_FOLDER, AddCircumflex(Path)) then
+        raise EStartupException.Create('Could not delete key "'+ FKeyPath +'"!')
+      else
+        begin
+          // Update information
+          FKeyPath := Path;
           FRootKey := '';
           FEnabled := True;
           result := True;
-          end;  //of if
-       end  //of begin
+        end;  //of if
+    end  //of begin
     else
-       raise EStartupException.Create('Could not create link!');
+      raise EStartupException.Create('Could not create .lnk file!');
 
   except
     on E: Exception do
@@ -1072,14 +1097,16 @@ begin
   result := True;
 
   try
-    if FEnabled then                           //Schlüssel oder Datei löschen
-       begin
-       if not DeleteFile(FKeyPath) then        //*.lnk löschen
-          raise EStartupException.Create('Could not delete link "'+ FKeyPath +'"!');
-       end  //of begin
+    if FEnabled then
+    begin
+      // Could not delete .lnk?
+      if not DeleteFile(FKeyPath) then 
+        raise EStartupException.Create('Could not delete .lnk "'+ FKeyPath +'"!');
+    end  //of begin
     else
-       if not DeleteKey('HKLM', KEY_DEACT_FOLDER, GetKeyName()) then
-          raise EStartupException.Create('Could not delete key "'+ FKeyPath +'"!');
+      // Could not delete key?
+      if not DeleteKey('HKLM', KEY_DEACT_FOLDER, GetKeyName()) then
+        raise EStartupException.Create('Could not delete key "'+ FKeyPath +'"!');
 
   except
     on E: Exception do
@@ -1155,19 +1182,20 @@ var
 
 begin
   if not FItem.Enabled then
-     result := TClearas.GetKeyValue('HKLM', FItem.KeyPath, 'backup')
+    result := TClearas.GetKeyValue('HKLM', FItem.KeyPath, 'backup')
   else
-     begin
-     Pss := TClearas.GetWinDir +'\pss';
+    begin
+      Pss := TOSUtils.GetWinDir() +'\pss';
 
-     if not DirectoryExists(Pss) then      //existiert Dir nicht?
-        ForceDirectories(Pss);             //dann Dir erstellen
+      // Create backup directory only if not exists
+      if not DirectoryExists(Pss) then
+        ForceDirectories(Pss);
 
-     if (Pos('Common', FItem.TypeOf) <> 0) then
+      if (Pos('Common', FItem.TypeOf) <> 0) then
         result := Pss +'\'+ FItem.Name + EXT_COMMON
-     else
+      else
         result := Pss +'\'+ FItem.Name + EXT_USER;
-     end;
+    end;  //of begin
 end;
 
 { private TStartupList.GetItem
@@ -1195,7 +1223,7 @@ begin
   if (FindFirst(RootFolder + '*.lnk', faAnyFile, SR) = 0) then
     try
       while (FindNext(SR) = 0) do
-        // File found
+        // File found?
         if (SR.Attr and faDirectory <> faDirectory) then
           AFileList.Add(RootFolder + SR.Name);
 
@@ -1213,17 +1241,18 @@ var
   st: string;
 
 begin
-  if not TClearas.CheckWindows then                //falls <= WinXP
-     result := TClearas.GetKeyValue('HKLM', AKeyPath, 'location')
-  else                                             //falls >= Win Vista
-     begin
-     st := TClearas.GetKeyValue('HKLM', AKeyPath, 'backupExtension');
+  // Windows >= Vista?
+  if TOSUtils.CheckWindows() then
+  begin
+    st := TClearas.GetKeyValue('HKLM', AKeyPath, 'backupExtension');
 
      if (st = EXT_COMMON) then
         result := TYPE_COMMON
      else
         result := TYPE_USER;
-     end;  //of if
+  end  //of begin
+  else
+     result := TClearas.GetKeyValue('HKLM', AKeyPath, 'location');
 end;
 
 { protected TStartupList.AddItemDisabled
@@ -1262,7 +1291,7 @@ begin
   Item := TStartupItem.Create(Count, True);
 
   with Item do
-    begin
+  begin
     RootKey := ARootKey;
     KeyPath := AKeyPath;
     Name := AName;
@@ -1273,7 +1302,7 @@ begin
        TypeOf := 'RunOnce'
     else
        TypeOf := ARootKey;
-    end;  //of with
+  end;  //of with
 
   Inc(FActCount);
   result := Add(Item);
@@ -1288,17 +1317,17 @@ var
   Item: TStartupListItem;
 
 begin
-  Item := TStartupUserItem.Create(Count, False);      //neues Objekt
+  Item := TStartupUserItem.Create(Count, False); 
 
-  with Item do                                        //Daten übergeben
-    begin
+  with Item do 
+  begin
     RootKey := 'HKLM';
     KeyPath := AKeyPath;
     Name := ExtractFileName(DelCircumflex(AKeyPath));
     FilePath := TClearas.GetKeyValue('HKLM', AKeyPath, 'command');
     Time := GetTime();
     TypeOf := GetStartupUserType(AKeyPath);
-    end;  //of with
+  end;  //of with
 
   result := Add(Item);
 end;
@@ -1356,18 +1385,18 @@ var
 
 begin
   List := TStringList.Create;
-  reg := TRegistry.Create(TClearas.SetKeyAccessMode); //init REG-Objekt
-  reg.RootKey := HKEY_LOCAL_MACHINE;                //Root Key setzen
+  reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));
+  reg.RootKey := HKEY_LOCAL_MACHINE;
 
   try
-    reg.OpenKey(AKeyPath, True);                    //Key öffnen
-    reg.GetKeyNames(List);                          //enthaltene Schlüsselnamen auslesen
+    reg.OpenKey(AKeyPath, True);
+    reg.GetKeyNames(List);
 
     for i := 0 to List.Count -1 do
-      if (AKeyPath = KEY_DEACT) then                //auslesen + eintragen
-         AddItemDisabled(AKeyPath + List[i])
+      if (AKeyPath = KEY_DEACT) then
+        AddItemDisabled(AKeyPath + List[i])
       else
-         AddUserItemDisabled(AKeyPath + List[i]);
+        AddUserItemDisabled(AKeyPath + List[i]);
 
   finally
     reg.Free;
@@ -1388,10 +1417,12 @@ begin
   List := TStringList.Create;
 
   try
-    GetLnkFileNames(List, AAllUsers);             //aktivierte Autostart-Programme auslesen
+    // Retrieve a list containing all activated startup user .lnk files
+    GetLnkFileNames(List, AAllUsers);
 
+    // Add every file to list
     for i := 0 to List.Count -1 do
-      AddUserItemEnabled(List[i], AAllUsers);     //Programm in Liste schreiben
+      AddUserItemEnabled(List[i], AAllUsers);
 
   finally
     List.Free;
@@ -1411,17 +1442,20 @@ var
 
 begin
   List := TStringList.Create;
-  reg := TRegistry.Create(TClearas.SetKeyAccessMode(AKeyPath));  //init REG-Objekt
+  reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));
 
   try
-    reg.RootKey := TClearas.StrToHKey(ARootKey);    //Root Key setzen
-    reg.OpenKey(AKeyPath, True);                    //Key öffnen
-    reg.GetValueNames(List);                        //enthaltene Einträge auslesen
+    reg.RootKey := TOSUtils.StrToHKey(ARootKey);
+    reg.OpenKey(AKeyPath, True);
+    reg.GetValueNames(List);
 
     for i := 0 to List.Count -1 do
     begin
-      FilePath := reg.ReadString(List[i]);          //Pfad zur *.exe auslesen
-      AddItemEnabled(ARootKey, AKeyPath, List[i], FilePath);  //Programm auslesen + eintragen
+      // Read path to .exe
+      FilePath := reg.ReadString(List[i]);
+
+      // Add to list
+      AddItemEnabled(ARootKey, AKeyPath, List[i], FilePath);
     end;  //of for
 
   finally
@@ -1440,6 +1474,7 @@ begin
   try
     TClearas.WriteStrValue('HKCU', KEY_STARTUP, AName, AFilePath);
     AddItemEnabled('HKCU', KEY_STARTUP, AName, AFilePath);
+    result := True;
 
   except
     result := False;
@@ -1462,12 +1497,12 @@ begin
 
     // Link file created successfully?
     if TClearas.CreateLnk(AFilePath, LnkFilePath) then
-       begin
-       AddUserItemEnabled(LnkFilePath, AAllUsers);
-       result := True;
-       end  //of begin
+    begin
+      AddUserItemEnabled(LnkFilePath, AAllUsers);
+      result := True;
+    end  //of begin
     else
-       raise EStartupException.Create('Link file could not be created!');
+      raise EStartupException.Create('.lnk file could not be created!');
 
   except
     result := False;
@@ -1530,12 +1565,12 @@ function TStartupList.ChangeItemFilePath(const ANewFilePath: string): Boolean;
 begin
   try
     if FItem.Enabled then
-       TClearas.WriteStrValue(FItem.RootKey, FItem.KeyPath, FItem.Name, ANewFilePath)
+      TClearas.WriteStrValue(FItem.RootKey, FItem.KeyPath, FItem.Name, ANewFilePath)
     else
-       begin
-       TClearas.WriteStrValue(FItem.RootKey, FItem.KeyPath, 'Command', ANewFilePath);
-       TClearas.WriteStrValue(FItem.RootKey, FItem.KeyPath, 'Item', Item.Name);
-       end;  //of if
+      begin
+        TClearas.WriteStrValue(FItem.RootKey, FItem.KeyPath, 'Command', ANewFilePath);
+        TClearas.WriteStrValue(FItem.RootKey, FItem.KeyPath, 'Item', Item.Name);
+      end;  //of if
 
     result := True;
 
@@ -1599,19 +1634,17 @@ procedure TStartupList.ExportList(const AFileName: string);
 var
   i: Word;
   RegFile: TRegistryFile;
-  Item: RootItem;
+  Item: TStartupListItem;
 
 begin
   //init Reg file
   RegFile := TRegistryFile.Create(AFileName);
 
   try
-    LastItem := nil;
-
-    for i := 0 to FCount -1 do
+    for i := 0 to Count -1 do
     begin
       Item := GetItem(i);
-      RegFile.ExportKey(Item.RootKey, Item.KeyPath, True);
+      RegFile.ExportKey(TOSUtils.StrToHKey(Item.RootKey), Item.KeyPath, True);
     end;  //of for
 
     // Save file
@@ -1705,12 +1738,9 @@ function TContextListItem.Delete(): Boolean;
 begin
   try
     if not DeleteKey('HKCR', ExtractFileDir(KeyPath), FName) then
-       begin
-       result := False;
-       raise EStartupException.Create('Could not delete key!');
-       end  //of begin
+      raise EStartupException.Create('Could not delete key!')
     else
-       result := True;
+      result := True;
 
   except
     on E: Exception do
@@ -1777,10 +1807,7 @@ function TShellItem.Enable(): Boolean;
 begin
   try
     if not DeleteValue('HKCR', KeyPath, 'LegacyDisable') then
-       begin
-       result := False;
-       raise EStartupException.Create('Could not delete value "'+ KeyPath + '\LegacyDisable' +'"!');
-       end  //of begin
+      raise EStartupException.Create('Could not delete value "'+ KeyPath + '\LegacyDisable' +'"!')
     else
        result := True;
 
@@ -1956,48 +1983,60 @@ var
   reg: TRegistry;
   i: Integer;
   List: TStringList;
-  Key: string;
+  Item, Key: string;
   Enabled: Boolean;
 
 begin
-  reg := TRegistry.Create(TClearas.SetKeyAccessMode);
+  reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));
   List := TStringList.Create;
 
   if AShell then
-     Key := AKeyName +'\shell'
+    Key := AKeyName +'\shell'
   else
-     Key := AKeyName + KEY_CONTEXTMENU;
+    Key := AKeyName + KEY_CONTEXTMENU;
 
   try
-    reg.RootKey := HKEY_CLASSES_ROOT;                     //Root Key setzen
-    reg.OpenKey(Key, False);                              //Key öffnen
-    reg.GetKeyNames(List);                                //alle Einträge im Key auslesen
+    reg.RootKey := HKEY_CLASSES_ROOT;
+    reg.OpenKey(Key, False);
+
+    // Read out all keys
+    reg.GetKeyNames(List);
 
     for i := 0 to List.Count -1 do
-      begin
+    begin
       reg.CloseKey;
-      reg.OpenKey(Key +'\'+ List[i], False);
+      Item := List[i];
+      reg.OpenKey(Key +'\'+ Item, False);
 
-      if ((reg.ReadString('') <> '') and (List[i][1] <> '{') and
-         (reg.ReadString('')[1] <> '@') and not FindDouble(List[i], AKeyName)) then  //wichtige, leere und doppelte Einträge filtern!
-         begin
-         if AShell then                                   //nach "Shell" suchen
-            begin
-            Enabled := not reg.ValueExists('LegacyDisable');  //Status
-            AddShellItem(List[i], AKeyName, Enabled);     //neues Item in Liste
-            end  //of begin
-         else                                             //sonst nach "ShellEx" suchen
-            begin
-            Enabled := reg.ReadString('')[1] <> '-';      //Status
-            AddShellExItem(List[i], AKeyName, Enabled);   //neues Item in Liste
-            end  //of begin
-         end;  //of begin
-      end;  //of for
+      // Filter empty, important and double entries
+      if ((reg.ReadString('') <> '') and (Item[1] <> '{') and
+        (reg.ReadString('')[1] <> '@') and not FindDouble(Item, AKeyName)) then
+      begin
+        // Search for shell entries
+        if AShell then
+          begin
+            // Get status
+            Enabled := not reg.ValueExists('LegacyDisable');
 
-  finally                                                 //freigeben
+            // Add item to list
+            AddShellItem(Item, AKeyName, Enabled);
+          end  //of begin
+        else
+          // Search for shellex entries
+          begin
+            // Get status
+            Enabled := reg.ReadString('')[1] <> '-';
+
+            // Add item to list
+            AddShellExItem(Item, AKeyName, Enabled);
+          end  //of begin
+        end;  //of begin
+    end;  //of for
+
+  finally
     List.Free;
     reg.Free;
-  end;  //of finally
+  end;  //of try
 end;
 
 { protected TContextList.AddEntry
@@ -2011,67 +2050,73 @@ var
   Hkcr, Temp, Shellex: TStringList;
 
 begin
-  reg := TRegistry.Create(KEY_READ);             //init REG-Object
-  Hkcr := TStringList.Create;                    //init Liste HKCR
-  Temp := TStringList.Create;                    //init Liste zum Suchen
-  Shellex := TStringList.Create;                 //init Liste ShellEx
+  reg := TRegistry.Create(KEY_READ);
+  Hkcr := TStringList.Create;
+  Temp := TStringList.Create;
+  Shellex := TStringList.Create;
 
   try
-    reg.RootKey := HKEY_CLASSES_ROOT;            //Root Key setzen
+    reg.RootKey := HKEY_CLASSES_ROOT;
 
-    if not reg.KeyExists('$$$_auto_file') then   //falls "Dummy Eintrag" nicht existiert...
-       reg.CreateKey('$$$_auto_file');           //erstellen, um Bug zu vermeiden
+    // Bad workaround to prevent an annoying bug of TRegistry
+    if not reg.KeyExists('$$$_auto_file') then
+       reg.CreateKey('$$$_auto_file');
 
-    reg.OpenKey('', False);                      //Key öffnen
-    reg.GetKeyNames(Hkcr);                       //alle Einträge im Key auslesen
-    FCountMax := Hkcr.Count;                     //Max auf Anzahl der Schlüssel
-    FWorkCountMax(Self, FCountMax);              //"Beginn der Suche" melden
-    FProgress := 0;                              //Progress-Bar Status-Reset
+    // Read out all keys
+    reg.OpenKey('', False);
+    reg.GetKeyNames(Hkcr);
+    FCountMax := Hkcr.Count;
+
+    // Notify start of search
+    FWorkCountMax(Self, FCountMax);
+    FProgress := 0;
 
     for i := 0 to Hkcr.Count -1 do
-      begin
-      Inc(FProgress);                            //Progress-Zähler
-      FWorkCount(Self, FProgress);               //Progress anzeigen
+    begin
+      // Refresh current progress
+      FWorkCount(Self, Inc(FProgress));
 
       reg.CloseKey;
-      reg.OpenKey(Hkcr[i], False);               //Key öffnen
+      reg.OpenKey(Hkcr[i], False);
 
-      if reg.HasSubKeys then                     //existiert Unterschlüssel?
-         begin
-         Temp.Clear;
-         reg.GetKeyNames(Temp);
+      if reg.HasSubKeys then
+      begin
+        Temp.Clear;
+        reg.GetKeyNames(Temp);
 
-         for j := 0 to Temp.Count -1 do
-           if ((Temp[j] = 'shellex') or (Temp[j] = 'ShellEx')) then
-              begin
-              reg.CloseKey;
-              reg.OpenKey(Hkcr[i] +'\'+ Temp[j], False); //Key öffnen
+        for j := 0 to Temp.Count -1 do
+          if ((Temp[j] = 'shellex') or (Temp[j] = 'ShellEx')) then
+          begin
+            reg.CloseKey;
+            reg.OpenKey(Hkcr[i] +'\'+ Temp[j], False);
 
-              if reg.HasSubKeys then             //existiert Unterschlüssel?
-                 begin
-                 Shellex.Clear;
-                 reg.GetKeyNames(Shellex);
+            if reg.HasSubKeys then
+            begin
+              Shellex.Clear;
+              reg.GetKeyNames(Shellex);
 
-                 for k := 0 to Shellex.Count -1 do
-                   if (Shellex[k] = 'ContextMenuHandlers') then
-                      begin
-                      reg.CloseKey;
-                      reg.OpenKey(Hkcr[i] +'\'+ Temp[j] +'\'+ Shellex[k], False);
+              for k := 0 to Shellex.Count -1 do
+                if (Shellex[k] = 'ContextMenuHandlers') then
+                begin
+                  reg.CloseKey;
+                  reg.OpenKey(Hkcr[i] +'\'+ Temp[j] +'\'+ Shellex[k], False);
 
-                      if reg.HasSubKeys then     //existiert Unterschlüssel...
-                         AddEntry(Hkcr[i]);      //dann Eintrag gefunden und hinzufügen
-                      end;  //of for
-                 end;  //of begin
-              end;  //of for
-         end;  //of begin
-      end;  //of for
+                  if reg.HasSubKeys then
+                    AddEntry(Hkcr[i]);
+                end;  //of for
+            end;  //of begin
+          end;  //of for
+      end;  //of begin
+    end;  //of for
 
   finally
     Temp.Free;
     Hkcr.Free;
     Shellex.Free;
     reg.Free;
-    FContextCount(Self);                         //"Ende der Suche" melden
+
+    // Notify end of search
+    FContextCount(Self);
   end;  //of finally
 end;
 

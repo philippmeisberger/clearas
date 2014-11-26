@@ -75,7 +75,7 @@ type
     destructor Destroy; override;
     procedure AddRemove(ASectionName, AKey, AValue: string);
     function AddSection(AHKey: HKEY; AKeyPath: string): Boolean; reintroduce;
-    function DeletePathDelimiter(AText: string): string;
+    function DeletePathDelimiter(APath: string): string;
     function DeleteQuoteChars(AText: string): string;
     function EscapePathDelimiter(APath: string): string;
     procedure ExportKey(AHKey: HKEY; AKeyPath: string; ARecursive: Boolean);
@@ -717,12 +717,12 @@ end;
 
  Deletes escape chars from a string. }
 
-function TRegistryFile.DeletePathDelimiter(AText: string): string;
+function TRegistryFile.DeletePathDelimiter(APath: string): string;
 begin
   if ((Length(APath) > 0) and (APath[1] = '\')) then
-    result := StringReplace(EscapedPath, '\"', '"', [rfReplaceAll]);
+    result := StringReplace(APath, '\"', '"', [rfReplaceAll]);
 
-  result := StringReplace(AText, '\\', '\', [rfReplaceAll]);
+  result := StringReplace(APath, '\\', '\', [rfReplaceAll]);
 end;
 { public TRegistryFile.DeleteQuoteChars
 
@@ -740,7 +740,7 @@ end;
 function TRegistryFile.EscapePathDelimiter(APath: string): string;
 begin
   if ((Length(APath) > 0) and (APath[1] = '"')) then
-    result := StringReplace(EscapedPath, '"', '\"', [rfReplaceAll]);
+    result := StringReplace(APath, '"', '\"', [rfReplaceAll]);
 
   result := StringReplace(APath, '\', '\\', [rfReplaceAll]);
 end;
