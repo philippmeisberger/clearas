@@ -149,8 +149,8 @@ type
     procedure EditPath(APath: string);
     procedure GetContext;
     procedure GetStartups(AGetNewData: Boolean = true);
-    procedure OnSearchProgress(Sender: TObject; AWorkCount: integer);
-    procedure OnSearchStart(Sender: TObject; AWorkCountMax: integer);
+    procedure OnSearchProgress(Sender: TObject; AWorkCount: Cardinal);
+    procedure OnSearchStart(Sender: TObject; AWorkCountMax: Cardinal);
     procedure OnSearchEnd(Sender: TObject);
     procedure RegExport;
     procedure SetLanguage(Sender: TObject);
@@ -435,13 +435,13 @@ begin
 end;
 
 { Thread Events }
-procedure TMain.OnSearchProgress(Sender: TObject; AWorkCount: integer);
+procedure TMain.OnSearchProgress(Sender: TObject; AWorkCount: Cardinal);
 begin
   pbLoad.Position := AWorkCount;                //ProgressBar Position
 end;
 
 
-procedure TMain.OnSearchStart(Sender: TObject; AWorkCountMax: integer);
+procedure TMain.OnSearchStart(Sender: TObject; AWorkCountMax: Cardinal);
 begin
   pbLoad.Max := AWorkCountMax;                  //ProgressBar Ende
 end;
@@ -477,9 +477,9 @@ begin
   try
     if SaveDialog.Execute then                      //"speichern" Klick
        if (FTab = tsStartup) then
-          Startup.ExportItem(SaveDialog.FileName)   //"Speichern"
+          Startup.Item.ExportItem(SaveDialog.FileName)   //"Speichern"
        else
-          Context.ExportItem(SaveDialog.FileName);  //"Speichern"
+          Context.Item.ExportItem(SaveDialog.FileName);  //"Speichern"
 
   finally
     SaveDialog.Free;
@@ -1191,7 +1191,7 @@ end;
 
 procedure TMain.mmContextClick(Sender: TObject);          //Kontextmenü-Eintrag
 begin
-  mmContext.Checked := TClearas.RegisterInContextMenu(mmContext.Checked, FLang);
+  mmContext.Checked := TClearas.RegisterInContextMenu(mmContext.Checked);
 end;
 
 

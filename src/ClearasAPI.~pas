@@ -16,17 +16,13 @@ uses
 
 const
   { Registry Keys }
-  KEY_RECYCLEBIN = 'CLSID\{645FF040-5081-101B-9F08-00AA002F954E}\shell';
-  KEY_STARTUP = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Run';
-  KEY_STARTUP32 = 'SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Run';
-  KEY_RUNONCE = 'SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce';
+  KEY_CONTEXTMENU = '\shellex\ContextMenuHandlers';
   KEY_DEACT = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\startupreg\';
   KEY_DEACT_FOLDER = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\startupfolder\';
-  KEY_CONTEXTMENU = '\shellex\ContextMenuHandlers';
-
-  { URL }
-  URL_BASE = 'http://www.pm-codeworks.de/';
-  URL_CONTACT = URL_BASE +'kontakt.html';
+  KEY_RECYCLEBIN = 'CLSID\{645FF040-5081-101B-9F08-00AA002F954E}\shell';
+  KEY_RUNONCE = 'SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce';
+  KEY_STARTUP = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Run';
+  KEY_STARTUP32 = 'SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Run';
 
   { Extensions von Backup-Dateien }
   EXT_COMMON = '.CommonStartup';
@@ -48,8 +44,9 @@ type
     class function GetKeyValue(AMainKey, AKeyPath, AValueName: string): string;
     class function GetStartUpDir(AAllUsers: Boolean): string;
     class function ReadLnkFile(const ALnkFileName: string; out APath: string): Boolean;
-    class function RegisterInContextMenu(ACheck: Boolean; ALangFile: TLanguageFile): Boolean;
-    class function UpdateContextPath(ALangFile: TLanguageFile): Boolean;
+    class function RegisterInContextMenu(ACheck: Boolean): Boolean;
+    class function UpdateContextPath(): Boolean; overload;
+    class function UpdateContextPath(ALangFile: TLanguageFile): Boolean; overload; deprecated;
     class procedure WriteStrValue(AMainKey, AKeyName, AName, AValue: string);
   end;
 
@@ -223,16 +220,14 @@ type
     function Enable(): Boolean; override;
   end;
 
-  { Search events }
-  TOnSearchBeginEvent = procedure(Sender: TObject; AWorkCountMax: Integer) of object;
-  TOnSearchEvent = procedure(Sender: TObject; AWorkCount: Integer) of object;
+  { Search event }
+  TOnSearchEvent = procedure(Sender: TObject; ACount: Cardinal) of object;
 
   { TContextList }
   TContextList = class(TRootList)
   private
     FItem: TContextListItem;
-    FWorkCount: TOnSearchEvent;
-    FWorkCountMax: TOnSearchBeginEvent;
+    FWorkCount, FWorkCountMax: TOnSearchEvent;
     FContextCount: TNotifyEvent;
     function Add(AItem: TContextListItem): Word; virtual;
     function FindDouble(AName, AKeyName: string): Boolean;
@@ -256,7 +251,7 @@ type
     property Items[AIndex: Word]: TContextListItem read GetItem; default;
     property Item: TContextListItem read FItem write FItem;
     property OnSearch: TOnSearchEvent read FWorkCount write FWorkCount;
-    property OnSearchBegin: TOnSearchBeginEvent read FWorkCountMax write FWorkCountMax;
+    property OnSearchBegin: TOnSearchEvent read FWorkCountMax write FWorkCountMax;
     property OnSearchEnd: TNotifyEvent read FContextCount write FContextCount;
   end;
 
@@ -470,52 +465,47 @@ end;
 
 { public TClearas.RegisterInContextMenu
 
-  Registers "Open Clearas" in recycle bin context menu. }
+  Adds or deletes "Clearas" in recycle bin context menu. }
 
-class function TClearas.RegisterInContextMenu(ACheck: Boolean;
-  ALangFile: TLanguageFile): Boolean;
+class function TClearas.RegisterInContextMenu(ACheck: Boolean): Boolean;
+begin
+  // Checkbox checked?
+  if ACheck then
+    // Remove recycle bin context menu entry
+    result := DeleteKey('HKCR', KEY_RECYCLEBIN, 'Clearas')
+  else
+    begin
+      // Add recycle bin context menu entry
+      WriteStrValue('HKCR', KEY_RECYCLEBIN +'\Clearas\command', '', ParamStr(0));
+      result := True;
+    end;  //of begin
+end;
+
+{ public TClearas.UpdateContextPath
+
+  Updates "Open Clearas" in recycle bin context menu. }
+
+class function TClearas.UpdateContextPath(): Boolean;
 var
   reg: TRegistry;
 
 begin
   reg := TRegistry.Create(DenyWOW64Redirection(KEY_WRITE));
   reg.RootKey := HKEY_CLASSES_ROOT;
-  reg.OpenKey(KEY_RECYCLEBIN, False);
 
-  if not ACheck then
-  begin
-    try
-      with reg do
-      begin
-        CreateKey(ALangFile.GetString(71));
-        CloseKey;
-        OpenKey(KEY_RECYCLEBIN +'\'+ ALangFile.GetString(71), True);
-        CreateKey('command');
-        CloseKey;
-        OpenKey(KEY_RECYCLEBIN + ALangFile.GetString(72), True);
-        WriteString('', ParamStr(0));
-        CloseKey;
-      end;  //of with
-
-      result := True;
-
-    except
-      result := False;
-    end;  //of try
-  end  //of begin
-  else
+  try
+    // Only update if context menu entry exists
+    if reg.OpenKey(KEY_RECYCLEBIN +'\Clearas\command', False) then
     begin
-      try
-        reg.DeleteKey(ALangFile.GetString(71));
-        reg.CloseKey;
-        result := False;
+      reg.WriteString('', ParamStr(0));
+      result := True;
+    end  //of begin
+    else
+      result := False;
 
-      except
-        result := True;
-      end;  //of try
-    end;  //of if
-
-  reg.Free;
+  finally
+    reg.Free;
+  end;  //of try
 end;
 
 { public TClearas.UpdateContextPath
@@ -536,10 +526,16 @@ begin
     // Only update if context menu entry exists
     if (reg.KeyExists(ALangFile.GetString(71))) then
     begin
-      reg.CloseKey;
-      reg.OpenKey(KEY_RECYCLEBIN + ALangFile.GetString(72), False);
-      reg.WriteString('', ParamStr(0));
-      result := True;
+      // Delete old context menu key
+      if not reg.DeleteKey(ALangFile.GetString(71)) then
+        raise Exception.Create('Could not delete key: '+ ALangFile.GetString(71));
+
+      // Create new context menu key
+      if reg.OpenKey(KEY_RECYCLEBIN +'\Clearas\command', True) then
+      begin
+        reg.WriteString('', ParamStr(0));
+        result := True;
+      end;  //of begin
     end  //of begin
     else
       result := False;
@@ -1519,7 +1515,7 @@ begin
       result := True;
     end  //of begin
     else
-      raise EStartupException.Create('.lnk file could not be created!');
+      raise EStartupException.Create('Could not create .lnk file!');
 
   except
     result := False;
