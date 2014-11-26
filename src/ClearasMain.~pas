@@ -234,7 +234,7 @@ begin
   mmDate.Enabled := newWindows;
 
   //Pfad in Kontextmenü aktualisieren
-  mmContext.Checked := TClearas.UpdateContextPath;
+  mmContext.Checked := TClearas.UpdateContextPath(FLang);
 
   // Auslesen
   GetStartups;
@@ -267,7 +267,7 @@ begin
     if (MessageBox(Format(GetString(21) +^J+ GetString(22), [ANewBuild]),
       mtQuestion, True) = IDYES) then
       with TUpdate.Create(Self, FLang, FLang.GetString(24)) do
-        Download('sit.exe', 'SIT.exe')
+        Download('clearas.exe', 'Clearas.exe')
     else
       mmUpdate.Caption := FLang.GetString(24);
 end;
@@ -385,7 +385,7 @@ begin
     for i := 0 to Context.Count -1 do                //Kontextmenüs ausgeben
       with lwContext.Items.Add do
         begin
-        Caption := Context[i].GetStatus;
+        Caption := Context[i].GetStatus(FLang);
         SubItems.Append(Context[i].Name);
         SubItems.Append(Context[i].Location);
         SubItems.Append(Context[i].TypeOf);
@@ -415,7 +415,7 @@ begin
     for i := 0 to Startup.Count -1 do            //Autostart-Programme ausgeben
       with lwList.Items.Add do
         begin
-        Caption := Startup[i].GetStatus;
+        Caption := Startup[i].GetStatus(FLang);
         SubItems.Append(Startup[i].Name);
         SubItems.Append(Startup[i].FilePath);
         SubItems.Append(Startup[i].TypeOf);
@@ -644,7 +644,7 @@ procedure TMain.bActivateClick(Sender: TObject);
 begin
   if Startup.ChangeItemStatus() then                       //aktivieren + auf Fehler prüfen
   begin
-    lwList.ItemFocused.Caption := Startup.Item.GetStatus; //optisch "Aktiviert" setzen
+    lwList.ItemFocused.Caption := Startup.Item.GetStatus(FLang); //optisch "Aktiviert" setzen
     ButtonHandle;                                         //"aktivieren"-Button deaktivieren
     bExport.Enabled := not Startup.BackupExists;
 
@@ -660,7 +660,7 @@ procedure TMain.bActContextClick(Sender: TObject);        //Kontextmenü-Eintrag
 begin                                                      //aktivieren
   if Context.ChangeItemStatus() then
   begin
-    lwContext.ItemFocused.Caption := Context.Item.GetStatus;
+    lwContext.ItemFocused.Caption := Context.Item.GetStatus(FLang);
     ButtonHandle;
   end  //of begin
   else
@@ -672,7 +672,7 @@ procedure TMain.bDeactivateClick(Sender: TObject);
 begin
   if Startup.ChangeItemStatus() then                        //Deaktivieren!
   begin
-    lwList.ItemFocused.Caption := Startup.Item.GetStatus;  //optisch "Deaktiviert" setzen
+    lwList.ItemFocused.Caption := Startup.Item.GetStatus(FLang);  //optisch "Deaktiviert" setzen
     ButtonHandle;                                          //"deaktivieren"-Button deaktivieren
 
     if mmDate.Checked then                                 //Deaktivierungsdatum verfügbar
@@ -690,7 +690,7 @@ procedure TMain.bDeactContextClick(Sender: TObject);      //Kontextmenü-Eintrag
 begin                                                      //deaktivieren
   if Context.ChangeItemStatus() then
   begin
-    lwContext.ItemFocused.Caption := Context.Item.GetStatus;
+    lwContext.ItemFocused.Caption := Context.Item.GetStatus(FLang);
     ButtonHandle;
   end  //of begin
   else
@@ -984,9 +984,9 @@ var
 
 begin
   if (FTab = tsStartup) then
-    Startup.Item.GetItemInfo(Name, Path)
+    Startup.Item.GetItemInfo(Name, Path, FLang)
   else
-    Context.Item.GetItemInfo(Name, Path);
+    Context.Item.GetItemInfo(Name, Path, FLang);
 
   FLang.MessageBox(Name +^J+ Path);
 end;
@@ -1085,7 +1085,7 @@ begin
 
               if (Startup.IndexOf(Name) = -1) then                      //existiert Programm?
                  try
-                   WriteStrValue('HKCU', STARTUP_KEY, Name, OpenDialog.FileName +' '+ Params);
+                   WriteStrValue('HKCU', KEY_STARTUP, Name, OpenDialog.FileName +' '+ Params);
                    GetStartups;
 
                  except
@@ -1125,7 +1125,7 @@ begin
   with OpenDialog do
     begin
     InitialDir := TClearas.GetWinDir +'\pss';               //Zeiger auf Dir
-    Filter := FLang.GetString(39) +' *'+ COMMON_EXT +'|*'+ COMMON_EXT;
+    Filter := FLang.GetString(39) +' *'+ EXT_COMMON +'|*'+ EXT_COMMON;
     Title := FLang.GetString(16);
     end;  //of with
 
@@ -1191,7 +1191,7 @@ end;
 
 procedure TMain.mmContextClick(Sender: TObject);          //Kontextmenü-Eintrag
 begin
-  mmContext.Checked := TClearas.RegisterInContextMenu(mmContext.Checked);
+  mmContext.Checked := TClearas.RegisterInContextMenu(mmContext.Checked, FLang);
 end;
 
 

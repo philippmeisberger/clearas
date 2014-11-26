@@ -24,10 +24,6 @@ const
   KEY_DEACT_FOLDER = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\startupfolder\';
   KEY_CONTEXTMENU = '\shellex\ContextMenuHandlers';
 
-  { URL }
-  URL_BASE = 'http://www.pm-codeworks.de/';
-  URL_CONTACT = URL_BASE +'kontakt.html';
-
   { Extensions von Backup-Dateien }
   EXT_COMMON = '.CommonStartup';
   EXT_USER = '.Startup';
@@ -185,7 +181,7 @@ type
     property Item: TStartupListItem read FItem write FItem;
   end;
 
-  { class alias }
+  { Alias class }
   TAutostart = TStartupList;
 
   { Exception class }
@@ -226,16 +222,14 @@ type
   { Search events }
   TOnSearchBeginEvent = procedure(Sender: TObject; AWorkCountMax: Integer) of object;
   TOnSearchEvent = procedure(Sender: TObject; AWorkCount: Integer) of object;
-  TOnSearchEndEvent = procedure(Sender: TObject) of object;
 
   { TContextList }
   TContextList = class(TRootList)
   private
     FItem: TContextListItem;
-    FCountMax, FProgress: Integer;
     FWorkCount: TOnSearchEvent;
     FWorkCountMax: TOnSearchBeginEvent;
-    FContextCount: TOnSearchEndEvent;
+    FContextCount: TNotifyEvent;
     function Add(AItem: TContextListItem): Word; virtual;
     function FindDouble(AName, AKeyName: string): Boolean;
     function GetItem(AIndex: Word): TContextListItem;
@@ -259,7 +253,7 @@ type
     property Item: TContextListItem read FItem write FItem;
     property OnSearch: TOnSearchEvent read FWorkCount write FWorkCount;
     property OnSearchBegin: TOnSearchBeginEvent read FWorkCountMax write FWorkCountMax;
-    property OnSearchEnd: TOnSearchEndEvent read FContextCount write FContextCount;
+    property OnSearchEnd: TNotifyEvent read FContextCount write FContextCount;
   end;
 
 implementation
@@ -275,7 +269,7 @@ var
   reg: TRegistry;
 
 begin
-  reg := TRegistry.Create(SetKeyAccessMode);
+  reg := TRegistry.Create(DenyWOW64Redirection(KEY_WRITE));
 
   try
     reg.RootKey := StrToHKey(AMainKey);
@@ -296,7 +290,7 @@ var
   reg: TRegistry;
 
 begin
-  reg := TRegistry.Create(SetKeyAccessMode);
+  reg := TRegistry.Create(DenyWOW64Redirection(KEY_WRITE));
 
   try
     reg.RootKey := StrToHKey(AMainKey);
@@ -390,7 +384,7 @@ var
   reg: TRegistry;
 
 begin
-  reg := TRegistry.Create(SetKeyAccessMode);
+  reg := TRegistry.Create(DenyWOW64Redirection(KEY_READ));
 
   try
     reg.RootKey := StrToHKey(AMainKey);
@@ -480,7 +474,7 @@ var
   reg: TRegistry;
 
 begin
-  reg := TRegistry.Create(SetKeyAccessMode);
+  reg := TRegistry.Create(DenyWOW64Redirection(KEY_WRITE));
   reg.RootKey := HKEY_CLASSES_ROOT;
   reg.OpenKey(KEY_RECYCLEBIN, False);
 
@@ -529,7 +523,7 @@ var
   reg: TRegistry;
 
 begin
-  reg := TRegistry.Create(SetKeyAccessMode);
+  reg := TRegistry.Create(DenyWOW64Redirection(KEY_ALL_ACCESS));
   reg.RootKey := HKEY_CLASSES_ROOT;
 
   try
@@ -663,7 +657,7 @@ end;
 
 { TStartupListItem }
 
-{ public TStartupListItem.GetTime
+{ private TStartupListItem.GetTime
 
   Returns the deactivation time stamp. }
 
@@ -707,9 +701,9 @@ begin
   end;  //of try
 end;
 
-{ public TStartupListItem.WriteTime
+{ private TStartupListItem.WriteTime
 
-  Writes the deactivation time stamp. }
+  Writes the deactivation timestamp. }
 
 procedure TStartupListItem.WriteTime(const AKeyPath: string);
 var
@@ -756,6 +750,25 @@ begin
       E.Message := 'Error while writing deactivation time to "'+ AKeyPath +'": '+ E.Message;
       raise;
     end;  //of begin
+  end;  //of try
+end;
+
+{ public TStartupListItem.ExportItem
+
+  Exports an list item as .reg or .ini. }
+
+procedure TStartupListItem.ExportItem(const AFileName: string);
+var
+  RegFile: TRegistryFile;
+
+begin
+  RegFile := TRegistryFile.Create(AFileName);
+
+  try
+    RegFile.ExportReg(StrToHKey(FRootKey), FKeyPath, False);
+
+  finally
+    RegFile.Free;
   end;  //of try
 end;
 
@@ -980,7 +993,7 @@ var
   Path, KeyName, PssDir, BackupLnk: string;
 
 begin
-  reg := TRegistry.Create(DenyWOW64Redirection(WRITE_KEY));
+  reg := TRegistry.Create(DenyWOW64Redirection(KEY_WRITE));
 
   try
     try
@@ -1710,7 +1723,7 @@ procedure TStartupList.Load(ARunOnce: Boolean);
 begin
   AddEnabled('HKLM', KEY_STARTUP);
 
-  if TOSUtils.IsWindows64() then
+  if TClearas.IsWindows64() then
     AddEnabled('HKLM', KEY_STARTUP32);
 
   // Read RunOnce entries?
@@ -1749,6 +1762,25 @@ begin
       E.Message := 'Error while deleting "'+ FName +'": '+ E.Message;
       raise;
     end;  //of begin
+  end;  //of try
+end;
+
+{ public TContextListItem.ExportItem
+
+  Exports an list item as .reg or .ini. }
+
+procedure TContextListItem.ExportItem(const AFileName: string);
+var
+  RegFile: TRegistryFile;
+
+begin
+  RegFile := TRegistryFile.Create(AFileName);
+
+  try
+    RegFile.ExportReg(HKEY_CLASSES_ROOT, GetKeyPath(), True);
+
+  finally
+    RegFile.Free;
   end;  //of try
 end;
 
@@ -1912,9 +1944,8 @@ function TContextList.FindDouble(AName, AKeyName: string): Boolean;
 begin
   result := False;
 
-  if (Count > 0) then
-     if (IndexOf(AName) <> -1) then
-        result := GetItem(IndexOf(AName)).TypeOf = AKeyName;
+  if ((Count > 0) and (IndexOf(AName) <> -1)) then
+    result := (GetItem(IndexOf(AName)).TypeOf = AKeyName);
 end;
 
 { private TContextList.GetItem
@@ -1944,7 +1975,7 @@ begin
     FType := 'Shell';
 
     if AEnabled then
-       Inc(FActCount);
+      Inc(FActCount);
   end;  //of with
 
   result := Add(Item);
@@ -1968,7 +1999,7 @@ begin
     FType := 'ShellEx';
 
     if AEnabled then
-       Inc(FActCount);
+      Inc(FActCount);
   end;  //of with
 
   result := Add(Item);
@@ -2048,9 +2079,10 @@ var
   reg: TRegistry;
   i, j, k: integer;
   Hkcr, Temp, Shellex: TStringList;
+  Progress, CountMax: Cardinal;
 
 begin
-  reg := TRegistry.Create(KEY_READ);
+  reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));
   Hkcr := TStringList.Create;
   Temp := TStringList.Create;
   Shellex := TStringList.Create;
@@ -2060,21 +2092,25 @@ begin
 
     // Bad workaround to prevent an annoying bug of TRegistry
     if not reg.KeyExists('$$$_auto_file') then
-       reg.CreateKey('$$$_auto_file');
+      reg.CreateKey('$$$_auto_file');
 
     // Read out all keys
     reg.OpenKey('', False);
     reg.GetKeyNames(Hkcr);
-    FCountMax := Hkcr.Count;
+    CountMax := Hkcr.Count;
 
     // Notify start of search
-    FWorkCountMax(Self, FCountMax);
-    FProgress := 0;
+    FWorkCountMax(Self, CountMax);
+    Progress := 0;
 
     for i := 0 to Hkcr.Count -1 do
     begin
       // Refresh current progress
-      FWorkCount(Self, Inc(FProgress));
+      if Assigned(FContextCount) then
+      begin
+        Inc(Progress);
+        FWorkCount(Self, Progress);
+      end;  //of begin
 
       reg.CloseKey;
       reg.OpenKey(Hkcr[i], False);
@@ -2116,7 +2152,8 @@ begin
     reg.Free;
 
     // Notify end of search
-    FContextCount(Self);
+    if Assigned(FContextCount) then
+      FContextCount(Self);
   end;  //of finally
 end;
 

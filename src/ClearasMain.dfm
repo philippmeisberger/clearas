@@ -329,7 +329,7 @@ object Main: TMain
         Width = 21
         Height = 14
         Anchors = [akTop, akRight]
-        Caption = 'v3.0'
+        Caption = 'v3.1'
       end
       object lWindows: TLabel
         Left = 21
@@ -478,7 +478,7 @@ object Main: TMain
         Width = 21
         Height = 14
         Anchors = [akTop, akRight]
-        Caption = 'v3.0'
+        Caption = 'v3.1'
       end
       object lWindows2: TLabel
         Left = 21

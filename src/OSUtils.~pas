@@ -32,8 +32,7 @@ type
   { TWinWOW64 }
   TWinWOW64 = class(TObject)
   protected
-    class function DisableWow64FsRedirection(): Boolean;
-    class function RevertWow64FsRedirection(): Boolean;
+    class function ChangeFSRedirection(AAccess: Boolean): Boolean;            //not by me
     class function SetKeyAccessMode(): Cardinal; deprecated;
   public
     class function DenyWOW64Redirection(AAccessRight: Cardinal): Cardinal;
@@ -82,58 +81,49 @@ implementation
 {$IFDEF MSWINDOWS}
 { TWinWOW64 }
 
-{ protected TWinWOW64.DisableWow64FsRedirection
+{ protected TWinWOW64.ChangeFSRedirection
 
-  Disables the WOW64 redirection on 64bit Windows. }
+  Forces enabling or disabling WOW64 redirection on 64bit Windows. }
 
-class function TWinWOW64.DisableWow64FsRedirection(): Boolean;
+class function TWinWOW64.ChangeFSRedirection(AAccess: Boolean): Boolean;
 type
-  TWow64DisableWow64FsRedirection = function(out OldValue: Pointer): BOOL; stdcall;
+  TWow64DisableWow64FsRedirection = function(var Wow64FsEnableRedirection: LongBool): LongBool; stdcall;
+  TWow64EnableWow64FsRedirection = function(var Wow64FsEnableRedirection: LongBool): LongBool; stdcall;
 
 var
   LibraryHandle: HMODULE;
   Wow64DisableWow64FsRedirection: TWow64DisableWow64FsRedirection;
-  OldValue: Pointer;
+  Wow64EnableWow64FsRedirection: TWow64EnableWow64FsRedirection;
+  Wow64FsEnableRedirection: LongBool;
 
 begin
   result := False;
+
+  // WOW64 only available on 64bit Windows
+  if not IsWindows64 then
+    Exit;
+
   LibraryHandle := GetModuleHandle(kernel32);
 
-  if (LibraryHandle <> 0) then
-  begin
-    Wow64DisableWow64FsRedirection := GetProcAddress(LibraryHandle, 'Wow64DisableWow64FsRedirection');
+  try
 
-    // Loading of Wow64DisableWow64FsRedirection successful?
-    if Assigned(Wow64DisableWow64FsRedirection) then
-      result := Wow64DisableWow64FsRedirection(OldValue);
-  end;  //of begin
-end;
+    @Wow64EnableWow64FsRedirection := GetProcAddress(hHandle, 'Wow64EnableWow64FsRedirection');
+    @Wow64DisableWow64FsRedirection := GetProcAddress(hHandle, 'Wow64DisableWow64FsRedirection');
 
-{ protected TWinWOW64.RevertWow64FsRedirection
+    if AAccess then
+    begin
+      if ((hHandle <> 0) and (@Wow64EnableWow64FsRedirection <> nil) and
+        (@Wow64DisableWow64FsRedirection <> nil)) then
+        Wow64DisableWow64FsRedirection(Wow64FsEnableRedirection);
+    end
+    else
+      if ((hHandle <> 0) and (@Wow64EnableWow64FsRedirection <> nil) and
+        (@Wow64DisableWow64FsRedirection <> nil)) then
+        Wow64EnableWow64FsRedirection(Wow64FsEnableRedirection);
 
-  Restores the WOW64 redirection on 64bit Windows. }
-
-class function TWinWOW64.RevertWow64FsRedirection(): Boolean;
-type
-  TWow64RevertWow64FsRedirection = function(out OldValue: Pointer): BOOL; stdcall;
-
-var
-  LibraryHandle: HMODULE;
-  Wow64RevertWow64FsRedirection: TWow64RevertWow64FsRedirection;
-  OldValue: Pointer;
-
-begin
-  result := False;
-  LibraryHandle := GetModuleHandle(kernel32);
-
-  if (LibraryHandle <> 0) then
-  begin
-    Wow64RevertWow64FsRedirection := GetProcAddress(LibraryHandle, 'Wow64RevertWow64FsRedirection');
-
-    // Loading of Wow64RevertWow64FsRedirection successful?
-    if Assigned(Wow64RevertWow64FsRedirection) then
-      result := Wow64RevertWow64FsRedirection(OldValue);
-  end;  //of begin
+  except
+    result := False;
+  end;  //of try
 end;
 
 { public TWinWOW64.IsWindows64
