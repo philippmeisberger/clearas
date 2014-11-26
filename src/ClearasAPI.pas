@@ -16,30 +16,29 @@ uses
 
 const
   { Registry Keys }
-  RECYCLEBIN_KEY = 'CLSID\{645FF040-5081-101B-9F08-00AA002F954E}\shell';
-  STARTUP_KEY = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Run';
-  STARTUP_KEY32 = 'SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Run';
-  RUNONCE_KEY = 'SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce';
-  DEACT_KEY = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\startupreg\';
-  DEACT_FOLDER = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\startupfolder\';
-  CONTEXTMENU_KEY = '\shellex\ContextMenuHandlers';
+  KEY_RECYCLEBIN = 'CLSID\{645FF040-5081-101B-9F08-00AA002F954E}\shell';
+  KEY_STARTUP = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Run';
+  KEY_STARTUP32 = 'SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Run';
+  KEY_RUNONCE = 'SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce';
+  KEY_DEACT = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\startupreg\';
+  KEY_DEACT_FOLDER = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\startupfolder\';
+  KEY_CONTEXTMENU = '\shellex\ContextMenuHandlers';
 
   { URL }
   URL_BASE = 'http://www.pm-codeworks.de/';
   URL_CONTACT = URL_BASE +'kontakt.html';
 
   { Extensions von Backup-Dateien }
-  COMMON_EXT = '.CommonStartup';
-  USER_EXT = '.Startup';
+  EXT_COMMON = '.CommonStartup';
+  EXT_USER = '.Startup';
 
-  COMMON_TYPE = 'Common Startup';
-  USER_TYPE = 'Startup User';
+  TYPE_COMMON = 'Common Startup';
+  TYPE_USER = 'Startup User';
 
 type
   { TClearas }
   TClearas = class(TOSUtils)
   protected
-    class function AddPathDelimiter(APath: string): string;
     class function DeleteKey(AMainKey, AKeyPath, AKeyName: string): Boolean;
     class function DeleteValue(AMainKey, AKeyName, AValueName: string): Boolean;
   public
@@ -264,165 +263,181 @@ implementation
 
 { TClearas }
 
-class function TClearas.AddPathDelimiter(APath: string): string;   //2.Backslash einfügen
-var
-  fullpath: string;
+{ public TClearas.DeleteKey
 
-begin
-  if (APath <> '') then
-     if (APath[1] = '"') then
-        begin
-        fullpath := StringReplace(APath, '\', '\\', [rfReplaceAll]);
-        APath := StringReplace(fullpath, '"', '\"', [rfReplaceAll]);
-        result := '"'+ APath +'"';
-        end  //of begin
-     else
-        result := StringReplace('"'+ APath +'"', '\', '\\', [rfReplaceAll])
-  else
-     result := '""';
-end;
-
+  Deletes a Registry key. }
 
 class function TClearas.DeleteKey(AMainKey, AKeyPath, AKeyName: string): Boolean;
 var
   reg: TRegistry;
 
 begin
-  reg := TRegistry.Create(SetKeyAccessMode);      //init von reg mit setzen der Rechte
+  reg := TRegistry.Create(SetKeyAccessMode);
 
   try
-    reg.RootKey := StrToHKey(AMainKey);           //HKEY öffnen
-    reg.OpenKey(AKeyPath, false);                 //SubKey öffnen
-    result := reg.DeleteKey(AKeyName);            //Key löschen und ggf. Fehlererkennung
+    reg.RootKey := StrToHKey(AMainKey);
+    reg.OpenKey(AKeyPath, False);
+    result := reg.DeleteKey(AKeyName);
 
-  finally                                         //freigeben
+  finally
     reg.Free;
-  end;  //of finally
+  end;  //of try
 end;
 
+{ public TClearas.DeleteValue
+
+  Deletes a Registry value. }
 
 class function TClearas.DeleteValue(AMainKey, AKeyName, AValueName: string): Boolean;
 var
   reg: TRegistry;
 
 begin
-  reg := TRegistry.Create(SetKeyAccessMode);      //init von reg mit setzen der Rechte
+  reg := TRegistry.Create(SetKeyAccessMode);
 
   try
-    reg.RootKey := StrToHKey(AMainKey);           //HKEY öffnen
-    reg.OpenKey(AKeyName, false);                 //SubKey öffnen
-    result := reg.DeleteValue(AValueName);        //Wert löschen
+    reg.RootKey := StrToHKey(AMainKey);
+    reg.OpenKey(AKeyName, False);
+    result := reg.DeleteValue(AValueName);
 
-  finally                                         //freigeben
+  finally
     reg.Free;
-  end;  //of finally
+  end;  //of try
 end;
 
+{ public TClearas.CreateLnk
 
-{ public }
+  Creates a new .lnk file. }
+
 class function TClearas.CreateLnk(const AExeFilename, ALinkFilename: string): Boolean;
 var
-  shellLink : IShellLink;
-  persistFile : IPersistFile;
-  name : PWideChar;
+  ShellLink : IShellLink;
+  PersistFile : IPersistFile;
+  Name : PWideChar;
 
 begin
-  result := false;
+  result := False;
 
   if Succeeded(CoCreateInstance(CLSID_ShellLink, nil, CLSCTX_inPROC_SERVER,
-               IID_IShellLinkA, shellLink)) then
-     begin
-     shellLink.SetPath(PChar(AExeFileName));                               //Pfad
-     shellLink.SetWorkingDirectory(PChar(ExtractFilePath(AExeFileName)));  //Verzeichnis
+    IID_IShellLinkA, ShellLink)) then
+  begin
+    // Set path to .exe
+    ShellLink.SetPath(PChar(AExeFileName));
 
-     if Succeeded(shellLink.QueryInterface(IPersistFile, persistFile)) then
-        begin
-        GetMem(name, MAX_PATH*2);
+    // Set working directory
+    ShellLink.SetWorkingDirectory(PChar(ExtractFilePath(AExeFileName)));
 
-          try
-            MultiByteToWideChar(CP_ACP, 0, PChar(ALinkFilename), -1, name, MAX_PATH); //Speicherplatz reservieren
-            persistFile.Save(name, true);     //*.lnk speichern
-            result := true;
+    if Succeeded(ShellLink.QueryInterface(IPersistFile, PersistFile)) then
+    begin
+      GetMem(Name, MAX_PATH * 2);
 
-          finally
-            FreeMem(name, MAX_PATH*2);
-          end; //of finally
-        end; //of begin
-     end; //of begin
+      try
+        // Write information
+        MultiByteToWideChar(CP_ACP, 0, PChar(ALinkFilename), -1, Name, MAX_PATH);
+
+        // Save .lnk
+        PersistFile.Save(Name, True);
+        result := True;
+
+      finally
+        FreeMem(Name, MAX_PATH*2);
+      end; //of finally
+    end; //of begin
+  end; //of begin
 end;
 
+{ public TClearas.DeleteExt
 
-class function TClearas.DeleteExt(AName: string): string;       //Endung löschen
+  Deletes the file extension of a file name. }
+
+class function TClearas.DeleteExt(AName: string): string;
 var
   Index: Integer;
   Ext: string;
 
 begin
-  Ext := ExtractFileExt(AName);                   //Endung
-  Index := Pos(Ext, AName);                       //Index der Endung
+  // Extract extension
+  Ext := ExtractFileExt(AName);
 
-  if (Index <> 0) then                            //Endung gefunden?
-     Delete(AName, Index, Index + Length(Ext)-1); //Endung löschen
+  // Search for given extension
+  Index := Pos(Ext, AName);
+
+  // Extension found?
+  if (Index <> 0) then
+    Delete(AName, Index, Index + Length(Ext)-1);
 
   result := AName;
 end;
 
+{ public TClearas.ExpandHKey
+
+  Converts a short form HKEY string represantation to long form. }
 
 class function TClearas.ExpandHKey(const ARootKey: string): string;
 begin
   result := HKeyToStr(StrToHKey(ARootKey));
 end;
 
+{ public TClearas.GetKeyValue
+
+  Returns a Registry value as string. }
 
 class function TClearas.GetKeyValue(AMainKey, AKeyPath, AValueName: string): string;
 var
   reg: TRegistry;
 
 begin
-  reg := TRegistry.Create(SetKeyAccessMode);    //init von reg mit setzen der Rechte
+  reg := TRegistry.Create(SetKeyAccessMode);
 
   try
-    reg.RootKey := StrToHKey(AMainKey);         //HKEY öffnen
+    reg.RootKey := StrToHKey(AMainKey);
 
-    if reg.OpenKey(AKeyPath, false) then        //SubKey öffnen
-       begin
-       if (reg.ValueExists(AValueName)) then    //existiert Wert?
-          result := reg.ReadString(AValueName)  //...dann Wert auslesen
-       else
-          result := '';                         //sonst Fehler vermeiden
-       end  //of begin
+    if reg.OpenKey(AKeyPath, False) then
+    begin
+      // Only read if value exists
+      if (reg.ValueExists(AValueName)) then
+        result := reg.ReadString(AValueName)
+      else
+        result := '';
+    end  //of begin
     else
-       result := '';
+      result := '';
 
   finally
     reg.Free;
-  end; //of finally
+  end;  //of try
 end;
 
+{ public TClearas.GetStartUpDir
 
-class function TClearas.GetStartUpDir(AAllUsers: Boolean): string; //Autostart Dir ermitteln
+  Returns the file system startup location of current user or all. }
+
+class function TClearas.GetStartUpDir(AAllUsers: Boolean): string;
 var
-  pidl: PItemIDList;
-  path: PChar;
-  folder: Cardinal;
+  ItemIDs: PItemIDList;
+  Path: PChar;
+  Folder: Cardinal;
 
 begin
   if AAllUsers then
-     folder := CSIDL_COMMON_STARTUP
+    folder := CSIDL_COMMON_STARTUP
   else
-     folder := CSIDL_STARTUP;
+    folder := CSIDL_STARTUP;
 
-  if Succeeded(SHGetSpecialFolderLocation(0, folder, pidl)) then  //Autostart Dir
-     begin
-     path := StrAlloc(max_path);
-     SHGetPathFromIDList(pidl, path);
-     result := string(path);
+  if Succeeded(SHGetSpecialFolderLocation(0, Folder, ItemIDs)) then
+  begin
+    Path := StrAlloc(MAX_PATH);
+    SHGetPathFromIDList(ItemIDs, Path);
+    result := string(Path);
 
-     if (result[length(result)] <> '\') then
-        result := result +'\';
-     end;  //of begin
+    if (result[length(result)] <> '\') then
+      result := result +'\';
+  end;  //of begin
 end;
 
+{ public TClearas.GetStartUpDir
+
+  Returns the path of a .exe out of a .lnk file. }
 
 class function TClearas.ReadLnkFile(const ALnkFileName: string; out APath: string): Boolean;
 var
@@ -431,74 +446,80 @@ var
   FileInfo: TWin32FindData;
 
 begin
-  result := false;
+  result := False;
 
   if Succeeded(CoCreateInstance(CLSID_ShellLink, nil, CLSCTX_INPROC_SERVER,
-     IShellLink, ShellLink)) then
-     begin
-     PersistFile := ShellLink as IPersistFile;
+    IShellLink, ShellLink)) then
+  begin
+    PersistFile := ShellLink as IPersistFile;
 
-     if Succeeded(PersistFile.Load(StringToOleStr(ALnkFileName), STGM_READ)) then
-        with ShellLink do
-          begin
-          SetLength(APath, MAX_PATH + 1);
+    if Succeeded(PersistFile.Load(StringToOleStr(ALnkFileName), STGM_READ)) then
+      with ShellLink do
+      begin
+        SetLength(APath, MAX_PATH + 1);
 
-          if Succeeded(GetPath(PChar(APath), MAX_PATH, FileInfo, SLR_ANY_MATCH)) then
-             begin
-             APath := PChar(APath);
-             result := true;
-             end;  //of begin
-          end; //of with
-     end;  //of begin
+        if Succeeded(GetPath(PChar(APath), MAX_PATH, FileInfo, SLR_ANY_MATCH)) then
+        begin
+          APath := PChar(APath);
+          result := True;
+        end;  //of begin
+      end; //of with
+  end;  //of begin
 end;
 
+{ public TClearas.RegisterInContextMenu
+
+  Registers "Open Clearas" in recycle bin context menu. }
 
 class function TClearas.RegisterInContextMenu(ACheck: Boolean;
-  ALangFile: TLanguageFile): Boolean;                       //in Kontextmenü eintragen/austragen
+  ALangFile: TLanguageFile): Boolean;
 var
   reg: TRegistry;
 
 begin
-  reg := TRegistry.Create(SetKeyAccessMode);                //init reg
-  reg.RootKey := HKEY_CLASSES_ROOT;                         //Root Key festlegen
-  reg.OpenKey(RECYCLEBIN_KEY, false);                       //SubKey festlegen
+  reg := TRegistry.Create(SetKeyAccessMode);
+  reg.RootKey := HKEY_CLASSES_ROOT;
+  reg.OpenKey(KEY_RECYCLEBIN, False);
 
   if not ACheck then
-     begin
-       try
-         with reg do
-           begin
-           CreateKey(ALangFile.GetString(71));
-           CloseKey;
-           OpenKey(RECYCLEBIN_KEY +'\'+ ALangFile.GetString(71), true);
-           CreateKey('command');
-           CloseKey;
-           OpenKey(RECYCLEBIN_KEY + ALangFile.GetString(72), true);
-           WriteString('', ParamStr(0));
-           CloseKey;
-           end;  //of with
+  begin
+    try
+      with reg do
+      begin
+        CreateKey(ALangFile.GetString(71));
+        CloseKey;
+        OpenKey(KEY_RECYCLEBIN +'\'+ ALangFile.GetString(71), True);
+        CreateKey('command');
+        CloseKey;
+        OpenKey(KEY_RECYCLEBIN + ALangFile.GetString(72), True);
+        WriteString('', ParamStr(0));
+        CloseKey;
+      end;  //of with
 
-         result := true;
+      result := True;
 
-       except
-         result := false;
-       end;  //of try
-     end  //of begin
+    except
+      result := False;
+    end;  //of try
+  end  //of begin
   else
-     begin
-       try
-         reg.DeleteKey(ALangFile.GetString(71));
-         reg.CloseKey;
-         result := false;
+    begin
+      try
+        reg.DeleteKey(ALangFile.GetString(71));
+        reg.CloseKey;
+        result := False;
 
-       except
-         result := true;
-       end;  //of try
-     end;  //of if
+      except
+        result := True;
+      end;  //of try
+    end;  //of if
 
   reg.Free;
 end;
 
+{ public TClearas.UpdateContextPath
+
+  Updates "Open Clearas" in recycle bin context menu. }
 
 class function TClearas.UpdateContextPath(ALangFile: TLanguageFile): Boolean;
 var
@@ -509,35 +530,39 @@ begin
   reg.RootKey := HKEY_CLASSES_ROOT;
 
   try
-    reg.OpenKey(RECYCLEBIN_KEY, false);
+    reg.OpenKey(KEY_RECYCLEBIN, False);
 
-    if (reg.KeyExists(ALangFile.GetString(71))) then      //Falls Kontextmenü-Eintrag
-       begin                                    //existiert
-       reg.CloseKey;
-       reg.OpenKey(RECYCLEBIN_KEY + ALangFile.GetString(72), false);
-       reg.WriteString('', ParamStr(0));        //aktuellen Pfad speichern
-       result := true;
-       end  //of begin
+    // Only update if context menu entry exists
+    if (reg.KeyExists(ALangFile.GetString(71))) then
+    begin
+      reg.CloseKey;
+      reg.OpenKey(KEY_RECYCLEBIN + ALangFile.GetString(72), False);
+      reg.WriteString('', ParamStr(0));
+      result := True;
+    end  //of begin
     else
-       result := false;
+      result := False;
 
   finally
     reg.Free;
-  end;  //of finally
+  end;  //of try
 end;
 
+{ public TClearas.WriteStrValue
+
+  Writes a string value to Registry }
 
 class procedure TClearas.WriteStrValue(AMainKey, AKeyName, AName, AValue: string);
 var
   reg: TRegistry;
 
 begin
-  reg := TRegistry.Create(SetKeyAccessMode);      //init von reg mit setzen der Rechte
+  reg := TRegistry.Create(SetKeyAccessMode);
 
   try
-    reg.RootKey := StrToHKey(AMainKey);         //HKEY öffnen
-    reg.OpenKey(AKeyName, true);                //SubKey öffnen
-    reg.WriteString(AName, AValue);             //Name + Wert übernehmen
+    reg.RootKey := StrToHKey(AMainKey);
+    reg.OpenKey(AKeyName, True);
+    reg.WriteString(AName, AValue);
     reg.Free;
 
   except
@@ -549,7 +574,6 @@ begin
     end;  //of begin
   end;  //of try
 end;
-{ of TClearas }
 
 
 { TRootItem }
@@ -650,7 +674,7 @@ begin
     if not FEnabled then
        begin
        reg.RootKey := StrToHKey(FRootKey);               //HKEY öffnen
-       reg.OpenKey(FKeyPath, false);                     //SubKey öffnen
+       reg.OpenKey(FKeyPath, False);                     //SubKey öffnen
 
        if not reg.ValueExists('YEAR') then               //Wert existiert?
           result := '00.00.0000 00:00:00'
@@ -691,7 +715,7 @@ begin
   reg.RootKey := HKEY_LOCAL_MACHINE;              //HKEY öffnen
 
   try
-    reg.OpenKey(AKeyPath, true);                  //SubKey öffnen
+    reg.OpenKey(AKeyPath, True);                  //SubKey öffnen
     TimeNow := Now();
     FTime := FormatDateTime('c', TimeNow);        //Deaktivierungsdatum
     DecodeDate(TimeNow, Year, Month, Day);        //Datum auslesen
@@ -733,7 +757,7 @@ end;
 
 { protected TStartupItem.Disable
 
-  Disables an TStartupItem object and returns true if successful. }
+  Disables an TStartupItem object and returns True if successful. }
 
 function TStartupItem.Disable(): Boolean;
 var
@@ -751,7 +775,7 @@ begin
 
     // Neuen Schlüssel erstellen
     if deleted then
-      created := reg.OpenKey(DEACT_KEY + FName, true)
+      created := reg.OpenKey(KEY_DEACT + FName, True)
     else
       created := False;
 
@@ -765,16 +789,16 @@ begin
       reg.WriteString('inimapping', '0');
 
       if CheckWindows then                           //nur ab Windows Vista:
-         WriteTime(DEACT_KEY + FName);               //Deaktivierungsdatum speichern
+         WriteTime(KEY_DEACT + FName);               //Deaktivierungsdatum speichern
 
       FRootKey := 'HKLM';                            //Daten aktualisieren
-      FKeyPath := DEACT_KEY + FName;
-      FEnabled := false;                             //Status aktualisieren
+      FKeyPath := KEY_DEACT + FName;
+      FEnabled := False;                             //Status aktualisieren
       reg.Free;                                      //Objekt freigeben
-      result := true;
+      result := True;
       end  //of begin
     else
-      raise EStartupException.Create('Could not create "'+ DEACT_KEY + FName +'"!');
+      raise EStartupException.Create('Could not create "'+ KEY_DEACT + FName +'"!');
 
   except
     on E: Exception do
@@ -789,7 +813,7 @@ end;
 
 { protected TStartupItem.Enable
 
-  Enables an TStartupItem object and returns true if successful. }
+  Enables an TStartupItem object and returns True if successful. }
 
 function TStartupItem.Enable(): Boolean;
 var
@@ -801,7 +825,7 @@ begin
 
   try
     reg.RootKey := HKEY_LOCAL_MACHINE;
-    reg.OpenKey(FKeyPath, false);                 //alten Schlüssel öffnen
+    reg.OpenKey(FKeyPath, False);                 //alten Schlüssel öffnen
     NewHKey := reg.ReadString('hkey');            //neuer HKEY auslesen
     NewKeyPath := reg.ReadString('key');          //neuer Pfad auslesen
     reg.CloseKey;
@@ -812,14 +836,14 @@ begin
        begin
        reg.RootKey := StrToHKey(NewHKey);
 
-       if reg.OpenKey(NewKeyPath, true) then
+       if reg.OpenKey(NewKeyPath, True) then
           begin
           reg.WriteString(FName, FFilePath);      //Autostarteintrag schreiben
-          result := DeleteKey('HKLM', DEACT_KEY, FName);  //alten Schlüssel löschen
+          result := DeleteKey('HKLM', KEY_DEACT, FName);  //alten Schlüssel löschen
 
           FRootKey := NewHKey;                    //Daten aktualisieren
           FKeyPath := NewKeyPath;
-          FEnabled := true;                       //Status aktualisieren
+          FEnabled := True;                       //Status aktualisieren
           FTime := '';
           reg.Free;                               //freigeben
           end  //of begin
@@ -840,7 +864,7 @@ end;
 
 { public TStartupItem.CreateBackup
 
-  Creates a backup file and returns true if successful. }
+  Creates a backup file and returns True if successful. }
 
 function TStartupItem.CreateBackup(): Boolean;
 begin
@@ -849,11 +873,11 @@ end;
 
 { public TStartupItem.Delete
 
-  Deletes a TStartupItem object and returns true if successful. }
+  Deletes a TStartupItem object and returns True if successful. }
 
 function TStartupItem.Delete(): Boolean;
 begin
-  result := true;
+  result := True;
 
   try
     if FEnabled then
@@ -862,7 +886,7 @@ begin
           raise EStartupException.Create('Could not delete value "'+ FName +'"!');
        end  //of begin
     else
-       if not DeleteKey('HKLM', DEACT_KEY, FName) then
+       if not DeleteKey('HKLM', KEY_DEACT, FName) then
           raise EStartupException.Create('Could not delete key "'+ FName +'"!');
 
   except
@@ -913,9 +937,9 @@ end;
 function TStartupUserItem.GetExtension(): string;
 begin
   if (Pos('Common', FType) <> 0) then
-    result := COMMON_EXT
+    result := EXT_COMMON
   else
-    result := USER_EXT;
+    result := EXT_USER;
 end;
 
 { private TStartupUserItem.StartupUserType
@@ -929,7 +953,7 @@ end;
 
 { protected TStartupUserItem.Disable
 
-  Disables an TStartupUserItem object and returns true if successful. }
+  Disables an TStartupUserItem object and returns True if successful. }
 
 function TStartupUserItem.Disable(): Boolean;
 var
@@ -945,7 +969,7 @@ begin
     PssDir := GetWinDir +'\pss';
     BackupLnk := GetBackupLnk();
 
-    if (reg.OpenKey(DEACT_FOLDER + KeyName, true) and
+    if (reg.OpenKey(KEY_DEACT_FOLDER + KeyName, True) and
        ReadLnkFile(FKeyPath, Path)) then
        begin                                            //Daten schreiben
        reg.WriteString('path', FKeyPath);
@@ -957,7 +981,7 @@ begin
           begin
           reg.WriteString('backupExtension', GetExtension());
           reg.WriteString('location', ExtractFileDir(FKeyPath));
-          WriteTime(DEACT_FOLDER + KeyName);            //Deaktivierungsdatum speichern
+          WriteTime(KEY_DEACT_FOLDER + KeyName);            //Deaktivierungsdatum speichern
           end  //of begin
        else                                             // <= Windows XP
           reg.WriteString('location', FType);
@@ -967,11 +991,11 @@ begin
 
        CreateLnk(FFilePath, BackupLnk);                 //Backup *.lnk erstellen
        DeleteFile(FKeyPath);                            //*.lnk löschen
-       FKeyPath := DEACT_FOLDER + KeyName;              //Reg-Pfad aktualisieren
+       FKeyPath := KEY_DEACT_FOLDER + KeyName;              //Reg-Pfad aktualisieren
        FRootKey := 'HKLM';
-       FEnabled := false;
+       FEnabled := False;
        reg.Free;                                        //freigeben
-       result := true;
+       result := True;
        end  //of begin
     else
        raise EStartupException.Create('Could not create key "'+ FName +'"!');
@@ -989,7 +1013,7 @@ end;
 
 { protected TStartupUserItem.Enable
 
-  Enables an TStartupUserItem object and returns true if successful. }
+  Enables an TStartupUserItem object and returns True if successful. }
 
 function TStartupUserItem.Enable(): Boolean;
 var
@@ -1001,14 +1025,14 @@ begin
 
     if CreateLnk(FFilePath, Path) then                     //Verknüpfung anlegen
        begin
-       if not DeleteKey('HKLM', DEACT_FOLDER, AddCircumflex(Path)) then
+       if not DeleteKey('HKLM', KEY_DEACT_FOLDER, AddCircumflex(Path)) then
           raise EStartupException.Create('Could not delete key "'+ FKeyPath +'"!')
        else
           begin
           FKeyPath := Path;                                //aktualisieren
           FRootKey := '';
-          FEnabled := true;
-          result := true;
+          FEnabled := True;
+          result := True;
           end;  //of if
        end  //of begin
     else
@@ -1026,7 +1050,7 @@ end;
 
 { public TStartupUserItem.CreateBackup
 
-  Creates a backup file and returns true if successful. }
+  Creates a backup file and returns True if successful. }
 
 function TStartupUserItem.CreateBackup(): Boolean;
 begin
@@ -1035,7 +1059,7 @@ end;
 
 { public TStartupUserItem.Delete
 
-  Deletes a TStartupUserItem object and returns true if successful. }
+  Deletes a TStartupUserItem object and returns True if successful. }
 
 function TStartupUserItem.Delete(): Boolean;
 
@@ -1045,7 +1069,7 @@ function TStartupUserItem.Delete(): Boolean;
   end;
 
 begin
-  result := true;
+  result := True;
 
   try
     if FEnabled then                           //Schlüssel oder Datei löschen
@@ -1054,7 +1078,7 @@ begin
           raise EStartupException.Create('Could not delete link "'+ FKeyPath +'"!');
        end  //of begin
     else
-       if not DeleteKey('HKLM', DEACT_FOLDER, GetKeyName()) then
+       if not DeleteKey('HKLM', KEY_DEACT_FOLDER, GetKeyName()) then
           raise EStartupException.Create('Could not delete key "'+ FKeyPath +'"!');
 
   except
@@ -1091,7 +1115,7 @@ end;
 constructor TStartupList.Create;
 begin
   inherited Create;
-  FDeleteBackup := true;
+  FDeleteBackup := True;
 end;
 
 { private TStartupList.Add
@@ -1114,7 +1138,7 @@ end;
 
 { private TStartupList.DeleteBackupLnk
 
-  Deletes the backup file and returns true if successful. }
+  Deletes the backup file and returns True if successful. }
 
 function TStartupList.DeleteBackupLnk(): Boolean;
 begin
@@ -1140,9 +1164,9 @@ begin
         ForceDirectories(Pss);             //dann Dir erstellen
 
      if (Pos('Common', FItem.TypeOf) <> 0) then
-        result := Pss +'\'+ FItem.Name + COMMON_EXT
+        result := Pss +'\'+ FItem.Name + EXT_COMMON
      else
-        result := Pss +'\'+ FItem.Name + USER_EXT;
+        result := Pss +'\'+ FItem.Name + EXT_USER;
      end;
 end;
 
@@ -1195,10 +1219,10 @@ begin
      begin
      st := TClearas.GetKeyValue('HKLM', AKeyPath, 'backupExtension');
 
-     if (st = COMMON_EXT) then
-        result := COMMON_TYPE
+     if (st = EXT_COMMON) then
+        result := TYPE_COMMON
      else
-        result := USER_TYPE;
+        result := TYPE_USER;
      end;  //of if
 end;
 
@@ -1211,7 +1235,7 @@ var
   Item: TStartupListItem;
 
 begin
-  Item := TStartupItem.Create(Count, false);
+  Item := TStartupItem.Create(Count, False);
 
   with Item do
   begin
@@ -1235,7 +1259,7 @@ var
   Item: TStartupListItem;
 
 begin
-  Item := TStartupItem.Create(Count, true);
+  Item := TStartupItem.Create(Count, True);
 
   with Item do
     begin
@@ -1245,7 +1269,7 @@ begin
     FilePath := AFilePath;
     Time := '';
 
-    if (AKeyPath = RUNONCE_KEY) then
+    if (AKeyPath = KEY_RUNONCE) then
        TypeOf := 'RunOnce'
     else
        TypeOf := ARootKey;
@@ -1264,7 +1288,7 @@ var
   Item: TStartupListItem;
 
 begin
-  Item := TStartupUserItem.Create(Count, false);      //neues Objekt
+  Item := TStartupUserItem.Create(Count, False);      //neues Objekt
 
   with Item do                                        //Daten übergeben
     begin
@@ -1289,7 +1313,7 @@ var
   ExeFile: string;
 
 begin
-  Item := TStartupUserItem.Create(Count, true);
+  Item := TStartupUserItem.Create(Count, True);
 
   with Item do
   begin
@@ -1300,9 +1324,9 @@ begin
     Name := ExtractFileName(ALnkFile);
 
     if AAllUsers then
-      TypeOf := COMMON_TYPE
+      TypeOf := TYPE_COMMON
     else
-      TypeOf := USER_TYPE;
+      TypeOf := TYPE_USER;
 
     Time := '';
   end;  //of with
@@ -1313,7 +1337,7 @@ end;
 
 { public TStartupList.CreateBackup
 
-  Creates a backup file and returns true if successful. }
+  Creates a backup file and returns True if successful. }
 
 function TStartupList.CreateBackup(): Boolean;
 begin
@@ -1336,11 +1360,11 @@ begin
   reg.RootKey := HKEY_LOCAL_MACHINE;                //Root Key setzen
 
   try
-    reg.OpenKey(AKeyPath, true);                    //Key öffnen
+    reg.OpenKey(AKeyPath, True);                    //Key öffnen
     reg.GetKeyNames(List);                          //enthaltene Schlüsselnamen auslesen
 
     for i := 0 to List.Count -1 do
-      if (AKeyPath = DEACT_KEY) then                //auslesen + eintragen
+      if (AKeyPath = KEY_DEACT) then                //auslesen + eintragen
          AddItemDisabled(AKeyPath + List[i])
       else
          AddUserItemDisabled(AKeyPath + List[i]);
@@ -1391,7 +1415,7 @@ begin
 
   try
     reg.RootKey := TClearas.StrToHKey(ARootKey);    //Root Key setzen
-    reg.OpenKey(AKeyPath, true);                    //Key öffnen
+    reg.OpenKey(AKeyPath, True);                    //Key öffnen
     reg.GetValueNames(List);                        //enthaltene Einträge auslesen
 
     for i := 0 to List.Count -1 do
@@ -1414,8 +1438,8 @@ function TStartupList.AddNewStartupItem(const AName, AFilePath: string): Boolean
 begin
   // Try to add new startup item to registry
   try
-    TClearas.WriteStrValue('HKCU', STARTUP_KEY, AName, AFilePath);
-    AddItemEnabled('HKCU', STARTUP_KEY, AName, AFilePath);
+    TClearas.WriteStrValue('HKCU', KEY_STARTUP, AName, AFilePath);
+    AddItemEnabled('HKCU', KEY_STARTUP, AName, AFilePath);
 
   except
     result := False;
@@ -1651,23 +1675,23 @@ end;
 
 procedure TStartupList.Load(ARunOnce: Boolean);
 begin
-  AddEnabled('HKLM', STARTUP_KEY);
+  AddEnabled('HKLM', KEY_STARTUP);
 
   if TOSUtils.IsWindows64() then
-    AddEnabled('HKLM', STARTUP_KEY32);
+    AddEnabled('HKLM', KEY_STARTUP32);
 
   // Read RunOnce entries?
   if ARunOnce then
   begin
-    AddEnabled('HKLM', RUNONCE_KEY);
-    AddEnabled('HKCU', RUNONCE_KEY);
+    AddEnabled('HKLM', KEY_RUNONCE);
+    AddEnabled('HKCU', KEY_RUNONCE);
   end;  //of begin
 
-  AddEnabled('HKCU', STARTUP_KEY);
-  AddEnabled(true);
-  AddEnabled(false);
-  AddDisabled(DEACT_KEY);
-  AddDisabled(DEACT_FOLDER);
+  AddEnabled('HKCU', KEY_STARTUP);
+  AddEnabled(True);
+  AddEnabled(False);
+  AddDisabled(KEY_DEACT);
+  AddDisabled(KEY_DEACT_FOLDER);
 end;
 
 
@@ -1675,7 +1699,7 @@ end;
 
 { public TContextListItem.Delete
 
-  Deletes a TContextListItem object and returns true if successful. }
+  Deletes a TContextListItem object and returns True if successful. }
 
 function TContextListItem.Delete(): Boolean;
 begin
@@ -1726,14 +1750,14 @@ end;
 
 { protected TShellItem.Disable
 
-  Disables a TShellItem object and returns true if successful. }
+  Disables a TShellItem object and returns True if successful. }
 
 function TShellItem.Disable(): Boolean;
 begin
   try
     WriteStrValue('HKCR', KeyPath, 'LegacyDisable', '');
-    FEnabled := false;
-    result := true;
+    FEnabled := False;
+    result := True;
 
   except
     on E: Exception do
@@ -1747,7 +1771,7 @@ end;
 
 { protected TShellItem.Enable
 
-  Enables a TShellItem object and returns true if successful. }
+  Enables a TShellItem object and returns True if successful. }
 
 function TShellItem.Enable(): Boolean;
 begin
@@ -1758,9 +1782,9 @@ begin
        raise EStartupException.Create('Could not delete value "'+ KeyPath + '\LegacyDisable' +'"!');
        end  //of begin
     else
-       result := true;
+       result := True;
 
-    FEnabled := true;
+    FEnabled := True;
 
   except
     on E: Exception do
@@ -1777,12 +1801,12 @@ end;
 
 function TShellExItem.GetKeyPath(): string;
 begin
-  result := FLocation + CONTEXTMENU_KEY +'\'+ FName;
+  result := FLocation + KEY_CONTEXTMENU +'\'+ FName;
 end;
 
 { protected TShellExItem.Disable
 
-  Disables a TShellExItem object and returns true if successful. }
+  Disables a TShellExItem object and returns True if successful. }
 
 function TShellExItem.Disable(): Boolean;
 var
@@ -1792,8 +1816,8 @@ begin
   try
     OldValue := GetKeyValue('HKCR', KeyPath, '');
     WriteStrValue('HKCR', KeyPath, '', '-' + OldValue);
-    FEnabled := false;
-    result := true;
+    FEnabled := False;
+    result := True;
 
   except
     on E: Exception do
@@ -1807,7 +1831,7 @@ end;
 
 { protected TShellExItem.Enable
 
-  Enables a TShellExItem object and returns true if successful. }
+  Enables a TShellExItem object and returns True if successful. }
 
 function TShellExItem.Enable(): Boolean;
 var
@@ -1818,8 +1842,8 @@ begin
     OldValue := GetKeyValue('HKCR', KeyPath, '');
     NewValue := Copy(OldValue, 2, Length(OldValue));
     WriteStrValue('HKCR', KeyPath, '', NewValue);
-    FEnabled := true;
-    result := true;
+    FEnabled := True;
+    result := True;
 
   except
     on E: Exception do
@@ -1859,7 +1883,7 @@ end;
 
 function TContextList.FindDouble(AName, AKeyName: string): Boolean;
 begin
-  result := false;
+  result := False;
 
   if (Count > 0) then
      if (IndexOf(AName) <> -1) then
@@ -1942,17 +1966,17 @@ begin
   if AShell then
      Key := AKeyName +'\shell'
   else
-     Key := AKeyName + CONTEXTMENU_KEY;
+     Key := AKeyName + KEY_CONTEXTMENU;
 
   try
     reg.RootKey := HKEY_CLASSES_ROOT;                     //Root Key setzen
-    reg.OpenKey(Key, false);                              //Key öffnen
+    reg.OpenKey(Key, False);                              //Key öffnen
     reg.GetKeyNames(List);                                //alle Einträge im Key auslesen
 
     for i := 0 to List.Count -1 do
       begin
       reg.CloseKey;
-      reg.OpenKey(Key +'\'+ List[i], false);
+      reg.OpenKey(Key +'\'+ List[i], False);
 
       if ((reg.ReadString('') <> '') and (List[i][1] <> '{') and
          (reg.ReadString('')[1] <> '@') and not FindDouble(List[i], AKeyName)) then  //wichtige, leere und doppelte Einträge filtern!
@@ -1998,7 +2022,7 @@ begin
     if not reg.KeyExists('$$$_auto_file') then   //falls "Dummy Eintrag" nicht existiert...
        reg.CreateKey('$$$_auto_file');           //erstellen, um Bug zu vermeiden
 
-    reg.OpenKey('', false);                      //Key öffnen
+    reg.OpenKey('', False);                      //Key öffnen
     reg.GetKeyNames(Hkcr);                       //alle Einträge im Key auslesen
     FCountMax := Hkcr.Count;                     //Max auf Anzahl der Schlüssel
     FWorkCountMax(Self, FCountMax);              //"Beginn der Suche" melden
@@ -2010,7 +2034,7 @@ begin
       FWorkCount(Self, FProgress);               //Progress anzeigen
 
       reg.CloseKey;
-      reg.OpenKey(Hkcr[i], false);               //Key öffnen
+      reg.OpenKey(Hkcr[i], False);               //Key öffnen
 
       if reg.HasSubKeys then                     //existiert Unterschlüssel?
          begin
@@ -2021,7 +2045,7 @@ begin
            if ((Temp[j] = 'shellex') or (Temp[j] = 'ShellEx')) then
               begin
               reg.CloseKey;
-              reg.OpenKey(Hkcr[i] +'\'+ Temp[j], false); //Key öffnen
+              reg.OpenKey(Hkcr[i] +'\'+ Temp[j], False); //Key öffnen
 
               if reg.HasSubKeys then             //existiert Unterschlüssel?
                  begin
@@ -2032,7 +2056,7 @@ begin
                    if (Shellex[k] = 'ContextMenuHandlers') then
                       begin
                       reg.CloseKey;
-                      reg.OpenKey(Hkcr[i] +'\'+ Temp[j] +'\'+ Shellex[k], false);
+                      reg.OpenKey(Hkcr[i] +'\'+ Temp[j] +'\'+ Shellex[k], False);
 
                       if reg.HasSubKeys then     //existiert Unterschlüssel...
                          AddEntry(Hkcr[i]);      //dann Eintrag gefunden und hinzufügen
@@ -2086,7 +2110,7 @@ begin
     result := Changed;
 
   except
-    result := false;
+    result := False;
     raise;
   end;  //of try
 end;
@@ -2119,7 +2143,7 @@ begin
     result := Deleted;
 
   except
-    result := false;
+    result := False;
     raise;
   end;  //of try
 end;
