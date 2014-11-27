@@ -32,13 +32,13 @@ type
   { TWinWOW64 }
   TWinWOW64 = class(TObject)
   protected
-    class function DisableWow64FsRedirection(): Boolean;
-    class function RevertWow64FsRedirection(): Boolean;
     class function SetKeyAccessMode(): Cardinal; deprecated;
   public
     class function DenyWOW64Redirection(AAccessRight: Cardinal): Cardinal;
+    class function DisableWow64FsRedirection(): Boolean;
     class function GetArchitecture(): string;
     class function IsWindows64(): Boolean;
+    class function RevertWow64FsRedirection(): Boolean;
   end;
 
   { TOSUtils }

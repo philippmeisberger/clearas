@@ -645,10 +645,10 @@ object Main: TMain
     object N2: TMenuItem
       Caption = '-'
     end
-    object pmInfos: TMenuItem
+    object pmProperties: TMenuItem
       Caption = 'Eigenschaften'
       Enabled = False
-      OnClick = pmInfosClick
+      OnClick = pmPropertiesClick
     end
   end
   object MainMenu: TMainMenu

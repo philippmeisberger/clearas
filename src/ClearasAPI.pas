@@ -174,7 +174,7 @@ type
     function IndexOf(AName: string): Integer; overload;
     function IndexOf(AName: string; AEnabled: Boolean): Integer; overload;
     procedure Insert(AIndex: Integer; AItem: TStartupListItem);
-    procedure Load(ARunOnce: Boolean);
+    procedure Load(AIncludeRunOnce: Boolean);
     { external }
     property AppIndex: PInt read FActAppIndex write FActAppIndex;
     property DeleteBackup: Boolean read FDeleteBackup write FDeleteBackup;
@@ -1721,7 +1721,7 @@ end;
 
   Searches for startup items at different locations. }
 
-procedure TStartupList.Load(ARunOnce: Boolean);
+procedure TStartupList.Load(AIncludeRunOnce: Boolean);
 begin
   AddEnabled('HKLM', KEY_STARTUP);
 
@@ -1729,7 +1729,7 @@ begin
     AddEnabled('HKLM', KEY_STARTUP32);
 
   // Read RunOnce entries?
-  if ARunOnce then
+  if AIncludeRunOnce then
   begin
     AddEnabled('HKLM', KEY_RUNONCE);
     AddEnabled('HKCU', KEY_RUNONCE);

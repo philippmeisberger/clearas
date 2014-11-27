@@ -174,7 +174,7 @@ type
     function IndexOf(AName: string): Integer; overload;
     function IndexOf(AName: string; AEnabled: Boolean): Integer; overload;
     procedure Insert(AIndex: Integer; AItem: TStartupListItem);
-    procedure Load(ARunOnce: Boolean);
+    procedure Load(AIncludeRunOnce: Boolean);
     { external }
     property AppIndex: PInt read FActAppIndex write FActAppIndex;
     property DeleteBackup: Boolean read FDeleteBackup write FDeleteBackup;
@@ -529,6 +529,8 @@ begin
       // Delete old context menu key
       if not reg.DeleteKey(ALangFile.GetString(71)) then
         raise Exception.Create('Could not delete key: '+ ALangFile.GetString(71));
+
+      reg.CloseKey;
 
       // Create new context menu key
       if reg.OpenKey(KEY_RECYCLEBIN +'\Clearas\command', True) then
@@ -1719,7 +1721,7 @@ end;
 
   Searches for startup items at different locations. }
 
-procedure TStartupList.Load(ARunOnce: Boolean);
+procedure TStartupList.Load(AIncludeRunOnce: Boolean);
 begin
   AddEnabled('HKLM', KEY_STARTUP);
 

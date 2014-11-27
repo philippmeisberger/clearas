@@ -26,7 +26,7 @@ type
     mmView: TMenuItem;
     mmRefresh: TMenuItem;
     N2: TMenuItem;
-    pmInfos: TMenuItem;
+    pmProperties: TMenuItem;
     mmHelp: TMenuItem;
     mmInfo: TMenuItem;
     mmEdit: TMenuItem;
@@ -105,7 +105,7 @@ type
     procedure lwListCompare(Sender: TObject; Item1, Item2: TListItem;   //http://www.delphipraxis.net/283-wie-kann-ich-eine-listview-sortieren.html
       Data: Integer; var Compare: Integer);
     procedure pmDeactivateClick(Sender: TObject);
-    procedure pmInfosClick(Sender: TObject);
+    procedure pmPropertiesClick(Sender: TObject);
     procedure pmDeleteClick(Sender: TObject);
     procedure pmSearchClick(Sender: TObject);
     procedure pmEditClick(Sender: TObject);
@@ -138,24 +138,20 @@ type
     FColumnToSort: Word;
     Startup: TStartupList;
     Context: TContextList;
-    FTab: TTabSheet;
     FLang: TLanguageFile;
     FUpdateCheck: TUpdateCheck;
     procedure AfterUpdate(Sender: TObject; ADownloadedFileName: string);
     procedure BeforeUpdate(Sender: TObject; const ANewBuild: Cardinal);
-    procedure ButtonHandle;
-    procedure CountContext;
-    procedure CountStartups;
     procedure EditPath(APath: string);
-    procedure GetContext;
-    procedure GetStartups(AGetNewData: Boolean = true);
     procedure OnSearchProgress(Sender: TObject; AWorkCount: Cardinal);
     procedure OnSearchStart(Sender: TObject; AWorkCountMax: Cardinal);
     procedure OnSearchEnd(Sender: TObject);
-    procedure RegExport;
+    procedure RefreshContextCounter();
+    procedure RefreshStartupCounter();
     procedure SetLanguage(Sender: TObject);
-  public
-    property Lang: TLanguageFile read FLang;
+    procedure ShowContextMenuEntries();
+    procedure ShowRegistryExportDialog();
+    procedure ShowStartupEntries(ATotalRefresh: Boolean = True);
   end;
 
 var
@@ -186,7 +182,6 @@ begin
   FUpdateCheck.CheckForUpdate(False);
 
   // Init Clearas instances
-  FTab := tsStartup;
   Startup := TStartupList.Create;
   Context := TContextList.Create;
 
@@ -221,23 +216,23 @@ begin
   if not (newWindows or (windows[1] in ['X','2'])) then
   begin
     Flang.MessageBox(FLang.GetString(74) + windows + FLang.GetString(75), mtError);
-    mmExportList.Enabled := false;
-    mmRefresh.Enabled := false;
-    mmContext.Enabled := false;
-    lwList.Enabled := false;
-    lwContext.Enabled := false;
-    cbExpert.Enabled := false;
+    mmExportList.Enabled := False;
+    mmRefresh.Enabled := False;
+    mmContext.Enabled := False;
+    lwList.Enabled := False;
+    lwContext.Enabled := False;
+    cbExpert.Enabled := False;
     Exit;
   end;  //of if
 
   //"Deaktivierungsdatum" nur ab Vista
   mmDate.Enabled := newWindows;
 
-  //Pfad in Kontextmenü aktualisieren
+  //Pfad in Kontextmenü aktualisieren     
   mmContext.Checked := TClearas.UpdateContextPath(FLang);
 
   // Auslesen
-  GetStartups;
+  ShowStartupEntries();
 end;
 
 { private TMain.AfterUpdate
@@ -272,57 +267,24 @@ begin
       mmUpdate.Caption := FLang.GetString(24);
 end;
 
+{ private TMain.RefreshContextCounter
 
-procedure TMain.ButtonHandle;                          //Buttons de-/aktivieren
-begin
-  if (FTab = tsStartup) then                            //welche Page?
-     begin
-     if Startup.Item.Enabled then                       //Autostart
-        begin
-        bActivate.Enabled := false;
-        bDeactivate.Enabled := true;
-        bDeactivate.Default := true;
-        end  //of begin
-     else
-        begin
-        bDeactivate.Enabled := false;
-        bActivate.Enabled := true;
-        bActivate.Default := true;
-        end;  //of if
+  Refreshs the counter label of context menu items. }
 
-     CountStartups;                                     //Zähler Refresh
-     end  //of begin
-  else
-     begin                                              //Kontextmenü
-     if Context.Item.Enabled then
-        begin
-        bActContext.Enabled := false;
-        bDeactContext.Enabled := true;
-        bDeactContext.Default := true;
-        end  //of begin
-     else
-        begin
-        bDeactContext.Enabled := false;
-        bActContext.Enabled := true;
-        bActContext.Default := true;
-        end;  //of if
-
-     CountContext;                                      //Zähler Refresh
-     end;  //of begin
-end;
-
-
-procedure TMain.CountContext;
+procedure TMain.RefreshContextCounter();
 begin
   lwContext.Columns[1].Caption := FLang.GetString(87) +' ('+IntToStr(Context.ActCount)
-                                   +'/'+ IntToStr(Context.Count)+')';     //Kontextmenü-Einträge zählen
+                                   +'/'+ IntToStr(Context.Count)+')';
 end;
 
+{ private TMain.RefreshStartupCounter
 
-procedure TMain.CountStartups;
+  Refreshs the counter label of startup items. }
+
+procedure TMain.RefreshStartupCounter();
 begin
   lwList.Columns[1].Caption := FLang.GetString(2)+'('+IntToStr(Startup.ActCount)
-                               +'/'+IntToStr(Startup.Count)+')';        //aktive Programme zählen
+                               +'/'+IntToStr(Startup.Count)+')';
 end;
 
 
@@ -358,82 +320,6 @@ begin
     end;  //of begin
 end;
 
-
-procedure TMain.GetContext;                             //Kontextmenüs auslesen
-var
-  i: integer;
-
-begin
-  pbLoad.Visible := true;                            //Progressbar sichtbar machen
-  pbLoad.Position := 0;                              //Progressbar auf 0
-  Context.Clear;                                     //Kontextmenü Liste leeren
-
-  try
-    if cbExpert.Checked then
-       begin
-       Context.OnSearchBegin := OnSearchStart;       //Events verknüpfen
-       Context.OnSearch := OnSearchProgress;
-       Context.OnSearchEnd := OnSearchEnd;
-       Application.ProcessMessages;                  //auslagern
-       Context.AddEntry();                           //Einträge suchen
-       end  //of begin
-    else
-       Context.Load;                                 //Kontextmenü-Einträge in Liste
-
-    lwContext.Clear;                                 //Kontextmenü-ListView leeren
-
-    for i := 0 to Context.Count -1 do                //Kontextmenüs ausgeben
-      with lwContext.Items.Add do
-        begin
-        Caption := Context[i].GetStatus(FLang);
-        SubItems.Append(Context[i].Name);
-        SubItems.Append(Context[i].Location);
-        SubItems.Append(Context[i].TypeOf);
-        end; //of with
-
-  finally
-    CountContext;                                    //Zähler Refresh
-    pbLoad.Visible := false;                         //Progressbar unsichtbar
-  end;  //of finally
-end;
-
-
-procedure TMain.GetStartups(AGetNewData: Boolean = true);  //Autostart auslesen
-var
-  i: integer;
-
-begin
-  lwList.Clear;                                  //Autostart-ListView leeren
-
-  try                                            
-    if AGetNewData then                          //Daten neu auslesen?
-       begin
-       Startup.Clear;                            //init bzw Reset Zähler
-       Startup.Load(mmRunOnce.Checked);          //Autostart auslesen
-       end;  //of begin
-
-    for i := 0 to Startup.Count -1 do            //Autostart-Programme ausgeben
-      with lwList.Items.Add do
-        begin
-        Caption := Startup[i].GetStatus(FLang);
-        SubItems.Append(Startup[i].Name);
-        SubItems.Append(Startup[i].FilePath);
-        SubItems.Append(Startup[i].TypeOf);
-
-        if mmDate.Checked then
-           SubItems.Append(Startup[i].Time);
-        end;  //of with
-
-    if bActivate.Enabled then
-       bActivate.Enabled := false
-    else
-       bDeactivate.Enabled := false;
-
-  finally                                        //freigeben
-    CountStartups;                               //Zähler Refresh
-  end;  //of finally
-end;
-
 { Thread Events }
 procedure TMain.OnSearchProgress(Sender: TObject; AWorkCount: Cardinal);
 begin
@@ -449,61 +335,34 @@ end;
 
 procedure TMain.OnSearchEnd(Sender: TObject);
 begin
-  pbLoad.Visible := false;
+  pbLoad.Visible := False;
   pbLoad.Position := 0;
 end;
 
+{ private TMain.SetLanguage
 
-procedure TMain.RegExport;                                         //REG-Export
-var
-  SaveDialog: TSaveDialog;
+  Updates all component captions with new language text. }
 
-begin
-  SaveDialog := TSaveDialog.Create(Self);           //init SaveDialog
-
-  with SaveDialog do
-    begin
-    Options := Options + [ofOverwritePrompt];       //Überschreiben-Dialog
-    Filter := FLang.GetString(36);                  //Filter nur für *.reg festlegen
-    DefaultExt := '.reg';                           //*.reg-Endung
-    Title := FLang.GetString(33);                   //Fenstername
-
-    if (FTab = tsStartup) then
-       FileName := Startup.Item.Name + DefaultExt   //default-Name
-    else
-       FileName := Context.Item.Name +'_'+ Context.Item.Location + DefaultExt;  //default-Name
-    end;  //of with
-
-  try
-    if SaveDialog.Execute then                      //"speichern" Klick
-       if (FTab = tsStartup) then
-          Startup.Item.ExportItem(SaveDialog.FileName)   //"Speichern"
-       else
-          Context.Item.ExportItem(SaveDialog.FileName);  //"Speichern"
-
-  finally
-    SaveDialog.Free;
-  end;  //of finally
-end;
-
-
-procedure TMain.SetLanguage(Sender: TObject);           //Sprache lokalisieren
+procedure TMain.SetLanguage(Sender: TObject);
 begin
   with FLang do
   begin
-    tsContext.Caption := GetString(84);                   //Buttons Autostart
+    // Startup side TButton labels
+    tsContext.Caption := GetString(84);
     bActivate.Caption := GetString(96);
     bDeactivate.Caption := GetString(97);
     bExport.Caption := GetString(98);
     bDelete.Caption := GetString(99);
     bClose.Caption := GetString(100);
 
-    lStartup.Caption := GetString(90);                     //Liste Autostart
+    // Startup side TListView labels
+    lStartup.Caption := GetString(90);
     lwList.Columns[0].Caption := GetString(91);
     lwList.Columns[2].Caption := GetString(101);
     lwList.Columns[3].Caption := GetString(94);
 
-    bActContext.Caption := bActivate.Caption;             //Buttons Kontextmenü
+    // Context menu side TButton labels
+    bActContext.Caption := bActivate.Caption;
     bDeactContext.Caption := bDeactivate.Caption;
     bExportContext.Caption := bExport.Caption;
     bDeleteContext.Caption := bDelete.Caption;
@@ -511,24 +370,28 @@ begin
     cbExpert.Caption := GetString(89);
     tsStartup.Caption := GetString(83);
 
-    lContext.Caption := GetString(86);                    //Liste Kontextmenü
+    // Context menu side TListView labels
+    lContext.Caption := GetString(86);
     lwContext.Columns[0].Caption := lwList.Columns[0].Caption;
     lwContext.Columns[1].Caption := GetString(87);
     lwContext.Columns[2].Caption := GetString(88);
     lwContext.Columns[3].Caption := GetString(94);
 
-    mmFile.Caption := GetString(101);                      //"Datei"-Menü
+    // File menu labels
+    mmFile.Caption := GetString(101);
     mmAdd.Caption := GetString(111);
     mmImport.Caption := GetString(112);
     mmExport.Caption := GetString(113);
     mmExportlist.Caption := GetString(114);
     mmClose.Caption := GetString(100);
 
-    mmEdit.Caption := GetString(102);                      //"Bearbeiten"-Menü
+    // Edit menu labels
+    mmEdit.Caption := GetString(102);
     mmContext.Caption := GetString(104);
     mmDelBackup.Caption := GetString(105);
 
-    mmView.Caption := GetString(20);                      //"Ansicht"-Menü
+    // View menu labels
+    mmView.Caption := GetString(20);
     mmRefresh.Caption := GetString(115);
     mmStandard.Caption := GetString(116);
     mmOptimate.Caption := GetString(117);
@@ -536,162 +399,373 @@ begin
     mmRunOnce.Caption := GetString(37);
     mmLang.Caption := GetString(119);
 
-    mmHelp.Caption := GetString(14);                      //"Hilfe"-Menü
+    // Help menu labels
+    mmHelp.Caption := GetString(14);
     mmUpdate.Caption := GetString(15);
     mmDownloadCert.Caption := GetString(16);
     mmReport.Caption := GetString(26);
     mmInfo.Caption := GetString(17);
 
-    pmDeactivate.Caption := GetString(6);                 //Kontextmenü
+    // Context menu labels
+    pmDeactivate.Caption := GetString(6);
     pmSearch.Caption := GetString(34);
     pmEdit.Caption := GetString(53);
     pmExport.Caption := GetString(8);
     pmDelete.Caption := GetString(9);
-    pmInfos.Caption := GetString(35);
+    pmProperties.Caption := GetString(35);
   end;  //of with
 end;
 
-{ Exportieren Events }
-procedure TMain.bExportClick(Sender: TObject);              //Export als Backup
+{ private TMain.ShowContextMenuEntries
+
+  Loads context menu entries and brings them into a TListView. }
+
+procedure TMain.ShowContextMenuEntries();
+var
+  i: Cardinal;
+
 begin
-  with Startup do
-    if (Item.Enabled and Item.StartupUser) then
-      begin
-        if CreateBackup() then                                //Backup erstellen
-          with Flang do
-          begin
-            MessageBox(GetString(44) +'"'+ TClearas.GetWinDir +'\pss\"'+ GetString(45));
-            bExport.Enabled := false;
-          end  //of with
-        else
-          Flang.MessageBox(46, mtError);
-        end  //of begin
+  // Init TProgressBar
+  pbLoad.Visible := True;
+  pbLoad.Position := 0;
+
+  // Clears all data
+  Context.Clear();
+
+  // Use expert search mode?
+  if cbExpert.Checked then
+  begin
+    // Link search events
+    Context.OnSearchBegin := OnSearchStart;
+    Context.OnSearch := OnSearchProgress;
+    Context.OnSearchEnd := OnSearchEnd;
+    Application.ProcessMessages;
+
+    // Do the expert search!
+    Context.AddEntry();
+  end  //of begin
+  else
+    // Use default search mode
+    Context.Load();
+
+  // Clears all visual data
+  lwContext.Clear();
+
+  // Print all information about context menu entires
+  for i := 0 to Context.Count -1 do
+    with lwContext.Items.Add do
+    begin
+      Caption := Context[i].GetStatus(FLang);
+      SubItems.Append(Context[i].Name);
+      SubItems.Append(Context[i].Location);
+      SubItems.Append(Context[i].TypeOf);
+    end; //of with
+
+  // Hide TProgressBar
+  pbLoad.Visible := False;
+
+  // Refresh counter label
+  RefreshContextCounter();
+end;
+
+{ private TMain.ShowRegistryExportDialog
+
+  Shows a .reg file export dialog. }
+
+procedure TMain.ShowRegistryExportDialog();
+var
+  SaveDialog: TSaveDialog;
+
+begin
+  SaveDialog := TSaveDialog.Create(Self);
+
+  // Set TSaveDialog options
+  with SaveDialog do
+  begin
+    Title := FLang.GetString(33);
+
+    // Confirm overwrite
+    Options := Options + [ofOverwritePrompt];
+
+    // Filter .reg files only
+    Filter := FLang.GetString(36);
+    DefaultExt := '.reg';
+
+    // Set a default file name
+    if (PageControl.ActivePage = tsStartup) then
+      FileName := Startup.Item.Name + DefaultExt
     else
-      RegExport;                                              //Export als *.reg
+      FileName := Context.Item.Name +'_'+ Context.Item.Location + DefaultExt;
+  end;  //of with
+
+  try
+    // User clicked "save"?
+    if SaveDialog.Execute then
+      if (PageControl.ActivePage = tsStartup) then
+        Startup.Item.ExportItem(SaveDialog.FileName)
+      else
+        Context.Item.ExportItem(SaveDialog.FileName);
+
+  finally
+    SaveDialog.Free;
+  end;  //of try
 end;
 
+{ private TMain.ShowStartupEntries
 
-procedure TMain.bExportContextClick(Sender: TObject);     //Kontextmenü-Eintrag
-begin                                                      //exportieren
-  RegExport;
+  Loads startup entries and brings them into a TListView. }
+
+procedure TMain.ShowStartupEntries(ATotalRefresh: Boolean = True);
+var
+  i: Cardinal;
+
+begin
+  // Clears all visual data
+  lwList.Clear;
+
+  // Make a total refresh or just use cached items
+  if ATotalRefresh then
+  begin
+    // Clears all data
+    Startup.Clear();
+
+    // Load autostart with or without special RunOnce entires
+    Startup.Load(mmRunOnce.Checked);
+  end;  //of begin
+
+  // Print all information about startup entires
+  for i := 0 to Startup.Count -1 do
+    with lwList.Items.Add do
+    begin
+      Caption := Startup[i].GetStatus(FLang);
+      SubItems.Append(Startup[i].Name);
+      SubItems.Append(Startup[i].FilePath);
+      SubItems.Append(Startup[i].TypeOf);
+
+      // Show deactivation timestamp?
+      if mmDate.Checked then
+        SubItems.Append(Startup[i].Time);
+    end;  //of with
+
+  // Refresh counter label
+  RefreshStartupCounter();
 end;
 
-{ Löschen Events }
+{ TMain.bExportContextClick
+
+  Calls the export method of current selected deactivated startup item. }
+
+procedure TMain.bExportClick(Sender: TObject);
+begin
+  // Special .lnk file backup only for activated startup user entries!
+  if (Startup.Item.Enabled and Startup.Item.StartupUser) then
+  begin
+    // Successfully created backup of .lnk file?
+    if Startup.CreateBackup() then
+    begin
+      FLang.MessageBox(Flang.GetString(44) +'"'+ TClearas.GetWinDir +'\pss\"'+ Flang.GetString(45));
+      bExport.Enabled := False;
+    end  //of with
+    else
+      Flang.MessageBox(46, mtError);
+  end  //of begin
+  else
+    // Default .reg file export
+    ShowRegistryExportDialog();
+end;
+
+{ TMain.bExportContextClick
+
+  Calls the export method of current selected context menu item. }
+
+procedure TMain.bExportContextClick(Sender: TObject);
+begin
+  ShowRegistryExportDialog();
+end;
+
+{ TMain.bDeleteClick
+
+  Deletes currently selected startup item. }
+
 procedure TMain.bDeleteClick(Sender: TObject);
 var
   DelBackup, Exported: Boolean;
 
 begin
-  DelBackup := Startup.DeleteBackup;                     //Backup löschen speichern
-  Exported := false;
+  // Save the DeleteBackup flag
+  DelBackup := Startup.DeleteBackup;
+  Exported := False;
 
   with FLang do
   begin
+    // Confirm deletion of item
     if (MessageBox(GetString(48) +'"'+ Startup.Item.Name +'"'+ GetString(49) +^J
-       + GetString(50) + GetString(57), mtConfirm) = IDYES) then  //wirklich löschen?
+       + GetString(50) + GetString(57), mtConfirm) = IDYES) then
       begin
-        //existiert Backup?
+        // Export item (last chance) only if backup does not exist?
         if (bExport.Enabled and (MessageBox(GetString(52), mtQuestion) = IDYES)) then
         begin
           bExport.Click;
-          DelBackup := false;
-          Exported := true;
+          DelBackup := False;
+          Exported := True;
         end;  //of begin
 
+        // Ask: Delete old backup if a backup exists and item was not exported
         if ((not Exported) and Startup.Item.StartupUser and Startup.BackupExists) then
-           Startup.DeleteBackup := (MessageBox(GetString(47), mtQuestion) = IDYES);  //Backup löschen?
+          Startup.DeleteBackup := (MessageBox(GetString(47), mtQuestion) = IDYES);
 
-        //Löschen + auf Fehler prüfen
+        // Successfully deleted item physically?
         if Startup.DeleteItem() then
         begin
-          lwList.DeleteSelected;                         //Element aus ListView löschen
-          CountStartups;                                 //Zähler Refresh
+          // Delete item from ListView visual
+          lwList.DeleteSelected();
+
+          // Refresh counter label
+          RefreshStartupCounter();
         end  //of begin
         else
           FLang.MessageBox(FLang.GetString(65) + FLang.GetString(66), mtError);
       end;  //of if
   end;  //of with
 
-  Startup.DeleteBackup := DelBackup;                     //Backup löschen zurücksetzen
+  // Restore the DeleteBackup flag
+  Startup.DeleteBackup := DelBackup;
 end;
 
+{ TMain.bDeleteContextClick
 
-procedure TMain.bDeleteContextClick(Sender: TObject);     //Kontextmenü-Eintrag
-begin                                                      //löschen
+  Deletes currently selected context menu item. }
+
+procedure TMain.bDeleteContextClick(Sender: TObject);
+begin
   with FLang do
   begin
-    // wirklich löschen?
+    // Confirm deletion of item
     if (MessageBox(GetString(85) +'"'+ Context.Item.Name +'"'+ GetString(49) +^J
        + GetString(50), mtConfirm) = IDYES) then
-      begin
-        // exportieren?
-        if (MessageBox(GetString(52), mtQuestion) = IDYES) then
-          RegExport;
+    begin
+      // Ask to export item (last chance)?
+      if (MessageBox(GetString(52), mtQuestion) = IDYES) then
+        ShowRegistryExportDialog();
 
-       if Context.DeleteItem() then                       //löschen
-          begin
-          lwContext.DeleteSelected;                       //Element aus ListView löschen
-          CountContext;                                   //Zähler Refresh
-          end  //of begin
-       else
-          MessageBox(GetString(65) + GetString(66), mtError);
-       end;  //of begin
-    end;  //of with
+      // Successfully deleted item physically?
+      if Context.DeleteItem() then
+      begin
+        // Delete item from ListView visual
+        lwContext.DeleteSelected();
+
+        // Refresh counter label
+        RefreshContextCounter();
+      end  //of begin
+      else
+        MessageBox(GetString(65) + GetString(66), mtError);
+    end;  //of begin
+  end;  //of with
 end;
 
-{ Aktivieren Events }
+{ TMain.bActivateClick
+
+  Activates currently selected startup item. }
+
 procedure TMain.bActivateClick(Sender: TObject);
 begin
-  if Startup.ChangeItemStatus() then                       //aktivieren + auf Fehler prüfen
+  // Successfully activated item?
+  if Startup.ChangeItemStatus() then
   begin
-    lwList.ItemFocused.Caption := Startup.Item.GetStatus(FLang); //optisch "Aktiviert" setzen
-    ButtonHandle;                                         //"aktivieren"-Button deaktivieren
+    // Change item visual status
+    lwList.ItemFocused.Caption := Startup.Item.GetStatus(FLang);
+
+    // Change button states
+    bActivate.Enabled := False;
+    bDeactivate.Enabled := True;
+    bDeactivate.Default := True;
     bExport.Enabled := not Startup.BackupExists;
 
-    if mmDate.Checked then                                //Deaktivierungsdatum verfügbar?
-      lwList.ItemFocused.SubItems[3] := '';              //...dann Zeitpunkt aus Liste löschen
+    // Delete deactivation timestamp if necassary
+    if mmDate.Checked then
+      lwList.ItemFocused.SubItems[3] := '';
+
+    // Refresh counter label
+    RefreshStartupCounter();
   end  //of begin
   else
     FLang.MessageBox(FLang.GetString(63) + FLang.GetString(66), mtError);
 end;
 
+{ TMain.bActContextClick
 
-procedure TMain.bActContextClick(Sender: TObject);        //Kontextmenü-Eintrag
-begin                                                      //aktivieren
+  Activates currently selected context menu item. }
+
+procedure TMain.bActContextClick(Sender: TObject);
+begin
+  // Successfully activated item?
   if Context.ChangeItemStatus() then
   begin
+    // Change item visual status
     lwContext.ItemFocused.Caption := Context.Item.GetStatus(FLang);
-    ButtonHandle;
+
+    // Change button states
+    bActContext.Enabled := False;
+    bDeactContext.Enabled := True;
+    bDeactContext.Default := True;
+
+    // Refresh counter label
+    RefreshContextCounter();
   end  //of begin
   else
     FLang.MessageBox(FLang.GetString(63) + FLang.GetString(66), mtError);
 end;
 
-{ Deaktivieren Events }
+{ TMain.bDeactivateClick
+
+  Deactivates currently selected startup item. }
+
 procedure TMain.bDeactivateClick(Sender: TObject);
 begin
-  if Startup.ChangeItemStatus() then                        //Deaktivieren!
+  // Successfully deactivated item?
+  if Startup.ChangeItemStatus() then
   begin
-    lwList.ItemFocused.Caption := Startup.Item.GetStatus(FLang);  //optisch "Deaktiviert" setzen
-    ButtonHandle;                                          //"deaktivieren"-Button deaktivieren
+    // Change item visual status
+    lwList.ItemFocused.Caption := Startup.Item.GetStatus(FLang);
 
-    if mmDate.Checked then                                 //Deaktivierungsdatum verfügbar
-      lwList.ItemFocused.SubItems[3] := Startup.Item.Time;  //...dann in Liste schreiben
+    // Change button states
+    bDeactivate.Enabled := False;
+    bActivate.Enabled := True;
+    bActivate.Default := True;
+
+    // Show deactivation timestamp?
+    if mmDate.Checked then
+      lwList.ItemFocused.SubItems[3] := Startup.Item.Time;
 
     if (Startup.Item.StartupUser and not bExport.Enabled) then
-      bExport.Enabled := true;
+      bExport.Enabled := True;
+
+    // Refresh counter label
+    RefreshStartupCounter();
   end  //of begin
   else
     FLang.MessageBox(FLang.GetString(64) + FLang.GetString(66), mtError);
 end;
 
+{ TMain.bDeactContextClick
 
-procedure TMain.bDeactContextClick(Sender: TObject);      //Kontextmenü-Eintrag
-begin                                                      //deaktivieren
+  Deactivates currently selected context menu item. }
+
+procedure TMain.bDeactContextClick(Sender: TObject);
+begin
+  // Successfully deactivated item?
   if Context.ChangeItemStatus() then
   begin
+    // Change item visual status
     lwContext.ItemFocused.Caption := Context.Item.GetStatus(FLang);
-    ButtonHandle;
+
+    // Change button states
+    bDeactivate.Enabled := False;
+    bActivate.Enabled := True;
+    bActivate.Default := True;
+
+    // Refresh counter label
+    RefreshContextCounter();
   end  //of begin
   else
     FLang.MessageBox(FLang.GetString(64) + FLang.GetString(66), mtError);
@@ -733,93 +807,93 @@ begin
       begin
       Index := Startup.IndexOf(Item.SubItems[0], (Item.Caption = FLang.GetString(31)));
       Startup.Item := Startup.Items[Index];    //Pointer setzen
-      bClose.Default := false;
+      bClose.Default := False;
 
       if (Startup.Item.StartupUser and Startup.Item.Enabled and Startup.BackupExists) then
          begin
-         bExport.Enabled := false;
-         pmExport.Enabled := false;
+         bExport.Enabled := False;
+         pmExport.Enabled := False;
          end //of begin
       else
          begin
-         bExport.Enabled := true;
-         pmExport.Enabled := true;
+         bExport.Enabled := True;
+         pmExport.Enabled := True;
          end;  //of if
 
-      bDelete.Enabled := true;
-      pmInfos.Enabled := true;
-      pmDelete.Enabled := true;
+      bDelete.Enabled := True;
+      pmProperties.Enabled := True;
+      pmDelete.Enabled := True;
 
       if ((Item.SubItems[2] <> '') and ((Item.SubItems[1] = '') or
          (Item.SubItems[1] = ' '))) then     //Schlüssel existiert und Pfad fehlt
          begin                               //...dann kann User danach suchen
-         bActivate.Enabled := false;
-         bDeactivate.Enabled := false;
-         pmDeactivate.Enabled := false;
-         bExport.Enabled := false;
-         pmExport.Enabled := false;
-         bDelete.Default := true;
-         pmSearch.Visible := true;
+         bActivate.Enabled := False;
+         bDeactivate.Enabled := False;
+         pmDeactivate.Enabled := False;
+         bExport.Enabled := False;
+         pmExport.Enabled := False;
+         bDelete.Default := True;
+         pmSearch.Visible := True;
          end  //of begin
       else
          begin
          if ((Item.Data = Startup.AppIndex) and (Assigned(Startup.AppIndex) or
             Assigned(Item.Data))) then     //ist Item das geänderte Programm?
             begin                         
-            pmSearch.Visible := true;
+            pmSearch.Visible := True;
 
             if pmEdit.Enabled then        //dann erlauben, den Pfad zu ändern
-               pmEdit.Visible := true;
+               pmEdit.Visible := True;
             end  //of begin
          else
             begin
-            pmSearch.Visible := false;    
-            pmEdit.Visible := false;
+            pmSearch.Visible := False;    
+            pmEdit.Visible := False;
             end;  //of if
 
          if (Item.SubItems[2] = '') then  //Schlüssel fehlt
             begin
-            bActivate.Enabled := false;
-            bDeactivate.Enabled := false;
-            bExport.Enabled := false;
-            pmExport.Enabled := false;
-            pmDeactivate.Enabled := false;
-            bDelete.Default := true;
+            bActivate.Enabled := False;
+            bDeactivate.Enabled := False;
+            bExport.Enabled := False;
+            pmExport.Enabled := False;
+            pmDeactivate.Enabled := False;
+            bDelete.Default := True;
             end  //of begin
          else
             begin
             if (IsDouble(Item.SubItems[0], Item.Index) <> -1) then
                begin
-               bActivate.Enabled := false;
-               bDeactivate.Enabled := false;
-               bDelete.Default := true;
+               bActivate.Enabled := False;
+               bDeactivate.Enabled := False;
+               bDelete.Default := True;
                end  //of begin
             else
                begin
                if bDelete.Default then
-                  bDelete.Default := false;
+                  bDelete.Default := False;
 
                if Startup.Item.Enabled then                       //aktiviert?
                   begin                                           //JA
-                  bDelete.Default := false;
-                  bActivate.Enabled := false;
-                  bDeactivate.Enabled := true;
-                  bDeactivate.Default := true;
-                  pmDeactivate.Enabled := true;
+                  bDelete.Default := False;
+                  bActivate.Enabled := False;
+                  bDeactivate.Enabled := True;
+                  bDeactivate.Default := True;
+                  pmDeactivate.Enabled := True;
                   pmDeactivate.Caption := FLang.GetString(7);  //Beschriftung ändern
                   end //of begin
                else
                   begin                                           //NEIN
-                  bDelete.Default := false;
-                  bActivate.Enabled := true;
-                  bDeactivate.Enabled := false;
-                  bActivate.Default := true;
-                  pmDeactivate.Enabled := true;
+                  bDelete.Default := False;
+                  bActivate.Enabled := True;
+                  bDeactivate.Enabled := False;
+                  bActivate.Default := True;
+                  pmDeactivate.Enabled := True;
                   pmDeactivate.Caption := FLang.GetString(6);  //Beschriftung ändern
                   end; //of if
 
                if not KeyPreview then                 //Hotkeys aktiviert?
-                  KeyPreview := true;
+                  KeyPreview := True;
                end; //of if
             end;  //of if
          end;  //of if
@@ -828,22 +902,22 @@ begin
      begin                                         //Buttons deaktivieren
      if bActivate.Enabled then
         begin
-        bActivate.Default := false;
-        bActivate.Enabled := false;
+        bActivate.Default := False;
+        bActivate.Enabled := False;
         end  //of begin
      else
         begin
-        bDeactivate.Default := false;
-        bDeactivate.Enabled := false;
+        bDeactivate.Default := False;
+        bDeactivate.Enabled := False;
         end;  //of if
 
-     pmDeactivate.Enabled := false;
-     pmDelete.Enabled := false;
-     pmExport.Enabled := false;
-     pmInfos.Enabled := false;
-     bExport.Enabled := false;
-     bDelete.Enabled := false;
-     bClose.Default := true;
+     pmDeactivate.Enabled := False;
+     pmDelete.Enabled := False;
+     pmExport.Enabled := False;
+     pmProperties.Enabled := False;
+     bExport.Enabled := False;
+     bDelete.Enabled := False;
+     bClose.Default := True;
      end;  //of if
 end;
 
@@ -858,31 +932,31 @@ begin
       begin
       Index := Context.IndexOf(Item.SubItems[0], Item.SubItems[1]);
       Context.Item := Context.Items[Index];             //Pointer setzen
-      bClose2.Default := false;
-      bDeleteContext.Enabled := true;
-      pmDelete.Enabled := true;
-      bExportContext.Enabled := true;
-      pmExport.Enabled := true;
-      pmInfos.Enabled := true;
-      pmInfos.Visible := (Item.SubItems[2] = 'Shell');  //Eigenschaften für Shell anzeigen
+      bClose2.Default := False;
+      bDeleteContext.Enabled := True;
+      pmDelete.Enabled := True;
+      bExportContext.Enabled := True;
+      pmExport.Enabled := True;
+      pmProperties.Enabled := True;
+      pmProperties.Visible := (Item.SubItems[2] = 'Shell');  //Eigenschaften für Shell anzeigen
 
       if bDeletecontext.Default then
-         bDeletecontext.Default := false;
+         bDeletecontext.Default := False;
 
       if (Item.Caption = FLang.GetString(31)) then    //aktiviert?
          begin
-         bActContext.Enabled := false;                  //JA
-         bDeactContext.Enabled := true;
-         bDeactContext.Default := true;
-         pmDeactivate.Enabled := true;
+         bActContext.Enabled := False;                  //JA
+         bDeactContext.Enabled := True;
+         bDeactContext.Default := True;
+         pmDeactivate.Enabled := True;
          pmDeactivate.Caption := FLang.GetString(7);  //Beschriftung ändern
          end //of begin
       else
          begin                                          //NEIN
-         bActContext.Enabled := true;
-         bDeactContext.Enabled := false;
-         bActContext.Default := true;
-         pmDeactivate.Enabled := true;
+         bActContext.Enabled := True;
+         bDeactContext.Enabled := False;
+         bActContext.Default := True;
+         pmDeactivate.Enabled := True;
          pmDeactivate.Caption := FLang.GetString(6);  //Beschriftung ändern
          end; //of if
       end  //of begin
@@ -890,100 +964,120 @@ begin
      begin                                              //Buttons deaktivieren
      if bActContext.Enabled then
         begin
-        bActContext.Default := false;
-        bActContext.Enabled := false;
+        bActContext.Default := False;
+        bActContext.Enabled := False;
         end  //of begin
      else
         begin
-        bDeactcontext.Default := false;
-        bDeactcontext.Enabled := false;
+        bDeactcontext.Default := False;
+        bDeactcontext.Enabled := False;
         end;  //of if
 
-     pmDeactivate.Enabled := false;
-     pmExport.Enabled := false;
-     pmDelete.Enabled := false;
-     pmInfos.Enabled := false;
-     bExportContext.Enabled := false;
-     bDeleteContext.Enabled := false;
-     bClose2.Default := true;
+     pmDeactivate.Enabled := False;
+     pmExport.Enabled := False;
+     pmDelete.Enabled := False;
+     pmProperties.Enabled := False;
+     bExportContext.Enabled := False;
+     bDeleteContext.Enabled := False;
+     bClose2.Default := True;
      end;  //of if
 end;
 
-{ Doppelklick Events }
+{ TMain.lwListDblClick
+
+  Event method that is called when user double clicks on TListView item. }
+
 procedure TMain.lwListDblClick(Sender: TObject);
 begin
   if bActivate.Enabled then
-     bActivate.Click
+    bActivate.Click
   else
-     if bDeactivate.Enabled then
-        bDeactivate.Click
-     else
-        if bDelete.Enabled then
-           bDelete.Click;
+    if bDeactivate.Enabled then
+      bDeactivate.Click
+    else
+      if bDelete.Enabled then
+        bDelete.Click;
 end;
 
+{ TMain.lwContextDblClick
+
+  Event method that is called when user double clicks on TListView item. }
 
 procedure TMain.lwContextDblClick(Sender: TObject);
 begin
   if bActContext.Default then
-     bActContext.Click
+    bActContext.Click
   else
-     if bDeactContext.Default then
-        bDeactContext.Click
-     else
-        if bDeleteContext.Default then
-           bDeleteContext.Click;
+    if bDeactContext.Default then
+      bDeactContext.Click
+    else
+      if bDeleteContext.Default then
+        bDeleteContext.Click;
 end;
 
-{ Liste sortieren Event }
+{ TMain.lwListColumnClick
+
+  Event method that is called when user clicks on TListView column. }
+
 procedure TMain.lwListColumnClick(Sender: TObject; Column: TListColumn);
 begin
   FColumnToSort := Column.Index;
   (Sender as TCustomListView).AlphaSort;
 end;
 
+{ TMain.lwListColumnClick
+
+  Sorts a TListView column alphabetically. }
 
 procedure TMain.lwListCompare(Sender: TObject; Item1, Item2: TListItem;
-  Data: Integer; var Compare: Integer);                     //ListView sortieren
+  Data: Integer; var Compare: Integer);
 begin
-  if (FColumnToSort = 0) then                               //"Aktiv"-Spalte
-     Compare := CompareText(Item1.Caption, Item2.Caption)
-  else                                                      //andere Spalte
-     begin
-     Data := FColumnToSort -1;
+  // Status column?
+  if (FColumnToSort = 0) then
+    Compare := CompareText(Item1.Caption, Item2.Caption)
+  else
+    begin
+      Data := FColumnToSort -1;
 
-     if (Data < 3) then
+      if (Data < 3) then
         Compare := CompareText(Item1.SubItems[Data], Item2.SubItems[Data]);
-     end;  //of if
+    end;  //of if
 end;
 
-{##############################################################################}
-{ Kontextmenü }
+{ TMain.pmDeactivateClick
 
-procedure TMain.pmDeactivateClick(Sender: TObject);            //de-/aktivieren
+  Popup menu entry to deactivate an item. }
+
+procedure TMain.pmDeactivateClick(Sender: TObject);
 begin
-  if (FTab = tsStartup) then                    //Autostart
-     lwListDblClick(Sender)
+  if (PageControl.ActivePage = tsStartup) then
+    lwListDblClick(Sender)
   else
-     lwContextDblClick(Sender);                 //Kontext
+    lwContextDblClick(Sender);
 end;
 
+{ TMain.pmDeleteClick
 
-procedure TMain.pmDeleteClick(Sender: TObject);                       //löschen
+  Popup menu entry to delete an item. }
+
+procedure TMain.pmDeleteClick(Sender: TObject);
 begin
-  if (FTab = tsStartup) then                    //Autostart
-     bDelete.Click
+  if (PageControl.ActivePage = tsStartup) then
+    bDelete.Click
   else
-     bDeleteContext.Click;                      //Kontext
+    bDeleteContext.Click;
 end;
 
+{ TMain.pmPropertiesClick
 
-procedure TMain.pmInfosClick(Sender: TObject);                  //Eigenschaften
+  Popup menu entry to show some properties. }
+
+procedure TMain.pmPropertiesClick(Sender: TObject);
 var
   Path, Name: string;
 
 begin
-  if (FTab = tsStartup) then
+  if (PageControl.ActivePage = tsStartup) then
     Startup.Item.GetItemInfo(Name, Path, FLang)
   else
     Context.Item.GetItemInfo(Name, Path, FLang);
@@ -1014,8 +1108,8 @@ begin
        lwList.ItemFocused.Data := Pointer(index);           //in Data schreiben
        Startup.AppIndex := lwList.ItemFocused.Data;         //Pointer auf Item
        EditPath(OpenDialog.FileName);                       //"Pfad bearbeiten"-Dialog
-       lwListSelectItem(Self, lwList.ItemFocused, true);    //Eintrag selektieren
-       pmEdit.Enabled := true;                              //"Pfad bearbeiten" in Kontextmenü
+       lwListSelectItem(Self, lwList.ItemFocused, True);    //Eintrag selektieren
+       pmEdit.Enabled := True;                              //"Pfad bearbeiten" in Kontextmenü
        end;  //of begin
 
   finally                                                   //freigeben
@@ -1041,10 +1135,10 @@ var
   procedure CreateLnkFile(AErrorID: Integer = 55);       //*.Lnk Datei erstellen
   begin
 	  if (Startup.IndexOf(Name) = -1) then                  //existiert Programm?
-      if not TClearas.CreateLnk(OpenDialog.FileName, TClearas.GetStartUpDir(false) + Name) then
+      if not TClearas.CreateLnk(OpenDialog.FileName, TClearas.GetStartUpDir(False) + Name) then
         FLang.MessageBox(AErrorID, mtError)
       else
-        GetStartups
+        ShowStartupEntries()
     else
       FLang.MessageBox(FLang.GetString(40) +'"'+ Name +'" '+ FLang.GetString(42));
   end;
@@ -1086,7 +1180,7 @@ begin
               if (Startup.IndexOf(Name) = -1) then                      //existiert Programm?
                  try
                    WriteStrValue('HKCU', KEY_STARTUP, Name, OpenDialog.FileName +' '+ Params);
-                   GetStartups;
+                   ShowStartupEntries();
 
                  except
                    FLang.MessageBox(FLang.GetString(40) +'"'+ Name +'" '+ FLang.GetString(42), mtError);
@@ -1110,7 +1204,7 @@ var
     if (Startup.IndexOf(Name) = -1) then                  //existiert Programm?
     begin
       TClearas.CreateLnk(Path, TClearas.GetStartupDir(AAllUsers) + Name); //Currnt User Dir
-      GetStartups;                                       //aktualisieren
+      ShowStartupEntries();
     end  //of begin
     else
       FLang.MessageBox(FLang.GetString(40) +'"'+ Name +'" '+ FLang.GetString(42), mtError);
@@ -1118,6 +1212,9 @@ var
   
 begin
   OpenDialog := TOpenDialog.Create(Self);                   //init OpenDialog
+
+  //if TWinWOW64.DisableWow64FsRedirection() then
+  //  ShowMessage('Disable True');
 
   if not DirectoryExists(TClearas.GetWinDir +'\pss') then   //existiert Dir nicht?
      ForceDirectories(TClearas.GetWinDir +'\pss');          //dann Dir erstellen
@@ -1138,19 +1235,22 @@ begin
         CreateLnkFile(OpenDialog.FilterIndex = 2);
       end;  //of with
 
-  finally                             //freigeben
+  finally
     OpenDialog.Free;
+
+    //if TWinWOW64.RevertWow64FsRedirection() then
+   //  ShowMessage('Revert True');
   end;   //of finally
 end;
 
 
 procedure TMain.mmExportClick(Sender: TObject);         //exportieren als *.reg
 begin
-  if ((FTab = tsStartup) and bExport.Enabled) then
+  if ((PageControl.ActivePage = tsStartup) and bExport.Enabled) then
     bExport.Click
   else
-    if ((FTab = tsContext) and bExportContext.Enabled) then
-      RegExport
+    if ((PageControl.ActivePage = tsContext) and bExportContext.Enabled) then
+      ShowRegistryExportDialog()
     else
       FLang.MessageBox(FLang.GetString(58) + FLang.GetString(66) +^J
                   + FLang.GetString(59), mtWarning);
@@ -1195,114 +1295,130 @@ begin
 end;
 
 
-procedure TMain.mmRefreshClick(Sender: TObject);              //"aktualisieren"
+procedure TMain.mmRefreshClick(Sender: TObject);
 begin
-  if (FTab = tsStartup) then              //Reiter Autostart aktiv?
-     GetStartups
+  if (PageControl.ActivePage = tsStartup) then
+     ShowStartupEntries()
   else
-     GetContext;                          //Reiter Kontextmenü aktiv?
+     ShowContextMenuEntries();
 end;
 
+{ TMain.mmOptimateClick
 
-procedure TMain.mmStandardClick(Sender: TObject);       //Standard Spaltengröße
+  Resizes all columns to standard size. }
+
+procedure TMain.mmStandardClick(Sender: TObject);
 begin
-  if (FTab = tsStartup) then                             //Reiter Autostart
-     begin
-     lwList.Columns[1].Width := 125;
-     lwList.Columns[2].Width := 124;
-     lwList.Columns[3].Width := 80;
-     end  //of begin
+  if (PageControl.ActivePage = tsStartup) then
+  begin
+    lwList.Columns[1].Width := 125;
+    lwList.Columns[2].Width := 124;
+    lwList.Columns[3].Width := 80;
+  end  //of begin
   else
-     begin                                               //Reiter Kontextmenü
-     lwContext.Columns[1].Width := 150;
-     lwContext.Columns[2].Width := 115;
-     lwContext.Columns[3].Width := 65;
-     end;  //of if
+    begin
+      lwContext.Columns[1].Width := 150;
+      lwContext.Columns[2].Width := 115;
+      lwContext.Columns[3].Width := 65;
+    end;  //of if
 end;
 
+{ TMain.mmOptimateClick
 
-procedure TMain.mmOptimateClick(Sender: TObject);     //Spaltengröße optimieren
+  Resizes all columns to fit the shown text optimal. }
+
+procedure TMain.mmOptimateClick(Sender: TObject);
 begin
-  if (FTab = tsStartup) then                           //Reiter Autostart
-     begin
-     lwList.Columns[1].Width := ColumnTextWidth;
-     lwList.Columns[2].Width := ColumnTextWidth;
-     lwList.Columns[3].Width := ColumnTextWidth;
-     end  //of begin
+  if (PageControl.ActivePage = tsStartup) then
+  begin
+    lwList.Columns[1].Width := ColumnTextWidth;
+    lwList.Columns[2].Width := ColumnTextWidth;
+    lwList.Columns[3].Width := ColumnTextWidth;
+  end  //of begin
   else
-     begin                                             //Reiter Kontextmenü
-     lwContext.Columns[1].Width := ColumnTextWidth;
-     lwContext.Columns[2].Width := ColumnTextWidth;
-     end;  //of if
+    begin
+      lwContext.Columns[1].Width := ColumnTextWidth;
+      lwContext.Columns[2].Width := ColumnTextWidth;
+    end;  //of if
 end;
 
+{ TMain.mmDateClick
 
-procedure TMain.mmDateClick(Sender: TObject);                  //Datum anzeigen
+  Adds or removes the deactivation timestamp column with a animation. }
+
+procedure TMain.mmDateClick(Sender: TObject);
 var
   endOf: integer;
 
 begin
   if not (WindowState = wsMaximized) then
-     lwList.Clear;
+    lwList.Clear;
 
+  // Timestamp already shown?
   if mmDate.Checked then
-     begin                            //Spalte löschen
-     mmDate.Checked := false;
+  begin
+    mmDate.Checked := False;
 
-     if (lwList.Columns.Count > 4) then
-        begin
-        Constraints.MinWidth := Constraints.MinWidth - lwList.Column[4].Width;
-        lwList.Column[4].MinWidth := 0;
-        endOf := Width - 120;
+    if (lwList.Columns.Count > 4) then
+    begin
+      Constraints.MinWidth := Constraints.MinWidth - lwList.Column[4].Width;
+      lwList.Column[4].MinWidth := 0;
+      endOf := Width - 120;
 
-        repeat                        //Animation "langsam zuschieben"
-          Width := Width - 1;
+      // Animation to remove column smoothly
+      repeat
+        Width := Width - 1;
 
-          if (WindowState = wsMaximized) then
-             endOf := Width;
-
-          if (lwList.Column[4].Width <= 120) then
-             lwList.Column[4].Width := lwList.Column[4].Width - 1;
-
-          Update;
-          Sleep(0);
-        until ((lwList.Column[4].Width <= 0) and (Width = endOf));
-
-        lwList.Columns.Delete(4);
-        GetStartups(false);           //aktualisieren
-        end;   //of if
-     end   //of begin
-  else
-     begin                            //neue Spalte anlegen
-     mmDate.Checked := true;
-     lwList.Columns.Add.Caption := FLang.GetString(95);
-     endOf := Width + 120;
-
-     if (WindowState = wsMaximized) then
-        GetStartups(false);           //aktualisieren
-
-     repeat                           //Animation "langsam aufschieben"
-       Width := Width + 1;
-
-       if (WindowState = wsMaximized) then
+        if (WindowState = wsMaximized) then
           endOf := Width;
 
-       if (lwList.Column[4].Width < 120) then
+        if (lwList.Column[4].Width <= 120) then
+          lwList.Column[4].Width := lwList.Column[4].Width - 1;
+
+        Update;
+        Sleep(0);
+      until ((lwList.Column[4].Width <= 0) and (Width = endOf));
+
+      // Delete column
+      lwList.Columns.Delete(4);
+
+      // Refresh counter label
+      ShowStartupEntries(False);
+    end;  //of if
+  end  //of begin
+  else
+    begin
+      mmDate.Checked := True;
+      endOf := Width + 120;
+
+      // Add column
+      lwList.Columns.Add.Caption := FLang.GetString(95);
+
+      if (WindowState = wsMaximized) then
+        ShowStartupEntries(False);
+
+      // Animation to add column smoothly
+      repeat
+        Width := Width + 1;
+
+        if (WindowState = wsMaximized) then
+          endOf := Width;
+
+        if (lwList.Column[4].Width < 120) then
           lwList.Column[4].Width := lwList.Column[4].Width + 1;
 
-       Update;
-       Sleep(0);
-     until ((lwList.Column[4].Width >= 120) and (Width = endOf));
+        Update;
+        Sleep(0);
+      until ((lwList.Column[4].Width >= 120) and (Width = endOf));
 
-     lwList.Column[4].MinWidth := lwList.Column[4].Width;
-     lwList.Column[4].MaxWidth := lwList.Column[4].Width;
-     Constraints.MinWidth := Constraints.MinWidth + lwList.Column[4].Width;
+      lwList.Column[4].MinWidth := lwList.Column[4].Width;
+      lwList.Column[4].MaxWidth := lwList.Column[4].Width;
+      Constraints.MinWidth := Constraints.MinWidth + lwList.Column[4].Width;
 
-     if not (WindowState = wsMaximized) then
-        GetStartups(false);           //aktualisieren
-     end;  //of if
+      if not (WindowState = wsMaximized) then
+        ShowStartupEntries(False);
+    end;  //of if
 end;
-
 
 { TMain.mmGerClick
 
@@ -1330,7 +1446,6 @@ procedure TMain.mmFraClick(Sender: TObject);
 begin
   FLang.ChangeLanguage(Sender, 500);
 end;
-
 
 { TMain.mmDownloadCertClick
 
@@ -1416,42 +1531,48 @@ begin
   end;  //of with
 end;
 
+{ TMain.PageControlChange
 
-procedure TMain.PageControlChange(Sender: TObject);            //Modus wechseln
+  Event method that is called when tab is changed. }
+
+procedure TMain.PageControlChange(Sender: TObject);
 begin
-  FTab := PageControl.ActivePage;
-  mmExport.Enabled := true;
-  mmExport.Visible := true;
+  mmExport.Enabled := True;
+  mmExport.Visible := True;
 
-  if (FTab = tsContext) then                       //Reiter Kontextmenü aktiv?
-     begin
-     mmAdd.Visible := false;                       //Einträge unsichtbar
-     mmImport.Visible := false;
-     mmExportList.Visible := false;
-     mmDate.Visible := false;
-     mmRunOnce.Visible := false;
-     N2.Visible := false;
-     pmInfos.Visible := false;
+  // Disable some menu items not used on context menu page
+  if (PageControl.ActivePage = tsContext) then
+  begin
+    mmAdd.Visible := False;
+    mmImport.Visible := False;
+    mmExportList.Visible := False;
+    mmDate.Visible := False;
+    mmRunOnce.Visible := False;
+    N2.Visible := False;
+    pmProperties.Visible := False;
 
-     if (Context.Count = 0) then
-        GetContext;
-     end  //of begin
+    if (Context.Count = 0) then
+      ShowContextMenuEntries();
+  end  //of begin
   else
-     begin                                         //Reiter Autostart
-     mmAdd.Visible := true;                        //Einträge sichtbar
-     mmImport.Visible := true;
-     mmExportList.Visible := true;
-     mmDate.Visible := true;
-     mmRunOnce.Visible := true;
-     N2.Visible := true;
-     pmInfos.Visible := true;
-     end;  //of if
+  begin
+    mmAdd.Visible := True;
+    mmImport.Visible := True;
+    mmExportList.Visible := True;
+    mmDate.Visible := True;
+    mmRunOnce.Visible := True;
+    N2.Visible := True;
+    pmProperties.Visible := True;
+  end;  //of if
 end;
 
+{ TMain.cbExpertClick
+
+  Event method that is called when user clicked on "expert mode". }
 
 procedure TMain.cbExpertClick(Sender: TObject);
 begin
-  GetContext;
+  ShowContextMenuEntries();
 end;
 
 
@@ -1459,10 +1580,10 @@ procedure TMain.FormKeyDown(Sender: TObject; var Key: Word;
   Shift: TShiftState);                                                  //Hotkey
 begin
   if (Key = VK_DELETE) then                   //"löschen"-Hotkey
-     if ((FTab = tsStartup) and bDelete.Enabled) then
+     if ((PageControl.ActivePage = tsStartup) and bDelete.Enabled) then
         bDelete.Click
      else
-        if ((FTab = tsContext) and bDeleteContext.Enabled) then
+        if ((PageControl.ActivePage = tsContext) and bDeleteContext.Enabled) then
            bDeleteContext.Click;
 end;
 
