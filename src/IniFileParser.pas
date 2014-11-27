@@ -634,10 +634,10 @@ begin
   else
     begin
       // Append item at the end of section
-      EndIndex := GetEndOfSection(ASectionName) - 1;
+      EndIndex := GetEndOfSection(ASectionName);
 
       // Add section if not exists
-      if (EndIndex = -2) then
+      if (EndIndex = -1) then
       begin
         AddSection(ASectionName);
         EndIndex := FFile.Count;

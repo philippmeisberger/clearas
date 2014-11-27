@@ -1085,40 +1085,59 @@ begin
   FLang.MessageBox(Name +^J+ Path);
 end;
 
+{ TMain.pmSearchClick
 
-procedure TMain.pmSearchClick(Sender: TObject);          //nach Programm suchen
+  Popup menu entry to search for a lost file path. }
+
+procedure TMain.pmSearchClick(Sender: TObject);
 var
   OpenDialog: TOpenDialog;
   index: integer;
 
 begin
-  OpenDialog := TOpenDialog.Create(Self);                   //init OpenDialog
+  OpenDialog := TOpenDialog.Create(Self);
 
+  // Set TOpenDialog options
   with OpenDialog do
-    begin
-    InitialDir := TClearas.GetWinDir[1] +':\Program Files';  //Programme Verzeichnis
-    Filter := FLang.GetString(38);                        //Filter
-    Title := FLang.GetString(34);                         //Fenstername
-    end;  //of with
+  begin
+    Title := FLang.GetString(34);
+    InitialDir := '%ProgramFiles%';
+    Filter := FLang.GetString(38);
+  end;  //of with
 
   try
-    if OpenDialog.Execute then                              //"öffnen" Klick
-       begin
-       index := lwList.ItemFocused.Index;                   //Index speichern
-       lwList.ItemFocused.Data := Pointer(index);           //in Data schreiben
-       Startup.AppIndex := lwList.ItemFocused.Data;         //Pointer auf Item
-       EditPath(OpenDialog.FileName);                       //"Pfad bearbeiten"-Dialog
-       lwListSelectItem(Self, lwList.ItemFocused, True);    //Eintrag selektieren
-       pmEdit.Enabled := True;                              //"Pfad bearbeiten" in Kontextmenü
-       end;  //of begin
+    // User clicked "open"
+    if OpenDialog.Execute then
+    begin
+      // Save index to current selected list item
+      index := lwList.ItemFocused.Index;
 
-  finally                                                   //freigeben
+      // Write pointer to index in current item data
+      lwList.ItemFocused.Data := Pointer(index);
+
+      // Save this pointer
+      Startup.AppIndex := lwList.ItemFocused.Data;
+
+      // Let user edit the path
+      EditPath(OpenDialog.FileName);
+
+      // Select current item in list
+      lwListSelectItem(Self, lwList.ItemFocused, True);
+
+      // Enable edit once again
+      pmEdit.Enabled := True;
+    end;  //of begin
+
+  finally
     OpenDialog.Free;
-  end;  //of finally
+  end;  //of try
 end;
 
+{ TMain.pmEditClick
 
-procedure TMain.pmEditClick(Sender: TObject);               //"Pfad bearbeiten"
+  Popup menu entry to edit the path of a program. }
+
+procedure TMain.pmEditClick(Sender: TObject);
 begin
   EditPath(lwList.ItemFocused.SubItems[1]);
 end;
@@ -1146,8 +1165,12 @@ begin
   end;  //of with
 
   try
-    // User clicked "open"?
-    if OpenDialog.Execute then
+    try
+      // User clicked "open"?
+      if OpenDialog.Execute then
+      begin
+        Name := '';
+
         if (OpenDialog.FilterIndex = 3) then
         begin
           // Set default name
@@ -1165,12 +1188,21 @@ begin
             Exit;
         end;  //of begin
 
-    // Error while adding item?
-    if not Startup.AddProgram(OpenDialog.FileName, Name) then
-      FLang.MessageBox(FLang.GetString(40) +'"'+ Name +'" '+ FLang.GetString(42));
+        // Error while adding item?
+        if not Startup.AddProgram(OpenDialog.FileName, Name) then
+          FLang.MessageBox(FLang.GetString(40) +'"'+ OpenDialog.FileName +'" '
+            + FLang.GetString(42))
+        else
+          // Update TListView
+          ShowStartupEntries(False);
+      end;  //of begin
 
-  finally
-    OpenDialog.Free;
+    finally
+      OpenDialog.Free;
+    end;  //of try
+
+  except
+    FLang.MessageBox(56, mtError);
   end;  //of try
 end;
 
