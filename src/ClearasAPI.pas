@@ -166,11 +166,12 @@ type
     function AddNewStartupUserItem(const AName, AFilePath: string;
       AAllUsers: Boolean = False): Boolean;
     function BackupExists(): Boolean;
-    procedure ExportItem(const AFileName: string; ARegFile: Boolean = True);
-    procedure ExportList(const AFileName: string);
     function ChangeItemStatus(): Boolean; override;
     function ChangeItemFilePath(const ANewFilePath: string): Boolean;
     function DeleteItem(): Boolean; override;
+    procedure ExportItem(const AFileName: string; ARegFile: Boolean = True);
+    procedure ExportList(const AFileName: string);
+    function ImportBackup(const ABackupFile: string): Boolean;
     function IndexOf(AName: string): Integer; overload;
     function IndexOf(AName: string; AEnabled: Boolean): Integer; overload;
     procedure Insert(AIndex: Integer; AItem: TStartupListItem);
@@ -256,6 +257,8 @@ type
   end;
 
 implementation
+
+uses Math;
 
 { TClearas }
 
@@ -1485,15 +1488,10 @@ end;
 
 function TStartupList.AddNewStartupItem(const AName, AFilePath: string): Boolean;
 begin
-  // Try to add new startup item to registry
-  try
-    TClearas.WriteStrValue('HKCU', KEY_STARTUP, AName, AFilePath);
-    AddItemEnabled('HKCU', KEY_STARTUP, AName, AFilePath);
-    result := True;
-
-  except
-    result := False;
-  end;  //of try
+  // Adds new startup item to Registry
+  TClearas.WriteStrValue('HKCU', KEY_STARTUP, AName, AFilePath);
+  AddItemEnabled('HKCU', KEY_STARTUP, AName, AFilePath);
+  result := True;
 end;
 
 { public TStartupList.AddNewStartupItem
@@ -1506,22 +1504,19 @@ var
   LnkFilePath: string;
 
 begin
-  // Try to add new startup user item to startup folder
-  try
-    LnkFilePath := TClearas.GetStartUpDir(AAllUsers) + AName;
+  result := False;
 
-    // Link file created successfully?
-    if TClearas.CreateLnk(AFilePath, LnkFilePath) then
-    begin
-      AddUserItemEnabled(LnkFilePath, AAllUsers);
-      result := True;
-    end  //of begin
-    else
-      raise EStartupException.Create('Could not create .lnk file!');
+  // Set startup location
+  LnkFilePath := TClearas.GetStartUpDir(AAllUsers) + AName;
 
-  except
-    result := False;
-  end;  //of try
+  // Link file created successfully?
+  if TClearas.CreateLnk(AFilePath, LnkFilePath) then
+  begin
+    AddUserItemEnabled(LnkFilePath, AAllUsers);
+    result := True;
+  end  //of begin
+  else
+    raise EStartupException.Create('Could not create .lnk file!');
 end;
 
 { public TStartupList.BackupExists
@@ -1668,6 +1663,38 @@ begin
   finally
     RegFile.Free;
   end;  //of try
+end;
+
+{ public TStartupList.ImportBackup
+
+  Imports a startup user backup file and adds it to the list. }
+
+function TStartupList.ImportBackup(const ABackupFile: string): Boolean;
+var
+  Path, Name, Ext: string;
+
+begin
+  result := False;
+  Ext := ExtractFileExt(ABackupFile);
+
+  // Check invalid extension
+  if ((Ext <> EXT_COMMON) or (Ext <> EXT_USER)) then
+    raise EInvalidArgument.Create('Invalid backup file extension! Must be "'
+      + EXT_COMMON +'" or "'+ EXT_USER+'"!');
+
+  // Get the name of item
+  Name := ExtractFileName(TClearas.DeleteExt(ABackupFile));
+
+  // Entry already exists?
+  if (IndexOf(Name) <> -1) then
+    Exit;
+
+  // Extract path to .exe
+  if not TClearas.ReadLnkFile(ABackupFile, Path) then
+    raise EStartupException.Create('Could not read backup file!');
+
+  // Create .lnk file and add it to list
+  result := AddNewStartupUserItem(Name, Path, Ext = EXT_COMMON);
 end;
 
 { public TStartupList.IndexOf

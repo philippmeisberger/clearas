@@ -1138,7 +1138,7 @@ var
       if not TClearas.CreateLnk(OpenDialog.FileName, TClearas.GetStartUpDir(False) + Name) then
         FLang.MessageBox(AErrorID, mtError)
       else
-        ShowStartupEntries()
+        ShowStartupEntries(False)
     else
       FLang.MessageBox(FLang.GetString(40) +'"'+ Name +'" '+ FLang.GetString(42));
   end;
@@ -1193,98 +1193,105 @@ begin
   end;  //of finally
 end;
 
+{ TMain.mmImportClick
 
-procedure TMain.mmImportClick(Sender: TObject);            //Backup importieren
+  MainMenu entry to import a startup .lnk backup file. }
+
+procedure TMain.mmImportClick(Sender: TObject);
 var
   OpenDialog: TOpenDialog;
-  Path, Name: string;
-  
-  procedure CreateLnkFile(AAllUsers: Boolean);      //*.Lnk Datei erstellen
-  begin
-    if (Startup.IndexOf(Name) = -1) then                  //existiert Programm?
-    begin
-      TClearas.CreateLnk(Path, TClearas.GetStartupDir(AAllUsers) + Name); //Currnt User Dir
-      ShowStartupEntries();
-    end  //of begin
-    else
-      FLang.MessageBox(FLang.GetString(40) +'"'+ Name +'" '+ FLang.GetString(42), mtError);
-  end;
   
 begin
-  OpenDialog := TOpenDialog.Create(Self);                   //init OpenDialog
-
-  //if TWinWOW64.DisableWow64FsRedirection() then
-  //  ShowMessage('Disable True');
-
-  if not DirectoryExists(TClearas.GetWinDir +'\pss') then   //existiert Dir nicht?
-     ForceDirectories(TClearas.GetWinDir +'\pss');          //dann Dir erstellen
-
-  with OpenDialog do
-    begin
-    InitialDir := TClearas.GetWinDir +'\pss';               //Zeiger auf Dir
-    Filter := FLang.GetString(39) +' *'+ EXT_COMMON +'|*'+ EXT_COMMON;
-    Title := FLang.GetString(16);
-    end;  //of with
+  OpenDialog := TOpenDialog.Create(Self);
 
   try
-    if OpenDialog.Execute then                              //"speichern" Klick
-      with TClearas do
-      begin
-        ReadLnkFile(OpenDialog.FileName, Path);            //Verknüpfung auslesen
-        Name := ExtractFileName(DeleteExt(OpenDialog.FileName));
-        CreateLnkFile(OpenDialog.FilterIndex = 2);
-      end;  //of with
+    // Create Backup directory if not exists
+    if not DirectoryExists(TClearas.GetWinDir +'\pss') then
+      ForceDirectories(TClearas.GetWinDir +'\pss');
 
-  finally
-    OpenDialog.Free;
+    // Set TOpenDialog options
+    with OpenDialog do
+    begin
+      Title := FLang.GetString(16);
+      InitialDir := TClearas.GetWinDir +'\pss';
+      Filter := FLang.GetString(39) +' *'+ EXT_COMMON +'|*'+ EXT_COMMON;
+    end;  //of with
 
-    //if TWinWOW64.RevertWow64FsRedirection() then
-   //  ShowMessage('Revert True');
-  end;   //of finally
+    try
+      // User clicked "save"?
+      if OpenDialog.Execute then
+        if not Startup.ImportBackup(OpenDialog.FileName) then
+          FLang.MessageBox(FLang.GetString(40) +'"'+ Name +'" '
+            + FLang.GetString(42), mtError)
+        else
+          // Update TListView
+          ShowStartupEntries(False);
+
+    finally
+      OpenDialog.Free;
+    end;  //of try
+
+  except
+    FLang.MessageBox(56, mtError);
+  end;  //of try
 end;
 
+{ TMain.mmExportClick
 
-procedure TMain.mmExportClick(Sender: TObject);         //exportieren als *.reg
+  MainMenu entry to export a single item as .reg file. }
+
+procedure TMain.mmExportClick(Sender: TObject);
 begin
-  if ((PageControl.ActivePage = tsStartup) and bExport.Enabled) then
-    bExport.Click
+  if (PageControl.ActivePage = tsStartup) then
+    bExport.Click()
   else
-    if ((PageControl.ActivePage = tsContext) and bExportContext.Enabled) then
-      ShowRegistryExportDialog()
+    if (PageControl.ActivePage = tsContext) then
+      bExportContext.Click()
     else
       FLang.MessageBox(FLang.GetString(58) + FLang.GetString(66) +^J
                   + FLang.GetString(59), mtWarning);
 end;
 
+{ TMain.mmExportListClick
 
-procedure TMain.mmExportListClick(Sender: TObject);     //exportieren als Liste
+  MainMenu entry to export the complete autostart as .reg file (for backup). }
+
+procedure TMain.mmExportListClick(Sender: TObject);
 var
   SaveDialog: TSaveDialog;
 
 begin
-  SaveDialog := TSaveDialog.Create(Self);           //init SaveDialog
+  SaveDialog := TSaveDialog.Create(Self);
 
+  // Set TSaveDialog options
   with SaveDialog do
   begin
-    Options := Options + [ofOverwritePrompt];       //Überschreiben-Dialog
-    Filter := FLang.GetString(36);                 //Filter festlegen
-    DefaultExt := '.reg';                           //*.reg-Endung
-    Title := FLang.GetString(18);                 //Fenstername
-    FileName := FLang.GetString(11) + DefaultExt; //default-Name
+    Title := FLang.GetString(18);
+
+    // Confirm overwrite
+    Options := Options + [ofOverwritePrompt];
+
+    // Filter .reg files only
+    Filter := FLang.GetString(36);
+    DefaultExt := '.reg';
+
+    // Sets a default file name
+    FileName := FLang.GetString(11) + DefaultExt;
   end;  //of with
 
   try
-    if SaveDialog.Execute then                      //"speichern" Klick
-      Startup.ExportList(SaveDialog.FileName);     //speichern als *.reg
+    // User clicked "save"?
+    if SaveDialog.Execute then
+      Startup.ExportList(SaveDialog.FileName);
 
   finally
     SaveDialog.Free;
-  end;  //of finally
+  end;  //of try
 end;
 
 { TMain.mmContextClick
 
-  Sets or resets the flag to delete backups automatically. }
+  MainMenu entry to set or resets the flag to delete backups automatically. }
 
 procedure TMain.mmDelBackupClick(Sender: TObject);
 begin
@@ -1293,7 +1300,7 @@ end;
 
 { TMain.mmContextClick
 
-  Adds or removes "Clearas" in the recycle bin context menu. }
+  MainMenu entry to add or removes "Clearas" in the recycle bin context menu. }
 
 procedure TMain.mmContextClick(Sender: TObject);
 begin
@@ -1302,7 +1309,7 @@ end;
 
 { TMain.mmRefreshClick
 
-  Refreshes the current shown TListView. }
+  MainMenu entry to refreshe the current shown TListView. }
 
 procedure TMain.mmRefreshClick(Sender: TObject);
 begin
@@ -1314,7 +1321,7 @@ end;
 
 { TMain.mmStandardClick
 
-  Resizes all columns to standard size. }
+  MainMenu entry to resize all columns to standard size. }
 
 procedure TMain.mmStandardClick(Sender: TObject);
 begin
@@ -1334,7 +1341,7 @@ end;
 
 { TMain.mmOptimateClick
 
-  Resizes all columns to fit the shown text optimal. }
+  MainMenu entry to resize all columns to fit the shown text optimal. }
 
 procedure TMain.mmOptimateClick(Sender: TObject);
 begin
@@ -1353,7 +1360,8 @@ end;
 
 { TMain.mmDateClick
 
-  Adds or removes the deactivation timestamp column with a animation. }
+  MainMenu entry to add or removes the deactivation timestamp column with
+  an animation. }
 
 procedure TMain.mmDateClick(Sender: TObject);
 var
@@ -1584,18 +1592,25 @@ begin
   ShowContextMenuEntries();
 end;
 
+{ TMain.FormKeyDown
+
+  Event method that is called when user presses a key. }
 
 procedure TMain.FormKeyDown(Sender: TObject; var Key: Word;
-  Shift: TShiftState);                                                  //Hotkey
+  Shift: TShiftState);
 begin
-  if (Key = VK_DELETE) then                   //"löschen"-Hotkey
-     if ((PageControl.ActivePage = tsStartup) and bDelete.Enabled) then
+  // Bind the "delete" key to delete methods
+  if (Key = VK_DELETE) then
+     if (PageControl.ActivePage = tsStartup) then
         bDelete.Click
      else
-        if ((PageControl.ActivePage = tsContext) and bDeleteContext.Enabled) then
+        if (PageControl.ActivePage = tsContext) then
            bDeleteContext.Click;
 end;
 
+{ TMain.bCloseClick
+
+  Closes Clearas. }
 
 procedure TMain.bCloseClick(Sender: TObject);
 begin
