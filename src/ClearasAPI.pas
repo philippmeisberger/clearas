@@ -163,15 +163,16 @@ type
     procedure AddEnabled(const AAllUsers: Boolean); overload;
     procedure AddEnabled(const ARootKey, AKeyPath: string); overload;
     function AddNewStartupItem(const AName, AFilePath: string): Boolean;
-    function AddNewStartupUserItem(const AName, AFilePath: string;
+    function AddNewStartupUserItem(AName, AFilePath: string;
       AAllUsers: Boolean = False): Boolean;
+    function AddProgram(const AFilePath: string; ANickName: string = ''): Boolean;
     function BackupExists(): Boolean;
     function ChangeItemStatus(): Boolean; override;
     function ChangeItemFilePath(const ANewFilePath: string): Boolean;
     function DeleteItem(): Boolean; override;
     procedure ExportItem(const AFileName: string; ARegFile: Boolean = True);
     procedure ExportList(const AFileName: string);
-    function ImportBackup(const ABackupFile: string): Boolean;
+    function ImportBackup(const AFilePath: string): Boolean;
     function IndexOf(AName: string): Integer; overload;
     function IndexOf(AName: string; AEnabled: Boolean): Integer; overload;
     procedure Insert(AIndex: Integer; AItem: TStartupListItem);
@@ -520,6 +521,7 @@ var
   reg: TRegistry;
 
 begin
+  result := False;
   reg := TRegistry.Create(DenyWOW64Redirection(KEY_ALL_ACCESS));
   reg.RootKey := HKEY_CLASSES_ROOT;
 
@@ -1498,13 +1500,16 @@ end;
 
   Adds a new startup user item to the autostart. }
 
-function TStartupList.AddNewStartupUserItem(const AName, AFilePath: string;
+function TStartupList.AddNewStartupUserItem(AName, AFilePath: string;
   AAllUsers: Boolean = False): Boolean;
 var
   LnkFilePath: string;
 
 begin
   result := False;
+
+  if (ExtractFileExt(AName) <> '.lnk') then
+     AName := AName +'.lnk';
 
   // Set startup location
   LnkFilePath := TClearas.GetStartUpDir(AAllUsers) + AName;
@@ -1518,6 +1523,43 @@ begin
   else
     raise EStartupException.Create('Could not create .lnk file!');
 end;
+
+{ public TStartupList.AddProgram
+
+  Checks if a backup file already exists. }
+
+function TStartupList.AddProgram(const AFilePath: string;
+  ANickName: string = ''): Boolean;
+var
+  Name, Ext: string;
+
+begin
+  result := False;
+  Name := ExtractFileName(AFilePath);
+  Ext := ExtractFileExt(Name);
+
+  // Check invalid extension
+  if ((Ext <> '.exe') or (Ext <> '.lnk') or (Ext <> '.bat')) then
+    raise EInvalidArgument.Create('Invalid program extension! Must be ".exe"'
+      +', ".lnk" or ".bat"!');
+
+  // Entry already exists?
+  if (IndexOf(Name) <> -1) then
+    Exit;
+
+  if ((Ext = '.exe') or (Ext = '.lnk')) then
+  begin
+    if (ANickName <> '') then
+      Name := ANickName
+    else
+      Name := TClearas.DeleteExt(Name);
+
+    result := AddNewStartupUserItem(Name, AFilePath);
+  end  //of begin
+  else
+    result := AddNewStartupItem(ANickName, AFilePath);
+end;
+
 
 { public TStartupList.BackupExists
 
@@ -1669,28 +1711,28 @@ end;
 
   Imports a startup user backup file and adds it to the list. }
 
-function TStartupList.ImportBackup(const ABackupFile: string): Boolean;
+function TStartupList.ImportBackup(const AFilePath: string): Boolean;
 var
   Path, Name, Ext: string;
 
 begin
   result := False;
-  Ext := ExtractFileExt(ABackupFile);
+  Ext := ExtractFileExt(AFilePath);
 
   // Check invalid extension
   if ((Ext <> EXT_COMMON) or (Ext <> EXT_USER)) then
     raise EInvalidArgument.Create('Invalid backup file extension! Must be "'
       + EXT_COMMON +'" or "'+ EXT_USER+'"!');
 
-  // Get the name of item
-  Name := ExtractFileName(TClearas.DeleteExt(ABackupFile));
+  // Set the name of item
+  Name := ExtractFileName(TClearas.DeleteExt(AFilePath)) +'.lnk';
 
   // Entry already exists?
   if (IndexOf(Name) <> -1) then
     Exit;
 
   // Extract path to .exe
-  if not TClearas.ReadLnkFile(ABackupFile, Path) then
+  if not TClearas.ReadLnkFile(AFilePath, Path) then
     raise EStartupException.Create('Could not read backup file!');
 
   // Create .lnk file and add it to list

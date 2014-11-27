@@ -1122,80 +1122,66 @@ procedure TMain.pmEditClick(Sender: TObject);               //"Pfad bearbeiten"
 begin
   EditPath(lwList.ItemFocused.SubItems[1]);
 end;
-{ of Kontextmenü }
 
-{##############################################################################}
-{ Mainmenu }
+{ TMain.mmAddClick
 
-procedure TMain.mmAddClick(Sender: TObject);              //Programm hinzufügen
+  MainMenu entry to add a application to autostart. }
+
+procedure TMain.mmAddClick(Sender: TObject);
 var
   OpenDialog: TOpenDialog;
   Name, Params: string;
-  
-  procedure CreateLnkFile(AErrorID: Integer = 55);       //*.Lnk Datei erstellen
-  begin
-	  if (Startup.IndexOf(Name) = -1) then                  //existiert Programm?
-      if not TClearas.CreateLnk(OpenDialog.FileName, TClearas.GetStartUpDir(False) + Name) then
-        FLang.MessageBox(AErrorID, mtError)
-      else
-        ShowStartupEntries(False)
-    else
-      FLang.MessageBox(FLang.GetString(40) +'"'+ Name +'" '+ FLang.GetString(42));
-  end;
-  
-begin
-  OpenDialog := TOpenDialog.Create(Self);                   //init OpenDialog
 
+begin
+  OpenDialog := TOpenDialog.Create(Self);
+
+  // Set TOpenDialog options
   with OpenDialog do
-    begin
-    InitialDir := TClearas.GetWinDir[1] +':\Program Files';  //Programme Verzeichnis
-    Filter := FLang.GetString(38);                        //Filter
-    Title := FLang.GetString(15);                         //Fenstername
-    end;  //of with
+  begin
+    Title := FLang.GetString(15);
+    InitialDir := '%ProgramFiles%';
+
+    // Filter .exe files
+    Filter := FLang.GetString(38);
+  end;  //of with
 
   try
-    if OpenDialog.Execute then                              //"Öffnen" Klick
-       with TClearas do
-         case OpenDialog.FilterIndex of
-           1: begin
-              Name := DeleteExt(ExtractFileName(OpenDialog.FileName)) +'.lnk';
-              CreateLnkFile(55);                            //*.Lnk Datei erstellen
-              end;  //of begin
+    try
+      // User clicked "open"?
+      if OpenDialog.Execute then
+        if (OpenDialog.FilterIndex = 3) then
+        begin
+          // Set default name
+          Name := TClearas.DeleteExt(ExtractFileName(OpenDialog.FileName));
 
-           2: begin
-              Name := ExtractFileName(OpenDialog.FileName);
-			        CreateLnkFile(56);                            //*.Lnk Datei erstellen
-              end;  //of begin
+          // User can edit the name
+          Name := InputBox(FLang.GetString(106), FLang.GetString(107), Name);
 
-           3: begin
-              Name := DeleteExt(ExtractFileName(OpenDialog.FileName));  //Name für Eintrag vorschlagen
-              Name := InputBox(FLang.GetString(106), FLang.GetString(107), Name);   //Name bearbeiten
+          // Name must not be empty!
+          if (Name = '') then
+            Exit;
 
-              if (Name = '') then
-                 Exit;
-                 
-              if not InputQuery(FLang.GetString(109), FLang.GetString(110), Params) then  //evtl. Parameter
-                 Exit;
+          // optional parameters
+          if not InputQuery(FLang.GetString(109), FLang.GetString(110), Params) then
+            Exit;
+        end;  //of begin
 
-              if (Startup.IndexOf(Name) = -1) then                      //existiert Programm?
-                 try
-                   WriteStrValue('HKCU', KEY_STARTUP, Name, OpenDialog.FileName +' '+ Params);
-                   ShowStartupEntries();
+      // Error while adding item?
+      if not Startup.AddProgram(OpenDialog.FileName, Name) then
+        FLang.MessageBox(FLang.GetString(40) +'"'+ Name +'" '+ FLang.GetString(42));
 
-                 except
-                   FLang.MessageBox(FLang.GetString(40) +'"'+ Name +'" '+ FLang.GetString(42), mtError);
-                 end;  //of except
-              end;  //of begin
-         end;  //of case
+    finally
+      OpenDialog.Free;
+    end;  //of try
 
-  finally                                                   //freigeben
-    OpenDialog.Free;
-  end;  //of finally
+  except
+    FLang.MessageBox(56, mtError);
+  end;  //of try
 end;
 
 { TMain.mmImportClick
 
-  MainMenu entry to import a startup .lnk backup file. }
+  MainMenu entry to import a startup backup file. }
 
 procedure TMain.mmImportClick(Sender: TObject);
 var
@@ -1218,7 +1204,7 @@ begin
     end;  //of with
 
     try
-      // User clicked "save"?
+      // User clicked "open"?
       if OpenDialog.Execute then
         if not Startup.ImportBackup(OpenDialog.FileName) then
           FLang.MessageBox(FLang.GetString(40) +'"'+ Name +'" '
