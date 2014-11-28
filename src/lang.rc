@@ -40,7 +40,7 @@ STRINGTABLE
 136, "Registrierungsdatei *.reg|*.reg"
 137, "RunOnce-Einträge anzeigen"
 138, "Anwendung *.exe|*.exe|Verknüpfung *.lnk|*.lnk|Batch-Datei *.bat|*.bat"
-139, "STARTUP-Dateien *.Startup|*.Startup|COMMONSTARTUP-Dateien"
+139, "STARTUP-Dateien *%s|*%s|COMMONSTARTUP-Dateien *%s|*%s"
 140, "Anwendung "
 141, "Backup "
 142, "existiert bereits!"
@@ -120,7 +120,6 @@ STRINGTABLE
 216, "Standard Spaltengröße"
 217, "Spaltengröße optimeren"
 218, "Deaktivierungsdatum anzeigen"
-219, "Service Pack anzeigen"
 
 //Englisch
 300, "Information"
@@ -162,7 +161,7 @@ STRINGTABLE
 336, "Regfile *.reg|*.reg"
 337, "Show RunOnce-entries"
 338, "Application *.exe|*.exe|Link file *.lnk|*.lnk|Batch file *.bat|*.bat"
-339, "STARTUP-files *.Startup|*.Startup|COMMONSTARTUP-files"
+339, "STARTUP-files *%s|*%s|COMMONSTARTUP-files *%s|*%s"
 340, "Application "
 341, "Backup "
 342, "already exists!"
@@ -242,7 +241,6 @@ STRINGTABLE
 416, "Standard columnwidth"
 417, "Optimate columnwidth"
 418, "Show date of deactivation"
-419, "Show service pack"
 
 //Französisch
 500, "Information"
@@ -284,7 +282,7 @@ STRINGTABLE
 536, "Fichier enregistrement *.reg|*.reg"
 537, "Afficher les enregistrements RunOnce"
 538, "Application *.exe|*.exe|Raccourci *.lnk|*.lnk|Fichier batch *.bat|*.bat"
-539, "Fichiers STARTUP *.Startup|*.Startup|fichiers COMMONSTARTUP"
+539, "Fichiers STARTUP *%s|*%s|Fichiers COMMONSTARTUP-files *%s|*%s"
 540, "L'application "
 541, "Backup "
 542, "existe déjà!"
@@ -364,5 +362,4 @@ STRINGTABLE
 616, "Taille standard de la colonne"
 617, "Optimaliser taille de la colonne"
 618, "Afficher date de la désactivation"
-619, "Afficher service pack"
 }

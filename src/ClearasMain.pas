@@ -397,7 +397,7 @@ begin
     mmOptimate.Caption := GetString(117);
     mmDate.Caption := GetString(118);
     mmRunOnce.Caption := GetString(37);
-    mmLang.Caption := GetString(119);
+    mmLang.Caption := GetString(25);
 
     // Help menu labels
     mmHelp.Caption := GetString(14);
@@ -446,7 +446,7 @@ begin
   end  //of begin
   else
     // Use default search mode
-    Context.Load();
+    Context.LoadContextMenus();
 
   // Clears all visual data
   lwContext.Clear();
@@ -530,7 +530,7 @@ begin
     Startup.Clear();
 
     // Load autostart with or without special RunOnce entires
-    Startup.Load(mmRunOnce.Checked);
+    Startup.LoadAutostart(mmRunOnce.Checked);
   end;  //of begin
 
   // Print all information about startup entires
@@ -563,7 +563,7 @@ begin
     // Successfully created backup of .lnk file?
     if Startup.CreateBackup() then
     begin
-      FLang.MessageBox(Flang.GetString(44) +'"'+ TClearas.GetWinDir +'\pss\"'+ Flang.GetString(45));
+      FLang.MessageBox(Flang.GetString(44) +'"'+ TClearas.GetBackupDir() +'"'+ Flang.GetString(45));
       bExport.Enabled := False;
     end  //of with
     else
@@ -1219,15 +1219,15 @@ begin
 
   try
     // Create Backup directory if not exists
-    if not DirectoryExists(TClearas.GetWinDir +'\pss') then
-      ForceDirectories(TClearas.GetWinDir +'\pss');
+    if not DirectoryExists(TClearas.GetBackupDir()) then
+      ForceDirectories(TClearas.GetBackupDir());
 
     // Set TOpenDialog options
     with OpenDialog do
     begin
       Title := FLang.GetString(16);
-      InitialDir := TClearas.GetWinDir +'\pss';
-      Filter := FLang.GetString(39) +' *'+ EXT_COMMON +'|*'+ EXT_COMMON;
+      InitialDir := TClearas.GetBackupDir();
+      Filter := Format(FLang.GetString(39), [EXT_USER, EXT_USER, EXT_COMMON, EXT_COMMON]);
     end;  //of with
 
     try

@@ -34,7 +34,8 @@ type
     function ExtractKey(const AKeyValuePair: string): string;
     function ExtractValue(const AKeyValuePair: string): string;
   public
-    constructor Create(const AFileName: string; ASaveOnDestroy: Boolean = False);
+    constructor Create(const AFileName: string; AOverwriteIfExists: Boolean = False;
+      ASaveOnDestroy: Boolean = False);
     destructor Destroy; override;
     procedure AddRemove(ASectionName, AKey, AValue: string);
     function AddSection(ASectionName: string): Boolean; overload;
@@ -71,7 +72,8 @@ type
     function GetKey(AIndex: Integer): string;
     function GetValue(AIndex: Integer): string;
   public
-    constructor Create(const AFileName: string);
+    constructor Create(const AFileName: string; AOverwriteIfExists: Boolean = False;
+      ASaveOnDestroy: Boolean = False);
     destructor Destroy; override;
     procedure AddRemove(ASectionName, AKey, AValue: string);
     function AddSection(AHKey: HKEY; AKeyPath: string): Boolean; reintroduce;
@@ -99,6 +101,8 @@ type
 
 implementation
 
+uses Math;
+
 { TIniFile }
 
 { public TIniFile.Create
@@ -106,18 +110,18 @@ implementation
   General constructor for creating a TIniFile instance. }
 
 constructor TIniFile.Create(const AFileName: string;
-  ASaveOnDestroy: Boolean = False);
+  AOverwriteIfExists: Boolean = False; ASaveOnDestroy: Boolean = False);
 begin
   inherited Create;
 
   if (AFileName = '') then
-    raise ERegistryFileException.Create('File name must not be empty!');
+    raise EInvalidArgument.Create('File name must not be empty!');
 
   FFileName := AFileName;
   FSaveOnDestroy := ASaveOnDestroy;
   FFile := TStringList.Create;
 
-  if FileExists(AFileName) then
+  if ((not AOverwriteIfExists) and FileExists(AFileName)) then
     FFile.LoadFromFile(AFileName);
 end;
 
@@ -634,10 +638,10 @@ begin
   else
     begin
       // Append item at the end of section
-      EndIndex := GetEndOfSection(ASectionName) - 1;
+      EndIndex := GetEndOfSection(ASectionName);
 
       // Add section if not exists
-      if (EndIndex = -2) then
+      if (EndIndex = -1) then
       begin
         AddSection(ASectionName);
         EndIndex := FFile.Count;
@@ -654,12 +658,13 @@ end;
 
   General constructor for creating a TRegistryFile instance. }
 
-constructor TRegistryFile.Create(const AFileName: string);
+constructor TRegistryFile.Create(const AFileName: string;
+  AOverwriteIfExists: Boolean = False; ASaveOnDestroy: Boolean = False);
 begin
   if (ExtractFileExt(AFileName) <> '.reg') then
-    raise ERegistryFileException.Create('The specified file is no .reg file!');
+    raise EInvalidArgument.Create('The specified file is no .reg file!');
 
-  inherited Create(AFileName);
+  inherited Create(AFileName, AOverwriteIfExists, ASaveOnDestroy);
   FReg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));
 end;
 
@@ -719,11 +724,16 @@ end;
 
 function TRegistryFile.DeletePathDelimiter(APath: string): string;
 begin
-  if ((Length(APath) > 0) and (APath[1] = '\')) then
-    result := StringReplace(APath, '\"', '"', [rfReplaceAll]);
+  // Remove escape of path delimiter
+  APath := StringReplace(APath, '\\', '\', [rfReplaceAll]);
 
-  result := StringReplace(APath, '\\', '\', [rfReplaceAll]);
+  // Remove escape of quote chars
+  if ((Length(APath) > 0) and (APath[1] = '\')) then
+    APath := StringReplace(APath, '\"', '"', [rfReplaceAll]);
+
+  result := APath;
 end;
+
 { public TRegistryFile.DeleteQuoteChars
 
  Deletes all quote chars " from a string. }
@@ -739,10 +749,14 @@ end;
 
 function TRegistryFile.EscapePathDelimiter(APath: string): string;
 begin
-  if ((Length(APath) > 0) and (APath[1] = '"')) then
-    result := StringReplace(APath, '"', '\"', [rfReplaceAll]);
+  // Escape path delimiter
+  APath := StringReplace(APath, '\', '\\', [rfReplaceAll]);
 
-  result := StringReplace(APath, '\', '\\', [rfReplaceAll]);
+  // Escape quote chars
+  if ((Length(APath) > 0) and (APath[1] = '"')) then
+    APath := StringReplace(APath, '"', '\"', [rfReplaceAll]);
+
+  result := APath;
 end;
 
 { public TRegistryFile.ExportKey

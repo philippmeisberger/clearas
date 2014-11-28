@@ -319,7 +319,7 @@ object Info: TInfo
         Top = 68
         Width = 21
         Height = 14
-        Caption = 'v3.0'
+        Caption = 'v3.1'
       end
       object lBuild: TLabel
         Left = 14
@@ -364,7 +364,7 @@ object Info: TInfo
             '.'
           'F'#252'r Sch'#228'den an Hard- und Software, die durch die Benutzung'
           'dieses Programms entstehen, wird keine Haftung '#252'bernommen.'
-          '11/2014')
+          '12/2014')
         ReadOnly = True
         TabOrder = 1
       end

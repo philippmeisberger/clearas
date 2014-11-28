@@ -319,7 +319,7 @@ object Info: TInfo
         Top = 68
         Width = 21
         Height = 14
-        Caption = 'v3.1'
+        Caption = 'v3.0'
       end
       object lBuild: TLabel
         Left = 14

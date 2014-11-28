@@ -41,6 +41,7 @@ type
     class function CreateLnk(const AExeFilename, ALinkFilename: string): Boolean;
     class function DeleteExt(AName: string): string;
     class function ExpandHKey(const ARootKey: string): string;
+    class function GetBackupDir(): string;
     class function GetKeyValue(AMainKey, AKeyPath, AValueName: string): string;
     class function GetStartUpDir(AAllUsers: Boolean): string;
     class function ReadLnkFile(const ALnkFileName: string; out APath: string): Boolean;
@@ -154,17 +155,13 @@ type
   protected
     function AddItemDisabled(const AKeyPath: string): Integer;
     function AddItemEnabled(const ARootKey, AKeyPath, AName, AFilePath: string): Integer;
+    function AddNewStartupUserItem(AName, AFilePath: string;
+      AAllUsers: Boolean = False): Boolean;
     function AddUserItemDisabled(const AKeyPath: string): Integer;
     function AddUserItemEnabled(const ALnkFile: string; AAllUsers: Boolean): Integer;
   public
     constructor Create;
     function CreateBackup(): Boolean;
-    procedure AddDisabled(const AKeyPath: string);
-    procedure AddEnabled(const AAllUsers: Boolean); overload;
-    procedure AddEnabled(const ARootKey, AKeyPath: string); overload;
-    function AddNewStartupItem(const AName, AFilePath: string): Boolean;
-    function AddNewStartupUserItem(AName, AFilePath: string;
-      AAllUsers: Boolean = False): Boolean;
     function AddProgram(const AFilePath: string; ANickName: string = ''): Boolean;
     function BackupExists(): Boolean;
     function ChangeItemStatus(): Boolean; override;
@@ -175,8 +172,10 @@ type
     function ImportBackup(const AFilePath: string): Boolean;
     function IndexOf(AName: string): Integer; overload;
     function IndexOf(AName: string; AEnabled: Boolean): Integer; overload;
-    procedure Insert(AIndex: Integer; AItem: TStartupListItem);
-    procedure Load(AIncludeRunOnce: Boolean);
+    procedure LoadAutostart(AIncludeRunOnce: Boolean);
+    procedure LoadDisabled(const AKeyPath: string);
+    procedure LoadEnabled(const AAllUsers: Boolean); overload;
+    procedure LoadEnabled(const ARootKey, AKeyPath: string); overload;
     { external }
     property AppIndex: PInt read FActAppIndex write FActAppIndex;
     property DeleteBackup: Boolean read FDeleteBackup write FDeleteBackup;
@@ -247,8 +246,7 @@ type
     procedure ExportItem(const AFileName: string);
     function IndexOf(AName: string): Integer; overload;
     function IndexOf(AName, ALocation: string): Integer; overload;
-    procedure Insert(AIndex: Integer; AItem: TContextListItem); virtual;
-    procedure Load;
+    procedure LoadContextMenus();
     { external }
     property Items[AIndex: Word]: TContextListItem read GetItem; default;
     property Item: TContextListItem read FItem write FItem;
@@ -376,6 +374,15 @@ end;
 class function TClearas.ExpandHKey(const ARootKey: string): string;
 begin
   result := HKeyToStr(StrToHKey(ARootKey));
+end;
+
+{ public TClearas.GetBackupDir
+
+  Returns the path to the backup directory. }
+
+class function TClearas.GetBackupDir(): string;
+begin
+  result := TOSUtils.GetWinDir + '\pss\';
 end;
 
 { public TClearas.GetKeyValue
@@ -769,7 +776,7 @@ var
   RegFile: TRegistryFile;
 
 begin
-  RegFile := TRegistryFile.Create(AFileName);
+  RegFile := TRegistryFile.Create(AFileName, True);
 
   try
     RegFile.ExportReg(StrToHKey(FRootKey), FKeyPath, False);
@@ -966,7 +973,7 @@ end;
 
 function TStartupUserItem.GetBackupLnk(): string;
 begin
-  result := GetWinDir +'\pss\'+ FName + GetExtension();
+  result := GetBackupDir() + FName + GetExtension();
 end;
 
 { private TStartupUserItem.GetExtension
@@ -997,7 +1004,7 @@ end;
 function TStartupUserItem.Disable(): Boolean;
 var
   reg: TRegistry;
-  Path, KeyName, PssDir, BackupLnk: string;
+  Path, KeyName, BackupLnk: string;
 
 begin
   reg := TRegistry.Create(DenyWOW64Redirection(KEY_WRITE));
@@ -1006,7 +1013,6 @@ begin
     try
       reg.RootKey := HKEY_LOCAL_MACHINE;
       KeyName := AddCircumflex(FKeyPath);
-      PssDir := GetWinDir +'\pss';
       BackupLnk := GetBackupLnk();
 
       if (reg.OpenKey(KEY_DEACT_FOLDER + KeyName, True) and
@@ -1017,21 +1023,28 @@ begin
         reg.WriteString('command', FFilePath);
         reg.WriteString('backup', BackupLnk);
 
-        if CheckWindows() then                            //nur ab Windows Vista
+        // Special Registry entries only for Windows >= Vista
+        if CheckWindows() then
         begin
           reg.WriteString('backupExtension', GetExtension());
           reg.WriteString('location', ExtractFileDir(FKeyPath));
-          WriteTime(KEY_DEACT_FOLDER + KeyName);            //Deaktivierungsdatum speichern
+          WriteTime(KEY_DEACT_FOLDER + KeyName);
         end  //of begin
-        else                                             // <= Windows XP
+        else
           reg.WriteString('location', FType);
 
-        if not DirectoryExists(PssDir) then              //existiert Dir nicht?
-          ForceDirectories(PssDir);                     //dann Dir erstellen
+        // Create backup directory if not exist
+        if not DirectoryExists(GetBackupDir()) then
+          ForceDirectories(GetBackupDir());
 
-        CreateLnk(FFilePath, BackupLnk);                 //Backup *.lnk erstellen
-        DeleteFile(FKeyPath);                            //*.lnk löschen
-        FKeyPath := KEY_DEACT_FOLDER + KeyName;              //Reg-Pfad aktualisieren
+        // Create backup .lnk
+        CreateLnk(FFilePath, BackupLnk);
+
+        // Delete original .lnk
+        DeleteFile(FKeyPath);
+
+        // Update information
+        FKeyPath := KEY_DEACT_FOLDER + KeyName;
         FRootKey := 'HKLM';
         FEnabled := False;
         result := True;
@@ -1205,7 +1218,7 @@ begin
     result := TClearas.GetKeyValue('HKLM', FItem.KeyPath, 'backup')
   else
     begin
-      Pss := TOSUtils.GetWinDir() +'\pss';
+      Pss := TClearas.GetBackupDir();
 
       // Create backup directory only if not exists
       if not DirectoryExists(Pss) then
@@ -1328,6 +1341,34 @@ begin
   result := Add(Item);
 end;
 
+{ protected TStartupList.AddNewStartupUserItem
+
+  Adds a new startup user item to the autostart. }
+
+function TStartupList.AddNewStartupUserItem(AName, AFilePath: string;
+  AAllUsers: Boolean = False): Boolean;
+var
+  LnkFilePath: string;
+
+begin
+  result := False;
+
+  if (ExtractFileExt(AName) <> '.lnk') then
+     AName := AName +'.lnk';
+
+  // Set startup location
+  LnkFilePath := TClearas.GetStartUpDir(AAllUsers) + AName;
+
+  // Link file created successfully?
+  if TClearas.CreateLnk(AFilePath, LnkFilePath) then
+  begin
+    AddUserItemEnabled(LnkFilePath, AAllUsers);
+    result := True;
+  end  //of begin
+  else
+    raise EStartupException.Create('Could not create .lnk file!');
+end;
+
 { protected TStartupList.AddUserItemDisabled
 
   Adds a disabled startup user item to the list. }
@@ -1393,137 +1434,6 @@ begin
   result := FItem.CreateBackup();
 end;
 
-{ public TStartupList.AddDisabled
-
-  Searches for disabled items in AKeyPath and adds them to the list. }
-
-procedure TStartupList.AddDisabled(const AKeyPath: string);
-var
-  reg: TRegistry;
-  List: TStringList;
-  i: Integer;
-
-begin
-  List := TStringList.Create;
-  reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));
-  reg.RootKey := HKEY_LOCAL_MACHINE;
-
-  try
-    reg.OpenKey(AKeyPath, True);
-    reg.GetKeyNames(List);
-
-    for i := 0 to List.Count -1 do
-      if (AKeyPath = KEY_DEACT) then
-        AddItemDisabled(AKeyPath + List[i])
-      else
-        AddUserItemDisabled(AKeyPath + List[i]);
-
-  finally
-    reg.Free;
-    List.Free;
-  end;  //of finally
-end;
-
-{ public TStartupList.AddEnabled
-
-  Searches for enabled startup user items and adds them to the list. }
-
-procedure TStartupList.AddEnabled(const AAllUsers: Boolean);
-var
-  List: TStringList;
-  i: integer;
-
-begin
-  List := TStringList.Create;
-
-  try
-    // Retrieve a list containing all activated startup user .lnk files
-    GetLnkFileNames(List, AAllUsers);
-
-    // Add every file to list
-    for i := 0 to List.Count -1 do
-      AddUserItemEnabled(List[i], AAllUsers);
-
-  finally
-    List.Free;
-  end;  //of finally
-end;
-
-{ public TStartupList.AddEnabled
-
-  Searches for enabled items in ARootKey and AKeyPath and adds them to the list. }
-
-procedure TStartupList.AddEnabled(const ARootKey, AKeyPath: string);
-var
-  reg: TRegistry;
-  List: TStringList;
-  i: Integer;
-  FilePath: string;
-
-begin
-  List := TStringList.Create;
-  reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));
-
-  try
-    reg.RootKey := TOSUtils.StrToHKey(ARootKey);
-    reg.OpenKey(AKeyPath, True);
-    reg.GetValueNames(List);
-
-    for i := 0 to List.Count -1 do
-    begin
-      // Read path to .exe
-      FilePath := reg.ReadString(List[i]);
-
-      // Add to list
-      AddItemEnabled(ARootKey, AKeyPath, List[i], FilePath);
-    end;  //of for
-
-  finally
-    reg.Free;
-    List.Free;
-  end;  //of finally
-end;
-
-{ public TStartupList.AddNewStartupItem
-
-  Adds a new default startup item to the autostart. }
-
-function TStartupList.AddNewStartupItem(const AName, AFilePath: string): Boolean;
-begin
-  // Adds new startup item to Registry
-  TClearas.WriteStrValue('HKCU', KEY_STARTUP, AName, AFilePath);
-  AddItemEnabled('HKCU', KEY_STARTUP, AName, AFilePath);
-  result := True;
-end;
-
-{ public TStartupList.AddNewStartupItem
-
-  Adds a new startup user item to the autostart. }
-
-function TStartupList.AddNewStartupUserItem(AName, AFilePath: string;
-  AAllUsers: Boolean = False): Boolean;
-var
-  LnkFilePath: string;
-
-begin
-  result := False;
-
-  if (ExtractFileExt(AName) <> '.lnk') then
-     AName := AName +'.lnk';
-
-  // Set startup location
-  LnkFilePath := TClearas.GetStartUpDir(AAllUsers) + AName;
-
-  // Link file created successfully?
-  if TClearas.CreateLnk(AFilePath, LnkFilePath) then
-  begin
-    AddUserItemEnabled(LnkFilePath, AAllUsers);
-    result := True;
-  end  //of begin
-  else
-    raise EStartupException.Create('Could not create .lnk file!');
-end;
-
 { public TStartupList.AddProgram
 
   Checks if a backup file already exists. }
@@ -1557,7 +1467,14 @@ begin
     result := AddNewStartupUserItem(Name, AFilePath);
   end  //of begin
   else
-    result := AddNewStartupItem(ANickName, AFilePath);
+    begin
+      // Adds new startup item to Registry
+      TClearas.WriteStrValue('HKCU', KEY_STARTUP, ANickName, AFilePath);
+
+      // Adds this item to list
+      AddItemEnabled('HKCU', KEY_STARTUP, ANickName, AFilePath);
+      result := True;
+    end;  //of begin
 end;
 
 
@@ -1690,7 +1607,7 @@ var
 
 begin
   //init Reg file
-  RegFile := TRegistryFile.Create(AFileName);
+  RegFile := TRegistryFile.Create(AFileName, True);
 
   try
     for i := 0 to Count -1 do
@@ -1777,38 +1694,120 @@ begin
     end;  //of begin
 end;
 
-{ public TStartupList.Insert
-
-  Inserts a TStartupListItem object at index. }
-
-procedure TStartupList.Insert(AIndex: Integer; AItem: TStartupListItem);
-begin
-  inherited Insert(AIndex, AItem);
-end;
-
-{ public TStartupList.Load
+{ public TStartupList.LoadAutostart
 
   Searches for startup items at different locations. }
 
-procedure TStartupList.Load(AIncludeRunOnce: Boolean);
+procedure TStartupList.LoadAutostart(AIncludeRunOnce: Boolean);
 begin
-  AddEnabled('HKLM', KEY_STARTUP);
+  LoadEnabled('HKLM', KEY_STARTUP);
 
   if TClearas.IsWindows64() then
-    AddEnabled('HKLM', KEY_STARTUP32);
+    LoadEnabled('HKLM', KEY_STARTUP32);
 
   // Read RunOnce entries?
   if AIncludeRunOnce then
   begin
-    AddEnabled('HKLM', KEY_RUNONCE);
-    AddEnabled('HKCU', KEY_RUNONCE);
+    LoadEnabled('HKLM', KEY_RUNONCE);
+    LoadEnabled('HKCU', KEY_RUNONCE);
   end;  //of begin
 
-  AddEnabled('HKCU', KEY_STARTUP);
-  AddEnabled(True);
-  AddEnabled(False);
-  AddDisabled(KEY_DEACT);
-  AddDisabled(KEY_DEACT_FOLDER);
+  LoadEnabled('HKCU', KEY_STARTUP);
+  LoadEnabled(True);
+  LoadEnabled(False);
+  LoadDisabled(KEY_DEACT);
+  LoadDisabled(KEY_DEACT_FOLDER);
+end;
+
+{ public TStartupList.LoadDisabled
+
+  Searches for disabled items in AKeyPath and adds them to the list. }
+
+procedure TStartupList.LoadDisabled(const AKeyPath: string);
+var
+  reg: TRegistry;
+  List: TStringList;
+  i: Integer;
+
+begin
+  List := TStringList.Create;
+  reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));
+  reg.RootKey := HKEY_LOCAL_MACHINE;
+
+  try
+    reg.OpenKey(AKeyPath, True);
+    reg.GetKeyNames(List);
+
+    for i := 0 to List.Count -1 do
+      if (AKeyPath = KEY_DEACT) then
+        AddItemDisabled(AKeyPath + List[i])
+      else
+        AddUserItemDisabled(AKeyPath + List[i]);
+
+  finally
+    reg.Free;
+    List.Free;
+  end;  //of finally
+end;
+
+{ public TStartupList.LoadEnabled
+
+  Searches for enabled startup user items and adds them to the list. }
+
+procedure TStartupList.LoadEnabled(const AAllUsers: Boolean);
+var
+  List: TStringList;
+  i: integer;
+
+begin
+  List := TStringList.Create;
+
+  try
+    // Retrieve a list containing all activated startup user .lnk files
+    GetLnkFileNames(List, AAllUsers);
+
+    // Add every file to list
+    for i := 0 to List.Count -1 do
+      AddUserItemEnabled(List[i], AAllUsers);
+
+  finally
+    List.Free;
+  end;  //of finally
+end;
+
+{ public TStartupList.LoadEnabled
+
+  Searches for enabled items in ARootKey and AKeyPath and adds them to the list. }
+
+procedure TStartupList.LoadEnabled(const ARootKey, AKeyPath: string);
+var
+  reg: TRegistry;
+  List: TStringList;
+  i: Integer;
+  FilePath: string;
+
+begin
+  List := TStringList.Create;
+  reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));
+
+  try
+    reg.RootKey := TOSUtils.StrToHKey(ARootKey);
+    reg.OpenKey(AKeyPath, True);
+    reg.GetValueNames(List);
+
+    for i := 0 to List.Count -1 do
+    begin
+      // Read path to .exe
+      FilePath := reg.ReadString(List[i]);
+
+      // Add to list
+      AddItemEnabled(ARootKey, AKeyPath, List[i], FilePath);
+    end;  //of for
+
+  finally
+    reg.Free;
+    List.Free;
+  end;  //of finally
 end;
 
 
@@ -1845,7 +1844,7 @@ var
   RegFile: TRegistryFile;
 
 begin
-  RegFile := TRegistryFile.Create(AFileName);
+  RegFile := TRegistryFile.Create(AFileName, True);
 
   try
     RegFile.ExportReg(HKEY_CLASSES_ROOT, GetKeyPath(), True);
@@ -2348,20 +2347,11 @@ begin
     end;  //of begin
 end;
 
-{ public TContextList.Insert
-
-  Inserts a TContextListItem object at index. }
-
-procedure TContextList.Insert(AIndex: Integer; AItem: TContextListItem);
-begin
-  inherited Insert(AIndex, AItem);
-end;
-
-{ public TContextList.Load
+{ public TContextList.LoadContextMenus
 
   Searches for context menu entries at different locations. }
 
-procedure TContextList.Load;
+procedure TContextList.LoadContextMenus();
 begin
   AddEntry('AllFilesystemObjects');
   AddEntry('Directory');

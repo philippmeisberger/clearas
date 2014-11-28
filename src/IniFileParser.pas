@@ -15,7 +15,7 @@ uses
 
 type
   { Exception class }
-  ERegistryFileException = class(Exception);
+  EInvalidIniFormat = class(Exception);
 
   { TIniFile }
   TIniFile = class(TObject)
@@ -34,7 +34,8 @@ type
     function ExtractKey(const AKeyValuePair: string): string;
     function ExtractValue(const AKeyValuePair: string): string;
   public
-    constructor Create(const AFileName: string; ASaveOnDestroy: Boolean = False);
+    constructor Create(const AFileName: string; AOverwriteIfExists: Boolean = False;
+      ASaveOnDestroy: Boolean = False);
     destructor Destroy; override;
     procedure AddRemove(ASectionName, AKey, AValue: string);
     function AddSection(ASectionName: string): Boolean; overload;
@@ -71,7 +72,8 @@ type
     function GetKey(AIndex: Integer): string;
     function GetValue(AIndex: Integer): string;
   public
-    constructor Create(const AFileName: string);
+    constructor Create(const AFileName: string; AOverwriteIfExists: Boolean = False;
+      ASaveOnDestroy: Boolean = False);
     destructor Destroy; override;
     procedure AddRemove(ASectionName, AKey, AValue: string);
     function AddSection(AHKey: HKEY; AKeyPath: string): Boolean; reintroduce;
@@ -99,6 +101,8 @@ type
 
 implementation
 
+uses Math;
+
 { TIniFile }
 
 { public TIniFile.Create
@@ -106,18 +110,18 @@ implementation
   General constructor for creating a TIniFile instance. }
 
 constructor TIniFile.Create(const AFileName: string;
-  ASaveOnDestroy: Boolean = False);
+  AOverwriteIfExists: Boolean = False; ASaveOnDestroy: Boolean = False);
 begin
   inherited Create;
 
   if (AFileName = '') then
-    raise ERegistryFileException.Create('File name must not be empty!');
+    raise EInvalidArgument.Create('File name must not be empty!');
 
   FFileName := AFileName;
   FSaveOnDestroy := ASaveOnDestroy;
   FFile := TStringList.Create;
 
-  if FileExists(AFileName) then
+  if ((not AOverwriteIfExists) and FileExists(AFileName)) then
     FFile.LoadFromFile(AFileName);
 end;
 
@@ -311,16 +315,20 @@ end;
 
 { public TIniFile.AddSection
 
-  Adds a new section if non existing. }
+  Adds a new section if not exist. }
 
 function TIniFile.AddSection(ASectionName: string): Boolean;
 var
   Exists: Boolean;
 
 begin
+  // Check for invalid section name
+  if (ASectionName = '') then
+    raise EInvalidIniFormat.Create('Section name must not be empty!');
+
   Exists := not SectionExists(ASectionName);
 
-  if (Exists and (ASectionName <> '')) then
+  if Exists then
   begin
     // No new line in first line!
     if (FFile.Count <> 0) then
@@ -619,6 +627,10 @@ var
   Index, EndIndex: Integer;
 
 begin
+  // Check for invalid key
+  if (AKey = '') then
+    raise EInvalidIniFormat.Create('Key must not be empty!');
+
   // Search for key
   Index := IndexOfKey(ASectionName, AKey);
 
@@ -654,12 +666,13 @@ end;
 
   General constructor for creating a TRegistryFile instance. }
 
-constructor TRegistryFile.Create(const AFileName: string);
+constructor TRegistryFile.Create(const AFileName: string;
+  AOverwriteIfExists: Boolean = False; ASaveOnDestroy: Boolean = False);
 begin
   if (ExtractFileExt(AFileName) <> '.reg') then
-    raise ERegistryFileException.Create('The specified file is no .reg file!');
+    raise EInvalidArgument.Create('The specified file is no .reg file!');
 
-  inherited Create(AFileName);
+  inherited Create(AFileName, AOverwriteIfExists, ASaveOnDestroy);
   FReg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));
 end;
 
@@ -719,11 +732,16 @@ end;
 
 function TRegistryFile.DeletePathDelimiter(APath: string): string;
 begin
-  if ((Length(APath) > 0) and (APath[1] = '\')) then
-    result := StringReplace(APath, '\"', '"', [rfReplaceAll]);
+  // Remove escape of path delimiter
+  APath := StringReplace(APath, '\\', '\', [rfReplaceAll]);
 
-  result := StringReplace(APath, '\\', '\', [rfReplaceAll]);
+  // Remove escape of quote chars
+  if ((Length(APath) > 0) and (APath[1] = '\')) then
+    APath := StringReplace(APath, '\"', '"', [rfReplaceAll]);
+
+  result := APath;
 end;
+
 { public TRegistryFile.DeleteQuoteChars
 
  Deletes all quote chars " from a string. }
@@ -739,10 +757,14 @@ end;
 
 function TRegistryFile.EscapePathDelimiter(APath: string): string;
 begin
-  if ((Length(APath) > 0) and (APath[1] = '"')) then
-    result := StringReplace(APath, '"', '\"', [rfReplaceAll]);
+  // Escape path delimiter
+  APath := StringReplace(APath, '\', '\\', [rfReplaceAll]);
 
-  result := StringReplace(APath, '\', '\\', [rfReplaceAll]);
+  // Escape quote chars
+  if ((Length(APath) > 0) and (APath[1] = '"')) then
+    APath := StringReplace(APath, '"', '\"', [rfReplaceAll]);
+
+  result := APath;
 end;
 
 { public TRegistryFile.ExportKey
@@ -773,17 +795,8 @@ begin
     // Append key-value pairs
     for i := 0 to Values.Count -1 do
       case FReg.GetDataType(Values[i]) of
-        rdString:
-          begin
-            // Check Registry Standard value of each key
-            if (Values[i] = '') then
-              WriteString(Section, '@', FReg.ReadString(Values[i]))
-            else
-              WriteString(Section, Values[i], FReg.ReadString(Values[i]));
-          end;  //of begin
-
-        rdInteger:
-          WriteInteger(Section, Values[i], FReg.ReadInteger(Values[i]));
+        rdString:  WriteString(Section, Values[i], FReg.ReadString(Values[i]));
+        rdInteger: WriteInteger(Section, Values[i], FReg.ReadInteger(Values[i]));
       end;  //of case
 
   // Include subkeys?
@@ -922,7 +935,10 @@ end;
 
 procedure TRegistryFile.WriteString(ASection, AIdent, AValue: string);
 begin
-  inherited WriteString(ASection, '"'+ AIdent +'"', '"'+ EscapePathDelimiter(AValue) +'"');
+  if (AIdent = '') then
+    inherited WriteString(ASection, '@', '"'+ EscapePathDelimiter(AValue) +'"')
+  else
+    inherited WriteString(ASection, '"'+ AIdent +'"', '"'+ EscapePathDelimiter(AValue) +'"');
 end;
 
 end.
