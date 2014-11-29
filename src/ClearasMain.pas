@@ -259,7 +259,7 @@ procedure TMain.BeforeUpdate(Sender: TObject; const ANewBuild: Cardinal);
 begin
   // Show dialog: Ask for permitting download
   with FLang do
-    if (MessageBox(Format(GetString(21) +^J+ GetString(22), [ANewBuild]),
+    if (MessageBox(SysUtils.Format(GetString(21) +^J+ GetString(22), [ANewBuild]),
       mtQuestion, True) = IDYES) then
       with TUpdate.Create(Self, FLang, FLang.GetString(24)) do
         Download('clearas.exe', 'Clearas.exe')
@@ -407,11 +407,11 @@ begin
     mmInfo.Caption := GetString(17);
 
     // Context menu labels
-    pmDeactivate.Caption := GetString(6);
+    pmDeactivate.Caption := GetString(96);
     pmSearch.Caption := GetString(34);
     pmEdit.Caption := GetString(53);
-    pmExport.Caption := GetString(8);
-    pmDelete.Caption := GetString(9);
+    pmExport.Caption := GetString(98);
+    pmDelete.Caption := GetString(99);
     pmProperties.Caption := GetString(35);
   end;  //of with
 end;
@@ -624,7 +624,7 @@ begin
           RefreshStartupCounter();
         end  //of begin
         else
-          FLang.MessageBox(FLang.GetString(65) + FLang.GetString(66), mtError);
+          FLang.MessageBox(FLang.GetString(99) + FLang.GetString(66), mtError);
       end;  //of if
   end;  //of with
 
@@ -658,7 +658,7 @@ begin
         RefreshContextCounter();
       end  //of begin
       else
-        MessageBox(GetString(65) + GetString(66), mtError);
+        MessageBox(GetString(99) + GetString(66), mtError);
     end;  //of begin
   end;  //of with
 end;
@@ -689,7 +689,7 @@ begin
     RefreshStartupCounter();
   end  //of begin
   else
-    FLang.MessageBox(FLang.GetString(63) + FLang.GetString(66), mtError);
+    FLang.MessageBox(FLang.GetString(96) + FLang.GetString(66), mtError);
 end;
 
 { TMain.bActContextClick
@@ -713,7 +713,7 @@ begin
     RefreshContextCounter();
   end  //of begin
   else
-    FLang.MessageBox(FLang.GetString(63) + FLang.GetString(66), mtError);
+    FLang.MessageBox(FLang.GetString(96) + FLang.GetString(66), mtError);
 end;
 
 { TMain.bDeactivateClick
@@ -744,7 +744,7 @@ begin
     RefreshStartupCounter();
   end  //of begin
   else
-    FLang.MessageBox(FLang.GetString(64) + FLang.GetString(66), mtError);
+    FLang.MessageBox(FLang.GetString(97) + FLang.GetString(66), mtError);
 end;
 
 { TMain.bDeactContextClick
@@ -768,7 +768,7 @@ begin
     RefreshContextCounter();
   end  //of begin
   else
-    FLang.MessageBox(FLang.GetString(64) + FLang.GetString(66), mtError);
+    FLang.MessageBox(FLang.GetString(97) + FLang.GetString(66), mtError);
 end;
 
 { Selektion Events }
@@ -880,7 +880,7 @@ begin
                   bDeactivate.Enabled := True;
                   bDeactivate.Default := True;
                   pmDeactivate.Enabled := True;
-                  pmDeactivate.Caption := FLang.GetString(7);  //Beschriftung ändern
+                  pmDeactivate.Caption := FLang.GetString(97);  //Beschriftung ändern
                   end //of begin
                else
                   begin                                           //NEIN
@@ -889,7 +889,7 @@ begin
                   bDeactivate.Enabled := False;
                   bActivate.Default := True;
                   pmDeactivate.Enabled := True;
-                  pmDeactivate.Caption := FLang.GetString(6);  //Beschriftung ändern
+                  pmDeactivate.Caption := FLang.GetString(96);  //Beschriftung ändern
                   end; //of if
 
                if not KeyPreview then                 //Hotkeys aktiviert?
@@ -949,7 +949,7 @@ begin
          bDeactContext.Enabled := True;
          bDeactContext.Default := True;
          pmDeactivate.Enabled := True;
-         pmDeactivate.Caption := FLang.GetString(7);  //Beschriftung ändern
+         pmDeactivate.Caption := FLang.GetString(97);  //Beschriftung ändern
          end //of begin
       else
          begin                                          //NEIN
@@ -957,7 +957,7 @@ begin
          bDeactContext.Enabled := False;
          bActContext.Default := True;
          pmDeactivate.Enabled := True;
-         pmDeactivate.Caption := FLang.GetString(6);  //Beschriftung ändern
+         pmDeactivate.Caption := FLang.GetString(96);  //Beschriftung ändern
          end; //of if
       end  //of begin
   else                                                  //nichts angewählt, dann
@@ -1074,15 +1074,15 @@ end;
 
 procedure TMain.pmPropertiesClick(Sender: TObject);
 var
-  Path, Name: string;
+  Properties: string;
 
 begin
   if (PageControl.ActivePage = tsStartup) then
-    Startup.Item.GetItemInfo(Name, Path, FLang)
+    Startup.Item.GetItemInfo(Properties, FLang)
   else
-    Context.Item.GetItemInfo(Name, Path, FLang);
+    Context.Item.GetItemInfo(Properties, FLang);
 
-  FLang.MessageBox(Name +^J+ Path);
+  FLang.MessageBox(Properties);
 end;
 
 { TMain.pmSearchClick

@@ -1,6 +1,6 @@
 { *********************************************************************** }
 {                                                                         }
-{ PM Code Works Cross Plattform Language Handler Unit v1.2                }
+{ PM Code Works Cross Plattform Language Handler Unit v1.3                }
 {                                                                         }
 { Copyright (c) 2011-2014 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
@@ -59,6 +59,7 @@ type
     destructor Destroy; override;
     procedure AddListener(AListener: IChangeLanguageListener);
     procedure ChangeLanguage(ASender: TObject; ALangID: Word);
+    function Format(const AIndex: Word; const AArgs: array of TVarRec): string;
   {$IFDEF LINUX}
     procedure GetLanguages(ASections: TStrings);
   {$ENDIF}
@@ -193,6 +194,15 @@ begin
   for i := 0 to FListeners.Count -1 do
     if Supports(FListeners[i], IChangeLanguageListener, Listener) then
       Listener.SetLanguage(Self);
+end;
+
+{ public TLanguageFile.MessageBox
+
+  Shows a MessageBox with text and specific look. }
+
+function TLanguageFile.Format(const AIndex: Word; const AArgs: array of TVarRec): string;
+begin
+  result := SysUtils.Format(GetString(AIndex), AArgs);
 end;
 
 { public TLanguageFile.MessageBox

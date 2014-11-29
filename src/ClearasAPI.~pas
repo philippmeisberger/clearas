@@ -40,7 +40,6 @@ type
   public
     class function CreateLnk(const AExeFilename, ALinkFilename: string): Boolean;
     class function DeleteExt(AName: string): string;
-    class function ExpandHKey(const ARootKey: string): string;
     class function GetBackupDir(): string;
     class function GetKeyValue(AMainKey, AKeyPath, AValueName: string): string;
     class function GetStartUpDir(AAllUsers: Boolean): string;
@@ -367,15 +366,6 @@ begin
   result := AName;
 end;
 
-{ public TClearas.ExpandHKey
-
-  Converts a short form HKEY string represantation to long form. }
-
-class function TClearas.ExpandHKey(const ARootKey: string): string;
-begin
-  result := HKeyToStr(StrToHKey(ARootKey));
-end;
-
 { public TClearas.GetBackupDir
 
   Returns the path to the backup directory. }
@@ -442,7 +432,7 @@ begin
   end;  //of begin
 end;
 
-{ public TClearas.GetStartUpDir
+{ public TClearas.ReadLnkFile
 
   Returns the path of a .exe out of a .lnk file. }
 
@@ -776,7 +766,7 @@ var
   RegFile: TRegistryFile;
 
 begin
-  RegFile := TRegistryFile.Create(AFileName);
+  RegFile := TRegistryFile.Create(AFileName, True);
 
   try
     RegFile.ExportReg(StrToHKey(FRootKey), FKeyPath, False);
@@ -927,13 +917,13 @@ begin
 
   try
     if FEnabled then
-       begin
-       if not DeleteValue(FRootKey, FKeyPath, FName) then
-          raise EStartupException.Create('Could not delete value "'+ FName +'"!');
-       end  //of begin
+    begin
+      if not DeleteValue(FRootKey, FKeyPath, FName) then
+        raise EStartupException.Create('Could not delete value "'+ FName +'"!');
+    end  //of begin
     else
-       if not DeleteKey('HKLM', KEY_DEACT, FName) then
-          raise EStartupException.Create('Could not delete key "'+ FName +'"!');
+      if not DeleteKey('HKLM', KEY_DEACT, FName) then
+        raise EStartupException.Create('Could not delete key "'+ FName +'"!');
 
   except
     on E: Exception do
@@ -951,8 +941,8 @@ end;
 
 procedure TStartupItem.GetItemInfo(var AName, APath: string; ALangFile: TLanguageFile);
 begin
-  APath := ALangFile.GetString(61) +^J+^J+ ExpandHKey(FRootKey) +'\'+ FKeyPath;
-  AName := ALangFile.GetString(62) +'"'+ FName +'"';
+  APath := ALangFile.Format(61, [HKeyToStr(StrToHKey(FRootKey)) +'\'+ FKeyPath]);
+  AName := ALangFile.Format(62, [FName]);
 end;
 
 
@@ -1083,15 +1073,13 @@ begin
     begin
       // Could not delete old key?
       if not DeleteKey('HKLM', KEY_DEACT_FOLDER, AddCircumflex(Path)) then
-        raise EStartupException.Create('Could not delete key "'+ FKeyPath +'"!')
-      else
-        begin
-          // Update information
-          FKeyPath := Path;
-          FRootKey := '';
-          FEnabled := True;
-          result := True;
-        end;  //of if
+        raise EStartupException.Create('Could not delete key "'+ FKeyPath +'"!');
+
+      // Update information
+      FKeyPath := Path;
+      FRootKey := '';
+      FEnabled := True;
+      result := True;
     end  //of begin
     else
       raise EStartupException.Create('Could not create .lnk file!');
@@ -1158,11 +1146,11 @@ end;
 procedure TStartupUserItem.GetItemInfo(var AName, APath: string; ALangFile: TLanguageFile);
 begin
   if FEnabled then
-     APath := ALangFile.GetString(60) +^J+^J+ FKeyPath
+    APath := ALangFile.Format(60, [FKeyPath])
   else
-     APath := ALangFile.GetString(61) +^J+^J+ ExpandHKey(FRootKey) +'\'+ FKeyPath;
+    APath := ALangFile.Format(61, [HKeyToStr(StrToHKey(FRootKey)) +'\'+ FKeyPath]);
 
-  AName := ALangFile.GetString(62) +'"'+ FName +'"';
+  AName := ALangFile.Format(62, [FName]);
 end;
 
 
@@ -1354,7 +1342,7 @@ begin
   result := False;
 
   if (ExtractFileExt(AName) <> '.lnk') then
-     AName := AName +'.lnk';
+    AName := AName +'.lnk';
 
   // Set startup location
   LnkFilePath := TClearas.GetStartUpDir(AAllUsers) + AName;
@@ -1607,7 +1595,7 @@ var
 
 begin
   //init Reg file
-  RegFile := TRegistryFile.Create(AFileName);
+  RegFile := TRegistryFile.Create(AFileName, True);
 
   try
     for i := 0 to Count -1 do
@@ -1844,7 +1832,7 @@ var
   RegFile: TRegistryFile;
 
 begin
-  RegFile := TRegistryFile.Create(AFileName);
+  RegFile := TRegistryFile.Create(AFileName, True);
 
   try
     RegFile.ExportReg(HKEY_CLASSES_ROOT, GetKeyPath(), True);

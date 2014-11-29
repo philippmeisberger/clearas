@@ -40,7 +40,6 @@ type
   public
     class function CreateLnk(const AExeFilename, ALinkFilename: string): Boolean;
     class function DeleteExt(AName: string): string;
-    class function ExpandHKey(const ARootKey: string): string;
     class function GetBackupDir(): string;
     class function GetKeyValue(AMainKey, AKeyPath, AValueName: string): string;
     class function GetStartUpDir(AAllUsers: Boolean): string;
@@ -66,7 +65,7 @@ type
     function ChangeStatus(): Boolean; virtual;
     function Delete(): Boolean; virtual; abstract;
     procedure ExportItem(const AFileName: string); virtual; abstract;
-    procedure GetItemInfo(var AName, APath: string; ALangFile: TLanguageFile); virtual; abstract;
+    procedure GetItemInfo(var AProperties: string; ALangFile: TLanguageFile); virtual; abstract;
     function GetStatus(ALangFile: TLanguageFile): string;
     { external }
     property Enabled: Boolean read FEnabled;
@@ -120,7 +119,7 @@ type
   public
     function CreateBackup(): Boolean; override;
     function Delete(): Boolean; override;
-    procedure GetItemInfo(var AName, APath: string; ALangFile: TLanguageFile); override;
+    procedure GetItemInfo(var AProperties: string; ALangFile: TLanguageFile); override;
   end;
 
   { TStartupUserItem }
@@ -136,7 +135,7 @@ type
   public
     function CreateBackup(): Boolean; override;
     function Delete(): Boolean; override;
-    procedure GetItemInfo(var AName, APath: string; ALangFile: TLanguageFile); override;
+    procedure GetItemInfo(var AProperties: string; ALangFile: TLanguageFile); override;
   end;
 
   { TStartupList }
@@ -197,7 +196,7 @@ type
   public
     function Delete(): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
-    procedure GetItemInfo(var AName, APath: string; ALangFile: TLanguageFile); override;
+    procedure GetItemInfo(var AProperties: string; ALangFile: TLanguageFile); override;
     { external }
     property KeyPath: string read GetKeyPath;
     property Location: string read FLocation;
@@ -367,15 +366,6 @@ begin
   result := AName;
 end;
 
-{ public TClearas.ExpandHKey
-
-  Converts a short form HKEY string represantation to long form. }
-
-class function TClearas.ExpandHKey(const ARootKey: string): string;
-begin
-  result := HKeyToStr(StrToHKey(ARootKey));
-end;
-
 { public TClearas.GetBackupDir
 
   Returns the path to the backup directory. }
@@ -442,7 +432,7 @@ begin
   end;  //of begin
 end;
 
-{ public TClearas.GetStartUpDir
+{ public TClearas.ReadLnkFile
 
   Returns the path of a .exe out of a .lnk file. }
 
@@ -927,13 +917,13 @@ begin
 
   try
     if FEnabled then
-       begin
-       if not DeleteValue(FRootKey, FKeyPath, FName) then
-          raise EStartupException.Create('Could not delete value "'+ FName +'"!');
-       end  //of begin
+    begin
+      if not DeleteValue(FRootKey, FKeyPath, FName) then
+        raise EStartupException.Create('Could not delete value "'+ FName +'"!');
+    end  //of begin
     else
-       if not DeleteKey('HKLM', KEY_DEACT, FName) then
-          raise EStartupException.Create('Could not delete key "'+ FName +'"!');
+      if not DeleteKey('HKLM', KEY_DEACT, FName) then
+        raise EStartupException.Create('Could not delete key "'+ FName +'"!');
 
   except
     on E: Exception do
@@ -949,10 +939,9 @@ end;
 
   Returns the name and path of an item as formatted text. }
 
-procedure TStartupItem.GetItemInfo(var AName, APath: string; ALangFile: TLanguageFile);
+procedure TStartupItem.GetItemInfo(var AProperties: string; ALangFile: TLanguageFile);
 begin
-  APath := ALangFile.GetString(61) +^J+^J+ ExpandHKey(FRootKey) +'\'+ FKeyPath;
-  AName := ALangFile.GetString(62) +'"'+ FName +'"';
+  AProperties := ALangFile.Format(61, [FName, HKeyToStr(StrToHKey(FRootKey)) +'\'+ FKeyPath]);
 end;
 
 
@@ -1083,15 +1072,13 @@ begin
     begin
       // Could not delete old key?
       if not DeleteKey('HKLM', KEY_DEACT_FOLDER, AddCircumflex(Path)) then
-        raise EStartupException.Create('Could not delete key "'+ FKeyPath +'"!')
-      else
-        begin
-          // Update information
-          FKeyPath := Path;
-          FRootKey := '';
-          FEnabled := True;
-          result := True;
-        end;  //of if
+        raise EStartupException.Create('Could not delete key "'+ FKeyPath +'"!');
+
+      // Update information
+      FKeyPath := Path;
+      FRootKey := '';
+      FEnabled := True;
+      result := True;
     end  //of begin
     else
       raise EStartupException.Create('Could not create .lnk file!');
@@ -1155,14 +1142,12 @@ end;
 
   Returns the name and path of an item as formatted text. }
 
-procedure TStartupUserItem.GetItemInfo(var AName, APath: string; ALangFile: TLanguageFile);
+procedure TStartupUserItem.GetItemInfo(var AProperties: string; ALangFile: TLanguageFile);
 begin
   if FEnabled then
-     APath := ALangFile.GetString(60) +^J+^J+ FKeyPath
+    AProperties := ALangFile.Format(60, [FName, FKeyPath])
   else
-     APath := ALangFile.GetString(61) +^J+^J+ ExpandHKey(FRootKey) +'\'+ FKeyPath;
-
-  AName := ALangFile.GetString(62) +'"'+ FName +'"';
+    AProperties := ALangFile.Format(61, [FName, HKeyToStr(StrToHKey(FRootKey)) +'\'+ FKeyPath]);
 end;
 
 
@@ -1354,7 +1339,7 @@ begin
   result := False;
 
   if (ExtractFileExt(AName) <> '.lnk') then
-     AName := AName +'.lnk';
+    AName := AName +'.lnk';
 
   // Set startup location
   LnkFilePath := TClearas.GetStartUpDir(AAllUsers) + AName;
@@ -1858,14 +1843,13 @@ end;
 
   Returns the name and path of an item as formatted text. }
 
-procedure TContextListItem.GetItemInfo(var AName, APath: string; ALangFile: TLanguageFile);
+procedure TContextListItem.GetItemInfo(var AProperties: string; ALangFile: TLanguageFile);
 var
   Text: string;
 
 begin
   Text := TClearas.GetKeyValue('HKCR', GetKeyPath(), '');
-  APath := ALangFile.GetString(87) +':'+ ^J+^J +'"'+ Text +'"';
-  AName := ALangFile.GetString(62) +'"'+ FName +'"';
+  AProperties := ALangFile.Format(62, [FName, Text]);
 end;
 
 
