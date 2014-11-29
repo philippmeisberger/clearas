@@ -737,17 +737,20 @@ object Main: TMain
       object mmLang: TMenuItem
         Caption = 'Sprache w'#228'hlen'
         object mmGer: TMenuItem
+          AutoCheck = True
           Caption = 'Deutsch (German)'
           Checked = True
           RadioItem = True
           OnClick = mmGerClick
         end
         object mmEng: TMenuItem
+          AutoCheck = True
           Caption = 'Englisch (English)'
           RadioItem = True
           OnClick = mmEngClick
         end
         object mmFra: TMenuItem
+          AutoCheck = True
           Caption = 'Franz'#246'sisch (Fran'#231'ais)'
           RadioItem = True
           OnClick = mmFraClick

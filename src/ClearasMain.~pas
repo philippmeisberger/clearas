@@ -149,7 +149,7 @@ type
     procedure RefreshContextCounter();
     procedure RefreshStartupCounter();
     procedure SetLanguage(Sender: TObject);
-    procedure ShowContextMenuEntries();
+    procedure ShowContextMenuEntries(ATotalRefresh: Boolean = True);
     procedure ShowRegistryExportDialog();
     procedure ShowStartupEntries(ATotalRefresh: Boolean = True);
   end;
@@ -195,8 +195,10 @@ end;
 
 procedure TMain.FormDestroy(Sender: TObject);
 begin
-  Startup.Free;
   Context.Free;
+  Startup.Free;
+  FUpdateCheck.Free;
+  FLang.Free;
 end;
 
 { TMain.FormShow
@@ -283,7 +285,7 @@ end;
 
 procedure TMain.RefreshStartupCounter();
 begin
-  lwList.Columns[1].Caption := FLang.GetString(2)+'('+IntToStr(Startup.ActCount)
+  lwList.Columns[1].Caption := FLang.GetString(92)+'('+IntToStr(Startup.ActCount)
                                +'/'+IntToStr(Startup.Count)+')';
 end;
 
@@ -302,34 +304,35 @@ var
 
 begin
   with Startup do
-    begin
+  begin
     FullPath := InputBox(FLang.GetString(53), FLang.GetString(54), AddCommas(APath));  //Pfad bearbeiten Dialog
 
     if ((FullPath = '') or (FullPath = ' '))then
-       FullPath := AddCommas(APath);                                   //Fehlervermeidung: Standard-Wert
+      FullPath := AddCommas(APath);                                   //Fehlervermeidung: Standard-Wert
 
     if Item.Enabled then                                               //Item aktiviert?
-       TClearas.WriteStrValue(Item.RootKey, Item.KeyPath, Item.Name, FullPath)  //neuen Pfad in REG schreiben
+      TClearas.WriteStrValue(Item.RootKey, Item.KeyPath, Item.Name, FullPath)  //neuen Pfad in REG schreiben
     else
-       begin                                                           //Item deaktiviert
-       TClearas.WriteStrValue(Item.RootKey, Item.KeyPath, 'Command', FullPath); //neuen Pfad in REG schreiben
-       TClearas.WriteStrValue(Item.RootKey, Item.KeyPath, 'Item', Item.Name);   //Name in REG schreiben
-       end;  //of if
+      begin                                                           //Item deaktiviert
+        TClearas.WriteStrValue(Item.RootKey, Item.KeyPath, 'Command', FullPath); //neuen Pfad in REG schreiben
+        TClearas.WriteStrValue(Item.RootKey, Item.KeyPath, 'Item', Item.Name);   //Name in REG schreiben
+      end;  //of if
 
     lwList.ItemFocused.SubItems[1] := FullPath;                        //in Liste schreiben
-    end;  //of begin
+  end;  //of with
 end;
 
 { Thread Events }
 procedure TMain.OnSearchProgress(Sender: TObject; AWorkCount: Cardinal);
 begin
-  pbLoad.Position := AWorkCount;                //ProgressBar Position
+  pbLoad.Position := AWorkCount;
 end;
 
 
 procedure TMain.OnSearchStart(Sender: TObject; AWorkCountMax: Cardinal);
 begin
-  pbLoad.Max := AWorkCountMax;                  //ProgressBar Ende
+  pbLoad.Visible := True;
+  pbLoad.Max := AWorkCountMax;
 end;
 
 
@@ -414,52 +417,60 @@ begin
     pmDelete.Caption := GetString(99);
     pmProperties.Caption := GetString(35);
   end;  //of with
+
+  // Update list labels
+  ShowStartupEntries(False);
+  ShowContextMenuEntries(False);
 end;
 
 { private TMain.ShowContextMenuEntries
 
   Loads context menu entries and brings them into a TListView. }
 
-procedure TMain.ShowContextMenuEntries();
+procedure TMain.ShowContextMenuEntries(ATotalRefresh: Boolean = True);
 var
   i: Cardinal;
 
 begin
-  // Init TProgressBar
-  pbLoad.Visible := True;
-  pbLoad.Position := 0;
-
-  // Clears all data
-  Context.Clear();
-
-  // Use expert search mode?
-  if cbExpert.Checked then
-  begin
-    // Link search events
-    Context.OnSearchBegin := OnSearchStart;
-    Context.OnSearch := OnSearchProgress;
-    Context.OnSearchEnd := OnSearchEnd;
-    Application.ProcessMessages;
-
-    // Do the expert search!
-    Context.AddEntry();
-  end  //of begin
-  else
-    // Use default search mode
-    Context.LoadContextMenus();
+  if not Assigned(Context) then
+    Exit;
 
   // Clears all visual data
   lwContext.Clear();
 
-  // Print all information about context menu entires
-  for i := 0 to Context.Count -1 do
-    with lwContext.Items.Add do
+  // Make a total refresh or just use cached items
+  if ATotalRefresh then
+  begin
+    // Clears all data
+    Context.Clear();
+
+    // Use expert search mode?
+    if cbExpert.Checked then
     begin
-      Caption := Context[i].GetStatus(FLang);
-      SubItems.Append(Context[i].Name);
-      SubItems.Append(Context[i].Location);
-      SubItems.Append(Context[i].TypeOf);
-    end; //of with
+      // Link search events
+      Context.OnSearchBegin := OnSearchStart;
+      Context.OnSearch := OnSearchProgress;
+      Context.OnSearchEnd := OnSearchEnd;
+      Application.ProcessMessages;
+
+      // Do the expert search!
+      Context.AddEntry();
+    end  //of begin
+    else
+      // Use default search mode
+      Context.LoadContextMenus();
+  end;  //of begin
+
+  if (Context.Count > 0) then
+    // Print all information about context menu entires
+    for i := 0 to Context.Count -1 do
+      with lwContext.Items.Add do
+      begin
+        Caption := Context[i].GetStatus(FLang);
+        SubItems.Append(Context[i].Name);
+        SubItems.Append(Context[i].Location);
+        SubItems.Append(Context[i].TypeOf);
+      end; //of with
 
   // Hide TProgressBar
   pbLoad.Visible := False;
@@ -520,6 +531,9 @@ var
   i: Cardinal;
 
 begin
+  if not Assigned(Startup) then
+    Exit;
+
   // Clears all visual data
   lwList.Clear;
 
@@ -533,19 +547,20 @@ begin
     Startup.LoadAutostart(mmRunOnce.Checked);
   end;  //of begin
 
-  // Print all information about startup entires
-  for i := 0 to Startup.Count -1 do
-    with lwList.Items.Add do
-    begin
-      Caption := Startup[i].GetStatus(FLang);
-      SubItems.Append(Startup[i].Name);
-      SubItems.Append(Startup[i].FilePath);
-      SubItems.Append(Startup[i].TypeOf);
+  if (Startup.Count > 0) then
+    // Print all information about startup entires
+    for i := 0 to Startup.Count -1 do
+      with lwList.Items.Add do
+      begin
+        Caption := Startup[i].GetStatus(FLang);
+        SubItems.Append(Startup[i].Name);
+        SubItems.Append(Startup[i].FilePath);
+        SubItems.Append(Startup[i].TypeOf);
 
-      // Show deactivation timestamp?
-      if mmDate.Checked then
-        SubItems.Append(Startup[i].Time);
-    end;  //of with
+        // Show deactivation timestamp?
+        if mmDate.Checked then
+          SubItems.Append(Startup[i].Time);
+      end;  //of with
 
   // Refresh counter label
   RefreshStartupCounter();
@@ -563,7 +578,7 @@ begin
     // Successfully created backup of .lnk file?
     if Startup.CreateBackup() then
     begin
-      FLang.MessageBox(Flang.GetString(44) +'"'+ TClearas.GetBackupDir() +'"'+ Flang.GetString(45));
+      FLang.MessageBox(Flang.Format(44, [TClearas.GetBackupDir()]));
       bExport.Enabled := False;
     end  //of with
     else
@@ -599,8 +614,8 @@ begin
   with FLang do
   begin
     // Confirm deletion of item
-    if (MessageBox(GetString(48) +'"'+ Startup.Item.Name +'"'+ GetString(49) +^J
-       + GetString(50) + GetString(57), mtConfirm) = IDYES) then
+    if (MessageBox(Format(48, [Startup.Item.Name]) +^J+ GetString(49)
+       + GetString(50), mtConfirm) = IDYES) then
       begin
         // Export item (last chance) only if backup does not exist?
         if (bExport.Enabled and (MessageBox(GetString(52), mtQuestion) = IDYES)) then
@@ -641,7 +656,7 @@ begin
   with FLang do
   begin
     // Confirm deletion of item
-    if (MessageBox(GetString(85) +'"'+ Context.Item.Name +'"'+ GetString(49) +^J
+    if (MessageBox(Format(85, [Context.Item.Name]) +^J+ GetString(49)
        + GetString(50), mtConfirm) = IDYES) then
     begin
       // Ask to export item (last chance)?
@@ -803,7 +818,7 @@ var
   end;
 
 begin
-  if (Selected and (Item <> nil)) then         //Item selektiert?
+  if (Selected and Assigned(Item)) then         //Item selektiert?
       begin
       Index := Startup.IndexOf(Item.SubItems[0], (Item.Caption = FLang.GetString(31)));
       Startup.Item := Startup.Items[Index];    //Pointer setzen
@@ -898,27 +913,29 @@ begin
             end;  //of if
          end;  //of if
       end  //of begin
-  else                                             //nichts angewählt, dann
-     begin                                         //Buttons deaktivieren
-     if bActivate.Enabled then
-        begin
+  else
+    // Nothing selected?
+    if not Assigned(Item) then
+    begin
+      if bActivate.Enabled then
+      begin
         bActivate.Default := False;
         bActivate.Enabled := False;
-        end  //of begin
-     else
+      end  //of begin
+      else
         begin
-        bDeactivate.Default := False;
-        bDeactivate.Enabled := False;
+          bDeactivate.Default := False;
+          bDeactivate.Enabled := False;
         end;  //of if
 
-     pmDeactivate.Enabled := False;
-     pmDelete.Enabled := False;
-     pmExport.Enabled := False;
-     pmProperties.Enabled := False;
-     bExport.Enabled := False;
-     bDelete.Enabled := False;
-     bClose.Default := True;
-     end;  //of if
+      pmDeactivate.Enabled := False;
+      pmDelete.Enabled := False;
+      pmExport.Enabled := False;
+      pmProperties.Enabled := False;
+      bExport.Enabled := False;
+      bDelete.Enabled := False;
+      bClose.Default := True;
+    end;  //of if
 end;
 
 
@@ -928,7 +945,8 @@ var
   Index: Word;
 
 begin
-  if (Selected and (Item <> nil)) then                  //Item selektiert?
+  // Item selected?
+  if (Selected and Assigned(Item)) then
       begin
       Index := Context.IndexOf(Item.SubItems[0], Item.SubItems[1]);
       Context.Item := Context.Items[Index];             //Pointer setzen
@@ -960,26 +978,28 @@ begin
          pmDeactivate.Caption := FLang.GetString(96);  //Beschriftung ändern
          end; //of if
       end  //of begin
-  else                                                  //nichts angewählt, dann
-     begin                                              //Buttons deaktivieren
-     if bActContext.Enabled then
-        begin
-        bActContext.Default := False;
-        bActContext.Enabled := False;
-        end  //of begin
-     else
-        begin
-        bDeactcontext.Default := False;
-        bDeactcontext.Enabled := False;
-        end;  //of if
+  else
+     // Nothing selected?
+     if not Assigned(Item) then
+     begin
+       if bActContext.Enabled then
+       begin
+         bActContext.Default := False;
+         bActContext.Enabled := False;
+       end  //of begin
+       else
+         begin
+           bDeactcontext.Default := False;
+           bDeactcontext.Enabled := False;
+         end;  //of if
 
-     pmDeactivate.Enabled := False;
-     pmExport.Enabled := False;
-     pmDelete.Enabled := False;
-     pmProperties.Enabled := False;
-     bExportContext.Enabled := False;
-     bDeleteContext.Enabled := False;
-     bClose2.Default := True;
+       pmDeactivate.Enabled := False;
+       pmExport.Enabled := False;
+       pmDelete.Enabled := False;
+       pmProperties.Enabled := False;
+       bExportContext.Enabled := False;
+       bDeleteContext.Enabled := False;
+       bClose2.Default := True;
      end;  //of if
 end;
 
@@ -1157,7 +1177,7 @@ begin
   // Set TOpenDialog options
   with OpenDialog do
   begin
-    Title := FLang.GetString(15);
+    Title := mmAdd.Caption;
     InitialDir := '%ProgramFiles%';
 
     // Filter .exe files
@@ -1188,10 +1208,9 @@ begin
             Exit;
         end;  //of begin
 
-        // Error while adding item?
+        // Item already exists?
         if not Startup.AddProgram(OpenDialog.FileName, Name) then
-          FLang.MessageBox(FLang.GetString(40) +'"'+ OpenDialog.FileName +'" '
-            + FLang.GetString(42))
+          FLang.MessageBox(FLang.Format(40, [OpenDialog.FileName]), mtError)
         else
           // Update TListView
           ShowStartupEntries(False);
@@ -1202,7 +1221,7 @@ begin
     end;  //of try
 
   except
-    FLang.MessageBox(56, mtError);
+    FLang.MessageBox(55, mtError);
   end;  //of try
 end;
 
@@ -1225,7 +1244,7 @@ begin
     // Set TOpenDialog options
     with OpenDialog do
     begin
-      Title := FLang.GetString(16);
+      Title := mmImport.Caption;
       InitialDir := TClearas.GetBackupDir();
       Filter := Format(FLang.GetString(39), [EXT_USER, EXT_USER, EXT_COMMON, EXT_COMMON]);
     end;  //of with
@@ -1233,9 +1252,9 @@ begin
     try
       // User clicked "open"?
       if OpenDialog.Execute then
+        // Item already exists?
         if not Startup.ImportBackup(OpenDialog.FileName) then
-          FLang.MessageBox(FLang.GetString(40) +'"'+ Name +'" '
-            + FLang.GetString(42), mtError)
+          FLang.MessageBox(FLang.Format(41, [Name]), mtError)
         else
           // Update TListView
           ShowStartupEntries(False);
@@ -1245,7 +1264,7 @@ begin
     end;  //of try
 
   except
-    FLang.MessageBox(56, mtError);
+    FLang.MessageBox(55, mtError);
   end;  //of try
 end;
 
