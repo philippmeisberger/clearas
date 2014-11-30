@@ -65,7 +65,7 @@ type
     function ChangeStatus(): Boolean; virtual;
     function Delete(): Boolean; virtual; abstract;
     procedure ExportItem(const AFileName: string); virtual; abstract;
-    procedure GetItemInfo(var AName, APath: string; ALangFile: TLanguageFile); virtual; abstract;
+    procedure GetItemInfo(var AProperties: string; ALangFile: TLanguageFile); virtual; abstract;
     function GetStatus(ALangFile: TLanguageFile): string;
     { external }
     property Enabled: Boolean read FEnabled;
@@ -119,7 +119,7 @@ type
   public
     function CreateBackup(): Boolean; override;
     function Delete(): Boolean; override;
-    procedure GetItemInfo(var AName, APath: string; ALangFile: TLanguageFile); override;
+    procedure GetItemInfo(var AProperties: string; ALangFile: TLanguageFile); override;
   end;
 
   { TStartupUserItem }
@@ -135,7 +135,7 @@ type
   public
     function CreateBackup(): Boolean; override;
     function Delete(): Boolean; override;
-    procedure GetItemInfo(var AName, APath: string; ALangFile: TLanguageFile); override;
+    procedure GetItemInfo(var AProperties: string; ALangFile: TLanguageFile); override;
   end;
 
   { TStartupList }
@@ -196,7 +196,7 @@ type
   public
     function Delete(): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
-    procedure GetItemInfo(var AName, APath: string; ALangFile: TLanguageFile); override;
+    procedure GetItemInfo(var AProperties: string; ALangFile: TLanguageFile); override;
     { external }
     property KeyPath: string read GetKeyPath;
     property Location: string read FLocation;
@@ -516,6 +516,7 @@ end;
 class function TClearas.UpdateContextPath(ALangFile: TLanguageFile): Boolean;
 var
   reg: TRegistry;
+  ClearasKey: string;
 
 begin
   result := False;
@@ -524,13 +525,13 @@ begin
 
   try
     reg.OpenKey(KEY_RECYCLEBIN, False);
-
+    ClearasKey := ALangFile.GetString(118);
     // Only update if context menu entry exists
-    if (reg.KeyExists(ALangFile.GetString(71))) then
+    if (reg.KeyExists(ClearasKey)) then
     begin
       // Delete old context menu key
-      if not reg.DeleteKey(ALangFile.GetString(71)) then
-        raise Exception.Create('Could not delete key: '+ ALangFile.GetString(71));
+      if not reg.DeleteKey(ClearasKey) then
+        raise Exception.Create('Could not delete key: '+ ClearasKey);
 
       reg.CloseKey;
 
@@ -939,10 +940,9 @@ end;
 
   Returns the name and path of an item as formatted text. }
 
-procedure TStartupItem.GetItemInfo(var AName, APath: string; ALangFile: TLanguageFile);
+procedure TStartupItem.GetItemInfo(var AProperties: string; ALangFile: TLanguageFile);
 begin
-  APath := ALangFile.Format(61, [HKeyToStr(StrToHKey(FRootKey)) +'\'+ FKeyPath]);
-  AName := ALangFile.Format(62, [FName]);
+  AProperties := ALangFile.Format(46, [FName, HKeyToStr(StrToHKey(FRootKey)) +'\'+ FKeyPath]);
 end;
 
 
@@ -1143,14 +1143,12 @@ end;
 
   Returns the name and path of an item as formatted text. }
 
-procedure TStartupUserItem.GetItemInfo(var AName, APath: string; ALangFile: TLanguageFile);
+procedure TStartupUserItem.GetItemInfo(var AProperties: string; ALangFile: TLanguageFile);
 begin
   if FEnabled then
-    APath := ALangFile.Format(60, [FKeyPath])
+    AProperties := ALangFile.Format(45, [FName, FKeyPath])
   else
-    APath := ALangFile.Format(61, [HKeyToStr(StrToHKey(FRootKey)) +'\'+ FKeyPath]);
-
-  AName := ALangFile.Format(62, [FName]);
+    AProperties := ALangFile.Format(46, [FName, HKeyToStr(StrToHKey(FRootKey)) +'\'+ FKeyPath]);
 end;
 
 
@@ -1846,14 +1844,13 @@ end;
 
   Returns the name and path of an item as formatted text. }
 
-procedure TContextListItem.GetItemInfo(var AName, APath: string; ALangFile: TLanguageFile);
+procedure TContextListItem.GetItemInfo(var AProperties: string; ALangFile: TLanguageFile);
 var
   Text: string;
 
 begin
   Text := TClearas.GetKeyValue('HKCR', GetKeyPath(), '');
-  APath := ALangFile.GetString(87) +':'+ ^J+^J +'"'+ Text +'"';
-  AName := ALangFile.GetString(62) +'"'+ FName +'"';
+  AProperties := ALangFile.Format(47, [FName, Text]);
 end;
 
 

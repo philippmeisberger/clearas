@@ -217,7 +217,7 @@ begin
   // Check for incompatibility
   if not (newWindows or (windows[1] in ['X','2'])) then
   begin
-    Flang.MessageBox(FLang.GetString(74) + windows + FLang.GetString(75), mtError);
+    Flang.MessageBox(FLang.Format(65, [windows]) + FLang.GetString(66), mtError);
     mmExportList.Enabled := False;
     mmRefresh.Enabled := False;
     mmContext.Enabled := False;
@@ -275,8 +275,7 @@ end;
 
 procedure TMain.RefreshContextCounter();
 begin
-  lwContext.Columns[1].Caption := FLang.GetString(87) +' ('+IntToStr(Context.ActCount)
-                                   +'/'+ IntToStr(Context.Count)+')';
+  lwContext.Columns[1].Caption := FLang.Format(87, [Context.ActCount, Context.Count]);
 end;
 
 { private TMain.RefreshStartupCounter
@@ -285,8 +284,7 @@ end;
 
 procedure TMain.RefreshStartupCounter();
 begin
-  lwList.Columns[1].Caption := FLang.GetString(92)+'('+IntToStr(Startup.ActCount)
-                               +'/'+IntToStr(Startup.Count)+')';
+  lwList.Columns[1].Caption := FLang.Format(88, [Startup.ActCount, Startup.Count]);
 end;
 
 
@@ -305,7 +303,7 @@ var
 begin
   with Startup do
   begin
-    FullPath := InputBox(FLang.GetString(53), FLang.GetString(54), AddCommas(APath));  //Pfad bearbeiten Dialog
+    FullPath := InputBox(FLang.GetString(33), FLang.GetString(54), AddCommas(APath));  //Pfad bearbeiten Dialog
 
     if ((FullPath = '') or (FullPath = ' '))then
       FullPath := AddCommas(APath);                                   //Fehlervermeidung: Standard-Wert
@@ -322,12 +320,18 @@ begin
   end;  //of with
 end;
 
-{ Thread Events }
+{ private TMain.OnSearchProgress
+
+  Event that is called when search is in progress. }
+
 procedure TMain.OnSearchProgress(Sender: TObject; AWorkCount: Cardinal);
 begin
   pbLoad.Position := AWorkCount;
 end;
 
+{ private TMain.OnSearchProgress
+
+  Event that is called when search starts. }
 
 procedure TMain.OnSearchStart(Sender: TObject; AWorkCountMax: Cardinal);
 begin
@@ -335,6 +339,9 @@ begin
   pbLoad.Max := AWorkCountMax;
 end;
 
+{ private TMain.OnSearchProgress
+
+  Event that is called when search ends. }
 
 procedure TMain.OnSearchEnd(Sender: TObject);
 begin
@@ -350,56 +357,26 @@ procedure TMain.SetLanguage(Sender: TObject);
 begin
   with FLang do
   begin
-    // Startup side TButton labels
-    tsContext.Caption := GetString(84);
-    bActivate.Caption := GetString(96);
-    bDeactivate.Caption := GetString(97);
-    bExport.Caption := GetString(98);
-    bDelete.Caption := GetString(99);
-    bClose.Caption := GetString(100);
-
-    // Startup side TListView labels
-    lStartup.Caption := GetString(90);
-    lwList.Columns[0].Caption := GetString(91);
-    lwList.Columns[2].Caption := GetString(101);
-    lwList.Columns[3].Caption := GetString(94);
-
-    // Context menu side TButton labels
-    bActContext.Caption := bActivate.Caption;
-    bDeactContext.Caption := bDeactivate.Caption;
-    bExportContext.Caption := bExport.Caption;
-    bDeleteContext.Caption := bDelete.Caption;
-    bClose2.Caption := bClose.Caption;
-    cbExpert.Caption := GetString(89);
-    tsStartup.Caption := GetString(83);
-
-    // Context menu side TListView labels
-    lContext.Caption := GetString(86);
-    lwContext.Columns[0].Caption := lwList.Columns[0].Caption;
-    lwContext.Columns[1].Caption := GetString(87);
-    lwContext.Columns[2].Caption := GetString(88);
-    lwContext.Columns[3].Caption := GetString(94);
-
     // File menu labels
-    mmFile.Caption := GetString(101);
-    mmAdd.Caption := GetString(111);
-    mmImport.Caption := GetString(112);
-    mmExport.Caption := GetString(113);
-    mmExportlist.Caption := GetString(114);
-    mmClose.Caption := GetString(100);
+    mmFile.Caption := GetString(68);
+    mmAdd.Caption := GetString(69);
+    mmImport.Caption := GetString(70);
+    mmExport.Caption := GetString(71);
+    mmExportlist.Caption := GetString(72);
+    mmClose.Caption := GetString(73);
 
     // Edit menu labels
-    mmEdit.Caption := GetString(102);
-    mmContext.Caption := GetString(104);
-    mmDelBackup.Caption := GetString(105);
+    mmEdit.Caption := GetString(74);
+    mmContext.Caption := GetString(75);
+    mmDelBackup.Caption := GetString(76);
 
     // View menu labels
     mmView.Caption := GetString(20);
-    mmRefresh.Caption := GetString(115);
-    mmStandard.Caption := GetString(116);
-    mmOptimate.Caption := GetString(117);
-    mmDate.Caption := GetString(118);
-    mmRunOnce.Caption := GetString(37);
+    mmRefresh.Caption := GetString(77);
+    mmStandard.Caption := GetString(78);
+    mmOptimate.Caption := GetString(79);
+    mmDate.Caption := GetString(80);
+    mmRunOnce.Caption := GetString(81);
     mmLang.Caption := GetString(25);
 
     // Help menu labels
@@ -409,12 +386,41 @@ begin
     mmReport.Caption := GetString(26);
     mmInfo.Caption := GetString(17);
 
-    // Context menu labels
-    pmDeactivate.Caption := GetString(96);
+    // Startup tab TButton labels
+    tsContext.Caption := GetString(84);
+    bActivate.Caption := GetString(93);
+    bDeactivate.Caption := GetString(94);
+    bExport.Caption := GetString(95);
+    bDelete.Caption := GetString(96);
+    bClose.Caption := mmClose.Caption;
+
+    // Startup tab TListView labels
+    lStartup.Caption := GetString(82);
+    lwList.Columns[0].Caption := GetString(91);
+    lwList.Columns[2].Caption := GetString(68);
+    lwList.Columns[3].Caption := GetString(92);
+
+    // Context menu tab TButton labels
+    bActContext.Caption := bActivate.Caption;
+    bDeactContext.Caption := bDeactivate.Caption;
+    bExportContext.Caption := bExport.Caption;
+    bDeleteContext.Caption := bDelete.Caption;
+    bClose2.Caption := bClose.Caption;
+    cbExpert.Caption := GetString(89);
+    tsStartup.Caption := GetString(83);
+
+    // Context menu tab TListView labels
+    lContext.Caption := GetString(86);
+    lwContext.Columns[0].Caption := lwList.Columns[0].Caption;
+    lwContext.Columns[2].Caption := GetString(90);
+    lwContext.Columns[3].Caption := lwList.Columns[3].Caption;
+
+    // Popup menu labels
+    pmDeactivate.Caption := bDeactivate.Caption;
     pmSearch.Caption := GetString(34);
-    pmEdit.Caption := GetString(53);
-    pmExport.Caption := GetString(98);
-    pmDelete.Caption := GetString(99);
+    pmEdit.Caption := mmEdit.Caption;
+    pmExport.Caption := mmExport.Caption;
+    pmDelete.Caption := bDelete.Caption;
     pmProperties.Caption := GetString(35);
   end;  //of with
 
@@ -493,7 +499,7 @@ begin
   // Set TSaveDialog options
   with SaveDialog do
   begin
-    Title := FLang.GetString(33);
+    Title := FLang.GetString(95);
 
     // Confirm overwrite
     Options := Options + [ofOverwritePrompt];
@@ -578,11 +584,11 @@ begin
     // Successfully created backup of .lnk file?
     if Startup.CreateBackup() then
     begin
-      FLang.MessageBox(Flang.Format(44, [TClearas.GetBackupDir()]));
+      FLang.MessageBox(Flang.Format(42, [TClearas.GetBackupDir()]));
       bExport.Enabled := False;
     end  //of with
     else
-      Flang.MessageBox(46, mtError);
+      Flang.MessageBox(43, mtError);
   end  //of begin
   else
     // Default .reg file export
@@ -627,7 +633,7 @@ begin
 
         // Ask: Delete old backup if a backup exists and item was not exported
         if ((not Exported) and Startup.Item.StartupUser and Startup.BackupExists) then
-          Startup.DeleteBackup := (MessageBox(GetString(47), mtQuestion) = IDYES);
+          Startup.DeleteBackup := (MessageBox(GetString(44), mtQuestion) = IDYES);
 
         // Successfully deleted item physically?
         if Startup.DeleteItem() then
@@ -639,7 +645,7 @@ begin
           RefreshStartupCounter();
         end  //of begin
         else
-          FLang.MessageBox(FLang.GetString(99) + FLang.GetString(66), mtError);
+          FLang.MessageBox(FLang.GetString(96) + FLang.GetString(67), mtError);
       end;  //of if
   end;  //of with
 
@@ -673,7 +679,7 @@ begin
         RefreshContextCounter();
       end  //of begin
       else
-        MessageBox(GetString(99) + GetString(66), mtError);
+        MessageBox(GetString(96) + GetString(67), mtError);
     end;  //of begin
   end;  //of with
 end;
@@ -704,7 +710,7 @@ begin
     RefreshStartupCounter();
   end  //of begin
   else
-    FLang.MessageBox(FLang.GetString(96) + FLang.GetString(66), mtError);
+    FLang.MessageBox(FLang.GetString(96) + FLang.GetString(67), mtError);
 end;
 
 { TMain.bActContextClick
@@ -728,7 +734,7 @@ begin
     RefreshContextCounter();
   end  //of begin
   else
-    FLang.MessageBox(FLang.GetString(96) + FLang.GetString(66), mtError);
+    FLang.MessageBox(FLang.GetString(96) + FLang.GetString(67), mtError);
 end;
 
 { TMain.bDeactivateClick
@@ -759,7 +765,7 @@ begin
     RefreshStartupCounter();
   end  //of begin
   else
-    FLang.MessageBox(FLang.GetString(97) + FLang.GetString(66), mtError);
+    FLang.MessageBox(FLang.GetString(93) + FLang.GetString(67), mtError);
 end;
 
 { TMain.bDeactContextClick
@@ -783,7 +789,7 @@ begin
     RefreshContextCounter();
   end  //of begin
   else
-    FLang.MessageBox(FLang.GetString(97) + FLang.GetString(66), mtError);
+    FLang.MessageBox(FLang.GetString(94) + FLang.GetString(67), mtError);
 end;
 
 { Selektion Events }
@@ -895,7 +901,7 @@ begin
                   bDeactivate.Enabled := True;
                   bDeactivate.Default := True;
                   pmDeactivate.Enabled := True;
-                  pmDeactivate.Caption := FLang.GetString(97);  //Beschriftung ändern
+                  pmDeactivate.Caption := bActivate.Caption;  //Beschriftung ändern
                   end //of begin
                else
                   begin                                           //NEIN
@@ -904,7 +910,7 @@ begin
                   bDeactivate.Enabled := False;
                   bActivate.Default := True;
                   pmDeactivate.Enabled := True;
-                  pmDeactivate.Caption := FLang.GetString(96);  //Beschriftung ändern
+                  pmDeactivate.Caption := bDeactivate.Caption;  //Beschriftung ändern
                   end; //of if
 
                if not KeyPreview then                 //Hotkeys aktiviert?
@@ -967,7 +973,7 @@ begin
          bDeactContext.Enabled := True;
          bDeactContext.Default := True;
          pmDeactivate.Enabled := True;
-         pmDeactivate.Caption := FLang.GetString(97);  //Beschriftung ändern
+         pmDeactivate.Caption := bDeactivate.Caption;  //Beschriftung ändern
          end //of begin
       else
          begin                                          //NEIN
@@ -975,7 +981,7 @@ begin
          bDeactContext.Enabled := False;
          bActContext.Default := True;
          pmDeactivate.Enabled := True;
-         pmDeactivate.Caption := FLang.GetString(96);  //Beschriftung ändern
+         pmDeactivate.Caption := bActivate.Caption;  //Beschriftung ändern
          end; //of if
       end  //of begin
   else
@@ -1177,7 +1183,7 @@ begin
   // Set TOpenDialog options
   with OpenDialog do
   begin
-    Title := mmAdd.Caption;
+    Title := FLang.GetString(69);
     InitialDir := '%ProgramFiles%';
 
     // Filter .exe files
@@ -1197,7 +1203,7 @@ begin
           Name := TClearas.DeleteExt(ExtractFileName(OpenDialog.FileName));
 
           // User can edit the name
-          Name := InputBox(FLang.GetString(106), FLang.GetString(107), Name);
+          Name := InputBox(FLang.GetString(74), FLang.GetString(107), Name);
 
           // Name must not be empty!
           if (Name = '') then
@@ -1244,7 +1250,7 @@ begin
     // Set TOpenDialog options
     with OpenDialog do
     begin
-      Title := mmImport.Caption;
+      Title := FLang.GetString(70);
       InitialDir := TClearas.GetBackupDir();
       Filter := Format(FLang.GetString(39), [EXT_USER, EXT_USER, EXT_COMMON, EXT_COMMON]);
     end;  //of with
@@ -1280,8 +1286,8 @@ begin
     if (PageControl.ActivePage = tsContext) then
       bExportContext.Click()
     else
-      FLang.MessageBox(FLang.GetString(58) + FLang.GetString(66) +^J
-                  + FLang.GetString(59), mtWarning);
+      FLang.MessageBox(FLang.GetString(95) + FLang.GetString(67) +^J
+                  + FLang.GetString(53), mtWarning);
 end;
 
 { TMain.mmExportListClick
@@ -1441,7 +1447,7 @@ begin
       endOf := Width + 120;
 
       // Add column
-      lwList.Columns.Add.Caption := FLang.GetString(95);
+      lwList.Columns.Add.Caption := FLang.GetString(80);
 
       if (WindowState = wsMaximized) then
         ShowStartupEntries(False);

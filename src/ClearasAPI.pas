@@ -516,6 +516,7 @@ end;
 class function TClearas.UpdateContextPath(ALangFile: TLanguageFile): Boolean;
 var
   reg: TRegistry;
+  ClearasKey: string;
 
 begin
   result := False;
@@ -524,13 +525,13 @@ begin
 
   try
     reg.OpenKey(KEY_RECYCLEBIN, False);
-
+    ClearasKey := ALangFile.GetString(37);
     // Only update if context menu entry exists
-    if (reg.KeyExists(ALangFile.GetString(71))) then
+    if (reg.KeyExists(ClearasKey)) then
     begin
       // Delete old context menu key
-      if not reg.DeleteKey(ALangFile.GetString(71)) then
-        raise Exception.Create('Could not delete key: '+ ALangFile.GetString(71));
+      if not reg.DeleteKey(ClearasKey) then
+        raise Exception.Create('Could not delete key: '+ ClearasKey);
 
       reg.CloseKey;
 
@@ -941,7 +942,7 @@ end;
 
 procedure TStartupItem.GetItemInfo(var AProperties: string; ALangFile: TLanguageFile);
 begin
-  AProperties := ALangFile.Format(61, [FName, HKeyToStr(StrToHKey(FRootKey)) +'\'+ FKeyPath]);
+  AProperties := ALangFile.Format(46, [FName, HKeyToStr(StrToHKey(FRootKey)) +'\'+ FKeyPath]);
 end;
 
 
@@ -1145,9 +1146,9 @@ end;
 procedure TStartupUserItem.GetItemInfo(var AProperties: string; ALangFile: TLanguageFile);
 begin
   if FEnabled then
-    AProperties := ALangFile.Format(60, [FName, FKeyPath])
+    AProperties := ALangFile.Format(45, [FName, FKeyPath])
   else
-    AProperties := ALangFile.Format(61, [FName, HKeyToStr(StrToHKey(FRootKey)) +'\'+ FKeyPath]);
+    AProperties := ALangFile.Format(46, [FName, HKeyToStr(StrToHKey(FRootKey)) +'\'+ FKeyPath]);
 end;
 
 
@@ -1849,7 +1850,7 @@ var
 
 begin
   Text := TClearas.GetKeyValue('HKCR', GetKeyPath(), '');
-  AProperties := ALangFile.Format(62, [FName, Text]);
+  AProperties := ALangFile.Format(47, [FName, Text]);
 end;
 
 
