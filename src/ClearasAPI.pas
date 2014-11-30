@@ -770,7 +770,10 @@ begin
   RegFile := TRegistryFile.Create(AFileName, True);
 
   try
-    RegFile.ExportReg(StrToHKey(FRootKey), FKeyPath, False);
+    if FEnabled then
+      RegFile.ExportReg(StrToHKey(FRootKey), FKeyPath, FName)
+    else
+      RegFile.ExportReg(StrToHKey(FRootKey), FKeyPath, False);
 
   finally
     RegFile.Free;
@@ -803,6 +806,10 @@ begin
   try
     reg.RootKey := HKEY_LOCAL_MACHINE;
 
+    // Successfully deleted old entry?
+    if not DeleteValue(FRootKey, FKeyPath, FName) then
+      raise EStartupException.Create('Could not delete value!');
+
     // Successfully created new key?
     if (reg.OpenKey(KEY_DEACT + FName, True)) then
     begin
@@ -827,10 +834,6 @@ begin
     end  //of begin
     else
       raise EStartupException.Create('Could not create "'+ KEY_DEACT + FName +'"!');
-
-    // Successfully deleted old entry?
-    if not DeleteValue(FRootKey, FKeyPath, FName) then
-      raise EStartupException.Create('Could not delete value!');
 
   except
     on E: Exception do

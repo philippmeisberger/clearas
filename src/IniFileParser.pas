@@ -8,10 +8,15 @@
 
 unit IniFileParser;
 
+{$IFDEF LINUX} {$mode delphi}{$H+} {$ENDIF}
+
 interface
 
 uses
-  Windows, Classes, Registry, SysUtils, StrUtils, OSUtils;
+{$IFDEF MSWINDOWS}
+  Windows, Registry,
+{$ENDIF}
+  Classes, SysUtils, StrUtils, OSUtils;
 
 type
   { Exception class }
@@ -64,6 +69,7 @@ type
     property Values[AIndex: Integer]: string read GetValue;
   end;
 
+{$IFDEF MSWINDOWS}
   { TRegistryFile }
   TRegistryFile = class(TIniFile)
   private
@@ -77,11 +83,13 @@ type
     destructor Destroy; override;
     procedure AddRemove(ASectionName, AKey, AValue: string);
     function AddSection(AHKey: HKEY; AKeyPath: string): Boolean; reintroduce;
+    procedure Clear();
     function DeletePathDelimiter(APath: string): string;
     function DeleteQuoteChars(AText: string): string;
     function EscapePathDelimiter(APath: string): string;
     procedure ExportKey(AHKey: HKEY; AKeyPath: string; ARecursive: Boolean);
-    procedure ExportReg(AHKey: HKEY; AKeyPath: string; ARecursive: Boolean = True);
+    procedure ExportReg(AHKey: HKEY; AKeyPath: string; ARecursive: Boolean = True); overload;
+    procedure ExportReg(AHKey: HKEY; AKeyPath, AValueName: string); overload;
     function GetSection(AHKey: HKEY; AKeyPath: string): string;
     procedure MakeHeadline();
     function ReadBoolean(ASection, AIdent: string): Boolean;
@@ -97,11 +105,9 @@ type
     property OnExportBegin: TNotifyEvent read FOnExportBegin write FOnExportBegin;
     property OnExportEnd: TNotifyEvent read FOnExportEnd write FOnExportEnd;
   end;
-
+{$ENDIF}
 
 implementation
-
-uses Math;
 
 { TIniFile }
 
@@ -673,6 +679,7 @@ begin
     raise EInvalidArgument.Create('The specified file is no .reg file!');
 
   inherited Create(AFileName, AOverwriteIfExists, ASaveOnDestroy);
+  MakeHeadline();
   FReg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));
 end;
 
@@ -724,6 +731,16 @@ end;
 function TRegistryFile.AddSection(AHKey: HKEY; AKeyPath: string): Boolean;
 begin
   result := inherited AddSection(GetSection(AHKey, AKeyPath));
+end;
+
+{ public TRegistryFile.Clear
+
+  Empties the current file. }
+
+procedure TRegistryFile.Clear();
+begin
+  inherited Clear();
+  MakeHeadline();
 end;
 
 { public TRegistryFile.DeletePathDelimiter
@@ -787,11 +804,11 @@ begin
   Values := TStringList.Create;
   FReg.GetValueNames(Values);
 
-  // Append section header
-  AddSection(AHKey, AKeyPath);
+  // Build and append section header
   Section := GetSection(AHKey, AKeyPath);
+  inherited AddSection(Section);
 
-  if (Values.Count <> 0) then
+  if (Values.Count > 0) then
     // Append key-value pairs
     for i := 0 to Values.Count -1 do
       case FReg.GetDataType(Values[i]) of
@@ -812,11 +829,13 @@ begin
       ExportKey(AHKey, AKeyPath +'\'+ Keys[i], True);
     end;  //of for
   end;  //of begin
+
+  FReg.CloseKey();
 end;
 
 { public TRegistryFile.ExportReg
 
- Saves the current .reg file. }
+  Exports an entire Registry key (opt. recursive) and saves it as .reg file. }
 
 procedure TRegistryFile.ExportReg(AHKey: HKEY; AKeyPath: string;
   ARecursive: Boolean = True);
@@ -830,6 +849,35 @@ begin
 
   if Assigned(FOnExportEnd) then
     FOnExportEnd(Self);
+end;
+
+{ public TRegistryFile.ExportReg
+
+  Exports a single Registry value and saves it as .reg file. }
+
+procedure TRegistryFile.ExportReg(AHKey: HKEY; AKeyPath, AValueName: string);
+var
+  Section: string;
+
+begin
+  // Init Registry access
+  FReg.RootKey := AHKey;
+  FReg.OpenKey(AKeyPath, False);
+
+  MakeHeadline();
+
+  // Build and append section header
+  Section := GetSection(AHKey, AKeyPath);
+  inherited AddSection(Section);
+
+  // Append key-value pair
+  case FReg.GetDataType(AValueName) of
+    rdString:  WriteString(Section, AValueName, FReg.ReadString(AValueName));
+    rdInteger: WriteInteger(Section, AValueName, FReg.ReadInteger(AValueName));
+  end;  //of case
+
+  FReg.CloseKey();
+  Save();
 end;
 
 { public TRegistryFile.GetSection

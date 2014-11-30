@@ -16,9 +16,10 @@ uses
   OSUtils, Updater;
 
 type
+  { TMain }
   TMain = class(TForm, IChangeLanguageListener, IUpdateListener)
     PopupMenu: TPopupMenu;
-    pmDeactivate: TMenuItem;
+    pmChangeStatus: TMenuItem;
     N1: TMenuItem;
     pmExport: TMenuItem;
     pmDelete: TMenuItem;
@@ -56,11 +57,11 @@ type
     tsContext: TTabSheet;
     lwList: TListView;
     lStartup: TLabel;
-    bActivate: TButton;
+    bEnableStartupItem: TButton;
     bClose: TButton;
-    bDeactivate: TButton;
-    bDelete: TButton;
-    bExport: TButton;
+    bDisableStartupItem: TButton;
+    bDeleteStartupItem: TButton;
+    bExportStartupItem: TButton;
     lCopy1: TLabel;
     lCopy2: TLabel;
     bExportContext: TButton;
@@ -87,13 +88,13 @@ type
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
-    procedure bDeleteClick(Sender: TObject);
+    procedure bDeleteStartupItemClick(Sender: TObject);
     procedure bDeleteContextClick(Sender: TObject);
-    procedure bActivateClick(Sender: TObject);
+    procedure bEnableStartupItemClick(Sender: TObject);
     procedure bActContextClick(Sender: TObject);
-    procedure bDeactivateClick(Sender: TObject);
+    procedure bDisableStartupItemClick(Sender: TObject);
     procedure bDeactContextClick(Sender: TObject);
-    procedure bExportClick(Sender: TObject);
+    procedure bExportStartupItemClick(Sender: TObject);
     procedure bExportContextClick(Sender: TObject);
     procedure lwListSelectItem(Sender: TObject; Item: TListItem;
       Selected: Boolean);
@@ -104,7 +105,7 @@ type
     procedure lwListColumnClick(Sender: TObject; Column: TListColumn);  //http://www.delphipraxis.net/283-wie-kann-ich-eine-listview-sortieren.html
     procedure lwListCompare(Sender: TObject; Item1, Item2: TListItem;   //http://www.delphipraxis.net/283-wie-kann-ich-eine-listview-sortieren.html
       Data: Integer; var Compare: Integer);
-    procedure pmDeactivateClick(Sender: TObject);
+    procedure pmChangeStatusClick(Sender: TObject);
     procedure pmPropertiesClick(Sender: TObject);
     procedure pmDeleteClick(Sender: TObject);
     procedure pmSearchClick(Sender: TObject);
@@ -388,10 +389,10 @@ begin
 
     // Startup tab TButton labels
     tsContext.Caption := GetString(84);
-    bActivate.Caption := GetString(93);
-    bDeactivate.Caption := GetString(94);
-    bExport.Caption := GetString(95);
-    bDelete.Caption := GetString(96);
+    bEnableStartupItem.Caption := GetString(93);
+    bDisableStartupItem.Caption := GetString(94);
+    bExportStartupItem.Caption := GetString(95);
+    bDeleteStartupItem.Caption := GetString(96);
     bClose.Caption := mmClose.Caption;
 
     // Startup tab TListView labels
@@ -401,10 +402,10 @@ begin
     lwList.Columns[3].Caption := GetString(92);
 
     // Context menu tab TButton labels
-    bActContext.Caption := bActivate.Caption;
-    bDeactContext.Caption := bDeactivate.Caption;
-    bExportContext.Caption := bExport.Caption;
-    bDeleteContext.Caption := bDelete.Caption;
+    bActContext.Caption := bEnableStartupItem.Caption;
+    bDeactContext.Caption := bDisableStartupItem.Caption;
+    bExportContext.Caption := bExportStartupItem.Caption;
+    bDeleteContext.Caption := bDeleteStartupItem.Caption;
     bClose2.Caption := bClose.Caption;
     cbExpert.Caption := GetString(89);
     tsStartup.Caption := GetString(83);
@@ -416,11 +417,11 @@ begin
     lwContext.Columns[3].Caption := lwList.Columns[3].Caption;
 
     // Popup menu labels
-    pmDeactivate.Caption := bDeactivate.Caption;
+    pmChangeStatus.Caption := bDisableStartupItem.Caption;
     pmSearch.Caption := GetString(34);
     pmEdit.Caption := mmEdit.Caption;
     pmExport.Caption := mmExport.Caption;
-    pmDelete.Caption := bDelete.Caption;
+    pmDelete.Caption := bDeleteStartupItem.Caption;
     pmProperties.Caption := GetString(35);
   end;  //of with
 
@@ -576,7 +577,7 @@ end;
 
   Calls the export method of current selected deactivated startup item. }
 
-procedure TMain.bExportClick(Sender: TObject);
+procedure TMain.bExportStartupItemClick(Sender: TObject);
 begin 
   // Special .lnk file backup only for activated startup user entries!
   if (Startup.Item.Enabled and Startup.Item.StartupUser) then
@@ -585,7 +586,7 @@ begin
     if Startup.CreateBackup() then
     begin
       FLang.MessageBox(Flang.Format(42, [TClearas.GetBackupDir()]));
-      bExport.Enabled := False;
+      bExportStartupItem.Enabled := False;
     end  //of with
     else
       Flang.MessageBox(43, mtError);
@@ -608,49 +609,54 @@ end;
 
   Deletes currently selected startup item. }
 
-procedure TMain.bDeleteClick(Sender: TObject);
+procedure TMain.bDeleteStartupItemClick(Sender: TObject);
 var
   DelBackup, Exported: Boolean;
 
 begin
-  // Save the DeleteBackup flag
-  DelBackup := Startup.DeleteBackup;
-  Exported := False;
-
-  with FLang do
+  // Confirm deletion of item
+  if (FLang.MessageBox(FLang.Format(48, [Startup.Item.Name]) +^J
+    + FLang.GetString(49) + FLang.GetString(50), mtConfirm) = IDYES) then
   begin
-    // Confirm deletion of item
-    if (MessageBox(Format(48, [Startup.Item.Name]) +^J+ GetString(49)
-       + GetString(50), mtConfirm) = IDYES) then
+    // Save the DeleteBackup flag
+    DelBackup := Startup.DeleteBackup;
+    Exported := False;
+
+    // Export item (last chance) only if backup does not exist?
+    if (bExportStartupItem.Enabled and (FLang.MessageBox(FLang.GetString(52),
+      mtQuestion) = IDYES)) then
+    begin
+      bExportStartupItem.Click;
+      DelBackup := False;
+      Exported := True;
+    end;  //of begin
+
+    // Ask: Delete old backup if a backup exists and item was not exported
+    if ((not Exported) and Startup.Item.StartupUser and Startup.BackupExists) then
+      Startup.DeleteBackup := (FLang.MessageBox(FLang.GetString(44), mtQuestion) = IDYES);
+
+    try
+      // Successfully deleted item physically?
+      if Startup.DeleteItem() then
       begin
-        // Export item (last chance) only if backup does not exist?
-        if (bExport.Enabled and (MessageBox(GetString(52), mtQuestion) = IDYES)) then
-        begin
-          bExport.Click;
-          DelBackup := False;
-          Exported := True;
-        end;  //of begin
+        // Delete item from ListView visual
+        lwList.DeleteSelected();
 
-        // Ask: Delete old backup if a backup exists and item was not exported
-        if ((not Exported) and Startup.Item.StartupUser and Startup.BackupExists) then
-          Startup.DeleteBackup := (MessageBox(GetString(44), mtQuestion) = IDYES);
+        // Refresh counter label
+        RefreshStartupCounter();
+      end  //of begin
+      else
+        raise Exception.Create('Could not delete item!');
 
-        // Successfully deleted item physically?
-        if Startup.DeleteItem() then
-        begin
-          // Delete item from ListView visual
-          lwList.DeleteSelected();
+    except
+      on E: Exception do
+        FLang.MessageBox(FLang.GetString(96) + FLang.GetString(66) +^J
+          + E.Message, mtError);
+    end;  //of try
 
-          // Refresh counter label
-          RefreshStartupCounter();
-        end  //of begin
-        else
-          FLang.MessageBox(FLang.GetString(96) + FLang.GetString(67), mtError);
-      end;  //of if
-  end;  //of with
-
-  // Restore the DeleteBackup flag
-  Startup.DeleteBackup := DelBackup;
+    // Restore the DeleteBackup flag
+    Startup.DeleteBackup := DelBackup;
+  end;  //of begin
 end;
 
 { TMain.bDeleteContextClick
@@ -659,16 +665,15 @@ end;
 
 procedure TMain.bDeleteContextClick(Sender: TObject);
 begin
-  with FLang do
+  // Confirm deletion of item
+  if (FLang.MessageBox(FLang.Format(85, [Context.Item.Name]) +^J
+    + FLang.GetString(49) + FLang.GetString(50), mtConfirm) = IDYES) then
   begin
-    // Confirm deletion of item
-    if (MessageBox(Format(85, [Context.Item.Name]) +^J+ GetString(49)
-       + GetString(50), mtConfirm) = IDYES) then
-    begin
-      // Ask to export item (last chance)?
-      if (MessageBox(GetString(52), mtQuestion) = IDYES) then
-        ShowRegistryExportDialog();
+    // Ask to export item (last chance)?
+    if (FLang.MessageBox(FLang.GetString(52), mtQuestion) = IDYES) then
+      ShowRegistryExportDialog();
 
+    try
       // Successfully deleted item physically?
       if Context.DeleteItem() then
       begin
@@ -679,38 +684,50 @@ begin
         RefreshContextCounter();
       end  //of begin
       else
-        MessageBox(GetString(96) + GetString(67), mtError);
-    end;  //of begin
-  end;  //of with
+        raise Exception.Create('Could not delete item!');
+
+    except
+      on E: Exception do
+        FLang.MessageBox(FLang.GetString(96) + FLang.GetString(66) +^J
+          + E.Message, mtError);
+    end;  //of try
+  end;  //of begin
 end;
 
 { TMain.bActivateClick
 
   Activates currently selected startup item. }
 
-procedure TMain.bActivateClick(Sender: TObject);
+procedure TMain.bEnableStartupItemClick(Sender: TObject);
 begin
-  // Successfully activated item?
-  if Startup.ChangeItemStatus() then
-  begin
-    // Change item visual status
-    lwList.ItemFocused.Caption := Startup.Item.GetStatus(FLang);
+  try
+    // Successfully activated item?
+    if Startup.ChangeItemStatus() then
+    begin
+      // Change item visual status
+      lwList.ItemFocused.Caption := Startup.Item.GetStatus(FLang);
 
-    // Change button states
-    bActivate.Enabled := False;
-    bDeactivate.Enabled := True;
-    bDeactivate.Default := True;
-    bExport.Enabled := not Startup.BackupExists;
+      // Change button states
+      bEnableStartupItem.Enabled := False;
+      bDisableStartupItem.Enabled := True;
+      bDisableStartupItem.Default := True;
+      bExportStartupItem.Enabled := not Startup.BackupExists;
 
-    // Delete deactivation timestamp if necassary
-    if mmDate.Checked then
-      lwList.ItemFocused.SubItems[3] := '';
+      // Delete deactivation timestamp if necassary
+      if mmDate.Checked then
+        lwList.ItemFocused.SubItems[3] := '';
 
-    // Refresh counter label
-    RefreshStartupCounter();
-  end  //of begin
-  else
-    FLang.MessageBox(FLang.GetString(96) + FLang.GetString(67), mtError);
+      // Refresh counter label
+      RefreshStartupCounter();
+    end  //of begin
+    else
+      raise Exception.Create('Could not enable item!');
+
+  except
+    on E: Exception do
+      FLang.MessageBox(FLang.GetString(93) + FLang.GetString(66) +^J
+        + E.Message, mtError);
+  end;  //of try
 end;
 
 { TMain.bActContextClick
@@ -719,53 +736,67 @@ end;
 
 procedure TMain.bActContextClick(Sender: TObject);
 begin
-  // Successfully activated item?
-  if Context.ChangeItemStatus() then
-  begin
-    // Change item visual status
-    lwContext.ItemFocused.Caption := Context.Item.GetStatus(FLang);
+  try
+    // Successfully activated item?
+    if Context.ChangeItemStatus() then
+    begin
+      // Change item visual status
+      lwContext.ItemFocused.Caption := Context.Item.GetStatus(FLang);
 
-    // Change button states
-    bActContext.Enabled := False;
-    bDeactContext.Enabled := True;
-    bDeactContext.Default := True;
+      // Change button states
+      bActContext.Enabled := False;
+      bDeactContext.Enabled := True;
+      bDeactContext.Default := True;
 
-    // Refresh counter label
-    RefreshContextCounter();
-  end  //of begin
-  else
-    FLang.MessageBox(FLang.GetString(96) + FLang.GetString(67), mtError);
+      // Refresh counter label
+      RefreshContextCounter();
+    end  //of begin
+    else
+      raise Exception.Create('Could not enable item!');
+
+  except
+    on E: Exception do
+      FLang.MessageBox(FLang.GetString(93) + FLang.GetString(66) +^J
+        + E.Message, mtError);
+  end;  //of try
 end;
 
 { TMain.bDeactivateClick
 
   Deactivates currently selected startup item. }
 
-procedure TMain.bDeactivateClick(Sender: TObject);
+procedure TMain.bDisableStartupItemClick(Sender: TObject);
 begin
-  // Successfully deactivated item?
-  if Startup.ChangeItemStatus() then
-  begin
-    // Change item visual status
-    lwList.ItemFocused.Caption := Startup.Item.GetStatus(FLang);
+  try
+    // Successfully deactivated item?
+    if Startup.ChangeItemStatus() then
+    begin
+      // Change item visual status
+      lwList.ItemFocused.Caption := Startup.Item.GetStatus(FLang);
 
-    // Change button states
-    bDeactivate.Enabled := False;
-    bActivate.Enabled := True;
-    bActivate.Default := True;
+      // Change button states
+      bDisableStartupItem.Enabled := False;
+      bEnableStartupItem.Enabled := True;
+      bEnableStartupItem.Default := True;
 
-    // Show deactivation timestamp?
-    if mmDate.Checked then
-      lwList.ItemFocused.SubItems[3] := Startup.Item.Time;
+      // Show deactivation timestamp?
+      if mmDate.Checked then
+        lwList.ItemFocused.SubItems[3] := Startup.Item.Time;
 
-    if (Startup.Item.StartupUser and not bExport.Enabled) then
-      bExport.Enabled := True;
+      if (Startup.Item.StartupUser and not bExportStartupItem.Enabled) then
+        bExportStartupItem.Enabled := True;
 
-    // Refresh counter label
-    RefreshStartupCounter();
-  end  //of begin
-  else
-    FLang.MessageBox(FLang.GetString(93) + FLang.GetString(67), mtError);
+      // Refresh counter label
+      RefreshStartupCounter();
+    end  //of begin
+    else
+      raise Exception.Create('Could not disable item!');
+
+  except
+    on E: Exception do
+      FLang.MessageBox(FLang.GetString(94) + FLang.GetString(66) +^J
+        + E.Message, mtError);
+  end;  //of try
 end;
 
 { TMain.bDeactContextClick
@@ -774,22 +805,29 @@ end;
 
 procedure TMain.bDeactContextClick(Sender: TObject);
 begin
-  // Successfully deactivated item?
-  if Context.ChangeItemStatus() then
-  begin
-    // Change item visual status
-    lwContext.ItemFocused.Caption := Context.Item.GetStatus(FLang);
+  try
+    // Successfully deactivated item?
+    if Context.ChangeItemStatus() then
+    begin
+      // Change item visual status
+      lwContext.ItemFocused.Caption := Context.Item.GetStatus(FLang);
 
-    // Change button states
-    bDeactivate.Enabled := False;
-    bActivate.Enabled := True;
-    bActivate.Default := True;
+      // Change button states
+      bDisableStartupItem.Enabled := False;
+      bEnableStartupItem.Enabled := True;
+      bEnableStartupItem.Default := True;
 
-    // Refresh counter label
-    RefreshContextCounter();
-  end  //of begin
-  else
-    FLang.MessageBox(FLang.GetString(94) + FLang.GetString(67), mtError);
+      // Refresh counter label
+      RefreshContextCounter();
+    end  //of begin
+    else
+      raise Exception.Create('Could not disable item!');
+
+  except
+    on E: Exception do
+      FLang.MessageBox(FLang.GetString(94) + FLang.GetString(66) +^J
+        + E.Message, mtError);
+  end;  //of try
 end;
 
 { Selektion Events }
@@ -832,28 +870,28 @@ begin
 
       if (Startup.Item.StartupUser and Startup.Item.Enabled and Startup.BackupExists) then
          begin
-         bExport.Enabled := False;
+         bExportStartupItem.Enabled := False;
          pmExport.Enabled := False;
          end //of begin
       else
          begin
-         bExport.Enabled := True;
+         bExportStartupItem.Enabled := True;
          pmExport.Enabled := True;
          end;  //of if
 
-      bDelete.Enabled := True;
+      bDeleteStartupItem.Enabled := True;
       pmProperties.Enabled := True;
       pmDelete.Enabled := True;
 
       if ((Item.SubItems[2] <> '') and ((Item.SubItems[1] = '') or
          (Item.SubItems[1] = ' '))) then     //Schlüssel existiert und Pfad fehlt
          begin                               //...dann kann User danach suchen
-         bActivate.Enabled := False;
-         bDeactivate.Enabled := False;
-         pmDeactivate.Enabled := False;
-         bExport.Enabled := False;
+         bEnableStartupItem.Enabled := False;
+         bDisableStartupItem.Enabled := False;
+         pmChangeStatus.Enabled := False;
+         bExportStartupItem.Enabled := False;
          pmExport.Enabled := False;
-         bDelete.Default := True;
+         bDeleteStartupItem.Default := True;
          pmSearch.Visible := True;
          end  //of begin
       else
@@ -874,43 +912,43 @@ begin
 
          if (Item.SubItems[2] = '') then  //Schlüssel fehlt
             begin
-            bActivate.Enabled := False;
-            bDeactivate.Enabled := False;
-            bExport.Enabled := False;
+            bEnableStartupItem.Enabled := False;
+            bDisableStartupItem.Enabled := False;
+            bExportStartupItem.Enabled := False;
             pmExport.Enabled := False;
-            pmDeactivate.Enabled := False;
-            bDelete.Default := True;
+            pmChangeStatus.Enabled := False;
+            bDeleteStartupItem.Default := True;
             end  //of begin
          else
             begin
             if (IsDouble(Item.SubItems[0], Item.Index) <> -1) then
                begin
-               bActivate.Enabled := False;
-               bDeactivate.Enabled := False;
-               bDelete.Default := True;
+               bEnableStartupItem.Enabled := False;
+               bDisableStartupItem.Enabled := False;
+               bDeleteStartupItem.Default := True;
                end  //of begin
             else
                begin
-               if bDelete.Default then
-                  bDelete.Default := False;
+               if bDeleteStartupItem.Default then
+                  bDeleteStartupItem.Default := False;
 
                if Startup.Item.Enabled then                       //aktiviert?
                   begin                                           //JA
-                  bDelete.Default := False;
-                  bActivate.Enabled := False;
-                  bDeactivate.Enabled := True;
-                  bDeactivate.Default := True;
-                  pmDeactivate.Enabled := True;
-                  pmDeactivate.Caption := bActivate.Caption;  //Beschriftung ändern
+                  bDeleteStartupItem.Default := False;
+                  bEnableStartupItem.Enabled := False;
+                  bDisableStartupItem.Enabled := True;
+                  bDisableStartupItem.Default := True;
+                  pmChangeStatus.Enabled := True;
+                  pmChangeStatus.Caption := bDisableStartupItem.Caption;  //Beschriftung ändern
                   end //of begin
                else
                   begin                                           //NEIN
-                  bDelete.Default := False;
-                  bActivate.Enabled := True;
-                  bDeactivate.Enabled := False;
-                  bActivate.Default := True;
-                  pmDeactivate.Enabled := True;
-                  pmDeactivate.Caption := bDeactivate.Caption;  //Beschriftung ändern
+                  bDeleteStartupItem.Default := False;
+                  bEnableStartupItem.Enabled := True;
+                  bDisableStartupItem.Enabled := False;
+                  bEnableStartupItem.Default := True;
+                  pmChangeStatus.Enabled := True;
+                  pmChangeStatus.Caption := bEnableStartupItem.Caption;  //Beschriftung ändern
                   end; //of if
 
                if not KeyPreview then                 //Hotkeys aktiviert?
@@ -923,23 +961,23 @@ begin
     // Nothing selected?
     if not Assigned(Item) then
     begin
-      if bActivate.Enabled then
+      if bEnableStartupItem.Enabled then
       begin
-        bActivate.Default := False;
-        bActivate.Enabled := False;
+        bEnableStartupItem.Default := False;
+        bEnableStartupItem.Enabled := False;
       end  //of begin
       else
         begin
-          bDeactivate.Default := False;
-          bDeactivate.Enabled := False;
+          bDisableStartupItem.Default := False;
+          bDisableStartupItem.Enabled := False;
         end;  //of if
 
-      pmDeactivate.Enabled := False;
+      pmChangeStatus.Enabled := False;
       pmDelete.Enabled := False;
       pmExport.Enabled := False;
       pmProperties.Enabled := False;
-      bExport.Enabled := False;
-      bDelete.Enabled := False;
+      bExportStartupItem.Enabled := False;
+      bDeleteStartupItem.Enabled := False;
       bClose.Default := True;
     end;  //of if
 end;
@@ -972,16 +1010,16 @@ begin
          bActContext.Enabled := False;                  //JA
          bDeactContext.Enabled := True;
          bDeactContext.Default := True;
-         pmDeactivate.Enabled := True;
-         pmDeactivate.Caption := bDeactivate.Caption;  //Beschriftung ändern
+         pmChangeStatus.Enabled := True;
+         pmChangeStatus.Caption := bDisableStartupItem.Caption;  //Beschriftung ändern
          end //of begin
       else
          begin                                          //NEIN
          bActContext.Enabled := True;
          bDeactContext.Enabled := False;
          bActContext.Default := True;
-         pmDeactivate.Enabled := True;
-         pmDeactivate.Caption := bActivate.Caption;  //Beschriftung ändern
+         pmChangeStatus.Enabled := True;
+         pmChangeStatus.Caption := bEnableStartupItem.Caption;  //Beschriftung ändern
          end; //of if
       end  //of begin
   else
@@ -999,7 +1037,7 @@ begin
            bDeactcontext.Enabled := False;
          end;  //of if
 
-       pmDeactivate.Enabled := False;
+       pmChangeStatus.Enabled := False;
        pmExport.Enabled := False;
        pmDelete.Enabled := False;
        pmProperties.Enabled := False;
@@ -1015,14 +1053,14 @@ end;
 
 procedure TMain.lwListDblClick(Sender: TObject);
 begin
-  if bActivate.Enabled then
-    bActivate.Click
+  if bEnableStartupItem.Enabled then
+    bEnableStartupItem.Click
   else
-    if bDeactivate.Enabled then
-      bDeactivate.Click
+    if bDisableStartupItem.Enabled then
+      bDisableStartupItem.Click
     else
-      if bDelete.Enabled then
-        bDelete.Click;
+      if bDeleteStartupItem.Enabled then
+        bDeleteStartupItem.Click;
 end;
 
 { TMain.lwContextDblClick
@@ -1074,7 +1112,7 @@ end;
 
   Popup menu entry to deactivate an item. }
 
-procedure TMain.pmDeactivateClick(Sender: TObject);
+procedure TMain.pmChangeStatusClick(Sender: TObject);
 begin
   if (PageControl.ActivePage = tsStartup) then
     lwListDblClick(Sender)
@@ -1089,7 +1127,7 @@ end;
 procedure TMain.pmDeleteClick(Sender: TObject);
 begin
   if (PageControl.ActivePage = tsStartup) then
-    bDelete.Click
+    bDeleteStartupItem.Click
   else
     bDeleteContext.Click;
 end;
@@ -1203,14 +1241,14 @@ begin
           Name := TClearas.DeleteExt(ExtractFileName(OpenDialog.FileName));
 
           // User can edit the name
-          Name := InputBox(FLang.GetString(74), FLang.GetString(107), Name);
+          Name := InputBox(FLang.GetString(74), FLang.GetString(97), Name);
 
           // Name must not be empty!
           if (Name = '') then
             Exit;
 
           // optional parameters
-          if not InputQuery(FLang.GetString(109), FLang.GetString(110), Params) then
+          if not InputQuery(FLang.GetString(99), FLang.GetString(98), Params) then
             Exit;
         end;  //of begin
 
@@ -1281,12 +1319,12 @@ end;
 procedure TMain.mmExportClick(Sender: TObject);
 begin
   if (PageControl.ActivePage = tsStartup) then
-    bExport.Click()
+    bExportStartupItem.Click()
   else
     if (PageControl.ActivePage = tsContext) then
       bExportContext.Click()
     else
-      FLang.MessageBox(FLang.GetString(95) + FLang.GetString(67) +^J
+      FLang.MessageBox(FLang.GetString(95) + FLang.GetString(66) +^J
                   + FLang.GetString(53), mtWarning);
 end;
 
@@ -1304,7 +1342,7 @@ begin
   // Set TSaveDialog options
   with SaveDialog do
   begin
-    Title := FLang.GetString(18);
+    Title := FLang.GetString(72);
 
     // Confirm overwrite
     Options := Options + [ofOverwritePrompt];
@@ -1314,7 +1352,7 @@ begin
     DefaultExt := '.reg';
 
     // Sets a default file name
-    FileName := FLang.GetString(11) + DefaultExt;
+    FileName := FLang.GetString(68) + DefaultExt;
   end;  //of with
 
   try
@@ -1640,7 +1678,7 @@ begin
   // Bind the "delete" key to delete methods
   if (Key = VK_DELETE) then
      if (PageControl.ActivePage = tsStartup) then
-        bDelete.Click
+        bDeleteStartupItem.Click
      else
         if (PageControl.ActivePage = tsContext) then
            bDeleteContext.Click;

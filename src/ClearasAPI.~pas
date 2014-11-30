@@ -525,7 +525,7 @@ begin
 
   try
     reg.OpenKey(KEY_RECYCLEBIN, False);
-    ClearasKey := ALangFile.GetString(118);
+    ClearasKey := ALangFile.GetString(37);
     // Only update if context menu entry exists
     if (reg.KeyExists(ClearasKey)) then
     begin
@@ -770,7 +770,10 @@ begin
   RegFile := TRegistryFile.Create(AFileName, True);
 
   try
-    RegFile.ExportReg(StrToHKey(FRootKey), FKeyPath, False);
+    if FEnabled then
+      RegFile.ExportReg(StrToHKey(FRootKey), FKeyPath, FName)
+    else
+      RegFile.ExportReg(StrToHKey(FRootKey), FKeyPath, False);
 
   finally
     RegFile.Free;

@@ -383,7 +383,7 @@ object Main: TMain
         OnDblClick = lwListDblClick
         OnSelectItem = lwListSelectItem
       end
-      object bActivate: TButton
+      object bEnableStartupItem: TButton
         Left = 426
         Top = 56
         Width = 91
@@ -392,7 +392,7 @@ object Main: TMain
         Caption = 'aktivieren'
         Enabled = False
         TabOrder = 1
-        OnClick = bActivateClick
+        OnClick = bEnableStartupItemClick
       end
       object bClose: TButton
         Left = 426
@@ -405,7 +405,7 @@ object Main: TMain
         TabOrder = 5
         OnClick = bCloseClick
       end
-      object bDeactivate: TButton
+      object bDisableStartupItem: TButton
         Left = 426
         Top = 96
         Width = 91
@@ -414,9 +414,9 @@ object Main: TMain
         Caption = 'deaktivieren'
         Enabled = False
         TabOrder = 2
-        OnClick = bDeactivateClick
+        OnClick = bDisableStartupItemClick
       end
-      object bDelete: TButton
+      object bDeleteStartupItem: TButton
         Left = 426
         Top = 176
         Width = 91
@@ -425,9 +425,9 @@ object Main: TMain
         Caption = 'l'#246'schen'
         Enabled = False
         TabOrder = 4
-        OnClick = bDeleteClick
+        OnClick = bDeleteStartupItemClick
       end
-      object bExport: TButton
+      object bExportStartupItem: TButton
         Left = 426
         Top = 136
         Width = 91
@@ -436,7 +436,7 @@ object Main: TMain
         Caption = 'exportieren'
         Enabled = False
         TabOrder = 3
-        OnClick = bExportClick
+        OnClick = bExportStartupItemClick
       end
     end
     object tsContext: TTabSheet
@@ -610,11 +610,11 @@ object Main: TMain
   end
   object PopupMenu: TPopupMenu
     Left = 496
-    object pmDeactivate: TMenuItem
+    object pmChangeStatus: TMenuItem
       Caption = 'deaktivieren'
       Default = True
       Enabled = False
-      OnClick = pmDeactivateClick
+      OnClick = pmChangeStatusClick
     end
     object N1: TMenuItem
       Caption = '-'
