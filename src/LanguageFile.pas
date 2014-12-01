@@ -18,8 +18,13 @@ uses
   Windows;
 {$ELSE}
   IniFiles, LCLType;
+{$ENDIF}
 
 const
+  { Flag indicating line feed }
+  NEW_LINE = 1023;
+
+{$IFDEF LINUX}
   { Interval for next language }
   LANGUAGE_INTERVAL = 100;
 {$ENDIF}
@@ -59,14 +64,18 @@ type
     destructor Destroy; override;
     procedure AddListener(AListener: IChangeLanguageListener);
     procedure ChangeLanguage(ASender: TObject; ALangID: Word);
-    function Format(const AIndex: Word; const AArgs: array of TVarRec): string;
+    function Format(const AIndex: Word; const AArgs: array of TVarRec): string; overload;
+    function Format(const AIndexes: array of Word; const AArgs: array of TVarRec): string; overload;
   {$IFDEF LINUX}
     procedure GetLanguages(ASections: TStrings);
   {$ENDIF}
-    function GetString(const AIndex: Word): string;
+    function GetString(const AIndex: Word): string; overload;
+    function GetString(const AIndexes: array of Word): string; overload;
     function MessageBox(AText: string; AType: TMessageType = mtInfo;
       AUpdate: Boolean = False): Integer; overload;
     function MessageBox(TextID: Word; AType: TMessageType = mtInfo;
+      AUpdate: Boolean = False): Integer; overload;
+    function MessageBox(const AIndexes: array of Word; AType: TMessageType = mtInfo;
       AUpdate: Boolean = False): Integer; overload;
     procedure RemoveListener(AListener: IChangeLanguageListener);
     { external }
@@ -153,7 +162,7 @@ end;
 
 { public TLanguageFile.GetString
 
-  Loads a string from a StringTable file based language file. }
+  Loads a single string from a StringTable file based language file. }
 
 function TLanguageFile.GetString(const AIndex: Word): string;
 var
@@ -162,12 +171,31 @@ var
 
 begin
   result := '';
-  ls := LoadString(hInstance, AIndex + FLang, Buffer, SizeOf(buffer));
+  ls := LoadString(hInstance, AIndex + FLang, Buffer, SizeOf(Buffer));
 
   if (ls <> 0) then
     result := Buffer;
 end;
 {$ENDIF}
+
+{ public TLanguageFile.GetString
+
+  Loads multiple strings from a StringTable file based language file. }
+
+function TLanguageFile.GetString(const AIndexes: array of Word): string;
+var
+  i: Word;
+  Text: string;
+
+begin
+  for i := 0 to Length(AIndexes) -1 do
+    if (AIndexes[i] = NEW_LINE) then
+      Text := Text + sLineBreak
+    else
+      Text := Text + GetString(AIndexes[i]);
+
+  result := Text;
+end;
 
 { public TLanguageFile.AddListener
 
@@ -196,13 +224,33 @@ begin
       Listener.SetLanguage(Self);
 end;
 
-{ public TLanguageFile.MessageBox
+{ public TLanguageFile.Format
 
-  Shows a MessageBox with text and specific look. }
+  Embeds data into a single string by replacing a special flag starting with %. }
 
 function TLanguageFile.Format(const AIndex: Word; const AArgs: array of TVarRec): string;
 begin
   result := SysUtils.Format(GetString(AIndex), AArgs);
+end;
+
+{ public TLanguageFile.Format
+
+  Embeds data into a multiple strings by replacing a special flag starting with %. }
+
+function TLanguageFile.Format(const AIndexes: array of Word;
+  const AArgs: array of TVarRec): string;
+var
+  i: Word;
+  Text: string;
+
+begin
+  for i := 0 to Length(AIndexes) -1 do
+    if (AIndexes[i] = NEW_LINE) then
+      Text := Text + sLineBreak
+    else
+      Text := Text + Format(AIndexes[i], AArgs);
+
+  result := Text;
 end;
 
 { public TLanguageFile.MessageBox
@@ -270,6 +318,16 @@ function TLanguageFile.MessageBox(TextID: Word; AType: TMessageType = mtInfo;
   AUpdate: Boolean = False): Integer;
 begin
   result := MessageBox(GetString(TextID), AType, AUpdate);
+end;
+
+{ public TLanguageFile.MessageBox
+
+  Shows a MessageBox with multiple string text and specific look. }
+
+function TLanguageFile.MessageBox(const AIndexes: array of Word;
+  AType: TMessageType = mtInfo; AUpdate: Boolean = False): Integer;
+begin
+  result := MessageBox(GetString(AIndexes), AType, AUpdate);
 end;
 
 { public TLanguageFile.RemoveListener

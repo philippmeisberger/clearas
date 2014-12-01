@@ -1489,6 +1489,9 @@ var
 
 begin
   try
+    if not Assigned(FItem) then
+      raise EAccessViolation.Create('No item selected!');
+
     // Change the status
     Changed := FItem.ChangeStatus();
 
@@ -1547,6 +1550,9 @@ var
 
 begin
   try
+    if not Assigned(FItem) then
+      raise EAccessViolation.Create('No item selected!');
+
     // Delete item from Registry
     Deleted := FItem.Delete();
 
@@ -1581,6 +1587,9 @@ end;
 
 procedure TStartupList.ExportItem(const AFileName: string; ARegFile: Boolean = True);
 begin
+  if not Assigned(FItem) then
+    raise EAccessViolation.Create('No item selected!');
+
   FItem.ExportItem(AFileName);
 end;
 
@@ -2236,6 +2245,9 @@ var
 
 begin
   try
+    if not Assigned(FItem) then
+      raise EAccessViolation.Create('No item selected!');
+
     // Change status of item
     Changed := FItem.ChangeStatus;
 
@@ -2265,6 +2277,9 @@ var
 
 begin
   try
+    if not Assigned(FItem) then
+      raise EAccessViolation.Create('No item selected!');
+
     // Delete item from Registry
     Deleted := FItem.Delete();
 
@@ -2294,6 +2309,9 @@ end;
 
 procedure TContextList.ExportItem(const AFileName: string);
 begin
+  if not Assigned(FItem) then
+    raise EAccessViolation.Create('No item selected!');
+
   FItem.ExportItem(AFileName);
 end;
 

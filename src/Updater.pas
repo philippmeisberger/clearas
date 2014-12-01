@@ -141,8 +141,7 @@ procedure TUpdateCheck.OnCheckError(Sender: TThread; AResponseCode: Integer);
 begin
   if FUserUpdate then
     with FLang do
-      MessageBox(GetString(12) +^J+ GetString(13) +' '+ Format(19, [AResponseCode]),
-        mtError, True);
+      MessageBox(Format([12, NEW_LINE, 13, 19], [AResponseCode]), mtError, True);
 end;
 
 { private TUpdateCheck.OnNoUpdateAvailable
@@ -305,8 +304,7 @@ end;
 procedure TUpdate.OnDownloadError(Sender: TThread; AResponseCode: Integer);
 begin
   with FLang do
-    MessageBox(Caption + GetString(18) +' '+ Format(19, [AResponseCode]),
-      mtError, True);
+    MessageBox(Caption + GetString(18) + Format(19, [AResponseCode]), mtError, True);
 
   Reset();
 end;

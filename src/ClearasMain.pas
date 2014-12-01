@@ -151,7 +151,7 @@ type
     procedure RefreshStartupCounter();
     procedure SetLanguage(Sender: TObject);
     procedure ShowContextMenuEntries(ATotalRefresh: Boolean = True);
-    procedure ShowRegistryExportDialog();
+    function ShowRegistryExportDialog(): Boolean;
     procedure ShowStartupEntries(ATotalRefresh: Boolean = True);
   end;
 
@@ -218,10 +218,12 @@ begin
   // Check for incompatibility
   if not (newWindows or (windows[1] in ['X','2'])) then
   begin
-    Flang.MessageBox(FLang.Format(65, [windows]) + FLang.GetString(66), mtError);
+    Flang.MessageBox(FLang.Format([64, 65], [windows]), mtError);
     mmExportList.Enabled := False;
     mmRefresh.Enabled := False;
     mmContext.Enabled := False;
+    mmRunOnce.Enabled := False;
+    mmDate.Enabled := False;
     lwList.Enabled := False;
     lwContext.Enabled := False;
     cbExpert.Enabled := False;
@@ -262,8 +264,8 @@ procedure TMain.BeforeUpdate(Sender: TObject; const ANewBuild: Cardinal);
 begin
   // Show dialog: Ask for permitting download
   with FLang do
-    if (MessageBox(SysUtils.Format(GetString(21) +^J+ GetString(22), [ANewBuild]),
-      mtQuestion, True) = IDYES) then
+    if (MessageBox(Format([21, NEW_LINE, 22], [ANewBuild]), mtQuestion,
+      True) = IDYES) then
       with TUpdate.Create(Self, FLang, FLang.GetString(24)) do
         Download('clearas.exe', 'Clearas.exe')
     else
@@ -490,11 +492,12 @@ end;
 
   Shows a .reg file export dialog. }
 
-procedure TMain.ShowRegistryExportDialog();
+function TMain.ShowRegistryExportDialog(): Boolean;
 var
   SaveDialog: TSaveDialog;
 
 begin
+  result := False;
   SaveDialog := TSaveDialog.Create(Self);
 
   // Set TSaveDialog options
@@ -519,10 +522,14 @@ begin
   try
     // User clicked "save"?
     if SaveDialog.Execute then
+    begin
       if (PageControl.ActivePage = tsStartup) then
         Startup.Item.ExportItem(SaveDialog.FileName)
       else
         Context.Item.ExportItem(SaveDialog.FileName);
+
+      result := True;
+    end;  //of begin
 
   finally
     SaveDialog.Free;
@@ -578,7 +585,14 @@ end;
   Calls the export method of current selected deactivated startup item. }
 
 procedure TMain.bExportStartupItemClick(Sender: TObject);
-begin 
+begin
+  // Nothing selected?
+  if not Assigned(Startup.Item) then
+  begin
+    FLang.MessageBox([95, 66, NEW_LINE, 53], mtWarning);
+    Exit;
+  end;  //of begin
+
   // Special .lnk file backup only for activated startup user entries!
   if (Startup.Item.Enabled and Startup.Item.StartupUser) then
   begin
@@ -602,6 +616,13 @@ end;
 
 procedure TMain.bExportContextClick(Sender: TObject);
 begin
+  // Nothing selected?
+  if not Assigned(Context.Item) then
+  begin
+    FLang.MessageBox([95, 66, NEW_LINE, 53], mtWarning);
+    Exit;
+  end;  //of begin
+
   ShowRegistryExportDialog();
 end;
 
@@ -615,16 +636,15 @@ var
 
 begin
   // Confirm deletion of item
-  if (FLang.MessageBox(FLang.Format(48, [Startup.Item.Name]) +^J
-    + FLang.GetString(49) + FLang.GetString(50), mtConfirm) = IDYES) then
-  begin
+  if (FLang.MessageBox(FLang.Format([48, NEW_LINE, 49, 50], [Startup.Item.Name]),
+    mtConfirm) = IDYES) then
+  try
     // Save the DeleteBackup flag
     DelBackup := Startup.DeleteBackup;
     Exported := False;
 
     // Export item (last chance) only if backup does not exist?
-    if (bExportStartupItem.Enabled and (FLang.MessageBox(FLang.GetString(52),
-      mtQuestion) = IDYES)) then
+    if (bExportStartupItem.Enabled and (FLang.MessageBox(52, mtQuestion) = IDYES)) then
     begin
       bExportStartupItem.Click;
       DelBackup := False;
@@ -633,30 +653,27 @@ begin
 
     // Ask: Delete old backup if a backup exists and item was not exported
     if ((not Exported) and Startup.Item.StartupUser and Startup.BackupExists) then
-      Startup.DeleteBackup := (FLang.MessageBox(FLang.GetString(44), mtQuestion) = IDYES);
+      Startup.DeleteBackup := (FLang.MessageBox(44, mtQuestion) = IDYES);
 
-    try
-      // Successfully deleted item physically?
-      if Startup.DeleteItem() then
-      begin
-        // Delete item from ListView visual
-        lwList.DeleteSelected();
+    // Successfully deleted item physically?
+    if Startup.DeleteItem() then
+    begin
+      // Delete item from ListView visual
+      lwList.DeleteSelected();
 
-        // Refresh counter label
-        RefreshStartupCounter();
-      end  //of begin
-      else
-        raise Exception.Create('Could not delete item!');
-
-    except
-      on E: Exception do
-        FLang.MessageBox(FLang.GetString(96) + FLang.GetString(66) +^J
-          + E.Message, mtError);
-    end;  //of try
+      // Refresh counter label
+      RefreshStartupCounter();
+    end  //of begin
+    else
+      raise Exception.Create('Could not delete item!');
 
     // Restore the DeleteBackup flag
     Startup.DeleteBackup := DelBackup;
-  end;  //of begin
+
+  except
+    on E: Exception do
+      FLang.MessageBox(FLang.GetString([96, 66, NEW_LINE]) + E.Message, mtError);
+  end;  //of try
 end;
 
 { TMain.bDeleteContextClick
@@ -666,14 +683,11 @@ end;
 procedure TMain.bDeleteContextClick(Sender: TObject);
 begin
   // Confirm deletion of item
-  if (FLang.MessageBox(FLang.Format(85, [Context.Item.Name]) +^J
-    + FLang.GetString(49) + FLang.GetString(50), mtConfirm) = IDYES) then
-  begin
-    // Ask to export item (last chance)?
-    if (FLang.MessageBox(FLang.GetString(52), mtQuestion) = IDYES) then
-      ShowRegistryExportDialog();
-
-    try
+  if (FLang.MessageBox(FLang.Format([85, NEW_LINE, 49, 50], [Context.Item.Name]),
+    mtConfirm) = IDYES) then
+  try
+    // Ask to export item (last chance)? Abort if user clicks cancel!
+    if ((FLang.MessageBox(52, mtQuestion) = IDYES) and ShowRegistryExportDialog()) then
       // Successfully deleted item physically?
       if Context.DeleteItem() then
       begin
@@ -686,12 +700,10 @@ begin
       else
         raise Exception.Create('Could not delete item!');
 
-    except
-      on E: Exception do
-        FLang.MessageBox(FLang.GetString(96) + FLang.GetString(66) +^J
-          + E.Message, mtError);
-    end;  //of try
-  end;  //of begin
+  except
+    on E: Exception do
+      FLang.MessageBox(FLang.GetString([96, 66, NEW_LINE]) + E.Message, mtError);
+  end;  //of try
 end;
 
 { TMain.bActivateClick
@@ -726,8 +738,7 @@ begin
 
   except
     on E: Exception do
-      FLang.MessageBox(FLang.GetString(93) + FLang.GetString(66) +^J
-        + E.Message, mtError);
+      FLang.MessageBox(FLang.GetString([93, 66, NEW_LINE]) + E.Message, mtError);
   end;  //of try
 end;
 
@@ -758,8 +769,7 @@ begin
 
   except
     on E: Exception do
-      FLang.MessageBox(FLang.GetString(93) + FLang.GetString(66) +^J
-        + E.Message, mtError);
+      FLang.MessageBox(FLang.GetString([93, 66, NEW_LINE]) + E.Message, mtError);
   end;  //of try
 end;
 
@@ -797,8 +807,7 @@ begin
 
   except
     on E: Exception do
-      FLang.MessageBox(FLang.GetString(94) + FLang.GetString(66) +^J
-        + E.Message, mtError);
+      FLang.MessageBox(FLang.GetString([94, 66, NEW_LINE]) + E.Message, mtError);
   end;  //of try
 end;
 
@@ -829,8 +838,7 @@ begin
 
   except
     on E: Exception do
-      FLang.MessageBox(FLang.GetString(94) + FLang.GetString(66) +^J
-        + E.Message, mtError);
+      FLang.MessageBox(FLang.GetString([94, 66, NEW_LINE]) + E.Message, mtError);
   end;  //of try
 end;
 
@@ -1328,8 +1336,7 @@ begin
     if (PageControl.ActivePage = tsContext) then
       bExportContext.Click()
     else
-      FLang.MessageBox(FLang.GetString(95) + FLang.GetString(66) +^J
-                  + FLang.GetString(53), mtWarning);
+      FLang.MessageBox([95, 66, NEW_LINE, 53], mtWarning);
 end;
 
 { TMain.mmExportListClick
@@ -1551,8 +1558,8 @@ end;
 procedure TMain.mmDownloadCertClick(Sender: TObject);
 begin
   // Certificate already installed?
-  if (TOSUtils.PMCertExists() and (FLang.MessageBox(FLang.GetString(27) +^J+
-    FLang.GetString(28), mtQuestion) = IDYES)) then
+  if (TOSUtils.PMCertExists() and (FLang.MessageBox([27, NEW_LINE, 28],
+    mtQuestion) = IDYES)) then
     // Download certificate
     with TUpdate.Create(Self, FLang, FLang.GetString(16)) do
       DownloadCertificate();
