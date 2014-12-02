@@ -115,7 +115,7 @@ AutoIncBuild=1
 MajorVer=3
 MinorVer=1
 Release=0
-Build=467
+Build=469
 Debug=0
 PreRelease=0
 Special=0
@@ -126,7 +126,7 @@ CodePage=1252
 [Version Info Keys]
 CompanyName=PM Code Works
 FileDescription=Clearas
-FileVersion=3.1.0.467
+FileVersion=3.1.0.469
 InternalName=
 LegalCopyright=P. Meisberger 2014
 LegalTrademarks=PM Code Works

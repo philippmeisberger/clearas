@@ -338,7 +338,7 @@ object Main: TMain
         Height = 14
         Caption = 'Windows'
       end
-      object lwList: TListView
+      object lwStartup: TListView
         Left = 21
         Top = 56
         Width = 396
@@ -378,10 +378,10 @@ object Main: TMain
         ShowWorkAreas = True
         TabOrder = 0
         ViewStyle = vsReport
-        OnColumnClick = lwListColumnClick
-        OnCompare = lwListCompare
-        OnDblClick = lwListDblClick
-        OnSelectItem = lwListSelectItem
+        OnColumnClick = lwStartupColumnClick
+        OnCompare = lwStartupCompare
+        OnDblClick = lwStartupDblClick
+        OnSelectItem = lwStartupSelectItem
       end
       object bEnableStartupItem: TButton
         Left = 426
@@ -487,7 +487,7 @@ object Main: TMain
         Height = 14
         Caption = 'Windows'
       end
-      object bExportContext: TButton
+      object bExportContextItem: TButton
         Left = 426
         Top = 136
         Width = 91
@@ -496,9 +496,9 @@ object Main: TMain
         Caption = 'exportieren'
         Enabled = False
         TabOrder = 3
-        OnClick = bExportContextClick
+        OnClick = bExportContextItemClick
       end
-      object bDeleteContext: TButton
+      object bDeleteContextItem: TButton
         Left = 426
         Top = 176
         Width = 91
@@ -507,7 +507,7 @@ object Main: TMain
         Caption = 'l'#246'schen'
         Enabled = False
         TabOrder = 4
-        OnClick = bDeleteContextClick
+        OnClick = bDeleteContextItemClick
       end
       object bClose2: TButton
         Left = 426
@@ -520,7 +520,7 @@ object Main: TMain
         TabOrder = 5
         OnClick = bCloseClick
       end
-      object bDeactContext: TButton
+      object bDisableContextItem: TButton
         Left = 426
         Top = 96
         Width = 91
@@ -529,9 +529,9 @@ object Main: TMain
         Caption = 'deaktivieren'
         Enabled = False
         TabOrder = 2
-        OnClick = bDeactContextClick
+        OnClick = bDisableContextItemClick
       end
-      object bActContext: TButton
+      object bEnableContextItem: TButton
         Left = 426
         Top = 56
         Width = 91
@@ -540,7 +540,7 @@ object Main: TMain
         Caption = 'aktivieren'
         Enabled = False
         TabOrder = 1
-        OnClick = bActContextClick
+        OnClick = bEnableContextItemClick
       end
       object lwContext: TListView
         Left = 21
@@ -582,8 +582,8 @@ object Main: TMain
         PopupMenu = PopupMenu
         TabOrder = 0
         ViewStyle = vsReport
-        OnColumnClick = lwListColumnClick
-        OnCompare = lwListCompare
+        OnColumnClick = lwStartupColumnClick
+        OnCompare = lwStartupCompare
         OnDblClick = lwContextDblClick
         OnSelectItem = lwContextSelectItem
       end

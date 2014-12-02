@@ -55,7 +55,7 @@ type
     PageControl: TPageControl;
     tsStartup: TTabSheet;
     tsContext: TTabSheet;
-    lwList: TListView;
+    lwStartup: TListView;
     lStartup: TLabel;
     bEnableStartupItem: TButton;
     bClose: TButton;
@@ -64,11 +64,11 @@ type
     bExportStartupItem: TButton;
     lCopy1: TLabel;
     lCopy2: TLabel;
-    bExportContext: TButton;
-    bDeleteContext: TButton;
+    bExportContextItem: TButton;
+    bDeleteContextItem: TButton;
     bClose2: TButton;
-    bDeactContext: TButton;
-    bActContext: TButton;
+    bDisableContextItem: TButton;
+    bEnableContextItem: TButton;
     lwContext: TListView;
     lContext: TLabel;
     lVersion2: TLabel;
@@ -89,21 +89,21 @@ type
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure bDeleteStartupItemClick(Sender: TObject);
-    procedure bDeleteContextClick(Sender: TObject);
+    procedure bDeleteContextItemClick(Sender: TObject);
     procedure bEnableStartupItemClick(Sender: TObject);
-    procedure bActContextClick(Sender: TObject);
+    procedure bEnableContextItemClick(Sender: TObject);
     procedure bDisableStartupItemClick(Sender: TObject);
-    procedure bDeactContextClick(Sender: TObject);
+    procedure bDisableContextItemClick(Sender: TObject);
     procedure bExportStartupItemClick(Sender: TObject);
-    procedure bExportContextClick(Sender: TObject);
-    procedure lwListSelectItem(Sender: TObject; Item: TListItem;
+    procedure bExportContextItemClick(Sender: TObject);
+    procedure lwStartupSelectItem(Sender: TObject; Item: TListItem;
       Selected: Boolean);
     procedure lwContextSelectItem(Sender: TObject; Item: TListItem;
       Selected: Boolean);
     procedure lwContextDblClick(Sender: TObject);
-    procedure lwListDblClick(Sender: TObject);
-    procedure lwListColumnClick(Sender: TObject; Column: TListColumn);  //http://www.delphipraxis.net/283-wie-kann-ich-eine-listview-sortieren.html
-    procedure lwListCompare(Sender: TObject; Item1, Item2: TListItem;   //http://www.delphipraxis.net/283-wie-kann-ich-eine-listview-sortieren.html
+    procedure lwStartupDblClick(Sender: TObject);
+    procedure lwStartupColumnClick(Sender: TObject; Column: TListColumn);  //http://www.delphipraxis.net/283-wie-kann-ich-eine-listview-sortieren.html
+    procedure lwStartupCompare(Sender: TObject; Item1, Item2: TListItem;   //http://www.delphipraxis.net/283-wie-kann-ich-eine-listview-sortieren.html
       Data: Integer; var Compare: Integer);
     procedure pmChangeStatusClick(Sender: TObject);
     procedure pmPropertiesClick(Sender: TObject);
@@ -143,6 +143,7 @@ type
     FUpdateCheck: TUpdateCheck;
     procedure AfterUpdate(Sender: TObject; ADownloadedFileName: string);
     procedure BeforeUpdate(Sender: TObject; const ANewBuild: Cardinal);
+    function CreateStartupUserBackup(): Boolean;
     procedure EditPath(APath: string);
     procedure OnSearchProgress(Sender: TObject; AWorkCount: Cardinal);
     procedure OnSearchStart(Sender: TObject; AWorkCountMax: Cardinal);
@@ -224,7 +225,7 @@ begin
     mmContext.Enabled := False;
     mmRunOnce.Enabled := False;
     mmDate.Enabled := False;
-    lwList.Enabled := False;
+    lwStartup.Enabled := False;
     lwContext.Enabled := False;
     cbExpert.Enabled := False;
     Exit;
@@ -272,22 +273,40 @@ begin
       mmUpdate.Caption := FLang.GetString(24);
 end;
 
-{ private TMain.RefreshContextCounter
+{ private TMain.CreateStartupUserBackup
 
-  Refreshs the counter label of context menu items. }
+  Creates a special .lnk backup for currently selected activated startup
+  user entry. }
 
-procedure TMain.RefreshContextCounter();
+function TMain.CreateStartupUserBackup(): Boolean;
 begin
-  lwContext.Columns[1].Caption := FLang.Format(87, [Context.ActCount, Context.Count]);
-end;
+  // Nothing selected?
+  if not Assigned(Startup.Item) then
+  begin
+    FLang.MessageBox([95, 66, NEW_LINE, 53], mtWarning);
+    result := False;
+    Exit;
+  end;  //of begin
 
-{ private TMain.RefreshStartupCounter
-
-  Refreshs the counter label of startup items. }
-
-procedure TMain.RefreshStartupCounter();
-begin
-  lwList.Columns[1].Caption := FLang.Format(88, [Startup.ActCount, Startup.Count]);
+  // Special .lnk file backup only for activated startup user entries!
+  if (Startup.Item.Enabled and Startup.Item.StartupUser) then
+  begin
+    // Successfully created backup of .lnk file?
+    if Startup.CreateBackup() then
+    begin
+      FLang.MessageBox(Flang.Format(42, [TClearas.GetBackupDir()]));
+      bExportStartupItem.Enabled := False;
+      result := True;
+    end  //of with
+    else
+      begin
+        Flang.MessageBox(43, mtError);
+        result := False;
+      end;  //of if
+  end  //of begin
+  else
+    // Default .reg file export
+    result := ShowRegistryExportDialog();
 end;
 
 
@@ -319,7 +338,7 @@ begin
         TClearas.WriteStrValue(Item.RootKey, Item.KeyPath, 'Item', Item.Name);   //Name in REG schreiben
       end;  //of if
 
-    lwList.ItemFocused.SubItems[1] := FullPath;                        //in Liste schreiben
+    lwStartup.ItemFocused.SubItems[1] := FullPath;                        //in Liste schreiben
   end;  //of with
 end;
 
@@ -350,6 +369,24 @@ procedure TMain.OnSearchEnd(Sender: TObject);
 begin
   pbLoad.Visible := False;
   pbLoad.Position := 0;
+end;
+
+{ private TMain.RefreshContextCounter
+
+  Refreshs the counter label of context menu items. }
+
+procedure TMain.RefreshContextCounter();
+begin
+  lwContext.Columns[1].Caption := FLang.Format(87, [Context.ActCount, Context.Count]);
+end;
+
+{ private TMain.RefreshStartupCounter
+
+  Refreshs the counter label of startup items. }
+
+procedure TMain.RefreshStartupCounter();
+begin
+  lwStartup.Columns[1].Caption := FLang.Format(88, [Startup.ActCount, Startup.Count]);
 end;
 
 { private TMain.SetLanguage
@@ -399,24 +436,24 @@ begin
 
     // Startup tab TListView labels
     lStartup.Caption := GetString(82);
-    lwList.Columns[0].Caption := GetString(91);
-    lwList.Columns[2].Caption := GetString(68);
-    lwList.Columns[3].Caption := GetString(92);
+    lwStartup.Columns[0].Caption := GetString(91);
+    lwStartup.Columns[2].Caption := GetString(68);
+    lwStartup.Columns[3].Caption := GetString(92);
 
     // Context menu tab TButton labels
-    bActContext.Caption := bEnableStartupItem.Caption;
-    bDeactContext.Caption := bDisableStartupItem.Caption;
-    bExportContext.Caption := bExportStartupItem.Caption;
-    bDeleteContext.Caption := bDeleteStartupItem.Caption;
+    bEnableContextItem.Caption := bEnableStartupItem.Caption;
+    bDisableContextItem.Caption := bDisableStartupItem.Caption;
+    bExportContextItem.Caption := bExportStartupItem.Caption;
+    bDeleteContextItem.Caption := bDeleteStartupItem.Caption;
     bClose2.Caption := bClose.Caption;
     cbExpert.Caption := GetString(89);
     tsStartup.Caption := GetString(83);
 
     // Context menu tab TListView labels
     lContext.Caption := GetString(86);
-    lwContext.Columns[0].Caption := lwList.Columns[0].Caption;
+    lwContext.Columns[0].Caption := lwStartup.Columns[0].Caption;
     lwContext.Columns[2].Caption := GetString(90);
-    lwContext.Columns[3].Caption := lwList.Columns[3].Caption;
+    lwContext.Columns[3].Caption := lwStartup.Columns[3].Caption;
 
     // Popup menu labels
     pmChangeStatus.Caption := bDisableStartupItem.Caption;
@@ -549,7 +586,7 @@ begin
     Exit;
 
   // Clears all visual data
-  lwList.Clear;
+  lwStartup.Clear;
 
   // Make a total refresh or just use cached items
   if ATotalRefresh then
@@ -564,7 +601,7 @@ begin
   if (Startup.Count > 0) then
     // Print all information about startup entires
     for i := 0 to Startup.Count -1 do
-      with lwList.Items.Add do
+      with lwStartup.Items.Add do
       begin
         Caption := Startup[i].GetStatus(FLang);
         SubItems.Append(Startup[i].Name);
@@ -586,35 +623,14 @@ end;
 
 procedure TMain.bExportStartupItemClick(Sender: TObject);
 begin
-  // Nothing selected?
-  if not Assigned(Startup.Item) then
-  begin
-    FLang.MessageBox([95, 66, NEW_LINE, 53], mtWarning);
-    Exit;
-  end;  //of begin
-
-  // Special .lnk file backup only for activated startup user entries!
-  if (Startup.Item.Enabled and Startup.Item.StartupUser) then
-  begin
-    // Successfully created backup of .lnk file?
-    if Startup.CreateBackup() then
-    begin
-      FLang.MessageBox(Flang.Format(42, [TClearas.GetBackupDir()]));
-      bExportStartupItem.Enabled := False;
-    end  //of with
-    else
-      Flang.MessageBox(43, mtError);
-  end  //of begin
-  else
-    // Default .reg file export
-    ShowRegistryExportDialog();
+  CreateStartupUserBackup();
 end;
 
 { TMain.bExportContextClick
 
   Calls the export method of current selected context menu item. }
 
-procedure TMain.bExportContextClick(Sender: TObject);
+procedure TMain.bExportContextItemClick(Sender: TObject);
 begin
   // Nothing selected?
   if not Assigned(Context.Item) then
@@ -632,75 +648,93 @@ end;
 
 procedure TMain.bDeleteStartupItemClick(Sender: TObject);
 var
-  DelBackup, Exported: Boolean;
+  DelBackup: Boolean;
+  Answer: Integer;
 
 begin
-  // Confirm deletion of item
-  if (FLang.MessageBox(FLang.Format([48, NEW_LINE, 49, 50], [Startup.Item.Name]),
-    mtConfirm) = IDYES) then
-  try
-    // Save the DeleteBackup flag
-    DelBackup := Startup.DeleteBackup;
-    Exported := False;
+  DelBackup := True;
 
-    // Export item (last chance) only if backup does not exist?
-    if (bExportStartupItem.Enabled and (FLang.MessageBox(52, mtQuestion) = IDYES)) then
+  try
+    // Confirm deletion of item
+    if (FLang.MessageBox(FLang.Format([48, NEW_LINE, 49, 50], [Startup.Item.Name]),
+      mtConfirm) = IDYES) then
     begin
-      bExportStartupItem.Click;
-      DelBackup := False;
-      Exported := True;
+      // Save the DeleteBackup flag
+      DelBackup := Startup.DeleteBackup;
+
+      // Ask user to export item
+      Answer := FLang.MessageBox(52, mtQuestion);
+
+      // Export item only if backup does not exist?
+      if (((Answer = IDYES) and CreateStartupUserBackup()) or (Answer = IDNO)) then
+      begin
+        // Ask user to delete old backup if a backup exists and item was not exported
+        if ((Answer = IDNO) and Startup.Item.StartupUser and Startup.BackupExists()) then
+          Startup.DeleteBackup := (FLang.MessageBox(44, mtQuestion) = IDYES);
+
+        // Successfully deleted item physically?
+        if Startup.DeleteItem() then
+        begin
+          // Delete item from ListView visual
+          lwStartup.DeleteSelected();
+
+          // Refresh counter label
+          RefreshStartupCounter();
+        end  //of begin
+        else
+          raise Exception.Create('Could not delete item!');
+      end;  //of begin
     end;  //of begin
 
-    // Ask: Delete old backup if a backup exists and item was not exported
-    if ((not Exported) and Startup.Item.StartupUser and Startup.BackupExists) then
-      Startup.DeleteBackup := (FLang.MessageBox(44, mtQuestion) = IDYES);
-
-    // Successfully deleted item physically?
-    if Startup.DeleteItem() then
-    begin
-      // Delete item from ListView visual
-      lwList.DeleteSelected();
-
-      // Refresh counter label
-      RefreshStartupCounter();
-    end  //of begin
-    else
-      raise Exception.Create('Could not delete item!');
-
-    // Restore the DeleteBackup flag
-    Startup.DeleteBackup := DelBackup;
-
   except
+    on E: EAccessViolation do
+      FLang.MessageBox([96, 66, NEW_LINE, 53], mtWarning);
+
     on E: Exception do
       FLang.MessageBox(FLang.GetString([96, 66, NEW_LINE]) + E.Message, mtError);
   end;  //of try
+
+  // Restore the DeleteBackup flag
+  if (Startup.DeleteBackup <> DelBackup) then
+    Startup.DeleteBackup := DelBackup;
 end;
 
 { TMain.bDeleteContextClick
 
   Deletes currently selected context menu item. }
 
-procedure TMain.bDeleteContextClick(Sender: TObject);
-begin
-  // Confirm deletion of item
-  if (FLang.MessageBox(FLang.Format([85, NEW_LINE, 49, 50], [Context.Item.Name]),
-    mtConfirm) = IDYES) then
-  try
-    // Ask to export item (last chance)? Abort if user clicks cancel!
-    if ((FLang.MessageBox(52, mtQuestion) = IDYES) and ShowRegistryExportDialog()) then
-      // Successfully deleted item physically?
-      if Context.DeleteItem() then
-      begin
-        // Delete item from ListView visual
-        lwContext.DeleteSelected();
+procedure TMain.bDeleteContextItemClick(Sender: TObject);
+var
+  Answer: Integer;
 
-        // Refresh counter label
-        RefreshContextCounter();
-      end  //of begin
-      else
-        raise Exception.Create('Could not delete item!');
+begin
+  try
+    // Confirm deletion of item
+    if (FLang.MessageBox(FLang.Format([85, NEW_LINE, 49, 50], [Context.Item.Name]),
+      mtConfirm) = IDYES) then
+    begin
+      // Ask user to export item
+      Answer := FLang.MessageBox(52, mtQuestion);
+
+      // Abort if user clicks cancel!
+      if (((Answer = IDYES) and ShowRegistryExportDialog()) or (Answer = IDNO)) then
+        // Successfully deleted item physically?
+        if Context.DeleteItem() then
+        begin
+          // Delete item from ListView visual
+          lwContext.DeleteSelected();
+
+          // Refresh counter label
+          RefreshContextCounter();
+        end  //of begin
+        else
+          raise Exception.Create('Could not delete item!');
+    end;  //of begin
 
   except
+    on E: EAccessViolation do
+      FLang.MessageBox([96, 66, NEW_LINE, 53], mtWarning);
+
     on E: Exception do
       FLang.MessageBox(FLang.GetString([96, 66, NEW_LINE]) + E.Message, mtError);
   end;  //of try
@@ -717,7 +751,7 @@ begin
     if Startup.ChangeItemStatus() then
     begin
       // Change item visual status
-      lwList.ItemFocused.Caption := Startup.Item.GetStatus(FLang);
+      lwStartup.ItemFocused.Caption := Startup.Item.GetStatus(FLang);
 
       // Change button states
       bEnableStartupItem.Enabled := False;
@@ -728,7 +762,7 @@ begin
 
       // Delete deactivation timestamp if necassary
       if mmDate.Checked then
-        lwList.ItemFocused.SubItems[3] := '';
+        lwStartup.ItemFocused.SubItems[3] := '';
 
       // Refresh counter label
       RefreshStartupCounter();
@@ -737,6 +771,9 @@ begin
       raise Exception.Create('Could not enable item!');
 
   except
+    on E: EInvalidItem do
+      FLang.MessageBox([93, 66, NEW_LINE, 53], mtWarning);
+
     on E: Exception do
       FLang.MessageBox(FLang.GetString([93, 66, NEW_LINE]) + E.Message, mtError);
   end;  //of try
@@ -746,7 +783,7 @@ end;
 
   Activates currently selected context menu item. }
 
-procedure TMain.bActContextClick(Sender: TObject);
+procedure TMain.bEnableContextItemClick(Sender: TObject);
 begin
   try
     // Successfully activated item?
@@ -756,9 +793,9 @@ begin
       lwContext.ItemFocused.Caption := Context.Item.GetStatus(FLang);
 
       // Change button states
-      bActContext.Enabled := False;
-      bDeactContext.Enabled := True;
-      bDeactContext.Default := True;
+      bEnableContextItem.Enabled := False;
+      bDisableContextItem.Enabled := True;
+      bDisableContextItem.Default := True;
       pmChangeStatus.Caption := bDisableStartupItem.Caption;
 
       // Refresh counter label
@@ -768,6 +805,9 @@ begin
       raise Exception.Create('Could not enable item!');
 
   except
+    on E: EInvalidItem do
+      FLang.MessageBox([93, 66, NEW_LINE, 53], mtWarning);
+
     on E: Exception do
       FLang.MessageBox(FLang.GetString([93, 66, NEW_LINE]) + E.Message, mtError);
   end;  //of try
@@ -784,7 +824,7 @@ begin
     if Startup.ChangeItemStatus() then
     begin
       // Change item visual status
-      lwList.ItemFocused.Caption := Startup.Item.GetStatus(FLang);
+      lwStartup.ItemFocused.Caption := Startup.Item.GetStatus(FLang);
 
       // Change button states
       bDisableStartupItem.Enabled := False;
@@ -794,7 +834,7 @@ begin
 
       // Show deactivation timestamp?
       if mmDate.Checked then
-        lwList.ItemFocused.SubItems[3] := Startup.Item.Time;
+        lwStartup.ItemFocused.SubItems[3] := Startup.Item.Time;
 
       if (Startup.Item.StartupUser and not bExportStartupItem.Enabled) then
         bExportStartupItem.Enabled := True;
@@ -806,6 +846,9 @@ begin
       raise Exception.Create('Could not disable item!');
 
   except
+    on E: EInvalidItem do
+      FLang.MessageBox([94, 66, NEW_LINE, 53], mtWarning);
+
     on E: Exception do
       FLang.MessageBox(FLang.GetString([94, 66, NEW_LINE]) + E.Message, mtError);
   end;  //of try
@@ -815,7 +858,7 @@ end;
 
   Deactivates currently selected context menu item. }
 
-procedure TMain.bDeactContextClick(Sender: TObject);
+procedure TMain.bDisableContextItemClick(Sender: TObject);
 begin
   try
     // Successfully deactivated item?
@@ -837,13 +880,16 @@ begin
       raise Exception.Create('Could not disable item!');
 
   except
+    on E: EInvalidItem do
+      FLang.MessageBox([94, 66, NEW_LINE, 53], mtWarning);
+
     on E: Exception do
       FLang.MessageBox(FLang.GetString([94, 66, NEW_LINE]) + E.Message, mtError);
   end;  //of try
 end;
 
 { Selektion Events }
-procedure TMain.lwListSelectItem(Sender: TObject; Item: TListItem;
+procedure TMain.lwStartupSelectItem(Sender: TObject; Item: TListItem;
   Selected: Boolean);
 var
   Index: Word;
@@ -856,8 +902,8 @@ var
     result := -1;
     j := 0;
 
-    for i := AStartIndex +1 to lwList.Items.Count -1 do
-      if (AName = lwList.Items.Item[i].SubItems[0]) then
+    for i := AStartIndex +1 to lwStartup.Items.Count -1 do
+      if (AName = lwStartup.Items.Item[i].SubItems[0]) then
          begin
          Inc(j);
          result := i;
@@ -866,7 +912,7 @@ var
 
     if (j = 0) then
        for k := 0 to Item.Index -1 do
-         if (AName = lwList.Items.Item[k].SubItems[0]) then
+         if (AName = lwStartup.Items.Item[k].SubItems[0]) then
             begin
             result := k;
             Break;
@@ -1007,29 +1053,29 @@ begin
       Index := Context.IndexOf(Item.SubItems[0], Item.SubItems[1]);
       Context.Item := Context.Items[Index];             //Pointer setzen
       bClose2.Default := False;
-      bDeleteContext.Enabled := True;
+      bDeleteContextItem.Enabled := True;
       pmDelete.Enabled := True;
-      bExportContext.Enabled := True;
+      bExportContextItem.Enabled := True;
       pmExport.Enabled := True;
       pmProperties.Enabled := True;
       pmProperties.Visible := (Item.SubItems[2] = 'Shell');  //Eigenschaften für Shell anzeigen
 
-      if bDeletecontext.Default then
-         bDeletecontext.Default := False;
+      if bDeleteContextItem.Default then
+         bDeleteContextItem.Default := False;
 
       if (Item.Caption = FLang.GetString(31)) then    //aktiviert?
          begin
-         bActContext.Enabled := False;                  //JA
-         bDeactContext.Enabled := True;
-         bDeactContext.Default := True;
+         bEnableContextItem.Enabled := False;                  //JA
+         bDisableContextItem.Enabled := True;
+         bDisableContextItem.Default := True;
          pmChangeStatus.Enabled := True;
          pmChangeStatus.Caption := bDisableStartupItem.Caption;  //Beschriftung ändern
          end //of begin
       else
          begin                                          //NEIN
-         bActContext.Enabled := True;
-         bDeactContext.Enabled := False;
-         bActContext.Default := True;
+         bEnableContextItem.Enabled := True;
+         bDisableContextItem.Enabled := False;
+         bEnableContextItem.Default := True;
          pmChangeStatus.Enabled := True;
          pmChangeStatus.Caption := bEnableStartupItem.Caption;  //Beschriftung ändern
          end; //of if
@@ -1038,23 +1084,23 @@ begin
      // Nothing selected?
      if not Assigned(Item) then
      begin
-       if bActContext.Enabled then
+       if bEnableContextItem.Enabled then
        begin
-         bActContext.Default := False;
-         bActContext.Enabled := False;
+         bEnableContextItem.Default := False;
+         bEnableContextItem.Enabled := False;
        end  //of begin
        else
          begin
-           bDeactcontext.Default := False;
-           bDeactcontext.Enabled := False;
+           bDisableContextItem.Default := False;
+           bDisableContextItem.Enabled := False;
          end;  //of if
 
        pmChangeStatus.Enabled := False;
        pmExport.Enabled := False;
        pmDelete.Enabled := False;
        pmProperties.Enabled := False;
-       bExportContext.Enabled := False;
-       bDeleteContext.Enabled := False;
+       bExportContextItem.Enabled := False;
+       bDeleteContextItem.Enabled := False;
        bClose2.Default := True;
      end;  //of if
 end;
@@ -1063,7 +1109,7 @@ end;
 
   Event method that is called when user double clicks on TListView item. }
 
-procedure TMain.lwListDblClick(Sender: TObject);
+procedure TMain.lwStartupDblClick(Sender: TObject);
 begin
   if bEnableStartupItem.Enabled then
     bEnableStartupItem.Click
@@ -1081,21 +1127,21 @@ end;
 
 procedure TMain.lwContextDblClick(Sender: TObject);
 begin
-  if bActContext.Default then
-    bActContext.Click
+  if bEnableContextItem.Default then
+    bEnableContextItem.Click
   else
-    if bDeactContext.Default then
-      bDeactContext.Click
+    if bDisableContextItem.Default then
+      bDisableContextItem.Click
     else
-      if bDeleteContext.Default then
-        bDeleteContext.Click;
+      if bDeleteContextItem.Default then
+        bDeleteContextItem.Click;
 end;
 
 { TMain.lwListColumnClick
 
   Event method that is called when user clicks on TListView column. }
 
-procedure TMain.lwListColumnClick(Sender: TObject; Column: TListColumn);
+procedure TMain.lwStartupColumnClick(Sender: TObject; Column: TListColumn);
 begin
   FColumnToSort := Column.Index;
   (Sender as TCustomListView).AlphaSort;
@@ -1105,7 +1151,7 @@ end;
 
   Sorts a TListView column alphabetically. }
 
-procedure TMain.lwListCompare(Sender: TObject; Item1, Item2: TListItem;
+procedure TMain.lwStartupCompare(Sender: TObject; Item1, Item2: TListItem;
   Data: Integer; var Compare: Integer);
 begin
   // Status column?
@@ -1127,7 +1173,7 @@ end;
 procedure TMain.pmChangeStatusClick(Sender: TObject);
 begin
   if (PageControl.ActivePage = tsStartup) then
-    lwListDblClick(Sender)
+    lwStartupDblClick(Sender)
   else
     lwContextDblClick(Sender);
 end;
@@ -1141,7 +1187,7 @@ begin
   if (PageControl.ActivePage = tsStartup) then
     bDeleteStartupItem.Click
   else
-    bDeleteContext.Click;
+    bDeleteContextItem.Click;
 end;
 
 { TMain.pmPropertiesClick
@@ -1186,19 +1232,19 @@ begin
     if OpenDialog.Execute then
     begin
       // Save index to current selected list item
-      index := lwList.ItemFocused.Index;
+      index := lwStartup.ItemFocused.Index;
 
       // Write pointer to index in current item data
-      lwList.ItemFocused.Data := Pointer(index);
+      lwStartup.ItemFocused.Data := Pointer(index);
 
       // Save this pointer
-      Startup.AppIndex := lwList.ItemFocused.Data;
+      Startup.AppIndex := lwStartup.ItemFocused.Data;
 
       // Let user edit the path
       EditPath(OpenDialog.FileName);
 
       // Select current item in list
-      lwListSelectItem(Self, lwList.ItemFocused, True);
+      lwStartupSelectItem(Self, lwStartup.ItemFocused, True);
 
       // Enable edit once again
       pmEdit.Enabled := True;
@@ -1215,7 +1261,7 @@ end;
 
 procedure TMain.pmEditClick(Sender: TObject);
 begin
-  EditPath(lwList.ItemFocused.SubItems[1]);
+  EditPath(lwStartup.ItemFocused.SubItems[1]);
 end;
 
 { TMain.mmAddClick
@@ -1334,7 +1380,7 @@ begin
     bExportStartupItem.Click()
   else
     if (PageControl.ActivePage = tsContext) then
-      bExportContext.Click()
+      bExportContextItem.Click()
     else
       FLang.MessageBox([95, 66, NEW_LINE, 53], mtWarning);
 end;
@@ -1414,9 +1460,9 @@ procedure TMain.mmStandardClick(Sender: TObject);
 begin
   if (PageControl.ActivePage = tsStartup) then
   begin
-    lwList.Columns[1].Width := 125;
-    lwList.Columns[2].Width := 124;
-    lwList.Columns[3].Width := 80;
+    lwStartup.Columns[1].Width := 125;
+    lwStartup.Columns[2].Width := 124;
+    lwStartup.Columns[3].Width := 80;
   end  //of begin
   else
     begin
@@ -1434,9 +1480,9 @@ procedure TMain.mmOptimateClick(Sender: TObject);
 begin
   if (PageControl.ActivePage = tsStartup) then
   begin
-    lwList.Columns[1].Width := ColumnTextWidth;
-    lwList.Columns[2].Width := ColumnTextWidth;
-    lwList.Columns[3].Width := ColumnTextWidth;
+    lwStartup.Columns[1].Width := ColumnTextWidth;
+    lwStartup.Columns[2].Width := ColumnTextWidth;
+    lwStartup.Columns[3].Width := ColumnTextWidth;
   end  //of begin
   else
     begin
@@ -1456,17 +1502,17 @@ var
 
 begin
   if not (WindowState = wsMaximized) then
-    lwList.Clear;
+    lwStartup.Clear;
 
   // Timestamp already shown?
   if mmDate.Checked then
   begin
     mmDate.Checked := False;
 
-    if (lwList.Columns.Count > 4) then
+    if (lwStartup.Columns.Count > 4) then
     begin
-      Constraints.MinWidth := Constraints.MinWidth - lwList.Column[4].Width;
-      lwList.Column[4].MinWidth := 0;
+      Constraints.MinWidth := Constraints.MinWidth - lwStartup.Column[4].Width;
+      lwStartup.Column[4].MinWidth := 0;
       endOf := Width - 120;
 
       // Animation to remove column smoothly
@@ -1476,15 +1522,15 @@ begin
         if (WindowState = wsMaximized) then
           endOf := Width;
 
-        if (lwList.Column[4].Width <= 120) then
-          lwList.Column[4].Width := lwList.Column[4].Width - 1;
+        if (lwStartup.Column[4].Width <= 120) then
+          lwStartup.Column[4].Width := lwStartup.Column[4].Width - 1;
 
         Update;
         Sleep(0);
-      until ((lwList.Column[4].Width <= 0) and (Width = endOf));
+      until ((lwStartup.Column[4].Width <= 0) and (Width = endOf));
 
       // Delete column
-      lwList.Columns.Delete(4);
+      lwStartup.Columns.Delete(4);
 
       // Refresh counter label
       ShowStartupEntries(False);
@@ -1496,7 +1542,7 @@ begin
       endOf := Width + 120;
 
       // Add column
-      lwList.Columns.Add.Caption := FLang.GetString(80);
+      lwStartup.Columns.Add.Caption := FLang.GetString(80);
 
       if (WindowState = wsMaximized) then
         ShowStartupEntries(False);
@@ -1508,16 +1554,16 @@ begin
         if (WindowState = wsMaximized) then
           endOf := Width;
 
-        if (lwList.Column[4].Width < 120) then
-          lwList.Column[4].Width := lwList.Column[4].Width + 1;
+        if (lwStartup.Column[4].Width < 120) then
+          lwStartup.Column[4].Width := lwStartup.Column[4].Width + 1;
 
         Update;
         Sleep(0);
-      until ((lwList.Column[4].Width >= 120) and (Width = endOf));
+      until ((lwStartup.Column[4].Width >= 120) and (Width = endOf));
 
-      lwList.Column[4].MinWidth := lwList.Column[4].Width;
-      lwList.Column[4].MaxWidth := lwList.Column[4].Width;
-      Constraints.MinWidth := Constraints.MinWidth + lwList.Column[4].Width;
+      lwStartup.Column[4].MinWidth := lwStartup.Column[4].Width;
+      lwStartup.Column[4].MaxWidth := lwStartup.Column[4].Width;
+      Constraints.MinWidth := Constraints.MinWidth + lwStartup.Column[4].Width;
 
       if not (WindowState = wsMaximized) then
         ShowStartupEntries(False);
@@ -1692,7 +1738,7 @@ begin
         bDeleteStartupItem.Click
      else
         if (PageControl.ActivePage = tsContext) then
-           bDeleteContext.Click;
+           bDeleteContextItem.Click;
 end;
 
 { TMain.bCloseClick

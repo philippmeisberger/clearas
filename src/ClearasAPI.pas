@@ -89,6 +89,7 @@ type
   end;
 
   { Exception class }
+  EInvalidItem = class(EAccessViolation);
   EStartupException = class(Exception);
 
   { TStartupListItem }
@@ -1473,10 +1474,13 @@ end;
 
 function TStartupList.BackupExists(): Boolean;
 begin
+  result := False;
+
+  if not Assigned(FItem) then
+    raise EInvalidItem.Create('No item selected!');
+
   if FItem.StartupUser then
-    result := FileExists(GetBackupLnk())
-  else
-    result := False;
+    result := FileExists(GetBackupLnk());
 end;
 
 { public TStartupList.ChangeItemStatus
@@ -1488,34 +1492,30 @@ var
   Changed: Boolean;
 
 begin
-  try
-    if not Assigned(FItem) then
-      raise EAccessViolation.Create('No item selected!');
+  result := False;
 
-    // Change the status
-    Changed := FItem.ChangeStatus();
+  if not Assigned(FItem) then
+    raise EInvalidItem.Create('No item selected!');
 
-    // Successful?
-    if Changed then
-      // Item has been enabled?
-      if FItem.Enabled then
-      begin
-        // Decide to delete backup
-        if (FDeleteBackup and FItem.StartupUser) then
-          DeleteBackupLnk();
+  // Change the status
+  Changed := FItem.ChangeStatus();
 
-        // Update active counter
-        Inc(FActCount);
-      end  //of begin
-    else
-      Dec(FActCount);
+  // Successful?
+  if Changed then
+    // Item has been enabled?
+    if FItem.Enabled then
+    begin
+      // Decide to delete backup
+      if (FDeleteBackup and FItem.StartupUser) then
+        DeleteBackupLnk();
 
-    result := Changed;
+      // Update active counter
+      Inc(FActCount);
+    end  //of begin
+  else
+    Dec(FActCount);
 
-  except
-    result := False;
-    raise;
-  end;  //of try
+  result := Changed;
 end;
 
 { public TStartupList.ChangeItemFilePath
@@ -1524,20 +1524,17 @@ end;
 
 function TStartupList.ChangeItemFilePath(const ANewFilePath: string): Boolean;
 begin
-  try
-    if FItem.Enabled then
-      TClearas.WriteStrValue(FItem.RootKey, FItem.KeyPath, FItem.Name, ANewFilePath)
-    else
-      begin
-        TClearas.WriteStrValue(FItem.RootKey, FItem.KeyPath, 'Command', ANewFilePath);
-        TClearas.WriteStrValue(FItem.RootKey, FItem.KeyPath, 'Item', Item.Name);
-      end;  //of if
+  result := False;
 
-    result := True;
+  if FItem.Enabled then
+    TClearas.WriteStrValue(FItem.RootKey, FItem.KeyPath, FItem.Name, ANewFilePath)
+  else
+    begin
+      TClearas.WriteStrValue(FItem.RootKey, FItem.KeyPath, 'Command', ANewFilePath);
+      TClearas.WriteStrValue(FItem.RootKey, FItem.KeyPath, 'Item', Item.Name);
+    end;  //of if
 
-  except
-    result := False;
-  end;  //of try
+  result := True;
 end;
 
 { public TStartupList.DeleteItem
@@ -1549,36 +1546,32 @@ var
   Deleted: Boolean;
 
 begin
-  try
-    if not Assigned(FItem) then
-      raise EAccessViolation.Create('No item selected!');
+  result := False;
 
-    // Delete item from Registry
-    Deleted := FItem.Delete();
+  if not Assigned(FItem) then
+    raise EInvalidItem.Create('No item selected!');
 
-    // Successful?
-    if Deleted then
-      // Item was enabled
-      if FItem.Enabled then
-      begin
-        // Decide to delete backup
-        if (FDeleteBackup and FItem.StartupUser) then
-          DeleteBackupLnk();
+  // Delete item from Registry
+  Deleted := FItem.Delete();
 
-        // Update active counter
-        Dec(FActCount);
+  // Successful?
+  if Deleted then
+    // Item was enabled
+    if FItem.Enabled then
+    begin
+      // Decide to delete backup
+      if (FDeleteBackup and FItem.StartupUser) then
+        DeleteBackupLnk();
 
-        // Remove item from list
-        inherited Remove(FItem);
-        FItem := nil;
-      end;  //of begin
+      // Update active counter
+      Dec(FActCount);
 
-    result := Deleted;
+      // Remove item from list
+      inherited Remove(FItem);
+      FItem := nil;
+    end;  //of begin
 
-  except
-    result := False;
-    raise;
-  end;  //of try
+  result := Deleted;
 end;
 
 { public TStartupList.ExportItem
@@ -1588,7 +1581,7 @@ end;
 procedure TStartupList.ExportItem(const AFileName: string; ARegFile: Boolean = True);
 begin
   if not Assigned(FItem) then
-    raise EAccessViolation.Create('No item selected!');
+    raise EInvalidItem.Create('No item selected!');
 
   FItem.ExportItem(AFileName);
 end;
@@ -2244,27 +2237,23 @@ var
   Changed: Boolean;
 
 begin
-  try
-    if not Assigned(FItem) then
-      raise EAccessViolation.Create('No item selected!');
+  result := False;
 
-    // Change status of item
-    Changed := FItem.ChangeStatus;
+  if not Assigned(FItem) then
+    raise EInvalidItem.Create('No item selected!');
 
-    // Successful?
-    if Changed then
-      // Item has been enabled?
-      if FItem.Enabled then
-        Inc(FActCount)
-      else
-        Dec(FActCount);
+  // Change status of item
+  Changed := FItem.ChangeStatus;
 
-    result := Changed;
+  // Successful?
+  if Changed then
+    // Item has been enabled?
+    if FItem.Enabled then
+      Inc(FActCount)
+    else
+      Dec(FActCount);
 
-  except
-    result := False;
-    raise;
-  end;  //of try
+  result := Changed;
 end;
 
 { public TContextList.DeleteItem
@@ -2276,31 +2265,27 @@ var
   Deleted: Boolean;
 
 begin
-  try
-    if not Assigned(FItem) then
-      raise EAccessViolation.Create('No item selected!');
+  result := False;
 
-    // Delete item from Registry
-    Deleted := FItem.Delete();
+  if not Assigned(FItem) then
+    raise EInvalidItem.Create('No item selected!');
 
-    // Successful?
-    if Deleted then
-    begin
-      // Item was enabled?
-      if FItem.Enabled then
-        Dec(FActCount);
+  // Delete item from Registry
+  Deleted := FItem.Delete();
 
-      // Remove item from list
-      inherited Remove(FItem);
-      FItem := nil;
-    end;  //of begin
+  // Successful?
+  if Deleted then
+  begin
+    // Item was enabled?
+    if FItem.Enabled then
+      Dec(FActCount);
 
-    result := Deleted;
+    // Remove item from list
+    inherited Remove(FItem);
+    FItem := nil;
+  end;  //of begin
 
-  except
-    result := False;
-    raise;
-  end;  //of try
+  result := Deleted;
 end;
 
 { public TContextList.ExportItem
@@ -2310,7 +2295,7 @@ end;
 procedure TContextList.ExportItem(const AFileName: string);
 begin
   if not Assigned(FItem) then
-    raise EAccessViolation.Create('No item selected!');
+    raise EInvalidItem.Create('No item selected!');
 
   FItem.ExportItem(AFileName);
 end;
