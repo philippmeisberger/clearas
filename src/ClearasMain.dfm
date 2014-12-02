@@ -623,7 +623,6 @@ object Main: TMain
     object pmEdit: TMenuItem
       Caption = 'Pfad bearbeiten'
       Enabled = False
-      Visible = False
       OnClick = pmEditClick
     end
     object pmExport: TMenuItem

@@ -1524,14 +1524,19 @@ function TStartupList.ChangeItemFilePath(const ANewFilePath: string): Boolean;
 begin
   result := False;
 
-  if FItem.Enabled then
-    TClearas.WriteStrValue(FItem.RootKey, FItem.KeyPath, FItem.Name, ANewFilePath)
-  else
-    begin
-      TClearas.WriteStrValue(FItem.RootKey, FItem.KeyPath, 'Command', ANewFilePath);
-      TClearas.WriteStrValue(FItem.RootKey, FItem.KeyPath, 'Item', Item.Name);
-    end;  //of if
+  if not Assigned(FItem) then
+    raise EInvalidItem.Create('No item selected!');
 
+  if not FItem.Enabled then
+  begin
+    TClearas.WriteStrValue(FItem.RootKey, FItem.KeyPath, 'Command', ANewFilePath);
+    TClearas.WriteStrValue(FItem.RootKey, FItem.KeyPath, 'Item', Item.Name);
+  end  //of begin
+  else
+    TClearas.WriteStrValue(FItem.RootKey, FItem.KeyPath, FItem.Name, ANewFilePath);
+
+  // Change path in item
+  FItem.FFilePath := ANewFilePath;
   result := True;
 end;
 

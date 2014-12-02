@@ -307,37 +307,43 @@ begin
     result := ShowRegistryExportDialog();
 end;
 
+{ private TMain.EditPath
+
+  Shows an input box for editing a file path. }
 
 procedure TMain.EditPath(APath: string);
 var
   FullPath: string;
 
-  function AddCommas(APath: string): string;
+  function AddQuotes(APath: string): string;
   begin
-    if (APath[1] <> '"') then
-       result := '"'+ APath +'"'
+    if ((Length(APath) > 0) and (APath[1] <> '"')) then
+      result := '"'+ APath +'"'
     else
-       result := APath;
+      result := APath;
   end;
 
 begin
-  with Startup do
-  begin
-    FullPath := InputBox(FLang.GetString(33), FLang.GetString(54), AddCommas(APath));  //Pfad bearbeiten Dialog
+  try
+    // Show input box for editing path
+    FullPath := InputBox(FLang.GetString(33), FLang.GetString(54), AddQuotes(APath));
 
-    if ((FullPath = '') or (FullPath = ' '))then
-      FullPath := AddCommas(APath);                                   //Fehlervermeidung: Standard-Wert
+    // Nothing entered: use default
+    if (Trim(FullPath) = '') then
+      FullPath := AddQuotes(APath);
 
-    if Item.Enabled then                                               //Item aktiviert?
-      TClearas.WriteStrValue(Item.RootKey, Item.KeyPath, Item.Name, FullPath)  //neuen Pfad in REG schreiben
-    else
-      begin                                                           //Item deaktiviert
-        TClearas.WriteStrValue(Item.RootKey, Item.KeyPath, 'Command', FullPath); //neuen Pfad in REG schreiben
-        TClearas.WriteStrValue(Item.RootKey, Item.KeyPath, 'Item', Item.Name);   //Name in REG schreiben
-      end;  //of if
+    if not Startup.ChangeItemFilePath(FullPath) then
+      raise Exception.Create('Could not change path!');
 
-    lwStartup.ItemFocused.SubItems[1] := FullPath;                        //in Liste schreiben
-  end;  //of with
+    lwStartup.ItemFocused.SubItems[1] := FullPath;
+
+  except
+    on E: EAccessViolation do
+      FLang.MessageBox(53, mtWarning);
+
+    on E: Exception do
+      FLang.MessageBox(57, mtError);
+  end;  //of try
 end;
 
 { private TMain.OnSearchProgress
@@ -972,6 +978,7 @@ begin
       bDisableStartupItem.Enabled := False;
       pmChangeStatus.Enabled := False;
       bDeleteStartupItem.Default := True;
+      pmEdit.Enabled := False;
     end  //of begin
     else
       begin
@@ -1618,6 +1625,7 @@ begin
     mmExportList.Visible := False;
     mmDate.Visible := False;
     mmRunOnce.Visible := False;
+    pmEdit.Visible := False;
 
     // Load context menu entries dynamically
     if (Context.Count = 0) then
@@ -1630,6 +1638,7 @@ begin
       mmExportList.Visible := True;
       mmDate.Visible := True;
       mmRunOnce.Visible := True;
+      pmEdit.Visible := True;
     end;  //of if
 end;
 
