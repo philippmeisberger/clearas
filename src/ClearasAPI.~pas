@@ -89,7 +89,7 @@ type
   end;
 
   { Exception class }
-  EInvalidItem = class(Exception);
+  EInvalidItem = class(EAccessViolation);
   EStartupException = class(Exception);
 
   { TStartupListItem }

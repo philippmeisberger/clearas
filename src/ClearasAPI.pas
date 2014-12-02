@@ -1556,6 +1556,7 @@ begin
 
   // Successful?
   if Deleted then
+  begin
     // Item was enabled
     if FItem.Enabled then
     begin
@@ -1565,11 +1566,12 @@ begin
 
       // Update active counter
       Dec(FActCount);
-
-      // Remove item from list
-      inherited Remove(FItem);
-      FItem := nil;
     end;  //of begin
+
+    // Remove item from list
+    inherited Remove(FItem);
+    FItem := nil;
+  end;  //of begin
 
   result := Deleted;
 end;

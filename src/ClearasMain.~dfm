@@ -394,7 +394,7 @@ object Main: TMain
         TabOrder = 1
         OnClick = bEnableStartupItemClick
       end
-      object bClose: TButton
+      object bCloseStartup: TButton
         Left = 426
         Top = 216
         Width = 91
@@ -403,7 +403,7 @@ object Main: TMain
         Caption = 'beenden'
         Default = True
         TabOrder = 5
-        OnClick = bCloseClick
+        OnClick = bCloseStartupClick
       end
       object bDisableStartupItem: TButton
         Left = 426
@@ -509,7 +509,7 @@ object Main: TMain
         TabOrder = 4
         OnClick = bDeleteContextItemClick
       end
-      object bClose2: TButton
+      object bCloseContext: TButton
         Left = 426
         Top = 216
         Width = 91
@@ -518,7 +518,7 @@ object Main: TMain
         Caption = 'beenden'
         Default = True
         TabOrder = 5
-        OnClick = bCloseClick
+        OnClick = bCloseStartupClick
       end
       object bDisableContextItem: TButton
         Left = 426
@@ -609,6 +609,7 @@ object Main: TMain
     end
   end
   object PopupMenu: TPopupMenu
+    AutoPopup = False
     Left = 496
     object pmChangeStatus: TMenuItem
       Caption = 'deaktivieren'
@@ -680,7 +681,7 @@ object Main: TMain
       end
       object mmClose: TMenuItem
         Caption = 'Beenden'
-        OnClick = bCloseClick
+        OnClick = bCloseStartupClick
       end
     end
     object mmEdit: TMenuItem

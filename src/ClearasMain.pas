@@ -58,7 +58,7 @@ type
     lwStartup: TListView;
     lStartup: TLabel;
     bEnableStartupItem: TButton;
-    bClose: TButton;
+    bCloseStartup: TButton;
     bDisableStartupItem: TButton;
     bDeleteStartupItem: TButton;
     bExportStartupItem: TButton;
@@ -66,7 +66,7 @@ type
     lCopy2: TLabel;
     bExportContextItem: TButton;
     bDeleteContextItem: TButton;
-    bClose2: TButton;
+    bCloseContext: TButton;
     bDisableContextItem: TButton;
     bEnableContextItem: TButton;
     lwContext: TListView;
@@ -133,7 +133,7 @@ type
       Shift: TShiftState);
     procedure lCopy1MouseLeave(Sender: TObject);
     procedure lCopy1MouseEnter(Sender: TObject);
-    procedure bCloseClick(Sender: TObject);
+    procedure bCloseStartupClick(Sender: TObject);
     procedure lCopy1Click(Sender: TObject);
   private
     FColumnToSort: Word;
@@ -283,7 +283,7 @@ begin
   // Nothing selected?
   if not Assigned(Startup.Item) then
   begin
-    FLang.MessageBox([95, 66, NEW_LINE, 53], mtWarning);
+    FLang.MessageBox([95, 18, NEW_LINE, 53], mtWarning);
     result := False;
     Exit;
   end;  //of begin
@@ -432,7 +432,7 @@ begin
     bDisableStartupItem.Caption := GetString(94);
     bExportStartupItem.Caption := GetString(95);
     bDeleteStartupItem.Caption := GetString(96);
-    bClose.Caption := mmClose.Caption;
+    bCloseStartup.Caption := mmClose.Caption;
 
     // Startup tab TListView labels
     lStartup.Caption := GetString(82);
@@ -445,7 +445,7 @@ begin
     bDisableContextItem.Caption := bDisableStartupItem.Caption;
     bExportContextItem.Caption := bExportStartupItem.Caption;
     bDeleteContextItem.Caption := bDeleteStartupItem.Caption;
-    bClose2.Caption := bClose.Caption;
+    bCloseContext.Caption := bCloseStartup.Caption;
     cbExpert.Caption := GetString(89);
     tsStartup.Caption := GetString(83);
 
@@ -635,7 +635,7 @@ begin
   // Nothing selected?
   if not Assigned(Context.Item) then
   begin
-    FLang.MessageBox([95, 66, NEW_LINE, 53], mtWarning);
+    FLang.MessageBox([95, 18, NEW_LINE, 53], mtWarning);
     Exit;
   end;  //of begin
 
@@ -680,6 +680,13 @@ begin
 
           // Refresh counter label
           RefreshStartupCounter();
+
+          // Change button states
+          bEnableStartupItem.Enabled := False;
+          bDisableStartupItem.Enabled := False;
+          bDeleteStartupItem.Enabled := False;
+          bExportStartupItem.Enabled := False;
+          bCloseStartup.Default := True;
         end  //of begin
         else
           raise Exception.Create('Could not delete item!');
@@ -688,10 +695,10 @@ begin
 
   except
     on E: EAccessViolation do
-      FLang.MessageBox([96, 66, NEW_LINE, 53], mtWarning);
+      FLang.MessageBox([96, 18, NEW_LINE, 53], mtWarning);
 
     on E: Exception do
-      FLang.MessageBox(FLang.GetString([96, 66, NEW_LINE]) + E.Message, mtError);
+      FLang.MessageBox(FLang.GetString([96, 18, NEW_LINE]) + E.Message, mtError);
   end;  //of try
 
   // Restore the DeleteBackup flag
@@ -726,6 +733,13 @@ begin
 
           // Refresh counter label
           RefreshContextCounter();
+
+          // Change button states
+          bEnableContextItem.Enabled := False;
+          bDisableContextItem.Enabled := False;
+          bDeleteContextItem.Enabled := False;
+          bExportContextItem.Enabled := False;
+          bCloseContext.Default := True;
         end  //of begin
         else
           raise Exception.Create('Could not delete item!');
@@ -733,10 +747,10 @@ begin
 
   except
     on E: EAccessViolation do
-      FLang.MessageBox([96, 66, NEW_LINE, 53], mtWarning);
+      FLang.MessageBox([96, 18, NEW_LINE, 53], mtWarning);
 
     on E: Exception do
-      FLang.MessageBox(FLang.GetString([96, 66, NEW_LINE]) + E.Message, mtError);
+      FLang.MessageBox(FLang.GetString([96, 18, NEW_LINE]) + E.Message, mtError);
   end;  //of try
 end;
 
@@ -772,10 +786,10 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.MessageBox([93, 66, NEW_LINE, 53], mtWarning);
+      FLang.MessageBox([93, 18, NEW_LINE, 53], mtWarning);
 
     on E: Exception do
-      FLang.MessageBox(FLang.GetString([93, 66, NEW_LINE]) + E.Message, mtError);
+      FLang.MessageBox(FLang.GetString([93, 18, NEW_LINE]) + E.Message, mtError);
   end;  //of try
 end;
 
@@ -892,7 +906,7 @@ end;
 procedure TMain.lwStartupSelectItem(Sender: TObject; Item: TListItem;
   Selected: Boolean);
 var
-  Index: Word;
+  Index: Integer;
 
   function IsDouble(AName: string; AStartIndex: Integer): Integer;
   var
@@ -904,205 +918,134 @@ var
 
     for i := AStartIndex +1 to lwStartup.Items.Count -1 do
       if (AName = lwStartup.Items.Item[i].SubItems[0]) then
-         begin
-         Inc(j);
-         result := i;
-         Break;
-         end;  //of begin
+      begin
+        Inc(j);
+        result := i;
+        Break;
+      end;  //of begin
 
     if (j = 0) then
-       for k := 0 to Item.Index -1 do
-         if (AName = lwStartup.Items.Item[k].SubItems[0]) then
-            begin
-            result := k;
-            Break;
-            end;  //of begin
+      for k := 0 to Item.Index -1 do
+        if (AName = lwStartup.Items.Item[k].SubItems[0]) then
+        begin
+          result := k;
+          Break;
+        end;  //of begin
   end;
 
 begin
-  if (Selected and Assigned(Item)) then         //Item selektiert?
-      begin
-      Index := Startup.IndexOf(Item.SubItems[0], (Item.Caption = FLang.GetString(31)));
-      Startup.Item := Startup.Items[Index];    //Pointer setzen
-      bClose.Default := False;
+  // Item selected?
+  if (Selected and Assigned(Item)) then
+  begin
+    // Find index of currently selected item in backend
+    Index := Startup.IndexOf(Item.SubItems[0], (Item.Caption = FLang.GetString(31)));
 
-      if (Startup.Item.StartupUser and Startup.Item.Enabled and Startup.BackupExists) then
-         begin
-         bExportStartupItem.Enabled := False;
-         pmExport.Enabled := False;
-         end //of begin
-      else
-         begin
-         bExportStartupItem.Enabled := True;
-         pmExport.Enabled := True;
-         end;  //of if
+    // Item not found?
+    if (Index = -1) then
+      Exit;
 
-      bDeleteStartupItem.Enabled := True;
-      pmProperties.Enabled := True;
-      pmDelete.Enabled := True;
+    // Load item into cache
+    Startup.Item := Startup.Items[Index];
 
-      if ((Item.SubItems[2] <> '') and ((Item.SubItems[1] = '') or
-         (Item.SubItems[1] = ' '))) then     //Schlüssel existiert und Pfad fehlt
-         begin                               //...dann kann User danach suchen
-         bEnableStartupItem.Enabled := False;
-         bDisableStartupItem.Enabled := False;
-         pmChangeStatus.Enabled := False;
-         bExportStartupItem.Enabled := False;
-         pmExport.Enabled := False;
-         bDeleteStartupItem.Default := True;
-         pmSearch.Visible := True;
-         end  //of begin
-      else
-         begin
-         if ((Item.Data = Startup.AppIndex) and (Assigned(Startup.AppIndex) or
-            Assigned(Item.Data))) then     //ist Item das geänderte Programm?
-            begin                         
-            pmSearch.Visible := True;
+    bCloseStartup.Default := False;
 
-            if pmEdit.Enabled then        //dann erlauben, den Pfad zu ändern
-               pmEdit.Visible := True;
-            end  //of begin
-         else
-            begin
-            pmSearch.Visible := False;    
-            pmEdit.Visible := False;
-            end;  //of if
-
-         if (Item.SubItems[2] = '') then  //Schlüssel fehlt
-            begin
-            bEnableStartupItem.Enabled := False;
-            bDisableStartupItem.Enabled := False;
-            bExportStartupItem.Enabled := False;
-            pmExport.Enabled := False;
-            pmChangeStatus.Enabled := False;
-            bDeleteStartupItem.Default := True;
-            end  //of begin
-         else
-            begin
-            if (IsDouble(Item.SubItems[0], Item.Index) <> -1) then
-               begin
-               bEnableStartupItem.Enabled := False;
-               bDisableStartupItem.Enabled := False;
-               bDeleteStartupItem.Default := True;
-               end  //of begin
-            else
-               begin
-               if bDeleteStartupItem.Default then
-                  bDeleteStartupItem.Default := False;
-
-               if Startup.Item.Enabled then                       //aktiviert?
-                  begin                                           //JA
-                  bDeleteStartupItem.Default := False;
-                  bEnableStartupItem.Enabled := False;
-                  bDisableStartupItem.Enabled := True;
-                  bDisableStartupItem.Default := True;
-                  pmChangeStatus.Enabled := True;
-                  pmChangeStatus.Caption := bDisableStartupItem.Caption;  //Beschriftung ändern
-                  end //of begin
-               else
-                  begin                                           //NEIN
-                  bDeleteStartupItem.Default := False;
-                  bEnableStartupItem.Enabled := True;
-                  bDisableStartupItem.Enabled := False;
-                  bEnableStartupItem.Default := True;
-                  pmChangeStatus.Enabled := True;
-                  pmChangeStatus.Caption := bEnableStartupItem.Caption;  //Beschriftung ändern
-                  end; //of if
-
-               if not KeyPreview then                 //Hotkeys aktiviert?
-                  KeyPreview := True;
-               end; //of if
-            end;  //of if
-         end;  //of if
-      end  //of begin
-  else
-    // Nothing selected?
-    if not Assigned(Item) then
+    // Check for multiple items with the same name
+    if (IsDouble(Item.SubItems[0], Item.Index) <> -1) then
     begin
-      if bEnableStartupItem.Enabled then
-      begin
-        bEnableStartupItem.Default := False;
-        bEnableStartupItem.Enabled := False;
-      end  //of begin
-      else
-        begin
-          bDisableStartupItem.Default := False;
-          bDisableStartupItem.Enabled := False;
-        end;  //of if
-
+      bEnableStartupItem.Enabled := False;
+      bDisableStartupItem.Enabled := False;
       pmChangeStatus.Enabled := False;
-      pmDelete.Enabled := False;
-      pmExport.Enabled := False;
-      pmProperties.Enabled := False;
-      bExportStartupItem.Enabled := False;
-      bDeleteStartupItem.Enabled := False;
-      bClose.Default := True;
-    end;  //of if
+      bDeleteStartupItem.Default := True;
+    end  //of begin
+    else
+      begin
+        bDeleteStartupItem.Default := False;
+
+        bEnableStartupItem.Enabled := not Startup.Item.Enabled;
+        bEnableStartupItem.Default := bEnableStartupItem.Enabled;
+
+        bDisableStartupItem.Enabled := not bEnableStartupItem.Enabled;
+        bDisableStartupItem.Default := bDisableStartupItem.Enabled;
+
+        // Change text of "change status" button
+        if bDisableStartupItem.Enabled then
+          pmChangeStatus.Caption := bDisableStartupItem.Caption
+        else
+          pmChangeStatus.Caption := bEnableStartupItem.Caption;
+
+        pmChangeStatus.Enabled := True;
+        pmEdit.Enabled := True;
+      end;  //of if
+
+    pmProperties.Enabled := True;
+
+    bDeleteStartupItem.Enabled := True;
+    pmDelete.Enabled := True;
+
+    bExportStartupItem.Enabled := True;
+    pmExport.Enabled := True;
+
+    // Show popup menu
+    PopupMenu.AutoPopup := True;
+  end  //of begin
+  else
+    // Nothing selected: Hide popup menu!
+    PopupMenu.AutoPopup := False;
 end;
 
 
 procedure TMain.lwContextSelectItem(Sender: TObject; Item: TListItem;
   Selected: Boolean);
 var
-  Index: Word;
+  Index: Integer;
 
 begin
   // Item selected?
   if (Selected and Assigned(Item)) then
-      begin
-      Index := Context.IndexOf(Item.SubItems[0], Item.SubItems[1]);
-      Context.Item := Context.Items[Index];             //Pointer setzen
-      bClose2.Default := False;
-      bDeleteContextItem.Enabled := True;
-      pmDelete.Enabled := True;
-      bExportContextItem.Enabled := True;
-      pmExport.Enabled := True;
-      pmProperties.Enabled := True;
-      pmProperties.Visible := (Item.SubItems[2] = 'Shell');  //Eigenschaften für Shell anzeigen
+  begin
+    // Find index of currently selected item in backend
+    Index := Context.IndexOf(Item.SubItems[0], Item.SubItems[1]);
 
-      if bDeleteContextItem.Default then
-         bDeleteContextItem.Default := False;
+    // Item not found?
+    if (Index = -1) then
+      Exit;
 
-      if (Item.Caption = FLang.GetString(31)) then    //aktiviert?
-         begin
-         bEnableContextItem.Enabled := False;                  //JA
-         bDisableContextItem.Enabled := True;
-         bDisableContextItem.Default := True;
-         pmChangeStatus.Enabled := True;
-         pmChangeStatus.Caption := bDisableStartupItem.Caption;  //Beschriftung ändern
-         end //of begin
-      else
-         begin                                          //NEIN
-         bEnableContextItem.Enabled := True;
-         bDisableContextItem.Enabled := False;
-         bEnableContextItem.Default := True;
-         pmChangeStatus.Enabled := True;
-         pmChangeStatus.Caption := bEnableStartupItem.Caption;  //Beschriftung ändern
-         end; //of if
-      end  //of begin
+    // Load item into cache
+    Context.Item := Context.Items[Index];
+
+    // Change button states
+    bCloseContext.Default := False;
+    bDeleteContextItem.Default := False;
+
+    bEnableContextItem.Enabled := not Context.Item.Enabled;
+    bEnableContextItem.Default := bEnableContextItem.Enabled;
+
+    bDisableContextItem.Enabled := not bEnableContextItem.Enabled;
+    bDisableContextItem.Default := bDisableContextItem.Enabled;
+
+    // Change text of "change status" button
+    if bDisableContextItem.Enabled then
+      pmChangeStatus.Caption := bDisableContextItem.Caption
+    else
+      pmChangeStatus.Caption := bEnableContextItem.Caption;
+
+    pmChangeStatus.Enabled := True;
+
+    // Enable properties for "Shell" entries only!
+    pmProperties.Enabled := (Item.SubItems[2] = 'Shell');
+
+    bDeleteContextItem.Enabled := True;
+    pmDelete.Enabled := True;
+
+    bExportContextItem.Enabled := True;
+    pmExport.Enabled := True;
+
+    // Show popup menu
+    PopupMenu.AutoPopup := True;
+  end  //of begin
   else
-     // Nothing selected?
-     if not Assigned(Item) then
-     begin
-       if bEnableContextItem.Enabled then
-       begin
-         bEnableContextItem.Default := False;
-         bEnableContextItem.Enabled := False;
-       end  //of begin
-       else
-         begin
-           bDisableContextItem.Default := False;
-           bDisableContextItem.Enabled := False;
-         end;  //of if
-
-       pmChangeStatus.Enabled := False;
-       pmExport.Enabled := False;
-       pmDelete.Enabled := False;
-       pmProperties.Enabled := False;
-       bExportContextItem.Enabled := False;
-       bDeleteContextItem.Enabled := False;
-       bClose2.Default := True;
-     end;  //of if
+    // Nothing selected: Hide popup menu!
+    PopupMenu.AutoPopup := False;
 end;
 
 { TMain.lwListDblClick
@@ -1118,7 +1061,9 @@ begin
       bDisableStartupItem.Click
     else
       if bDeleteStartupItem.Enabled then
-        bDeleteStartupItem.Click;
+        bDeleteStartupItem.Click
+      else
+        FLang.MessageBox(53, mtWarning);
 end;
 
 { TMain.lwContextDblClick
@@ -1134,7 +1079,9 @@ begin
       bDisableContextItem.Click
     else
       if bDeleteContextItem.Default then
-        bDeleteContextItem.Click;
+        bDeleteContextItem.Click
+      else
+        FLang.MessageBox(53, mtWarning);
 end;
 
 { TMain.lwListColumnClick
@@ -1199,12 +1146,17 @@ var
   Properties: string;
 
 begin
-  if (PageControl.ActivePage = tsStartup) then
-    Startup.Item.GetItemInfo(Properties, FLang)
-  else
-    Context.Item.GetItemInfo(Properties, FLang);
+  try
+    if (PageControl.ActivePage = tsStartup) then
+      Startup.Item.GetItemInfo(Properties, FLang)
+    else
+      Context.Item.GetItemInfo(Properties, FLang);
 
-  FLang.MessageBox(Properties);
+    FLang.MessageBox(Properties);
+
+  except
+    FLang.MessageBox(53, mtWarning);
+  end;  //of begin
 end;
 
 { TMain.pmSearchClick
@@ -1687,9 +1639,6 @@ end;
 
 procedure TMain.PageControlChange(Sender: TObject);
 begin
-  mmExport.Enabled := True;
-  mmExport.Visible := True;
-
   // Disable some menu items not used on context menu page
   if (PageControl.ActivePage = tsContext) then
   begin
@@ -1698,22 +1647,19 @@ begin
     mmExportList.Visible := False;
     mmDate.Visible := False;
     mmRunOnce.Visible := False;
-    N2.Visible := False;
-    pmProperties.Visible := False;
 
+    // Load context menu entries dynamically
     if (Context.Count = 0) then
       ShowContextMenuEntries();
   end  //of begin
   else
-  begin
-    mmAdd.Visible := True;
-    mmImport.Visible := True;
-    mmExportList.Visible := True;
-    mmDate.Visible := True;
-    mmRunOnce.Visible := True;
-    N2.Visible := True;
-    pmProperties.Visible := True;
-  end;  //of if
+    begin
+      mmAdd.Visible := True;
+      mmImport.Visible := True;
+      mmExportList.Visible := True;
+      mmDate.Visible := True;
+      mmRunOnce.Visible := True;
+    end;  //of if
 end;
 
 { TMain.cbExpertClick
@@ -1745,7 +1691,7 @@ end;
 
   Closes Clearas. }
 
-procedure TMain.bCloseClick(Sender: TObject);
+procedure TMain.bCloseStartupClick(Sender: TObject);
 begin
   Close;
 end;
