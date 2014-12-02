@@ -620,11 +620,6 @@ object Main: TMain
     object N1: TMenuItem
       Caption = '-'
     end
-    object pmSearch: TMenuItem
-      Caption = 'nach Programm suchen'
-      Visible = False
-      OnClick = pmSearchClick
-    end
     object pmEdit: TMenuItem
       Caption = 'Pfad bearbeiten'
       Enabled = False

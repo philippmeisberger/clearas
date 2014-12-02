@@ -15,7 +15,7 @@ uses
   Contnrs, OSUtils, LanguageFile, IniFileParser;
 
 const
-  { Registry Keys }
+  { Registry keys }
   KEY_CONTEXTMENU = '\shellex\ContextMenuHandlers';
   KEY_DEACT = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\startupreg\';
   KEY_DEACT_FOLDER = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\startupfolder\';
@@ -24,7 +24,7 @@ const
   KEY_STARTUP = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Run';
   KEY_STARTUP32 = 'SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Run';
 
-  { Extensions von Backup-Dateien }
+  { Extensions of backup files }
   EXT_COMMON = '.CommonStartup';
   EXT_USER = '.Startup';
 
@@ -142,7 +142,6 @@ type
   { TStartupList }
   TStartupList = class(TRootList)
   private
-    FActAppIndex: PInt;
     FItem: TStartupListItem;
     FDeleteBackup: Boolean;
     function Add(AItem: TStartupListItem): Word; virtual;
@@ -177,7 +176,6 @@ type
     procedure LoadEnabled(const AAllUsers: Boolean); overload;
     procedure LoadEnabled(const ARootKey, AKeyPath: string); overload;
     { external }
-    property AppIndex: PInt read FActAppIndex write FActAppIndex;
     property DeleteBackup: Boolean read FDeleteBackup write FDeleteBackup;
     property Items[AIndex: Word]: TStartupListItem read GetItem; default;
     property Item: TStartupListItem read FItem write FItem;

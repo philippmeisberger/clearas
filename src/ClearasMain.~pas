@@ -1639,9 +1639,6 @@ end;
 
 procedure TMain.PageControlChange(Sender: TObject);
 begin
-  mmExport.Enabled := True;
-  mmExport.Visible := True;
-
   // Disable some menu items not used on context menu page
   if (PageControl.ActivePage = tsContext) then
   begin
@@ -1650,22 +1647,19 @@ begin
     mmExportList.Visible := False;
     mmDate.Visible := False;
     mmRunOnce.Visible := False;
-    N2.Visible := False;
-    pmProperties.Visible := False;
 
+    // Load context menu entries dynamically
     if (Context.Count = 0) then
       ShowContextMenuEntries();
   end  //of begin
   else
-  begin
-    mmAdd.Visible := True;
-    mmImport.Visible := True;
-    mmExportList.Visible := True;
-    mmDate.Visible := True;
-    mmRunOnce.Visible := True;
-    N2.Visible := True;
-    pmProperties.Visible := True;
-  end;  //of if
+    begin
+      mmAdd.Visible := True;
+      mmImport.Visible := True;
+      mmExportList.Visible := True;
+      mmDate.Visible := True;
+      mmRunOnce.Visible := True;
+    end;  //of if
 end;
 
 { TMain.cbExpertClick

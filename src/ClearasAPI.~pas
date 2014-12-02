@@ -142,7 +142,6 @@ type
   { TStartupList }
   TStartupList = class(TRootList)
   private
-    FActAppIndex: PInt;
     FItem: TStartupListItem;
     FDeleteBackup: Boolean;
     function Add(AItem: TStartupListItem): Word; virtual;
@@ -177,7 +176,6 @@ type
     procedure LoadEnabled(const AAllUsers: Boolean); overload;
     procedure LoadEnabled(const ARootKey, AKeyPath: string); overload;
     { external }
-    property AppIndex: PInt read FActAppIndex write FActAppIndex;
     property DeleteBackup: Boolean read FDeleteBackup write FDeleteBackup;
     property Items[AIndex: Word]: TStartupListItem read GetItem; default;
     property Item: TStartupListItem read FItem write FItem;
@@ -1556,6 +1554,7 @@ begin
 
   // Successful?
   if Deleted then
+  begin
     // Item was enabled
     if FItem.Enabled then
     begin
@@ -1565,11 +1564,12 @@ begin
 
       // Update active counter
       Dec(FActCount);
-
-      // Remove item from list
-      inherited Remove(FItem);
-      FItem := nil;
     end;  //of begin
+
+    // Remove item from list
+    inherited Remove(FItem);
+    FItem := nil;
+  end;  //of begin
 
   result := Deleted;
 end;

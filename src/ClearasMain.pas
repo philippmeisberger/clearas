@@ -47,7 +47,6 @@ type
     N7: TMenuItem;
     mmOptimate: TMenuItem;
     N8: TMenuItem;
-    pmSearch: TMenuItem;
     N6: TMenuItem;
     mmLang: TMenuItem;
     mmGer: TMenuItem;
@@ -88,6 +87,7 @@ type
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
+    procedure bCloseStartupClick(Sender: TObject);
     procedure bDeleteStartupItemClick(Sender: TObject);
     procedure bDeleteContextItemClick(Sender: TObject);
     procedure bEnableStartupItemClick(Sender: TObject);
@@ -96,6 +96,9 @@ type
     procedure bDisableContextItemClick(Sender: TObject);
     procedure bExportStartupItemClick(Sender: TObject);
     procedure bExportContextItemClick(Sender: TObject);
+    procedure cbExpertClick(Sender: TObject);
+    procedure FormKeyDown(Sender: TObject; var Key: Word;
+      Shift: TShiftState);
     procedure lwStartupSelectItem(Sender: TObject; Item: TListItem;
       Selected: Boolean);
     procedure lwContextSelectItem(Sender: TObject; Item: TListItem;
@@ -105,35 +108,30 @@ type
     procedure lwStartupColumnClick(Sender: TObject; Column: TListColumn);  //http://www.delphipraxis.net/283-wie-kann-ich-eine-listview-sortieren.html
     procedure lwStartupCompare(Sender: TObject; Item1, Item2: TListItem;   //http://www.delphipraxis.net/283-wie-kann-ich-eine-listview-sortieren.html
       Data: Integer; var Compare: Integer);
-    procedure pmChangeStatusClick(Sender: TObject);
-    procedure pmPropertiesClick(Sender: TObject);
-    procedure pmDeleteClick(Sender: TObject);
-    procedure pmSearchClick(Sender: TObject);
-    procedure pmEditClick(Sender: TObject);
-    procedure mmImportClick(Sender: TObject);
-    procedure mmRefreshClick(Sender: TObject);
+    procedure mmAddClick(Sender: TObject);
     procedure mmContextClick(Sender: TObject);
+    procedure mmDateClick(Sender: TObject);
+    procedure mmDelBackupClick(Sender: TObject);
     procedure mmExportListClick(Sender: TObject);
     procedure mmExportClick(Sender: TObject);
-    procedure mmAddClick(Sender: TObject);
+    procedure mmImportClick(Sender: TObject);
+    procedure mmRefreshClick(Sender: TObject);
     procedure mmGerClick(Sender: TObject);
     procedure mmEngClick(Sender: TObject);
     procedure mmFraClick(Sender: TObject);
     procedure mmStandardClick(Sender: TObject);
     procedure mmOptimateClick(Sender: TObject);
-    procedure mmDateClick(Sender: TObject);
-    procedure mmDelBackupClick(Sender: TObject);
     procedure mmInfoClick(Sender: TObject);
     procedure mmUpdateClick(Sender: TObject);
     procedure mmDownloadCertClick(Sender: TObject);
     procedure mmReportClick(Sender: TObject);
     procedure PageControlChange(Sender: TObject);
-    procedure cbExpertClick(Sender: TObject);
-    procedure FormKeyDown(Sender: TObject; var Key: Word;
-      Shift: TShiftState);
+    procedure pmChangeStatusClick(Sender: TObject);
+    procedure pmPropertiesClick(Sender: TObject);
+    procedure pmDeleteClick(Sender: TObject);
+    procedure pmEditClick(Sender: TObject);
     procedure lCopy1MouseLeave(Sender: TObject);
     procedure lCopy1MouseEnter(Sender: TObject);
-    procedure bCloseStartupClick(Sender: TObject);
     procedure lCopy1Click(Sender: TObject);
   private
     FColumnToSort: Word;
@@ -457,7 +455,6 @@ begin
 
     // Popup menu labels
     pmChangeStatus.Caption := bDisableStartupItem.Caption;
-    pmSearch.Caption := GetString(34);
     pmEdit.Caption := mmEdit.Caption;
     pmExport.Caption := mmExport.Caption;
     pmDelete.Caption := bDeleteStartupItem.Caption;
@@ -902,7 +899,26 @@ begin
   end;  //of try
 end;
 
-{ Selektion Events }
+{ TMain.FormKeyDown
+
+  Event method that is called when user presses a key. }
+
+procedure TMain.FormKeyDown(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
+begin
+  // Bind the "delete" key to delete methods
+  if (Key = VK_DELETE) then
+    if (PageControl.ActivePage = tsStartup) then
+      bDeleteStartupItem.Click
+    else
+      if (PageControl.ActivePage = tsContext) then
+        bDeleteContextItem.Click;
+end;
+
+{ TMain.lwStartupSelectItem
+
+  Event method that is called when user selects an item in list. }
+
 procedure TMain.lwStartupSelectItem(Sender: TObject; Item: TListItem;
   Selected: Boolean);
 var
@@ -993,6 +1009,9 @@ begin
     PopupMenu.AutoPopup := False;
 end;
 
+{ TMain.lwContextSelectItem
+
+  Event method that is called when user selects an item in list. }
 
 procedure TMain.lwContextSelectItem(Sender: TObject; Item: TListItem;
   Selected: Boolean);
@@ -1048,7 +1067,7 @@ begin
     PopupMenu.AutoPopup := False;
 end;
 
-{ TMain.lwListDblClick
+{ TMain.lwStartupDblClick
 
   Event method that is called when user double clicks on TListView item. }
 
@@ -1084,7 +1103,7 @@ begin
         FLang.MessageBox(53, mtWarning);
 end;
 
-{ TMain.lwListColumnClick
+{ TMain.lwStartupColumnClick
 
   Event method that is called when user clicks on TListView column. }
 
@@ -1094,7 +1113,7 @@ begin
   (Sender as TCustomListView).AlphaSort;
 end;
 
-{ TMain.lwListColumnClick
+{ TMain.lwStartupCompare
 
   Sorts a TListView column alphabetically. }
 
@@ -1113,7 +1132,7 @@ begin
     end;  //of if
 end;
 
-{ TMain.pmDeactivateClick
+{ TMain.pmChangeStatusClick
 
   Popup menu entry to deactivate an item. }
 
@@ -1157,54 +1176,6 @@ begin
   except
     FLang.MessageBox(53, mtWarning);
   end;  //of begin
-end;
-
-{ TMain.pmSearchClick
-
-  Popup menu entry to search for a lost file path. }
-
-procedure TMain.pmSearchClick(Sender: TObject);
-var
-  OpenDialog: TOpenDialog;
-  index: integer;
-
-begin
-  OpenDialog := TOpenDialog.Create(Self);
-
-  // Set TOpenDialog options
-  with OpenDialog do
-  begin
-    Title := FLang.GetString(34);
-    InitialDir := '%ProgramFiles%';
-    Filter := FLang.GetString(38);
-  end;  //of with
-
-  try
-    // User clicked "open"
-    if OpenDialog.Execute then
-    begin
-      // Save index to current selected list item
-      index := lwStartup.ItemFocused.Index;
-
-      // Write pointer to index in current item data
-      lwStartup.ItemFocused.Data := Pointer(index);
-
-      // Save this pointer
-      Startup.AppIndex := lwStartup.ItemFocused.Data;
-
-      // Let user edit the path
-      EditPath(OpenDialog.FileName);
-
-      // Select current item in list
-      lwStartupSelectItem(Self, lwStartup.ItemFocused, True);
-
-      // Enable edit once again
-      pmEdit.Enabled := True;
-    end;  //of begin
-
-  finally
-    OpenDialog.Free;
-  end;  //of try
 end;
 
 { TMain.pmEditClick
@@ -1277,170 +1248,6 @@ begin
   except
     FLang.MessageBox(55, mtError);
   end;  //of try
-end;
-
-{ TMain.mmImportClick
-
-  MainMenu entry to import a startup backup file. }
-
-procedure TMain.mmImportClick(Sender: TObject);
-var
-  OpenDialog: TOpenDialog;
-  
-begin
-  OpenDialog := TOpenDialog.Create(Self);
-
-  try
-    // Create Backup directory if not exists
-    if not DirectoryExists(TClearas.GetBackupDir()) then
-      ForceDirectories(TClearas.GetBackupDir());
-
-    // Set TOpenDialog options
-    with OpenDialog do
-    begin
-      Title := FLang.GetString(70);
-      InitialDir := TClearas.GetBackupDir();
-      Filter := Format(FLang.GetString(39), [EXT_USER, EXT_USER, EXT_COMMON, EXT_COMMON]);
-    end;  //of with
-
-    try
-      // User clicked "open"?
-      if OpenDialog.Execute then
-        // Item already exists?
-        if not Startup.ImportBackup(OpenDialog.FileName) then
-          FLang.MessageBox(FLang.Format(41, [Name]), mtError)
-        else
-          // Update TListView
-          ShowStartupEntries(False);
-
-    finally
-      OpenDialog.Free;
-    end;  //of try
-
-  except
-    FLang.MessageBox(55, mtError);
-  end;  //of try
-end;
-
-{ TMain.mmExportClick
-
-  MainMenu entry to export a single item as .reg file. }
-
-procedure TMain.mmExportClick(Sender: TObject);
-begin
-  if (PageControl.ActivePage = tsStartup) then
-    bExportStartupItem.Click()
-  else
-    if (PageControl.ActivePage = tsContext) then
-      bExportContextItem.Click()
-    else
-      FLang.MessageBox([95, 66, NEW_LINE, 53], mtWarning);
-end;
-
-{ TMain.mmExportListClick
-
-  MainMenu entry to export the complete autostart as .reg file (for backup). }
-
-procedure TMain.mmExportListClick(Sender: TObject);
-var
-  SaveDialog: TSaveDialog;
-
-begin
-  SaveDialog := TSaveDialog.Create(Self);
-
-  // Set TSaveDialog options
-  with SaveDialog do
-  begin
-    Title := FLang.GetString(72);
-
-    // Confirm overwrite
-    Options := Options + [ofOverwritePrompt];
-
-    // Filter .reg files only
-    Filter := FLang.GetString(36);
-    DefaultExt := '.reg';
-
-    // Sets a default file name
-    FileName := FLang.GetString(68) + DefaultExt;
-  end;  //of with
-
-  try
-    // User clicked "save"?
-    if SaveDialog.Execute then
-      Startup.ExportList(SaveDialog.FileName);
-
-  finally
-    SaveDialog.Free;
-  end;  //of try
-end;
-
-{ TMain.mmContextClick
-
-  MainMenu entry to set or resets the flag to delete backups automatically. }
-
-procedure TMain.mmDelBackupClick(Sender: TObject);
-begin
-  Startup.DeleteBackup := mmDelBackup.Checked;
-end;
-
-{ TMain.mmContextClick
-
-  MainMenu entry to add or removes "Clearas" in the recycle bin context menu. }
-
-procedure TMain.mmContextClick(Sender: TObject);
-begin
-  mmContext.Checked := TClearas.RegisterInContextMenu(mmContext.Checked);
-end;
-
-{ TMain.mmRefreshClick
-
-  MainMenu entry to refreshe the current shown TListView. }
-
-procedure TMain.mmRefreshClick(Sender: TObject);
-begin
-  if (PageControl.ActivePage = tsStartup) then
-    ShowStartupEntries()
-  else
-    ShowContextMenuEntries();
-end;
-
-{ TMain.mmStandardClick
-
-  MainMenu entry to resize all columns to standard size. }
-
-procedure TMain.mmStandardClick(Sender: TObject);
-begin
-  if (PageControl.ActivePage = tsStartup) then
-  begin
-    lwStartup.Columns[1].Width := 125;
-    lwStartup.Columns[2].Width := 124;
-    lwStartup.Columns[3].Width := 80;
-  end  //of begin
-  else
-    begin
-      lwContext.Columns[1].Width := 150;
-      lwContext.Columns[2].Width := 115;
-      lwContext.Columns[3].Width := 65;
-    end;  //of if
-end;
-
-{ TMain.mmOptimateClick
-
-  MainMenu entry to resize all columns to fit the shown text optimal. }
-
-procedure TMain.mmOptimateClick(Sender: TObject);
-begin
-  if (PageControl.ActivePage = tsStartup) then
-  begin
-    lwStartup.Columns[1].Width := ColumnTextWidth;
-    lwStartup.Columns[2].Width := ColumnTextWidth;
-    lwStartup.Columns[3].Width := ColumnTextWidth;
-  end  //of begin
-  else
-    begin
-      lwContext.Columns[1].Width := ColumnTextWidth;
-      lwContext.Columns[2].Width := ColumnTextWidth;
-    end;  //of if
 end;
 
 { TMain.mmDateClick
@@ -1519,6 +1326,170 @@ begin
 
       if not (WindowState = wsMaximized) then
         ShowStartupEntries(False);
+    end;  //of if
+end;
+
+{ TMain.mmExportClick
+
+  MainMenu entry to export a single item as .reg file. }
+
+procedure TMain.mmExportClick(Sender: TObject);
+begin
+  if (PageControl.ActivePage = tsStartup) then
+    bExportStartupItem.Click()
+  else
+    if (PageControl.ActivePage = tsContext) then
+      bExportContextItem.Click()
+    else
+      FLang.MessageBox([95, 66, NEW_LINE, 53], mtWarning);
+end;
+
+{ TMain.mmExportListClick
+
+  MainMenu entry to export the complete autostart as .reg file (for backup). }
+
+procedure TMain.mmExportListClick(Sender: TObject);
+var
+  SaveDialog: TSaveDialog;
+
+begin
+  SaveDialog := TSaveDialog.Create(Self);
+
+  // Set TSaveDialog options
+  with SaveDialog do
+  begin
+    Title := FLang.GetString(72);
+
+    // Confirm overwrite
+    Options := Options + [ofOverwritePrompt];
+
+    // Filter .reg files only
+    Filter := FLang.GetString(36);
+    DefaultExt := '.reg';
+
+    // Sets a default file name
+    FileName := FLang.GetString(68) + DefaultExt;
+  end;  //of with
+
+  try
+    // User clicked "save"?
+    if SaveDialog.Execute then
+      Startup.ExportList(SaveDialog.FileName);
+
+  finally
+    SaveDialog.Free;
+  end;  //of try
+end;
+
+{ TMain.mmImportClick
+
+  MainMenu entry to import a startup backup file. }
+
+procedure TMain.mmImportClick(Sender: TObject);
+var
+  OpenDialog: TOpenDialog;
+
+begin
+  OpenDialog := TOpenDialog.Create(Self);
+
+  try
+    // Create Backup directory if not exists
+    if not DirectoryExists(TClearas.GetBackupDir()) then
+      ForceDirectories(TClearas.GetBackupDir());
+
+    // Set TOpenDialog options
+    with OpenDialog do
+    begin
+      Title := FLang.GetString(70);
+      InitialDir := TClearas.GetBackupDir();
+      Filter := Format(FLang.GetString(39), [EXT_USER, EXT_USER, EXT_COMMON, EXT_COMMON]);
+    end;  //of with
+
+    try
+      // User clicked "open"?
+      if OpenDialog.Execute then
+        // Item already exists?
+        if not Startup.ImportBackup(OpenDialog.FileName) then
+          FLang.MessageBox(FLang.Format(41, [Name]), mtError)
+        else
+          // Update TListView
+          ShowStartupEntries(False);
+
+    finally
+      OpenDialog.Free;
+    end;  //of try
+
+  except
+    FLang.MessageBox(55, mtError);
+  end;  //of try
+end;
+
+{ TMain.mmDelBackupClick
+
+  MainMenu entry to set or resets the flag to delete backups automatically. }
+
+procedure TMain.mmDelBackupClick(Sender: TObject);
+begin
+  Startup.DeleteBackup := mmDelBackup.Checked;
+end;
+
+{ TMain.mmContextClick
+
+  MainMenu entry to add or removes "Clearas" in the recycle bin context menu. }
+
+procedure TMain.mmContextClick(Sender: TObject);
+begin
+  mmContext.Checked := TClearas.RegisterInContextMenu(mmContext.Checked);
+end;
+
+{ TMain.mmRefreshClick
+
+  MainMenu entry to refreshe the current shown TListView. }
+
+procedure TMain.mmRefreshClick(Sender: TObject);
+begin
+  if (PageControl.ActivePage = tsStartup) then
+    ShowStartupEntries()
+  else
+    ShowContextMenuEntries();
+end;
+
+{ TMain.mmStandardClick
+
+  MainMenu entry to resize all columns to standard size. }
+
+procedure TMain.mmStandardClick(Sender: TObject);
+begin
+  if (PageControl.ActivePage = tsStartup) then
+  begin
+    lwStartup.Columns[1].Width := 125;
+    lwStartup.Columns[2].Width := 124;
+    lwStartup.Columns[3].Width := 80;
+  end  //of begin
+  else
+    begin
+      lwContext.Columns[1].Width := 150;
+      lwContext.Columns[2].Width := 115;
+      lwContext.Columns[3].Width := 65;
+    end;  //of if
+end;
+
+{ TMain.mmOptimateClick
+
+  MainMenu entry to resize all columns to fit the shown text optimal. }
+
+procedure TMain.mmOptimateClick(Sender: TObject);
+begin
+  if (PageControl.ActivePage = tsStartup) then
+  begin
+    lwStartup.Columns[1].Width := ColumnTextWidth;
+    lwStartup.Columns[2].Width := ColumnTextWidth;
+    lwStartup.Columns[3].Width := ColumnTextWidth;
+  end  //of begin
+  else
+    begin
+      lwContext.Columns[1].Width := ColumnTextWidth;
+      lwContext.Columns[2].Width := ColumnTextWidth;
     end;  //of if
 end;
 
@@ -1669,22 +1640,6 @@ end;
 procedure TMain.cbExpertClick(Sender: TObject);
 begin
   ShowContextMenuEntries();
-end;
-
-{ TMain.FormKeyDown
-
-  Event method that is called when user presses a key. }
-
-procedure TMain.FormKeyDown(Sender: TObject; var Key: Word;
-  Shift: TShiftState);
-begin
-  // Bind the "delete" key to delete methods
-  if (Key = VK_DELETE) then
-     if (PageControl.ActivePage = tsStartup) then
-        bDeleteStartupItem.Click
-     else
-        if (PageControl.ActivePage = tsContext) then
-           bDeleteContextItem.Click;
 end;
 
 { TMain.bCloseClick
