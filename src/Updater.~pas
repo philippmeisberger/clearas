@@ -64,11 +64,10 @@ type
     lSize: TLabel;
     procedure bFinishedClick(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
-    procedure FormShow(Sender: TObject);
   private
     FOnUserCancel: TNotifyEvent;
     FThreadRuns: Boolean;
-    FDownloadDirectory, FTitle, FRemoteFileName, FLocalFileName, FFileName: string;
+    FTitle, FRemoteFileName, FLocalFileName, FFileName: string;
     FLang: TLanguageFile;
     FListeners: TInterfaceList;
     procedure Reset();
@@ -79,17 +78,19 @@ type
     procedure OnDownloading(Sender: TThread; const ADownloadSize: Integer);
     procedure OnDownloadStart(Sender: TThread; const AFileSize: Integer);
   public
-    constructor Create(AOwner: TComponent; ALang: TLanguageFile); reintroduce;
+    constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     procedure AddListener(AListener: IUpdateListener);
     procedure Download(ADownloadDirectory: string = ''); overload;
     procedure Download(ARemoteFileName, ALocalFileName: string;
       ADownloadDirectory: string = ''); overload;
     procedure DownloadCertificate();
+    function Execute(): Boolean;
     procedure RemoveListener(AListener: IUpdateListener);
     { external }
     property LanguageFile: TLanguageFile read FLang write FLang;
-    property DownloadDirectory: string read FDownloadDirectory write FDownloadDirectory;
+    property LocalFileName: string read FLocalFileName write FLocalFileName;
+    property RemoteFileName: string read FRemoteFileName write FRemoteFileName;
     property Title: string read FTitle write FTitle;
   end;
 {$ENDIF}
@@ -241,10 +242,9 @@ end;
 
   Constructor for creating an TUpdate instance. }
 
-constructor TUpdate.Create(AOwner: TComponent; ALang: TLanguageFile);
+constructor TUpdate.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-  FLang := ALang;
   FThreadRuns := False;
 
   // Init list of listeners
@@ -374,7 +374,7 @@ end;
 
   Starts downloading a file. }
 
-procedure TUpdate.Download(ARemoteFileName, ALocalFileName: string;
+procedure TUpdate.Download(ARemoteFileName, ALocalFileName: string; 
   ADownloadDirectory: string = '');
 var
   Url: string;
@@ -383,7 +383,7 @@ var
 begin
   FRemoteFileName := ARemoteFileName;
   FLocalFileName := ALocalFileName;
-
+  
   // Download folder still set?
   if (ADownloadDirectory <> '') then
     Continue := True
@@ -425,8 +425,6 @@ begin
   else
     // Cancel clicked
     Reset();
-
-  ShowModal;
 end;
 
 { TUpdate.DownloadCertificate
@@ -436,6 +434,16 @@ end;
 procedure TUpdate.DownloadCertificate();
 begin
   Download('cert.reg', 'Install_PMCW_Cert.reg', TOSUtils.GetTempDir());
+end;
+
+{ TUpdate.DownloadCertificate
+
+  Shows the Updater form. }
+
+function TUpdate.Execute(): Boolean;
+begin
+  Reset();
+  result := (ShowModal = mrOK);
 end;
 
 { public TUpdate.RemoveListener
@@ -476,9 +484,5 @@ begin
   ModalResult := mrCancel;
 end;
 {$ENDIF}
-
-procedure TUpdate.FormShow(Sender: TObject);begin
-  ModalResult := mrOK;
-end;
 
 end.

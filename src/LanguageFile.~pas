@@ -77,9 +77,6 @@ type
       AUpdate: Boolean = False): Integer; overload;
     function MessageBox(const AIndexes: array of Word; AType: TMessageType = mtInfo;
       AUpdate: Boolean = False): Integer; overload;
-    function MessageBox(const AIndexes: array of Word;
-      const AArgs: array of TVarRec; AType: TMessageType = mtInfo;
-      AUpdate: Boolean = False): Integer; overload;
     procedure RemoveListener(AListener: IChangeLanguageListener);
     { external }
     property Lang: {$IFDEF LINUX}string{$ELSE}Word{$ENDIF} read FLang write FLang;
@@ -331,17 +328,6 @@ function TLanguageFile.MessageBox(const AIndexes: array of Word;
   AType: TMessageType = mtInfo; AUpdate: Boolean = False): Integer;
 begin
   result := MessageBox(GetString(AIndexes), AType, AUpdate);
-end;
-
-{ public TLanguageFile.MessageBox
-
-  Shows a MessageBox with multiple formatted string text and specific look. }
-
-function TLanguageFile.MessageBox(const AIndexes: array of Word;
-  const AArgs: array of TVarRec; AType: TMessageType = mtInfo;
-  AUpdate: Boolean = False): Integer;
-begin
-  result := MessageBox(Format(AIndexes, AArgs), AType, AUpdate);
 end;
 
 { public TLanguageFile.RemoveListener

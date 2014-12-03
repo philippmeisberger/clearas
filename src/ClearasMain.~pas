@@ -13,7 +13,7 @@ interface
 uses
   Windows, SysUtils, Classes, Controls, Forms, ComCtrls, StdCtrls, ExtCtrls,
   Dialogs, Menus, Graphics, ShellAPI, ClearasAPI, ClearasInfo, LanguageFile,
-  OSUtils, Updater;
+  OSUtils, Updater, ChangesDialog;
 
 type
   { TMain }
@@ -140,7 +140,8 @@ type
     FLang: TLanguageFile;
     FUpdateCheck: TUpdateCheck;
     procedure AfterUpdate(Sender: TObject; ADownloadedFileName: string);
-    procedure BeforeUpdate(Sender: TObject; const ANewBuild: Cardinal);
+    procedure BeforeUpdate(Sender: TObject; const ANewBuild: Cardinal;
+      AChanges: string);
     function CreateStartupUserBackup(): Boolean;
     procedure EditPath(APath: string);
     procedure OnSearchProgress(Sender: TObject; AWorkCount: Cardinal);
@@ -211,8 +212,10 @@ var
   newWindows: Boolean;
 
 begin
-  windows := TOSUtils.GetWinVersion();
+  // Get version of Windows including service pack
+  windows := TOSUtils.GetWinVersion(True);
   newWindows := TOSUtils.CheckWindows();
+  lWindows.Caption := lWindows.Caption +' '+ windows;
 
   // Check for incompatibility
   if not (newWindows or (windows[1] in ['X','2'])) then
@@ -259,16 +262,56 @@ end;
 
   Event that is called by TUpdateCheck when TUpdateCheckThread finds an update. }
 
-procedure TMain.BeforeUpdate(Sender: TObject; const ANewBuild: Cardinal);
+procedure TMain.BeforeUpdate(Sender: TObject; const ANewBuild: Cardinal;
+  AChanges: string);
+var
+  ChangesDialog: TChangesDialog;
+  Updater: TUpdate;
+
 begin
-  // Show dialog: Ask for permitting download
-  with FLang do
-    if (MessageBox(Format([21, NEW_LINE, 22], [ANewBuild]), mtQuestion,
-      True) = IDYES) then
-      with TUpdate.Create(Self, FLang, FLang.GetString(24)) do
-        Download('clearas.exe', 'Clearas.exe')
-    else
+  if (AChanges <> '') then
+  begin
+    // Show changes dialog: Ask for permitting download
+    ChangesDialog := TChangesDialog.Create(Self);
+
+    with ChangesDialog do
+    begin
+      Title := 'Question';
+      Text := FLang.Format(21, [ANewBuild]);
+      Changes := AChanges;
+      Question := FLang.GetString(22);
+    end;  //of with
+
+    if not ChangesDialog.Execute() then
+    begin
       mmUpdate.Caption := FLang.GetString(24);
+      Abort;
+    end  //of begin
+    else
+      ChangesDialog.Free;
+  end  //of begin
+  else
+    if (FLang.MessageBox([21, NEW_LINE, 22], [ANewBuild], mtQuestion, True) = IDNO) then
+    begin
+      mmUpdate.Caption := FLang.GetString(24);
+      Abort;
+    end;  //of begin
+
+  try
+    Updater := TUpdate.Create(Self);
+
+    with Updater do
+    begin
+      LanguageFile := FLang;
+      Title := FLang.GetString(24);
+    end;  //of begin
+
+    if Updater.Execute() then
+      Updater.Download('clearas.exe', 'Clearas.exe');
+
+  finally
+    Updater.Free;
+  end;  //of try
 end;
 
 { private TMain.CreateStartupUserBackup
@@ -307,37 +350,43 @@ begin
     result := ShowRegistryExportDialog();
 end;
 
+{ private TMain.EditPath
+
+  Shows an input box for editing a file path. }
 
 procedure TMain.EditPath(APath: string);
 var
   FullPath: string;
 
-  function AddCommas(APath: string): string;
+  function AddQuotes(APath: string): string;
   begin
-    if (APath[1] <> '"') then
-       result := '"'+ APath +'"'
+    if ((Length(APath) > 0) and (APath[1] <> '"')) then
+      result := '"'+ APath +'"'
     else
-       result := APath;
+      result := APath;
   end;
 
 begin
-  with Startup do
-  begin
-    FullPath := InputBox(FLang.GetString(33), FLang.GetString(54), AddCommas(APath));  //Pfad bearbeiten Dialog
+  try
+    // Show input box for editing path
+    FullPath := InputBox(FLang.GetString(33), FLang.GetString(54), AddQuotes(APath));
 
-    if ((FullPath = '') or (FullPath = ' '))then
-      FullPath := AddCommas(APath);                                   //Fehlervermeidung: Standard-Wert
+    // Nothing entered: use default
+    if (Trim(FullPath) = '') then
+      FullPath := AddQuotes(APath);
 
-    if Item.Enabled then                                               //Item aktiviert?
-      TClearas.WriteStrValue(Item.RootKey, Item.KeyPath, Item.Name, FullPath)  //neuen Pfad in REG schreiben
-    else
-      begin                                                           //Item deaktiviert
-        TClearas.WriteStrValue(Item.RootKey, Item.KeyPath, 'Command', FullPath); //neuen Pfad in REG schreiben
-        TClearas.WriteStrValue(Item.RootKey, Item.KeyPath, 'Item', Item.Name);   //Name in REG schreiben
-      end;  //of if
+    if not Startup.ChangeItemFilePath(FullPath) then
+      raise Exception.Create('Could not change path!');
 
-    lwStartup.ItemFocused.SubItems[1] := FullPath;                        //in Liste schreiben
-  end;  //of with
+    lwStartup.ItemFocused.SubItems[1] := FullPath;
+
+  except
+    on E: EAccessViolation do
+      FLang.MessageBox(53, mtWarning);
+
+    on E: Exception do
+      FLang.MessageBox(57, mtError);
+  end;  //of try
 end;
 
 { private TMain.OnSearchProgress
@@ -455,7 +504,7 @@ begin
 
     // Popup menu labels
     pmChangeStatus.Caption := bDisableStartupItem.Caption;
-    pmEdit.Caption := mmEdit.Caption;
+    pmEdit.Caption := GetString(33);
     pmExport.Caption := mmExport.Caption;
     pmDelete.Caption := bDeleteStartupItem.Caption;
     pmProperties.Caption := GetString(35);
@@ -1526,13 +1575,29 @@ end;
   MainMenu entry that allows to download the PM Code Works certificate. }
 
 procedure TMain.mmDownloadCertClick(Sender: TObject);
+var
+  Updater: TUpdate;
+
 begin
   // Certificate already installed?
   if (TOSUtils.PMCertExists() and (FLang.MessageBox([27, NEW_LINE, 28],
     mtQuestion) = IDYES)) then
     // Download certificate
-    with TUpdate.Create(Self, FLang, FLang.GetString(16)) do
-      DownloadCertificate();
+  try
+    Updater := TUpdate.Create(Self);
+
+    with Updater do
+    begin
+      LanguageFile := FLang;
+      Title := FLang.GetString(16);
+    end;  //of begin
+
+    if Updater.Execute() then
+      Updater.DownloadCertificate();
+
+  finally
+    Updater.Free;
+  end;  //of try
 end;
 
 { TMain.mmUpdateClick

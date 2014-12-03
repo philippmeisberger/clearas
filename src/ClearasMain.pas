@@ -13,7 +13,7 @@ interface
 uses
   Windows, SysUtils, Classes, Controls, Forms, ComCtrls, StdCtrls, ExtCtrls,
   Dialogs, Menus, Graphics, ShellAPI, ClearasAPI, ClearasInfo, LanguageFile,
-  OSUtils, Updater;
+  OSUtils, Updater, ChangesDialog;
 
 type
   { TMain }
@@ -140,7 +140,8 @@ type
     FLang: TLanguageFile;
     FUpdateCheck: TUpdateCheck;
     procedure AfterUpdate(Sender: TObject; ADownloadedFileName: string);
-    procedure BeforeUpdate(Sender: TObject; const ANewBuild: Cardinal);
+    procedure BeforeUpdate(Sender: TObject; const ANewBuild: Cardinal;
+      AChanges: string);
     function CreateStartupUserBackup(): Boolean;
     procedure EditPath(APath: string);
     procedure OnSearchProgress(Sender: TObject; AWorkCount: Cardinal);
@@ -211,8 +212,10 @@ var
   newWindows: Boolean;
 
 begin
-  windows := TOSUtils.GetWinVersion();
+  // Get version of Windows including service pack
+  windows := TOSUtils.GetWinVersion(True);
   newWindows := TOSUtils.CheckWindows();
+  lWindows.Caption := lWindows.Caption +' '+ windows;
 
   // Check for incompatibility
   if not (newWindows or (windows[1] in ['X','2'])) then
@@ -259,16 +262,54 @@ end;
 
   Event that is called by TUpdateCheck when TUpdateCheckThread finds an update. }
 
-procedure TMain.BeforeUpdate(Sender: TObject; const ANewBuild: Cardinal);
+procedure TMain.BeforeUpdate(Sender: TObject; const ANewBuild: Cardinal;
+  AChanges: string);
+var
+  ChangesDialog: TChangesDialog;
+  Updater: TUpdate;
+
 begin
-  // Show dialog: Ask for permitting download
-  with FLang do
-    if (MessageBox(Format([21, NEW_LINE, 22], [ANewBuild]), mtQuestion,
-      True) = IDYES) then
-      with TUpdate.Create(Self, FLang, FLang.GetString(24)) do
-        Download('clearas.exe', 'Clearas.exe')
-    else
+  if (AChanges <> '') then
+  begin
+    // Show changes dialog: Ask for permitting download
+    ChangesDialog := TChangesDialog.Create(Self);
+
+    with ChangesDialog do
+    begin
+      Title := FLang.GetString(3);
+      Text := FLang.Format(21, [ANewBuild]);
+      Changes := AChanges;
+      Question := FLang.GetString(22);
+    end;  //of with
+
+    if not ChangesDialog.Execute() then
+    begin
       mmUpdate.Caption := FLang.GetString(24);
+      Abort;
+    end;  //of begin
+
+    ChangesDialog.Free;
+  end  //of begin
+  else
+    if (FLang.MessageBox([21, NEW_LINE, 22], [ANewBuild], mtQuestion, True) = IDNO) then
+    begin
+      mmUpdate.Caption := FLang.GetString(24);
+      Abort;
+    end;  //of begin
+
+  try
+    // init TUpdate instance
+    Updater := TUpdate.Create(Self, FLang);
+
+    with Updater do
+    begin
+      Title := FLang.GetString(24);
+      Download('clearas.exe', 'Clearas.exe');
+    end;  //of begin
+
+  finally
+    Updater.Free;
+  end;  //of try
 end;
 
 { private TMain.CreateStartupUserBackup
@@ -461,7 +502,7 @@ begin
 
     // Popup menu labels
     pmChangeStatus.Caption := bDisableStartupItem.Caption;
-    pmEdit.Caption := mmEdit.Caption;
+    pmEdit.Caption := GetString(33);
     pmExport.Caption := mmExport.Caption;
     pmDelete.Caption := bDeleteStartupItem.Caption;
     pmProperties.Caption := GetString(35);
@@ -1532,13 +1573,26 @@ end;
   MainMenu entry that allows to download the PM Code Works certificate. }
 
 procedure TMain.mmDownloadCertClick(Sender: TObject);
+var
+  Updater: TUpdate;
+
 begin
   // Certificate already installed?
   if (TOSUtils.PMCertExists() and (FLang.MessageBox([27, NEW_LINE, 28],
     mtQuestion) = IDYES)) then
     // Download certificate
-    with TUpdate.Create(Self, FLang, FLang.GetString(16)) do
+  try
+    Updater := TUpdate.Create(Self, FLang);
+
+    with Updater do
+    begin
+      Title := FLang.GetString(16);
       DownloadCertificate();
+    end;  //of begin
+
+  finally
+    Updater.Free;
+  end;  //of try
 end;
 
 { TMain.mmUpdateClick

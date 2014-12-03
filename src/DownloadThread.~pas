@@ -75,9 +75,9 @@ begin
 
   // Rename file if already exists?
   if AAllowOverwrite then
-    FFileName := AFileName
+     FFileName := AFileName
   else
-    FFileName := GetUniqueFileName(AFileName);
+     FFileName := GetUniqueFileName(AFileName);
 
   FUrl := AUrl;
   

@@ -412,8 +412,25 @@ object Info: TInfo
           'History'
           '--------'
           ''
-          'Version 3.1  [24.11.14]'
+          'Version 3.1  [xx.12.14]'
           ''
+          '- Neue (Popup Men'#252') Funktion "Pfad bearbeiten"'
+          
+            '  - Dateipfade von Autostart Eintr'#228'gen k'#246'nnen nach eigenem Ermes' +
+            'sen '
+          '    bearbeitet werden'
+          
+            '- Funktion "Nach Programm suchen" entfernt (durch "Pfad bearbeit' +
+            'en" ersetzt)'
+          '- Exception Handling stark verbessert'
+          
+            '- Ausw'#228'hlen von Elementen in Autostart und Kontextmen'#252' Listen be' +
+            'schleunigt'
+          '- "Backup importieren" verbessert'
+          '- Registry Dateiexport verbessert (eigener Parser)'
+          
+            '- Bug Fix: Gel'#246'schte Autostart Elemente werden nun korrekt aus L' +
+            'iste gel'#246'scht'
           '- Updater v2.2'
           ''
           '---------------------------------'

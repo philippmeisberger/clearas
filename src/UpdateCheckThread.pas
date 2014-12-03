@@ -20,7 +20,7 @@ const
   
 type
   { Thread event }
-  TOnUpdateAvailableEvent = procedure(Sender: TThread; const ANewBuild: Cardinal) of object;
+  TOnUpdateAvailableEvent = procedure(Sender: TThread; const ANewBuild: Cardinal; AChanges: string) of object;
   TOnUpdateCheckErrorEvent = procedure(Sender: TThread; AResponseCode: Integer) of object;
 
   { TUpdateCheckThread }
@@ -31,7 +31,7 @@ type
     FOnError: TOnUpdateCheckErrorEvent;
     FOnNoUpdate: TNotifyEvent;
     FCurBuild, FNewBuild: Cardinal;
-    FRemoteDirName: string;
+    FRemoteDirName, FChanges: string;
     { Synchronizable events }
     procedure DoNotifyOnError;
     procedure DoNotifyOnNoUpdate;
@@ -72,9 +72,6 @@ begin
 
   // Set the user-agent because of some issues with default 
   FHttp.Request.UserAgent := 'Mozilla/5.0 (PM Code Works Update Utility)';
-
-  // Set the referer field to deny future issues with referer check
-  FHttp.Request.Referer := 'http://www.pm-codeworks.de';
 end;
 
 { public TUpdateCheckThread.Destroy
@@ -93,18 +90,29 @@ end;
   
 procedure TUpdateCheckThread.Execute;
 var
-  VersionUrl: string;
-  
+  BaseUrl: string;
+
 begin
   try
+    BaseUrl := URL_DIR + FRemoteDirName;
+
     // Download version file for application
-    VersionUrl := URL_DIR + FRemoteDirName +'/version.txt';
-    FNewBuild := StrToInt(FHttp.Get(VersionUrl));
+    FNewBuild := StrToInt(FHttp.Get(BaseUrl +'/version.txt'));
 
     // Check if downloaded version is newer than current version
     if (FNewBuild > FCurBuild) then
+    begin
+      try
+        // Try to download the changes file
+        FChanges := FHttp.Get(BaseUrl +'/changes.txt');
+
+      except
+        // Only catch exception: changes file is optional!
+      end;  //of try
+
       // Notify "update available"
-      Synchronize(DoNotifyOnUpdate)
+      Synchronize(DoNotifyOnUpdate);
+    end  //of begin
     else
       // Notify "no update available"
       Synchronize(DoNotifyOnNoUpdate);
@@ -143,7 +151,7 @@ end;
 procedure TUpdateCheckThread.DoNotifyOnUpdate;
 begin
   if Assigned(OnUpdate) then
-    OnUpdate(Self, FNewBuild);
+    OnUpdate(Self, FNewBuild, FChanges);
 end;
 
 end.

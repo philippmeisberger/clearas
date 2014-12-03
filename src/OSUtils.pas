@@ -257,9 +257,9 @@ end;
 
   Returns if current Windows version is newer than Windows XP. }
 
-class function TOSUtils.CheckWindows: Boolean;
+class function TOSUtils.CheckWindows(): Boolean;
 begin
-  result := GetWinVersion()[1] in ['V','7','8'];
+  result := ((Win32Platform = 2) and (Win32MajorVersion >= 6));
 end;
 
 { public TOSUtils.CreateTempDir
@@ -425,19 +425,19 @@ begin
 
     // Windows 9x
     1: if (Win32MajorVersion = 4) then
-          case Win32MinorVersion of
+         case Win32MinorVersion of
             0: result := '95';
            10: result := '98';
            90: result := 'Me';
-          end;  //of case
+         end;  //of case
 
     // Windows NT
-    2: case Win32MajorVersion of            
+    2: case Win32MajorVersion of
          3: if (Win32MinorVersion = 51) then
-               result := 'NT 3.51';
+              result := 'NT 3.51';
 
          4: if (Win32MinorVersion = 0) then
-               result := 'NT 4';
+              result := 'NT 4';
 
          5: case Win32MinorVersion of
               0: result := '2000';
@@ -455,7 +455,7 @@ begin
 
   // Add information about service packs?
   if (AShowServicePack and (Win32CSDVersion <> '')) then
-      result := result +' '+ Win32CSDVersion;
+    result := result +' '+ Win32CSDVersion;
 end;
 {$ENDIF}
 
