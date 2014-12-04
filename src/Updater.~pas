@@ -23,13 +23,13 @@ uses
 
 const
   URL_DOWNLOAD = URL_DIR + 'downloader.php?file=';
-  
+
 type
   { IUpdateListener }
   IUpdateListener = interface
   ['{D1CDAE74-717A-4C5E-9152-15FBA4A15552}']
     procedure AfterUpdate(Sender: TObject; ADownloadedFileName: string);
-    procedure BeforeUpdate(Sender: TObject; const ANewBuild: Cardinal; AChanges: string);
+    procedure BeforeUpdate(Sender: TObject; const ANewBuild: Cardinal);
   end;
 
   { TUpdateCheck }
@@ -37,13 +37,12 @@ type
   private
     FLang: TLanguageFile;
     FUserUpdate: Boolean;
-    FRemoteDirName, FChanges: string;
+    FRemoteDirName: string;
     FNewBuild: Cardinal;
     { TUpdateCheckThread events }
     procedure OnCheckError(Sender: TThread; AResponseCode: Integer);
     procedure OnNoUpdateAvailable(Sender: TObject);
-    procedure OnUpdateAvailable(Sender: TThread; const ANewBuild: Cardinal;
-      AChanges: string);
+    procedure OnUpdateAvailable(Sender: TThread; const ANewBuild: Cardinal);
   protected
     FListeners: TInterfaceList;
   public
@@ -64,10 +63,11 @@ type
     lSize: TLabel;
     procedure bFinishedClick(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
+    procedure FormShow(Sender: TObject);
   private
     FOnUserCancel: TNotifyEvent;
     FThreadRuns: Boolean;
-    FTitle, FRemoteFileName, FLocalFileName, FFileName: string;
+    FDownloadDirectory, FTitle, FRemoteFileName, FLocalFileName, FFileName: string;
     FLang: TLanguageFile;
     FListeners: TInterfaceList;
     procedure Reset();
@@ -78,19 +78,17 @@ type
     procedure OnDownloading(Sender: TThread; const ADownloadSize: Integer);
     procedure OnDownloadStart(Sender: TThread; const AFileSize: Integer);
   public
-    constructor Create(AOwner: TComponent); override;
+    constructor Create(AOwner: TComponent; ALang: TLanguageFile); reintroduce;
     destructor Destroy; override;
     procedure AddListener(AListener: IUpdateListener);
     procedure Download(ADownloadDirectory: string = ''); overload;
     procedure Download(ARemoteFileName, ALocalFileName: string;
       ADownloadDirectory: string = ''); overload;
     procedure DownloadCertificate();
-    function Execute(): Boolean;
     procedure RemoveListener(AListener: IUpdateListener);
     { external }
     property LanguageFile: TLanguageFile read FLang write FLang;
-    property LocalFileName: string read FLocalFileName write FLocalFileName;
-    property RemoteFileName: string read FRemoteFileName write FRemoteFileName;
+    property DownloadDirectory: string read FDownloadDirectory write FDownloadDirectory;
     property Title: string read FTitle write FTitle;
   end;
 {$ENDIF}
@@ -162,26 +160,20 @@ end;
 
   Event method that is called when TUpdateCheckThread search returns an update. }
 
-procedure TUpdateCheck.OnUpdateAvailable(Sender: TThread; const ANewBuild: Cardinal;
-  AChanges: string);
+procedure TUpdateCheck.OnUpdateAvailable(Sender: TThread; const ANewBuild: Cardinal);
 var
   i: Word;
   Listener: IUpdateListener;
 
 begin
   if (FNewBuild <> ANewBuild) then
-  begin
     // Store newest build
     FNewBuild := ANewBuild;
-
-    // Store changes
-    FChanges := AChanges;
-  end;
 
   // Notify all listeners
   for i := 0 to FListeners.Count -1 do
     if Supports(FListeners[i], IUpdateListener, Listener) then
-      Listener.BeforeUpdate(Self, ANewBuild, AChanges);
+      Listener.BeforeUpdate(Self, ANewBuild);
 end;
 
 { public TUpdateCheck.AddListener
@@ -204,7 +196,7 @@ begin
   // Update already available?
   if (FNewBuild > 0) then
   begin
-    OnUpdateAvailable(nil, FNewBuild, FChanges);
+    OnUpdateAvailable(nil, FNewBuild);
     Abort;
   end;  //of begin
 
@@ -242,9 +234,10 @@ end;
 
   Constructor for creating an TUpdate instance. }
 
-constructor TUpdate.Create(AOwner: TComponent);
+constructor TUpdate.Create(AOwner: TComponent; ALang: TLanguageFile);
 begin
   inherited Create(AOwner);
+  FLang := ALang;
   FThreadRuns := False;
 
   // Init list of listeners
@@ -265,6 +258,15 @@ begin
   inherited Destroy;
 end;
 
+{ private TUpdate.FormShow
+
+  Event that is called when form is shown. }
+
+procedure TUpdate.FormShow(Sender: TObject);
+begin
+  Caption := FTitle;
+end;
+
 { private TUpdate.Reset
 
   Resets Update GUI. }
@@ -282,7 +284,7 @@ end;
 { private TUpdate.OnDownloadCancel
 
   Event method that is called by TDownloadThread when user canceled downlad. }
-  
+
 procedure TUpdate.OnDownloadCancel(Sender: TObject);
 begin
   Reset();
@@ -374,7 +376,7 @@ end;
 
   Starts downloading a file. }
 
-procedure TUpdate.Download(ARemoteFileName, ALocalFileName: string; 
+procedure TUpdate.Download(ARemoteFileName, ALocalFileName: string;
   ADownloadDirectory: string = '');
 var
   Url: string;
@@ -383,7 +385,7 @@ var
 begin
   FRemoteFileName := ARemoteFileName;
   FLocalFileName := ALocalFileName;
-  
+
   // Download folder still set?
   if (ADownloadDirectory <> '') then
     Continue := True
@@ -409,14 +411,12 @@ begin
         OnStart := OnDownloadStart;
         OnFinish := OnDownloadFinished;
         OnError := OnDownloadError;
-        Resume;      
+        Resume;
       end;  //of with
 
       // Caption "cancel"
       bFinished.Caption := FLang.GetString(6);
       FThreadRuns := True;
-
-      ModalResult := mrOK;
 
     except
       OnDownloadError(nil, 0);
@@ -425,6 +425,8 @@ begin
   else
     // Cancel clicked
     Reset();
+
+  ShowModal;
 end;
 
 { TUpdate.DownloadCertificate
@@ -434,16 +436,6 @@ end;
 procedure TUpdate.DownloadCertificate();
 begin
   Download('cert.reg', 'Install_PMCW_Cert.reg', TOSUtils.GetTempDir());
-end;
-
-{ TUpdate.DownloadCertificate
-
-  Shows the Updater form. }
-
-function TUpdate.Execute(): Boolean;
-begin
-  Reset();
-  result := (ShowModal = mrOK);
 end;
 
 { public TUpdate.RemoveListener
@@ -481,8 +473,7 @@ begin
     // Close form
     CanClose := True;
 
-  ModalResult := mrCancel;
 end;
 {$ENDIF}
 
-end.
+end.

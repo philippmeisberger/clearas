@@ -472,7 +472,6 @@ begin
   else
     // Close form
     CanClose := True;
-
 end;
 {$ENDIF}
 

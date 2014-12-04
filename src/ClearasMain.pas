@@ -266,25 +266,25 @@ var
   Updater: TUpdate;
 
 begin
-  if (FLang.MessageBox([21, NEW_LINE, 22], [ANewBuild], mtQuestion, True) = IDNO) then
+  // Ask user to permit download
+  if (FLang.MessageBox([21, NEW_LINE, 22], [ANewBuild], mtQuestion, True) = IDYES) then
   begin
-    mmUpdate.Caption := FLang.GetString(24);
-    Exit;
-  end;  //of begin
-
-  try
     // init TUpdate instance
     Updater := TUpdate.Create(Self, FLang);
 
-    with Updater do
-    begin
-      Title := FLang.GetString(24);
-      Download('clearas.exe', 'Clearas.exe');
-    end;  //of begin
+    try
+      with Updater do
+      begin
+        Title := FLang.GetString(24);
+        Download('clearas.exe', 'Clearas.exe');
+      end;  //of begin
 
-  finally
-    Updater.Free;
-  end;  //of try
+    finally
+      Updater.Free;
+    end;  //of try
+  end  //of begin
+  else
+    mmUpdate.Caption := FLang.GetString(24);
 end;
 
 { private TMain.CreateStartupUserBackup
@@ -1555,19 +1555,22 @@ begin
   // Certificate already installed?
   if (TOSUtils.PMCertExists() and (FLang.MessageBox([27, NEW_LINE, 28],
     mtQuestion) = IDYES)) then
-    // Download certificate
-  try
+  begin
+    // Init downloader
     Updater := TUpdate.Create(Self, FLang);
 
-    with Updater do
-    begin
-      Title := FLang.GetString(16);
-      DownloadCertificate();
-    end;  //of begin
+    // Download certificate
+    try
+      with Updater do
+      begin
+        Title := FLang.GetString(16);
+        DownloadCertificate();
+      end;  //of begin
 
-  finally
-    Updater.Free;
-  end;  //of try
+    finally
+      Updater.Free;
+    end;  //of try
+  end;  //of begin
 end;
 
 { TMain.mmUpdateClick
