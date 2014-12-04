@@ -75,15 +75,16 @@ begin
 
   // Rename file if already exists?
   if AAllowOverwrite then
-     FFileName := AFileName
+    FFileName := AFileName
   else
-     FFileName := GetUniqueFileName(AFileName);
+    FFileName := GetUniqueFileName(AFileName);
 
   FUrl := AUrl;
   
   // Init IdHTTP component dynamically
   FHttp := TIdHTTP.Create(nil);
 
+  // Setup some HTTP options
   with FHttp do
   begin
     // Link HTTP events
@@ -92,6 +93,9 @@ begin
 
     // Set the user-agent because of some issues with default
     Request.UserAgent := 'Mozilla/5.0 (PM Code Works Update Utility)';
+
+    // Close connection after completion of the response
+    Connection := 'close';
   end;  //of begin
 end;
 

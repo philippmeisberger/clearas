@@ -70,8 +70,15 @@ begin
   // Init IdHTTP component dynamically
   FHttp := TIdHTTP.Create(nil);
 
-  // Set the user-agent because of some issues with default
-  FHttp.Request.UserAgent := 'Mozilla/5.0 (PM Code Works Update Utility)';
+  // Setup some HTTP options
+  with FHttp.Request do
+  begin
+    // Set the user-agent because of some issues with default
+    UserAgent := 'Updater/2.2 (PM Code Works Update Utility)';
+
+    // Close connection after completion of the response
+    Connection := 'close';
+  end;  //of with
 end;
 
 { public TUpdateCheckThread.Destroy

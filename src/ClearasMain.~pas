@@ -140,8 +140,7 @@ type
     FLang: TLanguageFile;
     FUpdateCheck: TUpdateCheck;
     procedure AfterUpdate(Sender: TObject; ADownloadedFileName: string);
-    procedure BeforeUpdate(Sender: TObject; const ANewBuild: Cardinal;
-      AChanges: string);
+    procedure BeforeUpdate(Sender: TObject; const ANewBuild: Cardinal);
     function CreateStartupUserBackup(): Boolean;
     procedure EditPath(APath: string);
     procedure OnSearchProgress(Sender: TObject; AWorkCount: Cardinal);
@@ -235,7 +234,7 @@ begin
   //"Deaktivierungsdatum" nur ab Vista
   mmDate.Enabled := newWindows;
 
-  //Pfad in Kontextmenü aktualisieren     
+  //Pfad in Kontextmenü aktualisieren
   mmContext.Checked := TClearas.UpdateContextPath(FLang);
 
   // Auslesen
@@ -262,52 +261,26 @@ end;
 
   Event that is called by TUpdateCheck when TUpdateCheckThread finds an update. }
 
-procedure TMain.BeforeUpdate(Sender: TObject; const ANewBuild: Cardinal;
-  AChanges: string);
+procedure TMain.BeforeUpdate(Sender: TObject; const ANewBuild: Cardinal);
 var
-  ChangesDialog: TChangesDialog;
   Updater: TUpdate;
 
 begin
-  if (AChanges <> '') then
+  if (FLang.MessageBox([21, NEW_LINE, 22], [ANewBuild], mtQuestion, True) = IDNO) then
   begin
-    // Show changes dialog: Ask for permitting download
-    ChangesDialog := TChangesDialog.Create(Self);
-
-    with ChangesDialog do
-    begin
-      Title := 'Question';
-      Text := FLang.Format(21, [ANewBuild]);
-      Changes := AChanges;
-      Question := FLang.GetString(22);
-    end;  //of with
-
-    if not ChangesDialog.Execute() then
-    begin
-      mmUpdate.Caption := FLang.GetString(24);
-      Abort;
-    end  //of begin
-    else
-      ChangesDialog.Free;
-  end  //of begin
-  else
-    if (FLang.MessageBox([21, NEW_LINE, 22], [ANewBuild], mtQuestion, True) = IDNO) then
-    begin
-      mmUpdate.Caption := FLang.GetString(24);
-      Abort;
-    end;  //of begin
+    mmUpdate.Caption := FLang.GetString(24);
+    Exit;
+  end;  //of begin
 
   try
-    Updater := TUpdate.Create(Self);
+    // init TUpdate instance
+    Updater := TUpdate.Create(Self, FLang);
 
     with Updater do
     begin
-      LanguageFile := FLang;
       Title := FLang.GetString(24);
+      Download('clearas.exe', 'Clearas.exe');
     end;  //of begin
-
-    if Updater.Execute() then
-      Updater.Download('clearas.exe', 'Clearas.exe');
 
   finally
     Updater.Free;
@@ -1584,16 +1557,13 @@ begin
     mtQuestion) = IDYES)) then
     // Download certificate
   try
-    Updater := TUpdate.Create(Self);
+    Updater := TUpdate.Create(Self, FLang);
 
     with Updater do
     begin
-      LanguageFile := FLang;
       Title := FLang.GetString(16);
+      DownloadCertificate();
     end;  //of begin
-
-    if Updater.Execute() then
-      Updater.DownloadCertificate();
 
   finally
     Updater.Free;

@@ -84,6 +84,7 @@ begin
   // Init IdHTTP component dynamically
   FHttp := TIdHTTP.Create(nil);
 
+  // Setup some HTTP options
   with FHttp do
   begin
     // Link HTTP events
@@ -91,7 +92,10 @@ begin
     OnWork := Downloading;
 
     // Set the user-agent because of some issues with default
-    Request.UserAgent := 'Mozilla/5.0 (PM Code Works Update Utility)';
+    Request.UserAgent := 'Updater/2.2 (PM Code Works Update Utility)';
+
+    // Close connection after completion of the response
+    Request.Connection := 'close';
   end;  //of begin
 end;
 

@@ -13,7 +13,7 @@ interface
 uses
   Windows, SysUtils, Classes, Controls, Forms, ComCtrls, StdCtrls, ExtCtrls,
   Dialogs, Menus, Graphics, ShellAPI, ClearasAPI, ClearasInfo, LanguageFile,
-  OSUtils, Updater, ChangesDialog;
+  OSUtils, Updater;
 
 type
   { TMain }
