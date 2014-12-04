@@ -17,10 +17,10 @@ uses
 
 const
   URL_DIR = 'http://www.pm-codeworks.de/media/';
-  
+
 type
   { Thread event }
-  TOnUpdateAvailableEvent = procedure(Sender: TThread; const ANewBuild: Cardinal; AChanges: string) of object;
+  TOnUpdateAvailableEvent = procedure(Sender: TThread; const ANewBuild: Cardinal) of object;
   TOnUpdateCheckErrorEvent = procedure(Sender: TThread; AResponseCode: Integer) of object;
 
   { TUpdateCheckThread }
@@ -31,7 +31,7 @@ type
     FOnError: TOnUpdateCheckErrorEvent;
     FOnNoUpdate: TNotifyEvent;
     FCurBuild, FNewBuild: Cardinal;
-    FRemoteDirName, FChanges: string;
+    FRemoteDirName: string;
     { Synchronizable events }
     procedure DoNotifyOnError;
     procedure DoNotifyOnNoUpdate;
@@ -60,17 +60,17 @@ constructor TUpdateCheckThread.Create(ACurrentBuild: Cardinal;
   ARemoteDirName: string; ACreateSuspended: Boolean = True);
 begin
   inherited Create(ACreateSuspended);
-  
+
   // Thread deallocates his memory
   FreeOnTerminate := True;
 
   FCurBuild := ACurrentBuild;
   FRemoteDirName := ARemoteDirName;
-  
+
   // Init IdHTTP component dynamically
   FHttp := TIdHTTP.Create(nil);
 
-  // Set the user-agent because of some issues with default 
+  // Set the user-agent because of some issues with default
   FHttp.Request.UserAgent := 'Mozilla/5.0 (PM Code Works Update Utility)';
 end;
 
@@ -80,39 +80,28 @@ end;
 
 destructor TUpdateCheckThread.Destroy;
 begin
-  FHttp.Free; 
+  FHttp.Free;
   inherited Destroy;
 end;
 
 { protected TDownloadThread.Execute
 
   Thread main method that checks for update on an HTTP source. }
-  
+
 procedure TUpdateCheckThread.Execute;
 var
-  BaseUrl: string;
+  VersionUrl: string;
 
 begin
   try
-    BaseUrl := URL_DIR + FRemoteDirName;
-
     // Download version file for application
-    FNewBuild := StrToInt(FHttp.Get(BaseUrl +'/version.txt'));
+    VersionUrl := URL_DIR + FRemoteDirName +'/version.txt';
+    FNewBuild := StrToInt(FHttp.Get(VersionUrl));
 
     // Check if downloaded version is newer than current version
     if (FNewBuild > FCurBuild) then
-    begin
-      try
-        // Try to download the changes file
-        FChanges := FHttp.Get(BaseUrl +'/changes.txt');
-
-      except
-        // Only catch exception: changes file is optional!
-      end;  //of try
-
       // Notify "update available"
-      Synchronize(DoNotifyOnUpdate);
-    end  //of begin
+      Synchronize(DoNotifyOnUpdate)
     else
       // Notify "no update available"
       Synchronize(DoNotifyOnNoUpdate);
@@ -136,7 +125,7 @@ end;
 { private TDownloadThread.DoNotifyOnNoUpdate
 
   Synchronizable event method that is called when search returns no update. }
-  
+
 procedure TUpdateCheckThread.DoNotifyOnNoUpdate;
 begin
   if Assigned(OnNoUpdate) then
@@ -151,7 +140,7 @@ end;
 procedure TUpdateCheckThread.DoNotifyOnUpdate;
 begin
   if Assigned(OnUpdate) then
-    OnUpdate(Self, FNewBuild, FChanges);
+    OnUpdate(Self, FNewBuild);
 end;
 
-end.
+end.

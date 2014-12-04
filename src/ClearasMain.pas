@@ -140,8 +140,7 @@ type
     FLang: TLanguageFile;
     FUpdateCheck: TUpdateCheck;
     procedure AfterUpdate(Sender: TObject; ADownloadedFileName: string);
-    procedure BeforeUpdate(Sender: TObject; const ANewBuild: Cardinal;
-      AChanges: string);
+    procedure BeforeUpdate(Sender: TObject; const ANewBuild: Cardinal);
     function CreateStartupUserBackup(): Boolean;
     procedure EditPath(APath: string);
     procedure OnSearchProgress(Sender: TObject; AWorkCount: Cardinal);
@@ -235,7 +234,7 @@ begin
   //"Deaktivierungsdatum" nur ab Vista
   mmDate.Enabled := newWindows;
 
-  //Pfad in Kontextmenü aktualisieren     
+  //Pfad in Kontextmenü aktualisieren
   mmContext.Checked := TClearas.UpdateContextPath(FLang);
 
   // Auslesen
@@ -262,40 +261,16 @@ end;
 
   Event that is called by TUpdateCheck when TUpdateCheckThread finds an update. }
 
-procedure TMain.BeforeUpdate(Sender: TObject; const ANewBuild: Cardinal;
-  AChanges: string);
+procedure TMain.BeforeUpdate(Sender: TObject; const ANewBuild: Cardinal);
 var
-  ChangesDialog: TChangesDialog;
   Updater: TUpdate;
 
 begin
-  if (AChanges <> '') then
+  if (FLang.MessageBox([21, NEW_LINE, 22], [ANewBuild], mtQuestion, True) = IDNO) then
   begin
-    // Show changes dialog: Ask for permitting download
-    ChangesDialog := TChangesDialog.Create(Self);
-
-    with ChangesDialog do
-    begin
-      Title := FLang.GetString(3);
-      Text := FLang.Format(21, [ANewBuild]);
-      Changes := AChanges;
-      Question := FLang.GetString(22);
-    end;  //of with
-
-    if not ChangesDialog.Execute() then
-    begin
-      mmUpdate.Caption := FLang.GetString(24);
-      Abort;
-    end;  //of begin
-
-    ChangesDialog.Free;
-  end  //of begin
-  else
-    if (FLang.MessageBox([21, NEW_LINE, 22], [ANewBuild], mtQuestion, True) = IDNO) then
-    begin
-      mmUpdate.Caption := FLang.GetString(24);
-      Abort;
-    end;  //of begin
+    mmUpdate.Caption := FLang.GetString(24);
+    Exit;
+  end;  //of begin
 
   try
     // init TUpdate instance

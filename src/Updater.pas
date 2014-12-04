@@ -23,13 +23,13 @@ uses
 
 const
   URL_DOWNLOAD = URL_DIR + 'downloader.php?file=';
-  
+
 type
   { IUpdateListener }
   IUpdateListener = interface
   ['{D1CDAE74-717A-4C5E-9152-15FBA4A15552}']
     procedure AfterUpdate(Sender: TObject; ADownloadedFileName: string);
-    procedure BeforeUpdate(Sender: TObject; const ANewBuild: Cardinal; AChanges: string);
+    procedure BeforeUpdate(Sender: TObject; const ANewBuild: Cardinal);
   end;
 
   { TUpdateCheck }
@@ -37,13 +37,12 @@ type
   private
     FLang: TLanguageFile;
     FUserUpdate: Boolean;
-    FRemoteDirName, FChanges: string;
+    FRemoteDirName: string;
     FNewBuild: Cardinal;
     { TUpdateCheckThread events }
     procedure OnCheckError(Sender: TThread; AResponseCode: Integer);
     procedure OnNoUpdateAvailable(Sender: TObject);
-    procedure OnUpdateAvailable(Sender: TThread; const ANewBuild: Cardinal;
-      AChanges: string);
+    procedure OnUpdateAvailable(Sender: TThread; const ANewBuild: Cardinal);
   protected
     FListeners: TInterfaceList;
   public
@@ -161,26 +160,20 @@ end;
 
   Event method that is called when TUpdateCheckThread search returns an update. }
 
-procedure TUpdateCheck.OnUpdateAvailable(Sender: TThread; const ANewBuild: Cardinal;
-  AChanges: string);
+procedure TUpdateCheck.OnUpdateAvailable(Sender: TThread; const ANewBuild: Cardinal);
 var
   i: Word;
   Listener: IUpdateListener;
 
 begin
   if (FNewBuild <> ANewBuild) then
-  begin
     // Store newest build
     FNewBuild := ANewBuild;
-
-    // Store changes
-    FChanges := AChanges;
-  end;
 
   // Notify all listeners
   for i := 0 to FListeners.Count -1 do
     if Supports(FListeners[i], IUpdateListener, Listener) then
-      Listener.BeforeUpdate(Self, ANewBuild, AChanges);
+      Listener.BeforeUpdate(Self, ANewBuild);
 end;
 
 { public TUpdateCheck.AddListener
@@ -203,7 +196,7 @@ begin
   // Update already available?
   if (FNewBuild > 0) then
   begin
-    OnUpdateAvailable(nil, FNewBuild, FChanges);
+    OnUpdateAvailable(nil, FNewBuild);
     Abort;
   end;  //of begin
 
@@ -265,6 +258,15 @@ begin
   inherited Destroy;
 end;
 
+{ private TUpdate.FormShow
+
+  Event that is called when form is shown. }
+
+procedure TUpdate.FormShow(Sender: TObject);
+begin
+  Caption := FTitle;
+end;
+
 { private TUpdate.Reset
 
   Resets Update GUI. }
@@ -282,7 +284,7 @@ end;
 { private TUpdate.OnDownloadCancel
 
   Event method that is called by TDownloadThread when user canceled downlad. }
-  
+
 procedure TUpdate.OnDownloadCancel(Sender: TObject);
 begin
   Reset();
@@ -409,14 +411,12 @@ begin
         OnStart := OnDownloadStart;
         OnFinish := OnDownloadFinished;
         OnError := OnDownloadError;
-        Resume;      
+        Resume;
       end;  //of with
 
       // Caption "cancel"
       bFinished.Caption := FLang.GetString(6);
       FThreadRuns := True;
-
-      ModalResult := mrOK;
 
     except
       OnDownloadError(nil, 0);
@@ -473,12 +473,7 @@ begin
     // Close form
     CanClose := True;
 
-  ModalResult := mrCancel;
 end;
 {$ENDIF}
 
-procedure TUpdate.FormShow(Sender: TObject);begin
-  ModalResult := mrOK;
-end;
-
-end.
+end.
