@@ -1235,21 +1235,22 @@ end;
 
 procedure TStartupList.GetLnkFileNames(AFileList: TStrings; AAllUsers: Boolean);
 var
-  SR: TSearchRec;
+  SearchResult: TSearchRec;
   RootFolder: string;
 
 begin
   RootFolder := TClearas.GetStartUpDir(AAllUsers);
 
-  if (FindFirst(RootFolder + '*.lnk', faAnyFile, SR) = 0) then
+  if (FindFirst(RootFolder + '*.lnk', faAnyFile, SearchResult) = 0) then
     try
-      while (FindNext(SR) = 0) do
+      repeat
         // File found?
-        if (SR.Attr and faDirectory <> faDirectory) then
-          AFileList.Add(RootFolder + SR.Name);
+        if (SearchResult.Attr <> faDirectory) then
+          AFileList.Add(RootFolder + SearchResult.Name);
+      until FindNext(SearchResult) <> 0;
 
     finally
-      FindClose(SR);
+      FindClose(SearchResult);
     end;  //of try
 end;
 

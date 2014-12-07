@@ -310,6 +310,7 @@ begin
     begin
       FLang.MessageBox(Flang.Format(42, [TClearas.GetBackupDir()]));
       bExportStartupItem.Enabled := False;
+      pmExport.Enabled := False;
       result := True;
     end  //of with
     else
@@ -791,6 +792,7 @@ begin
       bDisableStartupItem.Enabled := True;
       bDisableStartupItem.Default := True;
       bExportStartupItem.Enabled := not Startup.BackupExists;
+      pmExport.Enabled := bExportStartupItem.Enabled;
       pmChangeStatus.Caption := bDisableStartupItem.Caption;
 
       // Delete deactivation timestamp if necassary
@@ -871,6 +873,8 @@ begin
 
       if (Startup.Item.StartupUser and not bExportStartupItem.Enabled) then
         bExportStartupItem.Enabled := True;
+
+      pmExport.Enabled := bExportStartupItem.Enabled;
 
       // Refresh counter label
       RefreshStartupCounter();
@@ -1014,15 +1018,21 @@ begin
 
         pmChangeStatus.Enabled := True;
         pmEdit.Enabled := True;
+
+        // Disable "export" if backup already exists
+        if (Startup.Item.StartupUser and Startup.Item.Enabled
+          and Startup.BackupExists()) then
+          bExportStartupItem.Enabled := False
+        else
+          bExportStartupItem.Enabled := True;
+
+        pmExport.Enabled := bExportStartupItem.Enabled;
       end;  //of if
 
     pmProperties.Enabled := True;
 
     bDeleteStartupItem.Enabled := True;
     pmDelete.Enabled := True;
-
-    bExportStartupItem.Enabled := True;
-    pmExport.Enabled := True;
 
     // Show popup menu
     PopupMenu.AutoPopup := True;
