@@ -407,12 +407,12 @@ object Info: TInfo
         Height = 177
         Lines.Strings = (
           'Clearas'
-          'Ein Freeware-Programm von PM Code Works'
+          'Ein Open-Source Projekt von PM Code Works'
           ''
           'History'
           '--------'
           ''
-          'Version 3.1  [xx.12.14]'
+          'Version 3.1  [10.12.14]'
           ''
           '- Neue (Popup Men'#252') Funktion "Pfad bearbeiten"'
           
@@ -432,6 +432,7 @@ object Info: TInfo
             '- Bug Fix: Gel'#246'schte Autostart Elemente werden nun korrekt aus L' +
             'iste gel'#246'scht'
           '- Updater v2.2'
+          '- OSUtils v1.7'
           ''
           '---------------------------------'
           ''
@@ -597,7 +598,7 @@ object Info: TInfo
           ''
           'Version 1.0  [13.04.11]'
           ''
-          'Erste funktionierende Version von Clearas.'
+          'Erste Version von Clearas.'
           ''
           'Features:'
           ''
@@ -608,19 +609,10 @@ object Info: TInfo
           
             '----------------------------------------------------------------' +
             '---------------------------------'
-          
-            'Clearas ist Freeware. Das hei'#223't, dass das Kopieren und die Weite' +
-            'rgabe von '
-          
-            'Clearas erlaubt ist. Weiterhin ist die Ver'#246'ffentlichung auf WWW-' +
-            'Servern und'
-          
-            'Datentr'#228'gern erlaubt. Allerdings muss das Programm vollst'#228'ndig u' +
-            'nd in der '
-          
-            'Original-Form kopiert werden. Das Kopieren von Teilen des Progra' +
-            'mmes ist'
-          'nicht erlaubt. '
+          'Clearas wurde unter der BSD-Lizenz ver'#246'ffentlicht und ist somit '
+          'Open-Source. Der Quelltext kann auf der Website heruntergeladen '
+          'werden.'
+          ''
           
             'Soll Clearas auf eine kommerzielle CD-ROM (mit Magazin) gepresst' +
             ' werden, '
@@ -629,7 +621,7 @@ object Info: TInfo
             'hicken.'
           'Meine Adresse erfahren Sie unter team@pm-codeworks.de.'
           ''
-          '11/2014')
+          '12/2014')
         ReadOnly = True
         ScrollBars = ssVertical
         TabOrder = 1

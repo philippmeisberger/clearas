@@ -32,9 +32,6 @@ type
     procedure FormCreate(Sender: TObject);
   end;
 
-var
-  Info: TInfo;
-
 
 implementation
 
