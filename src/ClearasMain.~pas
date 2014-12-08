@@ -308,7 +308,7 @@ begin
     // Successfully created backup of .lnk file?
     if Startup.CreateBackup() then
     begin
-      FLang.MessageBox(Flang.Format(42, [TClearas.GetBackupDir()]));
+      FLang.MessageBox(Flang.Format(42, [Startup.GetBackupLnk()]));
       bExportStartupItem.Enabled := False;
       pmExport.Enabled := False;
       result := True;
@@ -874,6 +874,8 @@ begin
       if (Startup.Item.StartupUser and not bExportStartupItem.Enabled) then
         bExportStartupItem.Enabled := True;
 
+      pmExport.Enabled := bExportStartupItem.Enabled;
+
       // Refresh counter label
       RefreshStartupCounter();
     end  //of begin
@@ -1245,24 +1247,19 @@ begin
       // User clicked "open"?
       if OpenDialog.Execute then
       begin
-        Name := '';
+        // Set default name
+        Name := TClearas.DeleteExt(ExtractFileName(OpenDialog.FileName));
 
-        if (OpenDialog.FilterIndex = 3) then
-        begin
-          // Set default name
-          Name := TClearas.DeleteExt(ExtractFileName(OpenDialog.FileName));
+        // User can edit the name
+        Name := InputBox(FLang.GetString(74), FLang.GetString(97), Name);
 
-          // User can edit the name
-          Name := InputBox(FLang.GetString(74), FLang.GetString(97), Name);
+        // Name must not be empty!
+        if (Name = '') then
+          Exit;
 
-          // Name must not be empty!
-          if (Name = '') then
-            Exit;
-
-          // optional parameters
-          if not InputQuery(FLang.GetString(99), FLang.GetString(98), Params) then
-            Exit;
-        end;  //of begin
+        // optional parameters
+        if not InputQuery(FLang.GetString(99), FLang.GetString(98), Params) then
+          Exit;
 
         // Item already exists?
         if not Startup.AddProgram(OpenDialog.FileName, Name) then
@@ -1441,7 +1438,7 @@ begin
       if OpenDialog.Execute then
         // Item already exists?
         if not Startup.ImportBackup(OpenDialog.FileName) then
-          FLang.MessageBox(FLang.Format(41, [Name]), mtError)
+          FLang.MessageBox(41, mtWarning)
         else
           // Update TListView
           ShowStartupEntries(False);

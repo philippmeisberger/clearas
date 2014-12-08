@@ -127,7 +127,6 @@ type
   TStartupUserItem = class(TStartupListItem)
   private
     function AddCircumflex(const AName: string): string;
-    function GetBackupLnk(): string;
     function GetExtension(): string;
     function StartupUserType(): Boolean; override;
   protected
@@ -136,6 +135,7 @@ type
   public
     function CreateBackup(): Boolean; override;
     function Delete(): Boolean; override;
+    function GetBackupLnk(): string;
     procedure GetItemInfo(var AProperties: string; ALangFile: TLanguageFile); override;
   end;
 
@@ -147,7 +147,6 @@ type
     function Add(AItem: TStartupListItem): Word; virtual;
     function DelCircumflex(AName: string): string;
     function DeleteBackupLnk(): Boolean;
-    function GetBackupLnk(): string;
     function GetItem(AIndex: Word): TStartupListItem;
     procedure GetLnkFileNames(AFileList: TStrings; AAllUsers: Boolean);
     function GetStartupUserType(const AKeyPath: string): string;
@@ -168,6 +167,7 @@ type
     function DeleteItem(): Boolean; override;
     procedure ExportItem(const AFileName: string; ARegFile: Boolean = True);
     procedure ExportList(const AFileName: string);
+    function GetBackupLnk(): string;
     function ImportBackup(const AFilePath: string): Boolean;
     function IndexOf(AName: string): Integer; overload;
     function IndexOf(AName: string; AEnabled: Boolean): Integer; overload;
@@ -360,7 +360,7 @@ begin
 
   // Extension found?
   if (Index <> 0) then
-    Delete(AName, Index, Index + Length(Ext)-1);
+    Delete(AName, Index, Index + Length(Ext) -1);
 
   result := AName;
 end;
@@ -416,19 +416,18 @@ var
 
 begin
   if AAllUsers then
-    folder := CSIDL_COMMON_STARTUP
+    Folder := CSIDL_COMMON_STARTUP
   else
-    folder := CSIDL_STARTUP;
+    Folder := CSIDL_STARTUP;
 
   if Succeeded(SHGetSpecialFolderLocation(0, Folder, ItemIDs)) then
   begin
     Path := StrAlloc(MAX_PATH);
     SHGetPathFromIDList(ItemIDs, Path);
-    result := string(Path);
-
-    if (result[length(result)] <> '\') then
-      result := result +'\';
-  end;  //of begin
+    result := IncludeTrailingBackslash(string(Path));
+  end  //of begin
+  else
+    result := '';
 end;
 
 { public TClearas.ReadLnkFile
@@ -959,15 +958,6 @@ begin
   result := StringReplace(AName, '\', '^', [rfReplaceAll]);
 end;
 
-{ private TStartupUserItem.GetBackupLnk
-
-  Returns the path to the backup file. }
-
-function TStartupUserItem.GetBackupLnk(): string;
-begin
-  result := GetBackupDir() + FName + GetExtension();
-end;
-
 { private TStartupUserItem.GetExtension
 
   Returns the extension of an item used at the end of a backup file. }
@@ -1102,7 +1092,7 @@ end;
 
 function TStartupUserItem.CreateBackup(): Boolean;
 begin
-  result := TClearas.CreateLnk(FFilePath, GetBackupLnk);
+  result := TClearas.CreateLnk(FFilePath, GetBackupLnk());
 end;
 
 { public TStartupUserItem.Delete
@@ -1139,6 +1129,15 @@ begin
       raise;
     end;  //of begin
   end;  //of try
+end;
+
+{ public TStartupUserItem.GetBackupLnk
+
+  Returns the path to the backup file. }
+
+function TStartupUserItem.GetBackupLnk(): string;
+begin
+  result := GetBackupDir() + FName + GetExtension();
 end;
 
 { public TStartupItem.GetItemInfo
@@ -1193,32 +1192,6 @@ begin
   result := DeleteFile(GetBackupLnk());
 end;
 
-{ private TStartupList.GetBackupLnk
-
-  Returns the path to the backup file. }
-
-function TStartupList.GetBackupLnk(): string;
-var
-  Pss: string;
-
-begin
-  if not FItem.Enabled then
-    result := TClearas.GetKeyValue('HKLM', FItem.KeyPath, 'backup')
-  else
-    begin
-      Pss := TClearas.GetBackupDir();
-
-      // Create backup directory only if not exists
-      if not DirectoryExists(Pss) then
-        ForceDirectories(Pss);
-
-      if (Pos('Common', FItem.TypeOf) <> 0) then
-        result := Pss +'\'+ FItem.Name + EXT_COMMON
-      else
-        result := Pss +'\'+ FItem.Name + EXT_USER;
-    end;  //of begin
-end;
-
 { private TStartupList.GetItem
 
   Returns a TStartupListItem object at index. }
@@ -1235,21 +1208,22 @@ end;
 
 procedure TStartupList.GetLnkFileNames(AFileList: TStrings; AAllUsers: Boolean);
 var
-  SR: TSearchRec;
+  SearchResult: TSearchRec;
   RootFolder: string;
 
 begin
   RootFolder := TClearas.GetStartUpDir(AAllUsers);
 
-  if (FindFirst(RootFolder + '*.lnk', faAnyFile, SR) = 0) then
+  if (FindFirst(RootFolder + '*.lnk', faAnyFile, SearchResult) = 0) then
     try
-      while (FindNext(SR) = 0) do
+      repeat
         // File found?
-        if (SR.Attr and faDirectory <> faDirectory) then
-          AFileList.Add(RootFolder + SR.Name);
+        if (SearchResult.Attr <> faDirectory) then
+          AFileList.Add(RootFolder + SearchResult.Name);
+      until FindNext(SearchResult) <> 0;
 
     finally
-      FindClose(SR);
+      FindClose(SearchResult);
     end;  //of try
 end;
 
@@ -1419,6 +1393,9 @@ end;
 
 function TStartupList.CreateBackup(): Boolean;
 begin
+  if not Assigned(FItem) then
+    raise EInvalidItem.Create('No item selected!');
+
   result := FItem.CreateBackup();
 end;
 
@@ -1437,7 +1414,7 @@ begin
   Ext := ExtractFileExt(Name);
 
   // Check invalid extension
-  if ((Ext <> '.exe') or (Ext <> '.lnk') or (Ext <> '.bat')) then
+  if ((Ext <> '.exe') and (Ext <> '.lnk') and (Ext <> '.bat')) then
     raise EInvalidArgument.Create('Invalid program extension! Must be ".exe"'
       +', ".lnk" or ".bat"!');
 
@@ -1445,7 +1422,7 @@ begin
   if (IndexOf(Name) <> -1) then
     Exit;
 
-  if ((Ext = '.exe') or (Ext = '.lnk')) then
+  if ((Ext = '.exe') and (Ext = '.lnk')) then
   begin
     if (ANickName <> '') then
       Name := ANickName
@@ -1464,7 +1441,6 @@ begin
       result := True;
     end;  //of begin
 end;
-
 
 { public TStartupList.BackupExists
 
@@ -1620,6 +1596,21 @@ begin
   end;  //of try
 end;
 
+{ public TStartupList.GetBackupLnk
+
+  Returns the path to the backup file. }
+
+function TStartupList.GetBackupLnk(): string;
+begin
+  result := '';
+
+  if not Assigned(FItem) then
+    raise EInvalidItem.Create('No item selected!');
+
+  if (FItem is TStartupUserItem) then
+    result := (FItem as TStartupUserItem).GetBackupLnk();
+end;
+
 { public TStartupList.ImportBackup
 
   Imports a startup user backup file and adds it to the list. }
@@ -1633,12 +1624,16 @@ begin
   Ext := ExtractFileExt(AFilePath);
 
   // Check invalid extension
-  if ((Ext <> EXT_COMMON) or (Ext <> EXT_USER)) then
+  if ((Ext <> EXT_COMMON) and (Ext <> EXT_USER)) then
     raise EInvalidArgument.Create('Invalid backup file extension! Must be "'
       + EXT_COMMON +'" or "'+ EXT_USER+'"!');
 
   // Set the name of item
-  Name := ExtractFileName(TClearas.DeleteExt(AFilePath)) +'.lnk';
+  Name := ExtractFileName(TClearas.DeleteExt(AFilePath));
+
+  // Append extension if not exist
+  if (ExtractFileExt(Name) = '') then
+    Name := Name +'.lnk';
 
   // Entry already exists?
   if (IndexOf(Name) <> -1) then
@@ -1904,10 +1899,9 @@ function TShellItem.Enable(): Boolean;
 begin
   try
     if not DeleteValue('HKCR', KeyPath, 'LegacyDisable') then
-      raise EStartupException.Create('Could not delete value "'+ KeyPath + '\LegacyDisable' +'"!')
-    else
-       result := True;
+      raise EStartupException.Create('Could not delete value "'+ KeyPath + '\LegacyDisable' +'"!');
 
+    result := True;
     FEnabled := True;
 
   except
@@ -1922,6 +1916,10 @@ end;
 
 
 { TShellExItem }
+
+{ private TShellExItem.GetKeyPath
+
+  Returns the Registry path to the item. }
 
 function TShellExItem.GetKeyPath(): string;
 begin

@@ -35,10 +35,9 @@ type
     class function SetKeyAccessMode(): Cardinal; deprecated;
   public
     class function DenyWOW64Redirection(AAccessRight: Cardinal): Cardinal;
-    class function DisableWow64FsRedirection(): Boolean;
+    class function Wow64FsRedirection(ADisable: Boolean): Boolean;
     class function GetArchitecture(): string;
     class function IsWindows64(): Boolean;
-    class function RevertWow64FsRedirection(): Boolean;
   end;
 
   { TOSUtils }
@@ -82,57 +81,46 @@ implementation
 {$IFDEF MSWINDOWS}
 { TWinWOW64 }
 
-{ protected TWinWOW64.DisableWow64FsRedirection
+{ protected TWinWOW64.Wow64FsRedirection
 
-  Disables the WOW64 redirection on 64bit Windows. }
+  Disables or reverts the WOW64 redirection on 64bit Windows. }
 
-class function TWinWOW64.DisableWow64FsRedirection(): Boolean;
+class function TWinWOW64.Wow64FsRedirection(ADisable: Boolean): Boolean;
 type
-  TWow64DisableWow64FsRedirection = function(out OldValue: Pointer): BOOL; stdcall;
+  TWow64DisableWow64FsRedirection = function(OldValue: Pointer): BOOL; stdcall;
+  TWow64RevertWow64FsRedirection = function(OldValue: Pointer): BOOL; stdcall;
 
 var
   LibraryHandle: HMODULE;
   Wow64DisableWow64FsRedirection: TWow64DisableWow64FsRedirection;
-  OldValue: Pointer;
-
-begin
-  result := False;
-  LibraryHandle := GetModuleHandle(kernel32);
-
-  if (LibraryHandle <> 0) then
-  begin
-    Wow64DisableWow64FsRedirection := GetProcAddress(LibraryHandle, 'Wow64DisableWow64FsRedirection');
-
-    // Loading of Wow64DisableWow64FsRedirection successful?
-    if Assigned(Wow64DisableWow64FsRedirection) then
-      result := Wow64DisableWow64FsRedirection(OldValue);
-  end;  //of begin
-end;
-
-{ protected TWinWOW64.RevertWow64FsRedirection
-
-  Restores the WOW64 redirection on 64bit Windows. }
-
-class function TWinWOW64.RevertWow64FsRedirection(): Boolean;
-type
-  TWow64RevertWow64FsRedirection = function(out OldValue: Pointer): BOOL; stdcall;
-
-var
-  LibraryHandle: HMODULE;
   Wow64RevertWow64FsRedirection: TWow64RevertWow64FsRedirection;
-  OldValue: Pointer;
 
 begin
   result := False;
+  Wow64DisableWow64FsRedirection := nil;
+  Wow64RevertWow64FsRedirection := nil;
+
+  // Init handle
   LibraryHandle := GetModuleHandle(kernel32);
 
   if (LibraryHandle <> 0) then
   begin
-    Wow64RevertWow64FsRedirection := GetProcAddress(LibraryHandle, 'Wow64RevertWow64FsRedirection');
+    if ADisable then
+    begin
+      Wow64DisableWow64FsRedirection := GetProcAddress(LibraryHandle, 'Wow64DisableWow64FsRedirection');
 
-    // Loading of Wow64RevertWow64FsRedirection successful?
-    if Assigned(Wow64RevertWow64FsRedirection) then
-      result := Wow64RevertWow64FsRedirection(OldValue);
+      // Loading of Wow64DisableWow64FsRedirection successful?
+      if Assigned(Wow64DisableWow64FsRedirection) then
+        result := Wow64DisableWow64FsRedirection(nil);
+    end  //of begin
+    else
+       begin
+         Wow64RevertWow64FsRedirection := GetProcAddress(LibraryHandle, 'Wow64RevertWow64FsRedirection');
+
+         // Loading of Wow64RevertWow64FsRedirection successful?
+         if Assigned(Wow64RevertWow64FsRedirection) then
+           result := Wow64RevertWow64FsRedirection(nil);
+       end;  //of begin
   end;  //of begin
 end;
 
