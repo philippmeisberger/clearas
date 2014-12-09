@@ -78,7 +78,8 @@ type
   TRootList = class(TObjectList)
   private
     FActCount: Word;
-    function GetItem(AIndex: Word): TRootItem;
+  protected
+    function RootItemAt(AIndex: Word): TRootItem;
   public
     constructor Create;
     destructor Destroy; override;
@@ -150,7 +151,7 @@ type
     function Add(AItem: TStartupListItem): Word; virtual;
     function DelCircumflex(AName: string): string;
     function DeleteBackupLnk(): Boolean;
-    function GetItem(AIndex: Word): TStartupListItem;
+    function ItemAt(AIndex: Word): TStartupListItem;
     procedure GetLnkFileNames(AFileList: TStrings; AAllUsers: Boolean);
     function GetStartupUserType(const AKeyPath: string): string;
   protected
@@ -178,7 +179,7 @@ type
     procedure LoadEnabled(const ARootKey, AKeyPath: string); overload;
     { external }
     property DeleteBackup: Boolean read FDeleteBackup write FDeleteBackup;
-    property Items[AIndex: Word]: TStartupListItem read GetItem; default;
+    property Items[AIndex: Word]: TStartupListItem read ItemAt; default;
     property Item: TStartupListItem read FItem write FItem;
   end;
 
@@ -231,7 +232,7 @@ type
     FContextCount: TNotifyEvent;
     function Add(AItem: TContextListItem): Word; virtual;
     function FindDouble(AName, AKeyName: string): Boolean;
-    function GetItem(AIndex: Word): TContextListItem;
+    function ItemAt(AIndex: Word): TContextListItem;
   protected
     function AddShellItem(const AName,  ALocation: string; AEnabled: Boolean): Word;
     function AddShellExItem(const AName, ALocation: string; AEnabled: Boolean): Word;
@@ -246,7 +247,7 @@ type
     function IndexOf(AName, ALocation: string): Integer; overload;
     procedure LoadContextMenus();
     { external }
-    property Items[AIndex: Word]: TContextListItem read GetItem; default;
+    property Items[AIndex: Word]: TContextListItem read ItemAt; default;
     property Item: TContextListItem read FItem write FItem;
     property OnSearch: TOnSearchEvent read FWorkCount write FWorkCount;
     property OnSearchBegin: TOnSearchEvent read FWorkCountMax write FWorkCountMax;
@@ -646,13 +647,13 @@ begin
   inherited Destroy;
 end;
 
-{ private TRootList.GetItem
+{ protected TRootList.RootItemAt
 
   Returns a TRootItem object at index. }
 
-function TRootList.GetItem(AIndex: Word): TRootItem;
+function TRootList.RootItemAt(AIndex: Word): TRootItem;
 begin
-  result := TRootItem(Items[AIndex]);
+  result := TRootItem(Self.Items[AIndex]);
 end;
 
 { public TRootList.Clear
@@ -677,7 +678,7 @@ begin
   result := -1;
 
   for i := 0 to Count -1 do
-    if (GetItem(i).Name = AName) then
+    if (RootItemAt(i).Name = AName) then
     begin
       result := i;
       Break;
@@ -691,16 +692,21 @@ end;
 function TRootList.IndexOf(AName: string; AEnabled: Boolean): Integer;
 var
   i: Integer;
+  Item: TRootItem;
 
 begin
   result := -1;
 
   for i := 0 to Count -1 do
-    if ((GetItem(i).Name = AName) and (GetItem(i).Enabled = AEnabled))then
+  begin
+    Item := RootItemAt(i);
+
+    if ((Item.Name = AName) and (Item.Enabled = AEnabled))then
     begin
       result := i;
       Break;
     end;  //of begin
+  end;  //of for
 end;
 
 
@@ -952,7 +958,7 @@ end;
 
 function TStartupItem.CreateBackup(): Boolean;
 begin
-  result := True;
+  result := False;
 end;
 
 { public TStartupItem.Delete
@@ -1065,11 +1071,13 @@ begin
         if not DirectoryExists(GetBackupDir()) then
           ForceDirectories(GetBackupDir());
 
-        // Create backup .lnk
-        CreateLnk(FFilePath, BackupLnk);
+        // Create backup by copying original .lnk
+        if not CopyFile(PChar(FKeyPath), PChar(BackupLnk), False) then
+          raise EStartupException.Create('Could not create backup file!');
 
         // Delete original .lnk
-        DeleteFile(FKeyPath);
+        if not DeleteFile(FKeyPath) then
+          raise EStartupException.Create('Could not delete .lnk file!');
 
         // Update information
         FKeyPath := KEY_DEACT_FOLDER + KeyName;
@@ -1100,27 +1108,34 @@ end;
 
 function TStartupUserItem.Enable(): Boolean;
 var
-  Path: string;
+  Path, BackupLnk: string;
 
 begin
   try
     Path := GetKeyValue('HKLM', FKeyPath, 'path');
+    BackupLnk := GetBackupLnk();
 
-    // Successfully created .lnk?
-    if CreateLnk(FFilePath, Path) then
+    // Backup file exists?
+    if FileExists(BackupLnk) then
     begin
-      // Could not delete old key?
-      if not DeleteKey('HKLM', KEY_DEACT_FOLDER, AddCircumflex(Path)) then
-        raise EStartupException.Create('Could not delete key "'+ FKeyPath +'"!');
-
-      // Update information
-      FKeyPath := Path;
-      FRootKey := '';
-      FEnabled := True;
-      result := True;
+      // Failed to restore backup file?
+      if not CopyFile(PChar(BackupLnk), PChar(Path), True) then
+        raise EStartupException.Create('Could not create .lnk file!');
     end  //of begin
     else
-      raise EStartupException.Create('Could not create .lnk file!');
+      // Failed to create new .lnk file?
+      if not CreateLnk(FFilePath, Path) then
+        raise EStartupException.Create('Could not create .lnk file!');
+
+    // Could not delete old key?
+    if not DeleteKey('HKLM', KEY_DEACT_FOLDER, AddCircumflex(Path)) then
+      raise EStartupException.Create('Could not delete key "'+ FKeyPath +'"!');
+
+    // Update information
+    FKeyPath := Path;
+    FRootKey := '';
+    FEnabled := True;
+    result := True;
 
   except
     on E: Exception do
@@ -1238,13 +1253,13 @@ begin
   result := DeleteFile(GetBackupLnk());
 end;
 
-{ private TStartupList.GetItem
+{ private TStartupList.ItemAt
 
   Returns a TStartupListItem object at index. }
 
-function TStartupList.GetItem(AIndex: Word): TStartupListItem;
+function TStartupList.ItemAt(AIndex: Word): TStartupListItem;
 begin
-  result := TStartupListItem(inherited Items[AIndex]);
+  result := TStartupListItem(RootItemAt(AIndex));
 end;
 
 { private TStartupList.GetLnkFileNames
@@ -1439,6 +1454,8 @@ end;
 
 function TStartupList.CreateBackup(): Boolean;
 begin
+  result := False;
+  
   if not Assigned(FItem) then
     raise EInvalidItem.Create('No item selected!');
 
@@ -1582,16 +1599,14 @@ begin
   // Successful?
   if Deleted then
   begin
+    // Decide to delete backup
+    if (FDeleteBackup and FItem.StartupUser and BackupExists()) then
+      DeleteBackupLnk();
+
     // Item was enabled
     if FItem.Enabled then
-    begin
-      // Decide to delete backup
-      if (FDeleteBackup and FItem.StartupUser) then
-        DeleteBackupLnk();
-
       // Update active counter
       Dec(FActCount);
-    end;  //of begin
 
     // Remove item from list
     inherited Remove(FItem);
@@ -1630,7 +1645,7 @@ begin
   try
     for i := 0 to Count -1 do
     begin
-      Item := GetItem(i);
+      Item := ItemAt(i);
       RegFile.ExportKey(TOSUtils.StrToHKey(Item.RootKey), Item.KeyPath, True);
     end;  //of for
 
@@ -2016,16 +2031,16 @@ begin
   result := False;
 
   if ((Count > 0) and (IndexOf(AName) <> -1)) then
-    result := (GetItem(IndexOf(AName)).TypeOf = AKeyName);
+    result := (ItemAt(IndexOf(AName)).TypeOf = AKeyName);
 end;
 
-{ private TContextList.GetItem
+{ private TContextList.ItemAt
 
   Returns a TContextListItem object at index. }
 
-function TContextList.GetItem(AIndex: Word): TContextListItem;
+function TContextList.ItemAt(AIndex: Word): TContextListItem;
 begin
-  result := TContextListItem(inherited Items[AIndex]);
+  result := TContextListItem(RootItemAt(AIndex));
 end;
 
 { protected TContextList.AddShellItem
@@ -2318,16 +2333,21 @@ end;
 function TContextList.IndexOf(AName, ALocation: string): Integer;
 var
   i: Integer;
+  Item: TContextListItem;
 
 begin
   result := -1;
 
   for i := 0 to Count -1 do
-    if ((GetItem(i).Name = AName) and (GetItem(i).Location = ALocation)) then
+  begin
+    Item := ItemAt(i);
+
+    if ((Item.Name = AName) and (Item.Location = ALocation)) then
     begin
       result := i;
       Break;
     end;  //of begin
+  end;  //of for
 end;
 
 { public TContextList.LoadContextMenus
