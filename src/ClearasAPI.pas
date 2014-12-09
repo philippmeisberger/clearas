@@ -78,12 +78,15 @@ type
   TRootList = class(TObjectList)
   private
     FActCount: Word;
+    function GetItem(AIndex: Word): TRootItem;
   public
     constructor Create;
     destructor Destroy; override;
     function ChangeItemStatus(): Boolean; virtual; abstract;
     procedure Clear; override;
     function DeleteItem(): Boolean; virtual; abstract;
+    function IndexOf(const AName: string): Integer; overload;
+    function IndexOf(AName: string; AEnabled: Boolean): Integer; overload;
     { external }
     property ActCount: Word read FActCount;
   end;
@@ -169,8 +172,6 @@ type
     procedure ExportList(const AFileName: string);
     function GetBackupLnk(): string;
     function ImportBackup(const AFilePath: string): Boolean;
-    function IndexOf(AName: string): Integer; overload;
-    function IndexOf(AName: string; AEnabled: Boolean): Integer; overload;
     procedure LoadAutostart(AIncludeRunOnce: Boolean);
     procedure LoadDisabled(const AKeyPath: string);
     procedure LoadEnabled(const AAllUsers: Boolean); overload;
@@ -242,7 +243,6 @@ type
     function ChangeItemStatus(): Boolean; override;
     function DeleteItem(): Boolean; override;
     procedure ExportItem(const AFileName: string);
-    function IndexOf(AName: string): Integer; overload;
     function IndexOf(AName, ALocation: string): Integer; overload;
     procedure LoadContextMenus();
     { external }
@@ -255,7 +255,6 @@ type
 
 implementation
 
-uses Math;
 
 { TClearas }
 
@@ -647,6 +646,15 @@ begin
   inherited Destroy;
 end;
 
+{ private TRootList.GetItem
+
+  Returns a TRootItem object at index. }
+
+function TRootList.GetItem(AIndex: Word): TRootItem;
+begin
+  result := TRootItem(Items[AIndex]);
+end;
+
 { public TRootList.Clear
 
   Deletes all items in the list. }
@@ -655,6 +663,44 @@ procedure TRootList.Clear;
 begin
   inherited Clear;
   FActCount := 0;
+end;
+
+{ public TRootList.IndexOf
+
+  Returns the index of an item checking name only. }
+
+function TRootList.IndexOf(const AName: string): Integer;
+var
+  i: Integer;
+
+begin
+  result := -1;
+
+  for i := 0 to Count -1 do
+    if (GetItem(i).Name = AName) then
+    begin
+      result := i;
+      Break;
+    end;  //of begin
+end;
+
+{ public TRootList.IndexOf
+
+  Returns the index of an item checking name and status. }
+
+function TRootList.IndexOf(AName: string; AEnabled: Boolean): Integer;
+var
+  i: Integer;
+
+begin
+  result := -1;
+
+  for i := 0 to Count -1 do
+    if ((GetItem(i).Name = AName) and (GetItem(i).Enabled = AEnabled))then
+    begin
+      result := i;
+      Break;
+    end;  //of begin
 end;
 
 
@@ -1113,7 +1159,7 @@ begin
     if FEnabled then
     begin
       // Could not delete .lnk?
-      if not DeleteFile(FKeyPath) then 
+      if not DeleteFile(FKeyPath) then
         raise EStartupException.Create('Could not delete .lnk "'+ FKeyPath +'"!');
     end  //of begin
     else
@@ -1340,9 +1386,9 @@ var
   Item: TStartupListItem;
 
 begin
-  Item := TStartupUserItem.Create(Count, False); 
+  Item := TStartupUserItem.Create(Count, False);
 
-  with Item do 
+  with Item do
   begin
     RootKey := 'HKLM';
     KeyPath := AKeyPath;
@@ -1645,44 +1691,6 @@ begin
 
   // Create .lnk file and add it to list
   result := AddNewStartupUserItem(Name, Path, Ext = EXT_COMMON);
-end;
-
-{ public TStartupList.IndexOf
-
-  Returns the index of an item checking name only. }
-
-function TStartupList.IndexOf(AName: string): Integer;
-var
-  i: Integer;
-
-begin
-  result := -1;
-
-  for i := 0 to Count -1 do
-    if (GetItem(i).Name = AName) then
-    begin
-      result := i;
-      Break;
-    end;  //of begin
-end;
-
-{ public TStartupList.IndexOf
-
-  Returns the index of an item checking name and status. }
-
-function TStartupList.IndexOf(AName: string; AEnabled: Boolean): Integer;
-var
-  i: Integer;
-
-begin
-  result := -1;
-
-  for i := 0 to Count -1 do
-    if ((GetItem(i).Name = AName) and (GetItem(i).Enabled = AEnabled))then
-    begin
-      result := i;
-      Break;
-    end;  //of begin
 end;
 
 { public TStartupList.LoadAutostart
@@ -2301,25 +2309,6 @@ begin
     raise EInvalidItem.Create('No item selected!');
 
   FItem.ExportItem(AFileName);
-end;
-
-{ public TContextList.IndexOf
-
-  Returns the index of an item checking name only. }
-
-function TContextList.IndexOf(AName: string): Integer;
-var
-  i: Integer;
-
-begin
-  result := -1;
-
-  for i := 0 to Count -1 do
-    if (GetItem(i).Name = AName) then
-    begin
-      result := i;
-      Break;
-    end;  //of begin
 end;
 
 { public TContextList.IndexOf
