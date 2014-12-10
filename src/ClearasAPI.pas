@@ -1455,8 +1455,8 @@ end;
 function TStartupList.CreateBackup(): Boolean;
 begin
   result := False;
-  
-  if not Assigned(FItem) then
+
+  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
     raise EInvalidItem.Create('No item selected!');
 
   result := FItem.CreateBackup();
@@ -1513,7 +1513,7 @@ function TStartupList.BackupExists(): Boolean;
 begin
   result := False;
 
-  if not Assigned(FItem) then
+  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
     raise EInvalidItem.Create('No item selected!');
 
   if FItem.StartupUser then
@@ -1531,7 +1531,7 @@ var
 begin
   result := False;
 
-  if not Assigned(FItem) then
+  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
     raise EInvalidItem.Create('No item selected!');
 
   // Change the status
@@ -1563,7 +1563,7 @@ function TStartupList.ChangeItemFilePath(const ANewFilePath: string): Boolean;
 begin
   result := False;
 
-  if not Assigned(FItem) then
+  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
     raise EInvalidItem.Create('No item selected!');
 
   if not FItem.Enabled then
@@ -1590,7 +1590,7 @@ var
 begin
   result := False;
 
-  if not Assigned(FItem) then
+  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
     raise EInvalidItem.Create('No item selected!');
 
   // Delete item from Registry
@@ -1622,7 +1622,7 @@ end;
 
 procedure TStartupList.ExportItem(const AFileName: string; ARegFile: Boolean = True);
 begin
-  if not Assigned(FItem) then
+  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
     raise EInvalidItem.Create('No item selected!');
 
   FItem.ExportItem(AFileName);
@@ -1665,7 +1665,7 @@ function TStartupList.GetBackupLnk(): string;
 begin
   result := '';
 
-  if not Assigned(FItem) then
+  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
     raise EInvalidItem.Create('No item selected!');
 
   if (FItem is TStartupUserItem) then
@@ -2265,7 +2265,7 @@ var
 begin
   result := False;
 
-  if not Assigned(FItem) then
+  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
     raise EInvalidItem.Create('No item selected!');
 
   // Change status of item
@@ -2293,7 +2293,7 @@ var
 begin
   result := False;
 
-  if not Assigned(FItem) then
+  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
     raise EInvalidItem.Create('No item selected!');
 
   // Delete item from Registry
@@ -2320,7 +2320,7 @@ end;
 
 procedure TContextList.ExportItem(const AFileName: string);
 begin
-  if not Assigned(FItem) then
+  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
     raise EInvalidItem.Create('No item selected!');
 
   FItem.ExportItem(AFileName);

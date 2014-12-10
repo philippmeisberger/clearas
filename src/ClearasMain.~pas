@@ -688,6 +688,8 @@ begin
       // Export item only if backup does not exist?
       if (((Answer = IDYES) and CreateStartupUserBackup()) or (Answer = IDNO)) then
       begin
+        Startup.DeleteBackup := False;
+        
         // Ask user to delete old backup if a backup exists and item was not exported
         if ((Answer = IDNO) and Startup.Item.StartupUser and Startup.BackupExists()) then
           Startup.DeleteBackup := (FLang.MessageBox(44, mtQuestion) = IDYES);

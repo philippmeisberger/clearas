@@ -958,7 +958,7 @@ end;
 
 function TStartupItem.CreateBackup(): Boolean;
 begin
-  result := True;
+  result := False;
 end;
 
 { public TStartupItem.Delete
@@ -1454,6 +1454,8 @@ end;
 
 function TStartupList.CreateBackup(): Boolean;
 begin
+  result := False;
+  
   if not Assigned(FItem) then
     raise EInvalidItem.Create('No item selected!');
 
