@@ -569,7 +569,7 @@ end;
 
 function TIniFile.RemoveSection(ASectionName: string): Boolean;
 var
-  Range, StartIndex, EndIndex, i: Integer;
+  StartIndex, EndIndex, i: Integer;
 
 begin
   StartIndex := IndexOfSection(ASectionName);
@@ -577,10 +577,8 @@ begin
 
   if ((StartIndex <> -1) and (EndIndex <> -1)) then
   begin
-    Range := EndIndex - StartIndex;
-
-    for i := 0 to Range do
-      FFile.Delete(StartIndex - 1);
+    for i := EndIndex - 1 downto StartIndex -1 do
+      FFile.Delete(i);
 
     result := True;
   end  //of begin
