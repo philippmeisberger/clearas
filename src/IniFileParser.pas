@@ -518,8 +518,16 @@ end;
   Returns an integer value of a key in section. }
 
 function TIniFile.ReadInteger(ASectionName, AKey: string): Integer;
+var
+  Value: string;
+
 begin
-  result := StrToInt(ReadString(ASectionName, AKey));
+  Value := ReadString(ASectionName, AKey);
+
+  if (Value = '') then
+    result := -1
+  else
+    result := StrToInt(Value);
 end;
 
 { public TIniFile.ReadString
@@ -663,7 +671,7 @@ begin
     end;  //of if
 end;
 
-
+{$IFDEF MSWINDOWS}
 { TRegistryFile }
 
 { public TRegistryFile.Create
@@ -986,5 +994,6 @@ begin
   else
     inherited WriteString(ASection, '"'+ AIdent +'"', '"'+ EscapePathDelimiter(AValue) +'"');
 end;
+{$ENDIF}
 
-end.
+end.
