@@ -13,8 +13,9 @@ unit OSUtils;
 interface
 
 uses
+ SysUtils,
 {$IFDEF MSWINDOWS}
-  Windows, Classes, SysUtils, TLHelp32, Registry, ShellAPI, MMSystem;
+  Windows, Classes, TLHelp32, Registry, ShellAPI, MMSystem;
 {$ELSE}
   Process, Resource, ElfReader, VersionResource, LResources;
 {$ENDIF}
@@ -62,7 +63,7 @@ type
     class function PMCertExists(): Boolean;
     class function ShowAddRegistryDialog(const ARegFilePath: string): Boolean;
     class function Shutdown(): Boolean;
-   	class function StrToHKey(const AMainKey: string): HKEY;
+    class function StrToHKey(const AMainKey: string): HKEY;
   end;
 {$ELSE}
   { TOSUtils }
@@ -650,6 +651,7 @@ begin
     end  //of try
   else
     result := False;
+end;
 {$ELSE}
 begin
   result := TOSUtils.ExitWindows(EWX_SHUTDOWN or EWX_FORCE);
