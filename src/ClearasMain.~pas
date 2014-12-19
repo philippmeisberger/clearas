@@ -1469,7 +1469,7 @@ end;
 
 procedure TMain.mmContextClick(Sender: TObject);
 begin
-  mmContext.Checked := TClearas.RegisterInContextMenu(mmContext.Checked);
+  TClearas.RegisterInContextMenu(not mmContext.Checked);
 end;
 
 { TMain.mmRefreshClick
@@ -1665,6 +1665,7 @@ begin
     mmDate.Visible := False;
     mmRunOnce.Visible := False;
     pmEdit.Visible := False;
+    lwContextSelectItem(Sender, lwContext.Selected, True);
 
     // Load context menu entries dynamically
     if (Context.Count = 0) then
@@ -1678,6 +1679,7 @@ begin
       mmDate.Visible := True;
       mmRunOnce.Visible := True;
       pmEdit.Visible := True;
+      lwStartupSelectItem(Sender, lwStartup.Selected, True);
     end;  //of if
 end;
 

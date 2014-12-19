@@ -1469,7 +1469,7 @@ end;
 
 procedure TMain.mmContextClick(Sender: TObject);
 begin
-  mmContext.Checked := TClearas.RegisterInContextMenu(mmContext.Checked);
+  TClearas.RegisterInContextMenu(not mmContext.Checked);
 end;
 
 { TMain.mmRefreshClick

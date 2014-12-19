@@ -524,27 +524,18 @@ begin
   try
     reg.OpenKey(KEY_RECYCLEBIN, False);
     ClearasKey := ALangFile.GetString(37);
+
     // Only update if context menu entry exists
     if (reg.KeyExists(ClearasKey)) then
     begin
       // Delete old context menu key
       if not reg.DeleteKey(ClearasKey) then
         raise Exception.Create('Could not delete key: '+ ClearasKey);
-
-      reg.CloseKey;
-
-      // Create new context menu key
-      if reg.OpenKey(KEY_RECYCLEBIN +'\Clearas\command', True) then
-      begin
-        reg.WriteString('', ParamStr(0));
-        result := True;
-      end;  //of begin
-    end  //of begin
-    else
-      result := False;
+    end;  //of begin
 
   finally
     reg.Free;
+    result := UpdateContextPath();
   end;  //of try
 end;
 
