@@ -24,6 +24,7 @@ const
   KEY_RUNONCE32 = 'SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnce';
   KEY_STARTUP = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Run';
   KEY_STARTUP32 = 'SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Run';
+  KEY_REGEDIT = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Regedit';
 
   { Extensions of backup files }
   EXT_COMMON = '.CommonStartup';
@@ -66,8 +67,10 @@ type
     function ChangeStatus(): Boolean; virtual;
     function Delete(): Boolean; virtual; abstract;
     procedure ExportItem(const AFileName: string); virtual; abstract;
+    function GetFullKeyPath(): string; virtual; abstract;
     procedure GetItemInfo(var AProperties: string; ALangFile: TLanguageFile); virtual; abstract;
     function GetStatus(ALangFile: TLanguageFile): string;
+    procedure OpenInRegedit();
     { external }
     property Enabled: Boolean read FEnabled;
     property ItemIndex: Word read FIndex;
@@ -107,6 +110,7 @@ type
   public
     function CreateBackup(): Boolean; virtual; abstract;
     procedure ExportItem(const AFileName: string); override;
+    function GetFullKeyPath(): string; override;
     { external }
     property FilePath: string read FFilePath write FFilePath;
     property KeyPath: string read FKeyPath write FKeyPath;
@@ -199,6 +203,7 @@ type
     function Delete(): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
     procedure GetItemInfo(var AProperties: string; ALangFile: TLanguageFile); override;
+    function GetFullKeyPath(): string; override;
     { external }
     property KeyPath: string read GetKeyPath;
     property Location: string read FLocation;
@@ -600,9 +605,29 @@ end;
 function TRootItem.ChangeStatus(): Boolean;
 begin
   if FEnabled then
-     result := Disable
+    result := Disable
   else
-     result := Enable;
+    result := Enable;
+end;
+
+{ public TRootItem.OpenInRegedit
+
+  Opens an TRootItem object in regedit. }
+
+procedure TRootItem.OpenInRegedit();
+begin
+  // Set the Registry key to show
+  WriteStrValue('HKCU', KEY_REGEDIT, 'LastKey', 'Computer\'+ GetFullKeyPath());
+
+  // Deny WOW64 redirection only on 64bit Windows
+  if TOSUtils.IsWindows64() then
+  begin
+    TOSUtils.Wow64FsRedirection(True);
+    TOSUtils.ExecuteFile('regedit.exe');
+    TOSUtils.Wow64FsRedirection(False);
+  end  //of begin
+  else
+    TOSUtils.ExecuteFile('regedit.exe');
 end;
 
 { public TRootItem.GetStatus
@@ -822,6 +847,15 @@ begin
   end;  //of try
 end;
 
+{ public TStartupListItem.GetFullKeyPath
+
+  Returns the Registry path to a TStartupListItem. }
+
+function TStartupListItem.GetFullKeyPath(): string;
+begin
+  result := HKeyToStr(StrToHKey(FRootKey)) +'\'+ FKeyPath;
+end;
+
 
 { TStartupItem }
 
@@ -987,7 +1021,7 @@ end;
 
 procedure TStartupItem.GetItemInfo(var AProperties: string; ALangFile: TLanguageFile);
 begin
-  AProperties := ALangFile.Format(46, [FName, HKeyToStr(StrToHKey(FRootKey)) +'\'+ FKeyPath]);
+  AProperties := ALangFile.Format(46, [FName, GetFullKeyPath()]);
 end;
 
 
@@ -1193,7 +1227,7 @@ begin
   result := GetBackupDir() + FName + GetExtension();
 end;
 
-{ public TStartupItem.GetItemInfo
+{ public TStartupUserItem.GetItemInfo
 
   Returns the name and path of an item as formatted text. }
 
@@ -1202,7 +1236,7 @@ begin
   if FEnabled then
     AProperties := ALangFile.Format(45, [FName, FKeyPath])
   else
-    AProperties := ALangFile.Format(46, [FName, HKeyToStr(StrToHKey(FRootKey)) +'\'+ FKeyPath]);
+    AProperties := ALangFile.Format(46, [FName, GetFullKeyPath()]);
 end;
 
 
@@ -1881,6 +1915,15 @@ begin
   AProperties := ALangFile.Format(47, [FName, Text]);
 end;
 
+{ public TContextListItem.GetFullKeyPath
+
+  Returns the Registry path to a TStartupListItem. }
+
+function TContextListItem.GetFullKeyPath(): string;
+begin
+  result := HKeyToStr(HKEY_CLASSES_ROOT) +'\'+ GetKeyPath();
+end;
+
 
 { TShellItem }
 
@@ -1942,7 +1985,7 @@ end;
 
 { private TShellExItem.GetKeyPath
 
-  Returns the Registry path to the item. }
+  Returns the Registry path to a TShellExItem. }
 
 function TShellExItem.GetKeyPath(): string;
 begin

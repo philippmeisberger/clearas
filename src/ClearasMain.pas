@@ -84,6 +84,7 @@ type
     pmEdit: TMenuItem;
     mmReport: TMenuItem;
     mmRunOnce: TMenuItem;
+    pmOpenRegedit: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -133,6 +134,7 @@ type
     procedure lCopy1MouseLeave(Sender: TObject);
     procedure lCopy1MouseEnter(Sender: TObject);
     procedure lCopy1Click(Sender: TObject);
+    procedure pmOpenRegeditClick(Sender: TObject);
   private
     FColumnToSort: Word;
     Startup: TStartupList;
@@ -478,6 +480,7 @@ begin
 
     // Popup menu labels
     pmChangeStatus.Caption := bDisableStartupItem.Caption;
+    pmOpenRegedit.Caption := GetString(66);
     pmEdit.Caption := GetString(33);
     pmExport.Caption := mmExport.Caption;
     pmDelete.Caption := bDeleteStartupItem.Caption;
@@ -1187,6 +1190,18 @@ begin
     bDeleteStartupItem.Click
   else
     bDeleteContextItem.Click;
+end;
+
+{ TMain.pmOpenRegeditClick
+
+  Opens the the current selected item in regedit. }
+
+procedure TMain.pmOpenRegeditClick(Sender: TObject);
+begin
+  if (PageControl.ActivePage = tsStartup) then
+    Startup.Item.OpenInRegedit()
+  else
+    Context.Item.OpenInRegedit();
 end;
 
 { TMain.pmPropertiesClick

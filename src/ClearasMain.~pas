@@ -84,6 +84,7 @@ type
     pmEdit: TMenuItem;
     mmReport: TMenuItem;
     mmRunOnce: TMenuItem;
+    pmOpenRegedit: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -133,6 +134,7 @@ type
     procedure lCopy1MouseLeave(Sender: TObject);
     procedure lCopy1MouseEnter(Sender: TObject);
     procedure lCopy1Click(Sender: TObject);
+    procedure pmOpenRegeditClick(Sender: TObject);
   private
     FColumnToSort: Word;
     Startup: TStartupList;
@@ -1020,19 +1022,17 @@ begin
 
         pmChangeStatus.Enabled := True;
         pmEdit.Enabled := True;
-
-        // Disable "export" if backup already exists
-        if (Startup.Item.StartupUser and Startup.Item.Enabled
-          and Startup.BackupExists()) then
-          bExportStartupItem.Enabled := False
-        else
-          bExportStartupItem.Enabled := True;
-
-        pmExport.Enabled := bExportStartupItem.Enabled;
       end;  //of if
 
-    pmProperties.Enabled := True;
+    // Disable "export" if backup already exists
+    if (Startup.Item.StartupUser and Startup.Item.Enabled
+      and Startup.BackupExists()) then
+      bExportStartupItem.Enabled := False
+    else
+      bExportStartupItem.Enabled := True;
 
+    pmExport.Enabled := bExportStartupItem.Enabled;
+    pmProperties.Enabled := True;
     bDeleteStartupItem.Enabled := True;
     pmDelete.Enabled := True;
 
@@ -1189,6 +1189,18 @@ begin
     bDeleteStartupItem.Click
   else
     bDeleteContextItem.Click;
+end;
+
+{ TMain.pmOpenRegeditClick
+
+  Opens the the current selected item in regedit. }
+
+procedure TMain.pmOpenRegeditClick(Sender: TObject);
+begin
+  if (PageControl.ActivePage = tsStartup) then
+    Startup.Item.OpenInRegedit()
+  else
+    Context.Item.OpenInRegedit();
 end;
 
 { TMain.pmPropertiesClick

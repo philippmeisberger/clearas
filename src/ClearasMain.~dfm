@@ -400,7 +400,7 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'beenden'
+        Caption = 'Beenden'
         Default = True
         TabOrder = 5
         OnClick = bCloseStartupClick
@@ -619,6 +619,10 @@ object Main: TMain
     end
     object N1: TMenuItem
       Caption = '-'
+    end
+    object pmOpenRegedit: TMenuItem
+      Caption = 'In Regedit '#246'ffnen'
+      OnClick = pmOpenRegeditClick
     end
     object pmEdit: TMenuItem
       Caption = 'Pfad bearbeiten'

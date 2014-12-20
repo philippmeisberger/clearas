@@ -412,16 +412,19 @@ object Info: TInfo
           'History'
           '--------'
           ''
-          'Version 3.1  [10.12.14]'
+          'Version 3.1  [22.12.14]'
           ''
-          '- Neue (Popup Men'#252') Funktion "Pfad bearbeiten"'
+          '- '#196'nderungen im Popup Men'#252':'
+          '  - Neue Funktion "Pfad bearbeiten" hinzugef'#252'gt'
           
-            '  - Dateipfade von Autostart Eintr'#228'gen k'#246'nnen nach eigenem Ermes' +
-            'sen '
-          '    bearbeitet werden'
+            '    - Dateipfade von Autostart Eintr'#228'gen k'#246'nnen nach eigenem Erm' +
+            'essen '
+          '      bearbeitet werden'
+          '    - Funktion "Nach Programm suchen" entfernt'
+          '    - Neue Funktion "In Regedit '#246'ffnen" hinzugef'#252'gt'
           
-            '- Funktion "Nach Programm suchen" entfernt (durch "Pfad bearbeit' +
-            'en" ersetzt)'
+            '      - '#214'ffnet den Registry Pfad des aktuellen Elements in Reged' +
+            'it'
           '- Exception Handling stark verbessert'
           
             '- Ausw'#228'hlen von Elementen in Autostart und Kontextmen'#252' Listen be' +

@@ -620,6 +620,10 @@ object Main: TMain
     object N1: TMenuItem
       Caption = '-'
     end
+    object pmOpenRegedit: TMenuItem
+      Caption = 'In Regedit '#246'ffnen'
+      OnClick = pmOpenRegeditClick
+    end
     object pmEdit: TMenuItem
       Caption = 'Pfad bearbeiten'
       Enabled = False
