@@ -400,7 +400,7 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'beenden'
+        Caption = 'Beenden'
         Default = True
         TabOrder = 5
         OnClick = bCloseStartupClick

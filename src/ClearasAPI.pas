@@ -1,6 +1,6 @@
 { *********************************************************************** }
 {                                                                         }
-{ Clearas API Interface Unit v4.1                                         }
+{ Clearas API Interface Unit v4.2                                         }
 {                                                                         }
 { Copyright (c) 2011-2014 P.Meisberger (PM Code Works)                    }
 {                                                                         }
@@ -21,6 +21,7 @@ const
   KEY_DEACT_FOLDER = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\startupfolder\';
   KEY_RECYCLEBIN = 'CLSID\{645FF040-5081-101B-9F08-00AA002F954E}\shell';
   KEY_RUNONCE = 'SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce';
+  KEY_RUNONCE32 = 'SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnce';
   KEY_STARTUP = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Run';
   KEY_STARTUP32 = 'SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Run';
 
@@ -86,8 +87,8 @@ type
     function ChangeItemStatus(): Boolean; virtual; abstract;
     procedure Clear; override;
     function DeleteItem(): Boolean; virtual; abstract;
-    function IndexOf(const AName: string): Integer; overload;
-    function IndexOf(AName: string; AEnabled: Boolean): Integer; overload;
+    function IndexOf(const AItemName: string): Integer; overload;
+    function IndexOf(AItemName: string; AEnabled: Boolean): Integer; overload;
     { external }
     property ActCount: Word read FActCount;
   end;
@@ -661,7 +662,7 @@ end;
 
   Returns the index of an item checking name only. }
 
-function TRootList.IndexOf(const AName: string): Integer;
+function TRootList.IndexOf(const AItemName: string): Integer;
 var
   i: Integer;
 
@@ -669,7 +670,7 @@ begin
   result := -1;
 
   for i := 0 to Count -1 do
-    if (RootItemAt(i).Name = AName) then
+    if (RootItemAt(i).Name = AItemName) then
     begin
       result := i;
       Break;
@@ -680,7 +681,7 @@ end;
 
   Returns the index of an item checking name and status. }
 
-function TRootList.IndexOf(AName: string; AEnabled: Boolean): Integer;
+function TRootList.IndexOf(AItemName: string; AEnabled: Boolean): Integer;
 var
   i: Integer;
   Item: TRootItem;
@@ -692,7 +693,7 @@ begin
   begin
     Item := RootItemAt(i);
 
-    if ((Item.Name = AName) and (Item.Enabled = AEnabled))then
+    if ((Item.Name = AItemName) and (Item.Enabled = AEnabled))then
     begin
       result := i;
       Break;
@@ -1345,7 +1346,7 @@ begin
     FilePath := AFilePath;
     Time := '';
 
-    if (AKeyPath = KEY_RUNONCE) then
+    if ((AKeyPath = KEY_RUNONCE) or (AKeyPath = KEY_RUNONCE32)) then
        TypeOf := 'RunOnce'
     else
        TypeOf := ARootKey;
@@ -1707,6 +1708,7 @@ procedure TStartupList.LoadAutostart(AIncludeRunOnce: Boolean);
 begin
   LoadEnabled('HKLM', KEY_STARTUP);
 
+  // Load WOW6432 Registry key only on 64bit Windows
   if TClearas.IsWindows64() then
     LoadEnabled('HKLM', KEY_STARTUP32);
 
@@ -1715,6 +1717,13 @@ begin
   begin
     LoadEnabled('HKLM', KEY_RUNONCE);
     LoadEnabled('HKCU', KEY_RUNONCE);
+
+    // Load WOW6432 Registry keys only on 64bit Windows
+    if TClearas.IsWindows64() then
+      begin
+        LoadEnabled('HKLM', KEY_RUNONCE32);
+        LoadEnabled('HKCU', KEY_RUNONCE32);
+      end;  //of begin
   end;  //of begin
 
   LoadEnabled('HKCU', KEY_STARTUP);

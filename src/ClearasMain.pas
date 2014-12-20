@@ -1020,19 +1020,17 @@ begin
 
         pmChangeStatus.Enabled := True;
         pmEdit.Enabled := True;
-
-        // Disable "export" if backup already exists
-        if (Startup.Item.StartupUser and Startup.Item.Enabled
-          and Startup.BackupExists()) then
-          bExportStartupItem.Enabled := False
-        else
-          bExportStartupItem.Enabled := True;
-
-        pmExport.Enabled := bExportStartupItem.Enabled;
       end;  //of if
 
-    pmProperties.Enabled := True;
+    // Disable "export" if backup already exists
+    if (Startup.Item.StartupUser and Startup.Item.Enabled
+      and Startup.BackupExists()) then
+      bExportStartupItem.Enabled := False
+    else
+      bExportStartupItem.Enabled := True;
 
+    pmExport.Enabled := bExportStartupItem.Enabled;
+    pmProperties.Enabled := True;
     bDeleteStartupItem.Enabled := True;
     pmDelete.Enabled := True;
 
