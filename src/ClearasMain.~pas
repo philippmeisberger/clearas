@@ -480,6 +480,7 @@ begin
 
     // Popup menu labels
     pmChangeStatus.Caption := bDisableStartupItem.Caption;
+    pmOpenRegedit.Caption := GetString(66);
     pmEdit.Caption := GetString(33);
     pmExport.Caption := mmExport.Caption;
     pmDelete.Caption := bDeleteStartupItem.Caption;
