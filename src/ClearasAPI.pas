@@ -1,6 +1,6 @@
 { *********************************************************************** }
 {                                                                         }
-{ Clearas API Interface Unit v4.2                                         }
+{ Clearas API Interface Unit v4.1                                         }
 {                                                                         }
 { Copyright (c) 2011-2014 P.Meisberger (PM Code Works)                    }
 {                                                                         }
@@ -523,7 +523,6 @@ var
   ClearasKey: string;
 
 begin
-  result := False;
   reg := TRegistry.Create(DenyWOW64Redirection(KEY_ALL_ACCESS));
   reg.RootKey := HKEY_CLASSES_ROOT;
 
@@ -877,45 +876,49 @@ var
   reg: TRegistry;
 
 begin
+  result := False;
   reg := TRegistry.Create(DenyWOW64Redirection(KEY_WRITE));
 
   try
-    reg.RootKey := HKEY_LOCAL_MACHINE;
+    try
+      reg.RootKey := HKEY_LOCAL_MACHINE;
 
-    // Successfully deleted old entry?
-    if not DeleteValue(FRootKey, FKeyPath, FName) then
-      raise EStartupException.Create('Could not delete value!');
+      // Successfully deleted old entry?
+      if not DeleteValue(FRootKey, FKeyPath, FName) then
+        raise EStartupException.Create('Could not delete value!');
 
-    // Successfully created new key?
-    if (reg.OpenKey(KEY_DEACT + FName, True)) then
-    begin
-      // Write values
-      reg.WriteString('hkey', FRootKey);
-      reg.WriteString('key', FKeyPath);
-      reg.WriteString('item', FName);
-      reg.WriteString('command', FFilePath);
-      reg.WriteString('inimapping', '0');
+      // Successfully created new key?
+      if (reg.OpenKey(KEY_DEACT + FName, True)) then
+      begin
+        // Write values
+        reg.WriteString('hkey', FRootKey);
+        reg.WriteString('key', FKeyPath);
+        reg.WriteString('item', FName);
+        reg.WriteString('command', FFilePath);
+        reg.WriteString('inimapping', '0');
 
-      // Windows >= Vista?
-      if CheckWindows then
-        // Save deactivation time stamp
-        WriteTime(KEY_DEACT + FName);
+        // Windows >= Vista?
+        if TOSUtils.CheckWindows() then
+          // Save deactivation time stamp
+          WriteTime(KEY_DEACT + FName);
 
-      // Update information
-      FRootKey := 'HKLM';
-      FKeyPath := KEY_DEACT + FName;
-      FEnabled := False;
-      reg.Free;
+        // Update information
+        FRootKey := 'HKLM';
+        FKeyPath := KEY_DEACT + FName;
+        FEnabled := False;
+      end  //of begin
+      else
+        raise EStartupException.Create('Could not create "'+ KEY_DEACT + FName +'"!');
+
       result := True;
-    end  //of begin
-    else
-      raise EStartupException.Create('Could not create "'+ KEY_DEACT + FName +'"!');
+
+    finally
+      reg.Free;
+    end;  //of try
 
   except
     on E: Exception do
     begin
-      reg.Free;
-      result := False;
       E.Message := 'Error while disabling "'+ FName +'": '+ E.Message;
       raise;
     end;  //of begin
@@ -932,46 +935,49 @@ var
   NewHKey, NewKeyPath: string;
 
 begin
+  result := False;
   reg := TRegistry.Create(DenyWOW64Redirection(KEY_ALL_ACCESS));
 
   try
-    reg.RootKey := HKEY_LOCAL_MACHINE;
-    reg.OpenKey(FKeyPath, False);
+    try
+      reg.RootKey := HKEY_LOCAL_MACHINE;
+      reg.OpenKey(FKeyPath, False);
 
-    // Set new values
-    NewHKey := reg.ReadString('hkey');
-    NewKeyPath := reg.ReadString('key');
-    reg.CloseKey;
+      // Set new values
+      NewHKey := reg.ReadString('hkey');
+      NewKeyPath := reg.ReadString('key');
+      reg.CloseKey;
 
-    if ((NewHKey = '') or (NewKeyPath = '')) then
-       raise EStartupException.Create('Could not access registry!');
+      if ((NewHKey = '') or (NewKeyPath = '')) then
+        raise EStartupException.Create('Could not access registry!');
 
-    reg.RootKey := StrToHKey(NewHKey);
+      reg.RootKey := StrToHKey(NewHKey);
 
-    // Successfully created new key?
-    if reg.OpenKey(NewKeyPath, True) then
-    begin
-      // Write startup entry
-      reg.WriteString(FName, FFilePath);
+      // Successfully created new key?
+      if reg.OpenKey(NewKeyPath, True) then
+      begin
+        // Write startup entry
+        reg.WriteString(FName, FFilePath);
 
-      // Delete old key
-      result := DeleteKey('HKLM', KEY_DEACT, FName);
+        // Delete old key
+        result := DeleteKey('HKLM', KEY_DEACT, FName);
 
-      // Update information
-      FRootKey := NewHKey;
-      FKeyPath := NewKeyPath;
-      FEnabled := True;
-      FTime := '';
+        // Update information
+        FRootKey := NewHKey;
+        FKeyPath := NewKeyPath;
+        FEnabled := True;
+        FTime := '';
+      end  //of begin
+      else
+        raise EStartupException.Create('Could not create key "'+ NewKeyPath +'"!');
+
+    finally
       reg.Free;
-    end  //of begin
-    else
-      raise EStartupException.Create('Could not create key "'+ NewKeyPath +'"!');
+    end;  //of try
 
   except
     on E: Exception do
     begin
-      reg.Free;
-      result := False;
       E.Message := 'Error while enabling "'+ FName +'": '+ E.Message;
       raise;
     end;  //of begin
@@ -993,7 +999,7 @@ end;
 
 function TStartupItem.Delete(): Boolean;
 begin
-  result := True;
+  result := False;
 
   try
     if FEnabled then
@@ -1005,10 +1011,11 @@ begin
       if not DeleteKey('HKLM', KEY_DEACT, FName) then
         raise EStartupException.Create('Could not delete key "'+ FName +'"!');
 
+    result := True;
+
   except
     on E: Exception do
     begin
-      result := False;
       E.Message := 'Error while deleting "'+ FName +'": '+ E.Message;
       raise;
     end;  //of begin
@@ -1067,6 +1074,7 @@ var
   Path, KeyName, BackupLnk: string;
 
 begin
+  result := False;
   reg := TRegistry.Create(DenyWOW64Redirection(KEY_WRITE));
 
   try
@@ -1084,7 +1092,7 @@ begin
         reg.WriteString('backup', BackupLnk);
 
         // Special Registry entries only for Windows >= Vista
-        if CheckWindows() then
+        if TOSUtils.CheckWindows() then
         begin
           reg.WriteString('backupExtension', GetExtension());
           reg.WriteString('location', ExtractFileDir(FKeyPath));
@@ -1109,10 +1117,11 @@ begin
         FKeyPath := KEY_DEACT_FOLDER + KeyName;
         FRootKey := 'HKLM';
         FEnabled := False;
-        result := True;
       end  //of begin
       else
         raise EStartupException.Create('Could not create key "'+ FName +'"!');
+
+      result := True;
 
     finally
       reg.Free;
@@ -1121,7 +1130,6 @@ begin
   except
     on E: Exception do
     begin
-      result := False;
       E.Message := 'Error while disabling "'+ FName +'": '+ E.Message;
       raise;
     end;  //of begin
@@ -1137,6 +1145,8 @@ var
   Path, BackupLnk: string;
 
 begin
+  result := False;
+
   try
     Path := GetKeyValue('HKLM', FKeyPath, 'path');
     BackupLnk := GetBackupLnk();
@@ -1166,7 +1176,6 @@ begin
   except
     on E: Exception do
     begin
-      result := False;
       E.Message := 'Error while enabling "'+ FName +'": '+ E.Message;
       raise;
     end;  //of begin
@@ -1194,7 +1203,7 @@ function TStartupUserItem.Delete(): Boolean;
   end;
 
 begin
-  result := True;
+  result := False;
 
   try
     if FEnabled then
@@ -1208,10 +1217,11 @@ begin
       if not DeleteKey('HKLM', KEY_DEACT_FOLDER, GetKeyName()) then
         raise EStartupException.Create('Could not delete key "'+ FKeyPath +'"!');
 
+    result := True;
+
   except
     on E: Exception do
     begin
-      result := False;
       E.Message := 'Error while deleting "'+ FName +'": '+ E.Message;
       raise;
     end;  //of begin

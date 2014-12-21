@@ -1,6 +1,6 @@
 { *********************************************************************** }
 {                                                                         }
-{ Clearas API Interface Unit v4.2                                         }
+{ Clearas API Interface Unit v4.1                                         }
 {                                                                         }
 { Copyright (c) 2011-2014 P.Meisberger (PM Code Works)                    }
 {                                                                         }
@@ -523,7 +523,6 @@ var
   ClearasKey: string;
 
 begin
-  result := False;
   reg := TRegistry.Create(DenyWOW64Redirection(KEY_ALL_ACCESS));
   reg.RootKey := HKEY_CLASSES_ROOT;
 
@@ -605,9 +604,9 @@ end;
 function TRootItem.ChangeStatus(): Boolean;
 begin
   if FEnabled then
-     result := Disable
+    result := Disable
   else
-     result := Enable;
+    result := Enable;
 end;
 
 { public TRootItem.OpenInRegedit
@@ -616,8 +615,18 @@ end;
 
 procedure TRootItem.OpenInRegedit();
 begin
+  // Set the Registry key to show
   WriteStrValue('HKCU', KEY_REGEDIT, 'LastKey', 'Computer\'+ GetFullKeyPath());
-  TOSUtils.ShowAddRegistryDialog('');
+
+  // Deny WOW64 redirection only on 64bit Windows
+  if TOSUtils.IsWindows64() then
+  begin
+    TOSUtils.Wow64FsRedirection(True);
+    TOSUtils.ExecuteFile('regedit.exe');
+    TOSUtils.Wow64FsRedirection(False);
+  end  //of begin
+  else
+    TOSUtils.ExecuteFile('regedit.exe');
 end;
 
 { public TRootItem.GetStatus
@@ -887,7 +896,7 @@ begin
       reg.WriteString('inimapping', '0');
 
       // Windows >= Vista?
-      if CheckWindows then
+      if TOSUtils.CheckWindows() then
         // Save deactivation time stamp
         WriteTime(KEY_DEACT + FName);
 
@@ -1074,7 +1083,7 @@ begin
         reg.WriteString('backup', BackupLnk);
 
         // Special Registry entries only for Windows >= Vista
-        if CheckWindows() then
+        if TOSUtils.CheckWindows() then
         begin
           reg.WriteString('backupExtension', GetExtension());
           reg.WriteString('location', ExtractFileDir(FKeyPath));

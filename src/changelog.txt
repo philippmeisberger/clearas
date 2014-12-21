@@ -4,16 +4,22 @@ Ein Open-Source Projekt von PM Code Works
 History
 --------
 
-Version 3.1  [10.12.14]
+Version 3.1  [22.12.14]
 
-- Neue (Popup Menü) Funktion "Pfad bearbeiten"
-  - Dateipfade von Autostart Einträgen können nach eigenem Ermessen bearbeitet werden
-- Funktion "Nach Programm suchen" entfernt (durch "Pfad bearbeiten" ersetzt)
+- Änderungen im Popup Menü:
+  - Neue Funktion "Pfad bearbeiten" hinzugefügt
+    - Dateipfade von Autostart Einträgen können nach eigenem Ermessen 
+      bearbeitet werden
+    - Funktion "Nach Programm suchen" entfernt
+    - Neue Funktion "In RegEdit öffnen" hinzugefügt
+      - Öffnet den Registry Pfad des aktuellen Elements in RegEdit
 - Exception Handling stark verbessert
 - Auswählen von Elementen in Autostart und Kontextmenü Listen beschleunigt
 - "Backup importieren" verbessert
 - Registry Dateiexport verbessert (eigener Parser)
-- Bug Fix: Gelöschte Autostart Elemente werden nun korrekt aus Liste gelöscht
+- Bug Fixes: 
+  - Gelöschte Autostart Elemente werden nun korrekt aus Liste gelöscht
+  - RunOnce Einträge werden nun auch in 32 Bit Schlüsseln ausgelesen
 - Updater v2.2
 - OSUtils v1.7
 

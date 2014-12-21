@@ -421,9 +421,9 @@ object Info: TInfo
             'essen '
           '      bearbeitet werden'
           '    - Funktion "Nach Programm suchen" entfernt'
-          '    - Neue Funktion "In Regedit '#246'ffnen" hinzugef'#252'gt'
+          '    - Neue Funktion "In RegEdit '#246'ffnen" hinzugef'#252'gt'
           
-            '      - '#214'ffnet den Registry Pfad des aktuellen Elements in Reged' +
+            '      - '#214'ffnet den Registry Pfad des aktuellen Elements in RegEd' +
             'it'
           '- Exception Handling stark verbessert'
           

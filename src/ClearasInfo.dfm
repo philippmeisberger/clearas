@@ -431,9 +431,13 @@ object Info: TInfo
             'schleunigt'
           '- "Backup importieren" verbessert'
           '- Registry Dateiexport verbessert (eigener Parser)'
+          '- Bug Fixes: '
           
-            '- Bug Fix: Gel'#246'schte Autostart Elemente werden nun korrekt aus L' +
-            'iste gel'#246'scht'
+            '  - Gel'#246'schte Autostart Elemente werden nun korrekt aus Liste ge' +
+            'l'#246'scht'
+          
+            '  - RunOnce Eintr'#228'ge werden nun auch in 32 Bit Schl'#252'sseln ausgel' +
+            'esen'
           '- Updater v2.2'
           '- OSUtils v1.7'
           ''

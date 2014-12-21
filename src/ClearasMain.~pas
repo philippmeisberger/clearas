@@ -43,7 +43,7 @@ type
     mmDate: TMenuItem;
     mmImport: TMenuItem;
     mmDelBackup: TMenuItem;
-    mmStandard: TMenuItem;
+    mmDefault: TMenuItem;
     N7: TMenuItem;
     mmOptimate: TMenuItem;
     N8: TMenuItem;
@@ -120,7 +120,7 @@ type
     procedure mmGerClick(Sender: TObject);
     procedure mmEngClick(Sender: TObject);
     procedure mmFraClick(Sender: TObject);
-    procedure mmStandardClick(Sender: TObject);
+    procedure mmDefaultClick(Sender: TObject);
     procedure mmOptimateClick(Sender: TObject);
     procedure mmInfoClick(Sender: TObject);
     procedure mmUpdateClick(Sender: TObject);
@@ -436,7 +436,7 @@ begin
     // View menu labels
     mmView.Caption := GetString(20);
     mmRefresh.Caption := GetString(77);
-    mmStandard.Caption := GetString(78);
+    mmDefault.Caption := GetString(78);
     mmOptimate.Caption := GetString(79);
     mmDate.Caption := GetString(80);
     mmRunOnce.Caption := GetString(81);
@@ -1501,13 +1501,13 @@ end;
 
   MainMenu entry to resize all columns to standard size. }
 
-procedure TMain.mmStandardClick(Sender: TObject);
+procedure TMain.mmDefaultClick(Sender: TObject);
 begin
   if (PageControl.ActivePage = tsStartup) then
   begin
     lwStartup.Columns[1].Width := 125;
     lwStartup.Columns[2].Width := 124;
-    lwStartup.Columns[3].Width := 80;
+    lwStartup.Columns[3].Width := 72;
   end  //of begin
   else
     begin

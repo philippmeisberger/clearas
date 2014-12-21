@@ -346,10 +346,10 @@ object Main: TMain
         Anchors = [akLeft, akTop, akRight, akBottom]
         Columns = <
           item
-            Caption = 'Aktiv'
-            MaxWidth = 45
-            MinWidth = 45
-            Width = 45
+            Caption = 'Aktiviert'
+            MaxWidth = 53
+            MinWidth = 53
+            Width = 53
           end
           item
             Caption = 'Programm (0/0)'
@@ -362,7 +362,7 @@ object Main: TMain
           item
             Caption = 'Schl'#252'ssel'
             MaxWidth = 105
-            Width = 80
+            Width = 72
           end>
         Font.Charset = ANSI_CHARSET
         Font.Color = clBlack
@@ -709,10 +709,10 @@ object Main: TMain
       object N7: TMenuItem
         Caption = '-'
       end
-      object mmStandard: TMenuItem
+      object mmDefault: TMenuItem
         Caption = 'Standard Spaltengr'#246#223'e'
         ShortCut = 117
-        OnClick = mmStandardClick
+        OnClick = mmDefaultClick
       end
       object mmOptimate: TMenuItem
         Caption = 'Spaltengr'#246#223'e optimieren'
