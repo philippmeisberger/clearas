@@ -274,7 +274,7 @@ var
   reg: TRegistry;
 
 begin
-  reg := TRegistry.Create(DenyWOW64Redirection(KEY_WRITE));
+  reg := TRegistry.Create(DenyWOW64Redirection(KEY_READ or KEY_WRITE));
 
   try
     reg.RootKey := StrToHKey(AMainKey);
