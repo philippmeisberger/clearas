@@ -132,7 +132,9 @@ begin
 
     // Check if download was successful?
     if (FHttp.ResponseCode = 200) then
-      Synchronize(DoNotifyOnFinish);
+      Synchronize(DoNotifyOnFinish)
+    else
+      raise Exception.Create('Error while downloading! HTTP response code was not 200!');
 
   except
     on E: EAbort do
