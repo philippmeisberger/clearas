@@ -296,34 +296,37 @@ end;
 
 function TMain.CreateStartupUserBackup(): Boolean;
 begin
-  // Nothing selected?
-  if not Assigned(Startup.Item) then
-  begin
-    FLang.MessageBox([95, 18, NEW_LINE, 53], mtWarning);
-    result := False;
-    Exit;
-  end;  //of begin
+  result := False;
 
-  // Special .lnk file backup only for activated startup user entries!
-  if (Startup.Item.Enabled and Startup.Item.StartupUser) then
-  begin
-    // Successfully created backup of .lnk file?
-    if Startup.CreateBackup() then
+  try
+    // Special .lnk file backup only for activated startup user entries!
+    if (Startup.Item.Enabled and Startup.Item.StartupUser) then
     begin
-      FLang.MessageBox(Flang.Format(42, [Startup.GetBackupLnk()]));
-      bExportStartupItem.Enabled := False;
-      pmExport.Enabled := False;
-      result := True;
-    end  //of with
-    else
+      // Successfully created backup of .lnk file?
+      if Startup.CreateBackup() then
       begin
-        Flang.MessageBox(43, mtError);
-        result := False;
-      end;  //of if
-  end  //of begin
-  else
-    // Default .reg file export
-    result := ShowRegistryExportDialog();
+        FLang.MessageBox(Flang.Format(42, [Startup.GetBackupLnk()]));
+        bExportStartupItem.Enabled := False;
+        pmExport.Enabled := False;
+        result := True;
+      end  //of begin
+      else
+        begin
+          Flang.MessageBox(43, mtError);
+          result := False;
+        end;  //of if
+    end  //of begin
+    else
+      // Default .reg file export
+      result := ShowRegistryExportDialog();
+
+  except
+    on E: EAccessViolation do
+      FLang.MessageBox([95, 18, NEW_LINE, 53], mtWarning);
+
+    on E: Exception do
+      FLang.MessageBox(FLang.GetString([95, 18, NEW_LINE]) + E.Message, mtError);
+  end;  //of try
 end;
 
 { private TMain.EditPath
@@ -332,7 +335,7 @@ end;
 
 procedure TMain.EditPath(APath: string);
 var
-  FullPath: string;
+  DefaultPath, EnteredPath: string;
 
   function AddQuotes(APath: string): string;
   begin
@@ -344,24 +347,27 @@ var
 
 begin
   try
+    DefaultPath := AddQuotes(APath);
+
     // Show input box for editing path
-    FullPath := InputBox(FLang.GetString(33), FLang.GetString(54), AddQuotes(APath));
+    EnteredPath := InputBox(FLang.GetString(33), FLang.GetString(54), DefaultPath);
 
-    // Nothing entered: use default
-    if (Trim(FullPath) = '') then
-      FullPath := AddQuotes(APath);
+    // Nothing entered or nothing changed
+    if ((Trim(EnteredPath) = '') or (EnteredPath = DefaultPath)) then
+      Exit;
 
-    if not Startup.ChangeItemFilePath(FullPath) then
+    // Try to change the file path
+    if not Startup.ChangeItemFilePath(EnteredPath) then
       raise Exception.Create('Could not change path!');
 
-    lwStartup.ItemFocused.SubItems[1] := FullPath;
+    lwStartup.ItemFocused.SubItems[1] := EnteredPath;
 
   except
     on E: EAccessViolation do
       FLang.MessageBox(53, mtWarning);
 
     on E: Exception do
-      FLang.MessageBox(57, mtError);
+      FLang.MessageBox(FLang.GetString([33, 18, NEW_LINE]) + E.Message, mtError);
   end;  //of try
 end;
 
@@ -560,39 +566,48 @@ begin
   result := False;
   SaveDialog := TSaveDialog.Create(Self);
 
-  // Set TSaveDialog options
-  with SaveDialog do
-  begin
-    Title := FLang.GetString(95);
-
-    // Confirm overwrite
-    Options := Options + [ofOverwritePrompt];
-
-    // Filter .reg files only
-    Filter := FLang.GetString(36);
-    DefaultExt := '.reg';
-
-    // Set a default file name
-    if (PageControl.ActivePage = tsStartup) then
-      FileName := Startup.Item.Name + DefaultExt
-    else
-      FileName := Context.Item.Name +'_'+ Context.Item.Location + DefaultExt;
-  end;  //of with
-
   try
-    // User clicked "save"?
-    if SaveDialog.Execute then
+    // Set TSaveDialog options
+    with SaveDialog do
     begin
+      Title := FLang.GetString(95);
+
+      // Confirm overwrite
+      Options := Options + [ofOverwritePrompt];
+
+      // Filter .reg files only
+      Filter := FLang.GetString(36);
+      DefaultExt := '.reg';
+
+      // Set a default file name
       if (PageControl.ActivePage = tsStartup) then
-        Startup.Item.ExportItem(SaveDialog.FileName)
+        FileName := Startup.Item.Name + DefaultExt
       else
-        Context.Item.ExportItem(SaveDialog.FileName);
+        FileName := Context.Item.Name +'_'+ Context.Item.Location + DefaultExt;
+    end;  //of with
 
-      result := True;
-    end;  //of begin
+    try
+      // User clicked "save"?
+      if SaveDialog.Execute then
+      begin
+        if (PageControl.ActivePage = tsStartup) then
+          Startup.Item.ExportItem(SaveDialog.FileName)
+        else
+          Context.Item.ExportItem(SaveDialog.FileName);
 
-  finally
-    SaveDialog.Free;
+        result := True;
+      end;  //of begin
+
+    finally
+      SaveDialog.Free;
+    end;  //of try
+
+  except
+    on E: EAccessViolation do
+      FLang.MessageBox([95, 18, NEW_LINE, 53], mtWarning);
+
+    on E: Exception do
+      FLang.MessageBox(FLang.GetString([95, 18, NEW_LINE]) + E.Message, mtError);
   end;  //of try
 end;
 
@@ -846,10 +861,10 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.MessageBox([93, 66, NEW_LINE, 53], mtWarning);
+      FLang.MessageBox([93, 18, NEW_LINE, 53], mtWarning);
 
     on E: Exception do
-      FLang.MessageBox(FLang.GetString([93, 66, NEW_LINE]) + E.Message, mtError);
+      FLang.MessageBox(FLang.GetString([93, 18, NEW_LINE]) + E.Message, mtError);
   end;  //of try
 end;
 
@@ -889,10 +904,10 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.MessageBox([94, 66, NEW_LINE, 53], mtWarning);
+      FLang.MessageBox([94, 18, NEW_LINE, 53], mtWarning);
 
     on E: Exception do
-      FLang.MessageBox(FLang.GetString([94, 66, NEW_LINE]) + E.Message, mtError);
+      FLang.MessageBox(FLang.GetString([94, 18, NEW_LINE]) + E.Message, mtError);
   end;  //of try
 end;
 
@@ -923,10 +938,10 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.MessageBox([94, 66, NEW_LINE, 53], mtWarning);
+      FLang.MessageBox([94, 18, NEW_LINE, 53], mtWarning);
 
     on E: Exception do
-      FLang.MessageBox(FLang.GetString([94, 66, NEW_LINE]) + E.Message, mtError);
+      FLang.MessageBox(FLang.GetString([94, 18, NEW_LINE]) + E.Message, mtError);
   end;  //of try
 end;
 
@@ -1384,7 +1399,7 @@ begin
     if (PageControl.ActivePage = tsContext) then
       bExportContextItem.Click()
     else
-      FLang.MessageBox([95, 66, NEW_LINE, 53], mtWarning);
+      FLang.MessageBox([95, 18, NEW_LINE, 53], mtWarning);
 end;
 
 { TMain.mmExportListClick

@@ -274,7 +274,7 @@ var
   reg: TRegistry;
 
 begin
-  reg := TRegistry.Create(DenyWOW64Redirection(KEY_WRITE));
+  reg := TRegistry.Create(DenyWOW64Redirection(KEY_READ or KEY_WRITE));
 
   try
     reg.RootKey := StrToHKey(AMainKey);
@@ -826,7 +826,7 @@ end;
 
 { public TStartupListItem.ExportItem
 
-  Exports an list item as .reg or .ini. }
+  Exports an list item as .reg file. }
 
 procedure TStartupListItem.ExportItem(const AFileName: string);
 var
@@ -941,7 +941,9 @@ begin
   try
     try
       reg.RootKey := HKEY_LOCAL_MACHINE;
-      reg.OpenKey(FKeyPath, False);
+
+      if not reg.OpenKey(FKeyPath, False) then
+        raise EStartupException.Create('Key does not exist!');
 
       // Set new values
       NewHKey := reg.ReadString('hkey');
@@ -949,7 +951,8 @@ begin
       reg.CloseKey;
 
       if ((NewHKey = '') or (NewKeyPath = '')) then
-        raise EStartupException.Create('Could not access registry!');
+        raise EStartupException.Create('Missing destination Registry values '
+          +'"hkey" and "key"!');
 
       reg.RootKey := StrToHKey(NewHKey);
 
@@ -1005,11 +1008,11 @@ begin
     if FEnabled then
     begin
       if not DeleteValue(FRootKey, FKeyPath, FName) then
-        raise EStartupException.Create('Could not delete value "'+ FName +'"!');
+        raise EStartupException.Create('Could not delete value!');
     end  //of begin
     else
       if not DeleteKey('HKLM', KEY_DEACT, FName) then
-        raise EStartupException.Create('Could not delete key "'+ FName +'"!');
+        raise EStartupException.Create('Could not delete key!');
 
     result := True;
 
@@ -1593,26 +1596,46 @@ end;
 
 { public TStartupList.ChangeItemFilePath
 
-  Changes the item file path. }
+  Changes the file path of an item. }
 
 function TStartupList.ChangeItemFilePath(const ANewFilePath: string): Boolean;
+var
+  reg: TRegistry;
+  ItemName: string;
+
 begin
   result := False;
 
+  // Invalid item?
   if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
     raise EInvalidItem.Create('No item selected!');
 
-  if not FItem.Enabled then
-  begin
-    TClearas.WriteStrValue(FItem.RootKey, FItem.KeyPath, 'Command', ANewFilePath);
-    TClearas.WriteStrValue(FItem.RootKey, FItem.KeyPath, 'Item', Item.Name);
-  end  //of begin
-  else
-    TClearas.WriteStrValue(FItem.RootKey, FItem.KeyPath, FItem.Name, ANewFilePath);
+  reg := TRegistry.Create(TWinWOW64.DenyWOW64Redirection(KEY_ALL_ACCESS));
 
-  // Change path in item
-  FItem.FFilePath := ANewFilePath;
-  result := True;
+  try
+    reg.RootKey := TOSUtils.StrToHKey(FItem.RootKey);
+
+    // Invalid key?
+    if not reg.OpenKey(FItem.KeyPath, False) then
+      raise Exception.Create('Key does not exist!');
+
+    if FItem.Enabled then
+      ItemName := FItem.Name
+    else
+      ItemName := 'command';
+
+    // Value must exist!
+    if not reg.ValueExists(ItemName) then
+      raise Exception.Create('Value does not exist!');
+
+    // Change path
+    reg.WriteString(ItemName, ANewFilePath);
+    FItem.FFilePath := ANewFilePath;
+    result := True;
+
+  finally
+    reg.Free;
+  end;  //of try
 end;
 
 { public TStartupList.DeleteItem
@@ -1654,7 +1677,7 @@ end;
 
 { public TStartupList.ExportItem
 
-  Exports an item as .reg or .ini file. }
+  Exports an item as .reg file. }
 
 procedure TStartupList.ExportItem(const AFileName: string; ARegFile: Boolean = True);
 begin
@@ -1666,7 +1689,7 @@ end;
 
 { public TStartupList.ExportList
 
-  Exports the complete list as .reg or .ini file. }
+  Exports the complete list as .reg file. }
 
 procedure TStartupList.ExportList(const AFileName: string);
 var
@@ -1877,6 +1900,8 @@ end;
 
 function TContextListItem.Delete(): Boolean;
 begin
+  result := False;
+
   try
     if not DeleteKey('HKCR', ExtractFileDir(KeyPath), FName) then
       raise EStartupException.Create('Could not delete key!')
@@ -1886,7 +1911,6 @@ begin
   except
     on E: Exception do
     begin
-      result := False;
       E.Message := 'Error while deleting "'+ FName +'": '+ E.Message;
       raise;
     end;  //of begin
@@ -1895,7 +1919,7 @@ end;
 
 { public TContextListItem.ExportItem
 
-  Exports an list item as .reg or .ini. }
+  Exports an list item as .reg file. }
 
 procedure TContextListItem.ExportItem(const AFileName: string);
 var
@@ -1952,6 +1976,8 @@ end;
 
 function TShellItem.Disable(): Boolean;
 begin
+  result := False;
+
   try
     WriteStrValue('HKCR', KeyPath, 'LegacyDisable', '');
     FEnabled := False;
@@ -1960,7 +1986,6 @@ begin
   except
     on E: Exception do
     begin
-      result := False;
       E.Message := 'Error while disabling "'+ FName +'": '+ E.Message;
       raise;
     end;  //of begin
@@ -1973,17 +1998,18 @@ end;
 
 function TShellItem.Enable(): Boolean;
 begin
+  result := False;
+
   try
     if not DeleteValue('HKCR', KeyPath, 'LegacyDisable') then
       raise EStartupException.Create('Could not delete value "'+ KeyPath + '\LegacyDisable' +'"!');
 
-    result := True;
     FEnabled := True;
+    result := True;
 
   except
     on E: Exception do
     begin
-      result := False;
       E.Message := 'Error while enabling "'+ FName +'": '+ E.Message;
       raise;
     end;  //of begin
@@ -2011,6 +2037,8 @@ var
   OldValue: string;
 
 begin
+  result := False;
+
   try
     OldValue := GetKeyValue('HKCR', KeyPath, '');
     WriteStrValue('HKCR', KeyPath, '', '-' + OldValue);
@@ -2020,7 +2048,6 @@ begin
   except
     on E: Exception do
     begin
-      result := False;
       E.Message := 'Error while disabling "'+ FName +'": '+ E.Message;
       raise;
     end;  //of begin
@@ -2036,6 +2063,8 @@ var
   OldValue, NewValue: string;
 
 begin
+  result := False;
+
   try
     OldValue := GetKeyValue('HKCR', KeyPath, '');
     NewValue := Copy(OldValue, 2, Length(OldValue));
@@ -2046,7 +2075,6 @@ begin
   except
     on E: Exception do
     begin
-      result := False;
       E.Message := 'Error while enabling "'+ FName +'": '+ E.Message;
       raise;
     end;  //of begin
@@ -2369,7 +2397,7 @@ end;
 
 { public TContextList.ExportItem
 
-  Exports an item as .reg or .ini file. }
+  Exports an item as .reg file. }
 
 procedure TContextList.ExportItem(const AFileName: string);
 begin

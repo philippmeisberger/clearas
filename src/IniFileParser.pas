@@ -19,8 +19,9 @@ uses
   Classes, SysUtils, StrUtils, OSUtils;
 
 type
-  { Exception class }
+  { Exception classes }
   EInvalidIniFormat = class(Exception);
+  EParserException = class(Exception);
 
   { TIniFile }
   TIniFile = class(TObject)
@@ -804,7 +805,10 @@ var
 begin
   // Init Registry access
   FReg.RootKey := AHKey;
-  FReg.OpenKey(AKeyPath, False);
+
+  // Invalid key?
+  if not FReg.OpenKey(AKeyPath, False) then
+    raise EParserException.Create('Error while exporting key: Key does not exist!');
 
   // Read all values from current key
   Values := TStringList.Create;
@@ -820,6 +824,8 @@ begin
       case FReg.GetDataType(Values[i]) of
         rdString:  WriteString(Section, Values[i], FReg.ReadString(Values[i]));
         rdInteger: WriteInteger(Section, Values[i], FReg.ReadInteger(Values[i]));
+        //rdBinary: TODO
+        //rdExpandString: TODO
       end;  //of case
 
   // Include subkeys?
@@ -868,7 +874,14 @@ var
 begin
   // Init Registry access
   FReg.RootKey := AHKey;
-  FReg.OpenKey(AKeyPath, False);
+
+  // Invalid key?
+  if not FReg.OpenKey(AKeyPath, False) then
+    raise EParserException.Create('Error while exporting value: Key does not exist!');
+
+  // Invalid value?
+  if not FReg.ValueExists(AValueName) then
+    raise EParserException.Create('Error while exporting value: Value does not exist!');
 
   MakeHeadline();
 
@@ -880,6 +893,8 @@ begin
   case FReg.GetDataType(AValueName) of
     rdString:  WriteString(Section, AValueName, FReg.ReadString(AValueName));
     rdInteger: WriteInteger(Section, AValueName, FReg.ReadInteger(AValueName));
+    //rdBinary: TODO
+    //rdExpandString: TODO
   end;  //of case
 
   FReg.CloseKey();

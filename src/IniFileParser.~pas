@@ -8,10 +8,15 @@
 
 unit IniFileParser;
 
+{$IFDEF LINUX} {$mode delphi}{$H+} {$ENDIF}
+
 interface
 
 uses
-  Windows, Classes, Registry, SysUtils, StrUtils, OSUtils;
+{$IFDEF MSWINDOWS}
+  Windows, Registry,
+{$ENDIF}
+  Classes, SysUtils, StrUtils, OSUtils;
 
 type
   { Exception class }
@@ -64,6 +69,7 @@ type
     property Values[AIndex: Integer]: string read GetValue;
   end;
 
+{$IFDEF MSWINDOWS}
   { TRegistryFile }
   TRegistryFile = class(TIniFile)
   private
@@ -99,11 +105,9 @@ type
     property OnExportBegin: TNotifyEvent read FOnExportBegin write FOnExportBegin;
     property OnExportEnd: TNotifyEvent read FOnExportEnd write FOnExportEnd;
   end;
-
+{$ENDIF}
 
 implementation
-
-uses Math;
 
 { TIniFile }
 
@@ -514,8 +518,16 @@ end;
   Returns an integer value of a key in section. }
 
 function TIniFile.ReadInteger(ASectionName, AKey: string): Integer;
+var
+  Value: string;
+
 begin
-  result := StrToInt(ReadString(ASectionName, AKey));
+  Value := ReadString(ASectionName, AKey);
+
+  if (Value = '') then
+    result := -1
+  else
+    result := StrToInt(Value);
 end;
 
 { public TIniFile.ReadString
@@ -565,7 +577,7 @@ end;
 
 function TIniFile.RemoveSection(ASectionName: string): Boolean;
 var
-  Range, StartIndex, EndIndex, i: Integer;
+  StartIndex, EndIndex, i: Integer;
 
 begin
   StartIndex := IndexOfSection(ASectionName);
@@ -573,10 +585,8 @@ begin
 
   if ((StartIndex <> -1) and (EndIndex <> -1)) then
   begin
-    Range := EndIndex - StartIndex;
-
-    for i := 0 to Range do
-      FFile.Delete(StartIndex - 1);
+    for i := EndIndex - 1 downto StartIndex -1 do
+      FFile.Delete(i);
 
     result := True;
   end  //of begin
@@ -661,7 +671,7 @@ begin
     end;  //of if
 end;
 
-
+{$IFDEF MSWINDOWS}
 { TRegistryFile }
 
 { public TRegistryFile.Create
@@ -794,7 +804,10 @@ var
 begin
   // Init Registry access
   FReg.RootKey := AHKey;
-  FReg.OpenKey(AKeyPath, False);
+
+  // Invalid key?
+  if not FReg.OpenKey(AKeyPath, False) then
+    raise Exception.Create('Error while exporting key: Key does not exist!');
 
   // Read all values from current key
   Values := TStringList.Create;
@@ -810,6 +823,8 @@ begin
       case FReg.GetDataType(Values[i]) of
         rdString:  WriteString(Section, Values[i], FReg.ReadString(Values[i]));
         rdInteger: WriteInteger(Section, Values[i], FReg.ReadInteger(Values[i]));
+        //rdBinary: TODO
+        //rdExpandString: TODO
       end;  //of case
 
   // Include subkeys?
@@ -858,7 +873,14 @@ var
 begin
   // Init Registry access
   FReg.RootKey := AHKey;
-  FReg.OpenKey(AKeyPath, False);
+
+  // Invalid key?
+  if not FReg.OpenKey(AKeyPath, False) then
+    raise Exception.Create('Error while exporting value: Key does not exist!');
+
+  // Invalid value?
+  if not FReg.ValueExists(AValueName) then
+    raise Exception.Create('Error while exporting value: Value does not exist!');
 
   MakeHeadline();
 
@@ -870,6 +892,8 @@ begin
   case FReg.GetDataType(AValueName) of
     rdString:  WriteString(Section, AValueName, FReg.ReadString(AValueName));
     rdInteger: WriteInteger(Section, AValueName, FReg.ReadInteger(AValueName));
+    //rdBinary: TODO
+    //rdExpandString: TODO
   end;  //of case
 
   FReg.CloseKey();
@@ -984,5 +1008,6 @@ begin
   else
     inherited WriteString(ASection, '"'+ AIdent +'"', '"'+ EscapePathDelimiter(AValue) +'"');
 end;
+{$ENDIF}
 
-end.
+end.

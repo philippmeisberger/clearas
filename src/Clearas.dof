@@ -33,7 +33,7 @@ UnitAliases=WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=
 NamespacePrefix=
 SymbolDeprecated=1
 SymbolLibrary=1
-SymbolPlatform=1
+SymbolPlatform=0
 UnitLibrary=1
 UnitPlatform=1
 UnitDeprecated=1
@@ -115,7 +115,7 @@ AutoIncBuild=1
 MajorVer=3
 MinorVer=1
 Release=0
-Build=516
+Build=526
 Debug=0
 PreRelease=0
 Special=0
@@ -126,7 +126,7 @@ CodePage=1252
 [Version Info Keys]
 CompanyName=PM Code Works
 FileDescription=Clearas
-FileVersion=3.1.0.516
+FileVersion=3.1.0.526
 InternalName=
 LegalCopyright=P. Meisberger 2014
 LegalTrademarks=PM Code Works

@@ -412,7 +412,7 @@ object Info: TInfo
           'History'
           '--------'
           ''
-          'Version 3.1  [22.12.14]'
+          'Version 3.1  [30.12.14]'
           ''
           '- '#196'nderungen im Popup Men'#252':'
           '  - Neue Funktion "Pfad bearbeiten" hinzugef'#252'gt'
