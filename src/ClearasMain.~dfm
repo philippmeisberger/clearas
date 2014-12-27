@@ -285,7 +285,7 @@ object Main: TMain
     Top = 0
     Width = 541
     Height = 307
-    ActivePage = tsContext
+    ActivePage = tsStartup
     Anchors = [akLeft, akTop, akRight, akBottom]
     TabOrder = 0
     OnChange = PageControlChange
@@ -561,7 +561,7 @@ object Main: TMain
           end
           item
             Caption = 'Ort'
-            Width = 108
+            Width = 107
           end
           item
             Caption = 'Schl'#252'ssel'

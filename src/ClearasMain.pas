@@ -144,7 +144,6 @@ type
     procedure AfterUpdate(Sender: TObject; ADownloadedFileName: string);
     procedure BeforeUpdate(Sender: TObject; const ANewBuild: Cardinal);
     function CreateStartupUserBackup(): Boolean;
-    procedure EditPath(APath: string);
     procedure OnSearchProgress(Sender: TObject; AWorkCount: Cardinal);
     procedure OnSearchStart(Sender: TObject; AWorkCountMax: Cardinal);
     procedure OnSearchEnd(Sender: TObject);
@@ -326,48 +325,6 @@ begin
 
     on E: Exception do
       FLang.MessageBox(FLang.GetString([95, 18, NEW_LINE]) + E.Message, mtError);
-  end;  //of try
-end;
-
-{ private TMain.EditPath
-
-  Shows an input box for editing a file path. }
-
-procedure TMain.EditPath(APath: string);
-var
-  DefaultPath, EnteredPath: string;
-
-  function AddQuotes(APath: string): string;
-  begin
-    if ((Length(APath) > 0) and (APath[1] <> '"')) then
-      result := '"'+ APath +'"'
-    else
-      result := APath;
-  end;
-
-begin
-  try
-    DefaultPath := AddQuotes(APath);
-
-    // Show input box for editing path
-    EnteredPath := InputBox(FLang.GetString(33), FLang.GetString(54), DefaultPath);
-
-    // Nothing entered or nothing changed
-    if ((Trim(EnteredPath) = '') or (EnteredPath = DefaultPath)) then
-      Exit;
-
-    // Try to change the file path
-    if not Startup.ChangeItemFilePath(EnteredPath) then
-      raise Exception.Create('Could not change path!');
-
-    lwStartup.ItemFocused.SubItems[1] := EnteredPath;
-
-  except
-    on E: EAccessViolation do
-      FLang.MessageBox(53, mtWarning);
-
-    on E: Exception do
-      FLang.MessageBox(FLang.GetString([33, 18, NEW_LINE]) + E.Message, mtError);
   end;  //of try
 end;
 
@@ -1264,8 +1221,37 @@ end;
   Popup menu entry to edit the path of a program. }
 
 procedure TMain.pmEditClick(Sender: TObject);
+var
+  Path, EnteredPath: string;
+
 begin
-  EditPath(lwStartup.ItemFocused.SubItems[1]);
+  try
+    Path := Startup.Selected.FilePath;
+
+    // Show input box for editing path
+    EnteredPath := InputBox(FLang.GetString(33), FLang.GetString(54), Path);
+
+    // Nothing entered or nothing changed
+    if ((Trim(EnteredPath) = '') or (EnteredPath = Path)) then
+      Exit;
+
+    // Escape file path in quotes
+    if ((Length(EnteredPath) > 0) and (EnteredPath[1] <> '"')) then
+      EnteredPath := '"'+ EnteredPath +'"';
+
+    // Try to change the file path
+    if not Startup.ChangeItemFilePath(EnteredPath) then
+      raise Exception.Create('Could not change path!');
+
+    lwStartup.ItemFocused.SubItems[1] := EnteredPath;
+
+  except
+    on E: EAccessViolation do
+      FLang.MessageBox(53, mtWarning);
+
+    on E: Exception do
+      FLang.MessageBox(FLang.GetString([33, 18, NEW_LINE]) + E.Message, mtError);
+  end;  //of try
 end;
 
 { TMain.mmAddClick
