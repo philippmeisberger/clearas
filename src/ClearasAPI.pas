@@ -185,7 +185,7 @@ type
     { external }
     property DeleteBackup: Boolean read FDeleteBackup write FDeleteBackup;
     property Items[AIndex: Word]: TStartupListItem read ItemAt; default;
-    property Item: TStartupListItem read FItem write FItem;
+    property Selected: TStartupListItem read FItem write FItem;
   end;
 
   { Alias class }
@@ -254,7 +254,7 @@ type
     procedure LoadContextMenus();
     { external }
     property Items[AIndex: Word]: TContextListItem read ItemAt; default;
-    property Item: TContextListItem read FItem write FItem;
+    property Selected: TContextListItem read FItem write FItem;
     property OnSearch: TOnSearchEvent read FWorkCount write FWorkCount;
     property OnSearchBegin: TOnSearchEvent read FWorkCountMax write FWorkCountMax;
     property OnSearchEnd: TNotifyEvent read FContextCount write FContextCount;
@@ -739,14 +739,12 @@ var
   Date, Time: string;
 
 begin
+  result := '';
+
   // Deactivation timestamp only available for disabled items
   if FEnabled then
-  begin
-    result := '';
     Exit;
-  end;  //of begin
 
-  result := '00.00.0000 00:00:00';
   reg := TRegistry.Create(DenyWOW64Redirection(KEY_READ));
 
   try

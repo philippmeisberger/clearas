@@ -285,7 +285,7 @@ object Main: TMain
     Top = 0
     Width = 541
     Height = 307
-    ActivePage = tsStartup
+    ActivePage = tsContext
     Anchors = [akLeft, akTop, akRight, akBottom]
     TabOrder = 0
     OnChange = PageControlChange
@@ -357,12 +357,12 @@ object Main: TMain
           end
           item
             Caption = 'Datei'
-            Width = 125
+            Width = 122
           end
           item
             Caption = 'Schl'#252'ssel'
             MaxWidth = 105
-            Width = 72
+            Width = 75
           end>
         Font.Charset = ANSI_CHARSET
         Font.Color = clBlack
@@ -551,9 +551,9 @@ object Main: TMain
         Columns = <
           item
             Caption = 'Aktiv'
-            MaxWidth = 45
-            MinWidth = 45
-            Width = 45
+            MaxWidth = 53
+            MinWidth = 53
+            Width = 53
           end
           item
             Caption = 'Eintrag (0/0)'
@@ -561,7 +561,7 @@ object Main: TMain
           end
           item
             Caption = 'Ort'
-            Width = 115
+            Width = 108
           end
           item
             Caption = 'Schl'#252'ssel'

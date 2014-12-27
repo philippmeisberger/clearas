@@ -300,7 +300,7 @@ begin
 
   try
     // Special .lnk file backup only for activated startup user entries!
-    if (Startup.Item.Enabled and Startup.Item.StartupUser) then
+    if (Startup.Selected.Enabled and Startup.Selected.StartupUser) then
     begin
       // Successfully created backup of .lnk file?
       if Startup.CreateBackup() then
@@ -367,7 +367,7 @@ begin
       FLang.MessageBox(53, mtWarning);
 
     on E: Exception do
-      FLang.MessageBox(57, mtError);
+      FLang.MessageBox(FLang.GetString([33, 18, NEW_LINE]) + E.Message, mtError);
   end;  //of try
 end;
 
@@ -516,7 +516,16 @@ begin
   // Make a total refresh or just use cached items
   if ATotalRefresh then
   begin
-    // Clears all data
+    // Clear selected item
+    Context.Selected := nil;
+
+    // Disable VCL buttons
+    bDisableContextItem.Enabled := False;
+    bEnableContextItem.Enabled := False;
+    bDeleteContextItem.Enabled := False;
+    bExportContextItem.Enabled := False;
+
+    // Clear all data in backend
     Context.Clear();
 
     // Use expert search mode?
@@ -581,9 +590,9 @@ begin
 
       // Set a default file name
       if (PageControl.ActivePage = tsStartup) then
-        FileName := Startup.Item.Name + DefaultExt
+        FileName := Startup.Selected.Name + DefaultExt
       else
-        FileName := Context.Item.Name +'_'+ Context.Item.Location + DefaultExt;
+        FileName := Context.Selected.Name +'_'+ Context.Selected.Location + DefaultExt;
     end;  //of with
 
     try
@@ -591,9 +600,9 @@ begin
       if SaveDialog.Execute then
       begin
         if (PageControl.ActivePage = tsStartup) then
-          Startup.Item.ExportItem(SaveDialog.FileName)
+          Startup.Selected.ExportItem(SaveDialog.FileName)
         else
-          Context.Item.ExportItem(SaveDialog.FileName);
+          Context.Selected.ExportItem(SaveDialog.FileName);
 
         result := True;
       end;  //of begin
@@ -629,6 +638,15 @@ begin
   // Make a total refresh or just use cached items
   if ATotalRefresh then
   begin
+    // Clear selected item
+    Startup.Selected := nil;
+
+    // Disable VCL buttons
+    bDisableStartupItem.Enabled := False;
+    bEnableStartupItem.Enabled := False;
+    bDeleteStartupItem.Enabled := False;
+    bExportStartupItem.Enabled := False;
+
     // Clears all data
     Startup.Clear();
 
@@ -671,7 +689,7 @@ end;
 procedure TMain.bExportContextItemClick(Sender: TObject);
 begin
   // Nothing selected?
-  if not Assigned(Context.Item) then
+  if not Assigned(Context.Selected) then
   begin
     FLang.MessageBox([95, 18, NEW_LINE, 53], mtWarning);
     Exit;
@@ -694,8 +712,8 @@ begin
 
   try
     // Confirm deletion of item
-    if (FLang.MessageBox(FLang.Format([48, NEW_LINE, 49, 50], [Startup.Item.Name]),
-      mtConfirm) = IDYES) then
+    if (FLang.MessageBox(FLang.Format([48, NEW_LINE, 49, 50],
+      [Startup.Selected.Name]), mtConfirm) = IDYES) then
     begin
       // Save the DeleteBackup flag
       DelBackup := Startup.DeleteBackup;
@@ -709,7 +727,7 @@ begin
         Startup.DeleteBackup := False;
         
         // Ask user to delete old backup if a backup exists and item was not exported
-        if ((Answer = IDNO) and Startup.Item.StartupUser and Startup.BackupExists()) then
+        if ((Answer = IDNO) and Startup.Selected.StartupUser and Startup.BackupExists()) then
           Startup.DeleteBackup := (FLang.MessageBox(44, mtQuestion) = IDYES);
 
         // Successfully deleted item physically?
@@ -757,8 +775,8 @@ var
 begin
   try
     // Confirm deletion of item
-    if (FLang.MessageBox(FLang.Format([85, NEW_LINE, 49, 50], [Context.Item.Name]),
-      mtConfirm) = IDYES) then
+    if (FLang.MessageBox(FLang.Format([85, NEW_LINE, 49, 50],
+      [Context.Selected.Name]), mtConfirm) = IDYES) then
     begin
       // Ask user to export item
       Answer := FLang.MessageBox(52, mtQuestion);
@@ -805,7 +823,7 @@ begin
     if Startup.ChangeItemStatus() then
     begin
       // Change item visual status
-      lwStartup.ItemFocused.Caption := Startup.Item.GetStatus(FLang);
+      lwStartup.ItemFocused.Caption := Startup.Selected.GetStatus(FLang);
 
       // Change button states
       bEnableStartupItem.Enabled := False;
@@ -845,7 +863,7 @@ begin
     if Context.ChangeItemStatus() then
     begin
       // Change item visual status
-      lwContext.ItemFocused.Caption := Context.Item.GetStatus(FLang);
+      lwContext.ItemFocused.Caption := Context.Selected.GetStatus(FLang);
 
       // Change button states
       bEnableContextItem.Enabled := False;
@@ -879,7 +897,7 @@ begin
     if Startup.ChangeItemStatus() then
     begin
       // Change item visual status
-      lwStartup.ItemFocused.Caption := Startup.Item.GetStatus(FLang);
+      lwStartup.ItemFocused.Caption := Startup.Selected.GetStatus(FLang);
 
       // Change button states
       bDisableStartupItem.Enabled := False;
@@ -889,9 +907,9 @@ begin
 
       // Show deactivation timestamp?
       if mmDate.Checked then
-        lwStartup.ItemFocused.SubItems[3] := Startup.Item.Time;
+        lwStartup.ItemFocused.SubItems[3] := Startup.Selected.Time;
 
-      if (Startup.Item.StartupUser and not bExportStartupItem.Enabled) then
+      if (Startup.Selected.StartupUser and not bExportStartupItem.Enabled) then
         bExportStartupItem.Enabled := True;
 
       pmExport.Enabled := bExportStartupItem.Enabled;
@@ -922,7 +940,7 @@ begin
     if Context.ChangeItemStatus() then
     begin
       // Change item visual status
-      lwContext.ItemFocused.Caption := Context.Item.GetStatus(FLang);
+      lwContext.ItemFocused.Caption := Context.Selected.GetStatus(FLang);
 
       // Change button states
       bDisableStartupItem.Enabled := False;
@@ -1007,7 +1025,7 @@ begin
       Exit;
 
     // Load item into cache
-    Startup.Item := Startup.Items[Index];
+    Startup.Selected := Startup.Items[Index];
 
     bCloseStartup.Default := False;
 
@@ -1024,7 +1042,7 @@ begin
       begin
         bDeleteStartupItem.Default := False;
 
-        bEnableStartupItem.Enabled := not Startup.Item.Enabled;
+        bEnableStartupItem.Enabled := not Startup.Selected.Enabled;
         bEnableStartupItem.Default := bEnableStartupItem.Enabled;
 
         bDisableStartupItem.Enabled := not bEnableStartupItem.Enabled;
@@ -1041,7 +1059,7 @@ begin
       end;  //of if
 
     // Disable "export" if backup already exists
-    if (Startup.Item.StartupUser and Startup.Item.Enabled
+    if (Startup.Selected.StartupUser and Startup.Selected.Enabled
       and Startup.BackupExists()) then
       bExportStartupItem.Enabled := False
     else
@@ -1081,13 +1099,13 @@ begin
       Exit;
 
     // Load item into cache
-    Context.Item := Context.Items[Index];
+    Context.Selected := Context.Items[Index];
 
     // Change button states
     bCloseContext.Default := False;
     bDeleteContextItem.Default := False;
 
-    bEnableContextItem.Enabled := not Context.Item.Enabled;
+    bEnableContextItem.Enabled := not Context.Selected.Enabled;
     bEnableContextItem.Default := bEnableContextItem.Enabled;
 
     bDisableContextItem.Enabled := not bEnableContextItem.Enabled;
@@ -1214,9 +1232,9 @@ end;
 procedure TMain.pmOpenRegeditClick(Sender: TObject);
 begin
   if (PageControl.ActivePage = tsStartup) then
-    Startup.Item.OpenInRegedit()
+    Startup.Selected.OpenInRegedit()
   else
-    Context.Item.OpenInRegedit();
+    Context.Selected.OpenInRegedit();
 end;
 
 { TMain.pmPropertiesClick
@@ -1230,9 +1248,9 @@ var
 begin
   try
     if (PageControl.ActivePage = tsStartup) then
-      Startup.Item.GetItemInfo(Properties, FLang)
+      Startup.Selected.GetItemInfo(Properties, FLang)
     else
-      Context.Item.GetItemInfo(Properties, FLang);
+      Context.Selected.GetItemInfo(Properties, FLang);
 
     FLang.MessageBox(Properties);
 
@@ -1521,13 +1539,13 @@ begin
   if (PageControl.ActivePage = tsStartup) then
   begin
     lwStartup.Columns[1].Width := 125;
-    lwStartup.Columns[2].Width := 124;
-    lwStartup.Columns[3].Width := 72;
+    lwStartup.Columns[2].Width := 122;
+    lwStartup.Columns[3].Width := 75;
   end  //of begin
   else
     begin
       lwContext.Columns[1].Width := 150;
-      lwContext.Columns[2].Width := 115;
+      lwContext.Columns[2].Width := 108;
       lwContext.Columns[3].Width := 65;
     end;  //of if
 end;
