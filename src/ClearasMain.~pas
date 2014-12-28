@@ -216,6 +216,7 @@ begin
   windows := TOSUtils.GetWinVersion(True);
   newWindows := TOSUtils.CheckWindows();
   lWindows.Caption := lWindows.Caption +' '+ windows;
+  lWindows2.Caption := lWindows.Caption;
 
   // Check for incompatibility
   if not (newWindows or (windows[1] in ['X','2'])) then
@@ -661,7 +662,7 @@ end;
 
 procedure TMain.bDeleteStartupItemClick(Sender: TObject);
 var
-  DelBackup: Boolean;
+  DelBackup, BackupExists: Boolean;
   Answer: Integer;
 
 begin
@@ -674,38 +675,43 @@ begin
     begin
       // Save the DeleteBackup flag
       DelBackup := Startup.DeleteBackup;
+      BackupExists := Startup.BackupExists();
 
-      // Ask user to export item
-      Answer := FLang.MessageBox(52, mtQuestion);
+      // Skip export dialog for enabled startup user item with exising backup
+      if (Startup.Selected.StartupUser and Startup.Selected.Enabled and BackupExists) then
+        Answer := IDCANCEL
+      else
+        Answer := FLang.MessageBox(52, mtQuestion);
 
-      // Export item only if backup does not exist?
-      if (((Answer = IDYES) and CreateStartupUserBackup()) or (Answer = IDNO)) then
+      // Export item and only continue if this has succeeded
+      if ((Answer = IDYES) and CreateStartupUserBackup()) then
+        Startup.DeleteBackup := False
+      else
+        Exit;
+
+      // Ask user to delete old existing backup and item was not exported
+      if ((Answer = IDCANCEL) or (Startup.Selected.StartupUser
+        and not Startup.Selected.Enabled and BackupExists)) then
+        Startup.DeleteBackup := (FLang.MessageBox(44, mtQuestion) = IDYES);
+
+      // Successfully deleted item physically?
+      if Startup.DeleteItem() then
       begin
-        Startup.DeleteBackup := False;
-        
-        // Ask user to delete old backup if a backup exists and item was not exported
-        if ((Answer = IDNO) and Startup.Selected.StartupUser and Startup.BackupExists()) then
-          Startup.DeleteBackup := (FLang.MessageBox(44, mtQuestion) = IDYES);
+        // Delete item from TListView
+        lwStartup.DeleteSelected();
 
-        // Successfully deleted item physically?
-        if Startup.DeleteItem() then
-        begin
-          // Delete item from ListView visual
-          lwStartup.DeleteSelected();
+        // Refresh counter label
+        RefreshStartupCounter();
 
-          // Refresh counter label
-          RefreshStartupCounter();
-
-          // Change button states
-          bEnableStartupItem.Enabled := False;
-          bDisableStartupItem.Enabled := False;
-          bDeleteStartupItem.Enabled := False;
-          bExportStartupItem.Enabled := False;
-          bCloseStartup.Default := True;
-        end  //of begin
-        else
-          raise Exception.Create('Could not delete item!');
-      end;  //of begin
+        // Change button states
+        bEnableStartupItem.Enabled := False;
+        bDisableStartupItem.Enabled := False;
+        bDeleteStartupItem.Enabled := False;
+        bExportStartupItem.Enabled := False;
+        bCloseStartup.Default := True;
+      end  //of begin
+      else
+        raise Exception.Create('Could not delete item!');
     end;  //of begin
 
   except
@@ -743,7 +749,7 @@ begin
         // Successfully deleted item physically?
         if Context.DeleteItem() then
         begin
-          // Delete item from ListView visual
+          // Delete item from TListView
           lwContext.DeleteSelected();
 
           // Refresh counter label
@@ -1225,9 +1231,9 @@ var
   Path, EnteredPath: string;
 
 begin
-  Path := lwStartup.ItemFocused.SubItems[1];
-
   try
+    Path := Startup.Selected.FilePath;
+
     // Show input box for editing path
     EnteredPath := InputBox(FLang.GetString(33), FLang.GetString(54), Path);
 

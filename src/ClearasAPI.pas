@@ -160,12 +160,12 @@ type
     procedure GetLnkFileNames(AFileList: TStrings; AAllUsers: Boolean);
     function GetStartupUserType(const AKeyPath: string): string;
   protected
-    function AddItemDisabled(const AKeyPath: string): Integer;
-    function AddItemEnabled(const ARootKey, AKeyPath, AName, AFilePath: string): Integer;
+    function AddItemDisabled(const AKeyPath: string): Word;
+    function AddItemEnabled(const ARootKey, AKeyPath, AName, AFilePath: string): Word;
     function AddNewStartupUserItem(AName, AFilePath: string;
       AAllUsers: Boolean = False): Boolean;
-    function AddUserItemDisabled(const AKeyPath: string): Integer;
-    function AddUserItemEnabled(const ALnkFile: string; AAllUsers: Boolean): Integer;
+    function AddUserItemDisabled(const AKeyPath: string): Word;
+    function AddUserItemEnabled(const ALnkFile: string; AAllUsers: Boolean): Word;
   public
     constructor Create;
     function CreateBackup(): Boolean;
@@ -1352,7 +1352,7 @@ end;
 
   Adds a disabled default startup item to the list. }
 
-function TStartupList.AddItemDisabled(const AKeyPath: string): Integer;
+function TStartupList.AddItemDisabled(const AKeyPath: string): Word;
 var
   Item: TStartupListItem;
 
@@ -1376,7 +1376,7 @@ end;
 
   Adds a enabled default startup item to the list. }
 
-function TStartupList.AddItemEnabled(const ARootKey, AKeyPath, AName, AFilePath: string): Integer;
+function TStartupList.AddItemEnabled(const ARootKey, AKeyPath, AName, AFilePath: string): Word;
 var
   Item: TStartupListItem;
 
@@ -1392,9 +1392,9 @@ begin
     Time := '';
 
     if ((AKeyPath = KEY_RUNONCE) or (AKeyPath = KEY_RUNONCE32)) then
-       TypeOf := 'RunOnce'
+      TypeOf := 'RunOnce'
     else
-       TypeOf := ARootKey;
+      TypeOf := ARootKey;
   end;  //of with
 
   Inc(FActCount);
@@ -1433,7 +1433,7 @@ end;
 
   Adds a disabled startup user item to the list. }
 
-function TStartupList.AddUserItemDisabled(const AKeyPath: string): Integer;
+function TStartupList.AddUserItemDisabled(const AKeyPath: string): Word;
 var
   Item: TStartupListItem;
 
@@ -1457,7 +1457,7 @@ end;
 
   Adds a enabled startup user item to the list. }
 
-function TStartupList.AddUserItemEnabled(const ALnkFile: string; AAllUsers: Boolean): Integer;
+function TStartupList.AddUserItemEnabled(const ALnkFile: string; AAllUsers: Boolean): Word;
 var
   Item: TStartupListItem;
   ExeFile: string;
@@ -1507,6 +1507,7 @@ function TStartupList.AddProgram(const AFilePath: string;
   ANickName: string = ''): Boolean;
 var
   Name, Ext: string;
+  i: Word;
 
 begin
   result := False;
@@ -1518,10 +1519,12 @@ begin
     raise EInvalidArgument.Create('Invalid program extension! Must be ".exe"'
       +', ".lnk" or ".bat"!');
 
-  // Entry already exists?
-  if (IndexOf(Name) <> -1) then
-    Exit;
+  // File path already exists in another item?
+  for i := 0 to Count -1 do
+    if (ItemAt(i).FilePath = AFilePath) then
+      Exit;
 
+  // Add new startup user item?
   if ((Ext = '.exe') or (Ext = '.lnk')) then
   begin
     if (ANickName <> '') then
@@ -1736,6 +1739,7 @@ end;
 function TStartupList.ImportBackup(const AFilePath: string): Boolean;
 var
   Path, Name, Ext: string;
+  i: Word;
 
 begin
   result := False;
@@ -1753,13 +1757,14 @@ begin
   if (ExtractFileExt(Name) = '') then
     Name := Name +'.lnk';
 
-  // Entry already exists?
-  if (IndexOf(Name) <> -1) then
-    Exit;
-
   // Extract path to .exe
   if not TClearas.ReadLnkFile(AFilePath, Path) then
     raise EStartupException.Create('Could not read backup file!');
+
+  // File path already exists in another item?
+  for i := 0 to Count -1 do
+    if (ItemAt(i).FilePath = Path) then
+      Exit;
 
   // Create .lnk file and add it to list
   result := AddNewStartupUserItem(Name, Path, Ext = EXT_COMMON);

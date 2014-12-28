@@ -597,7 +597,7 @@ object Main: TMain
         Visible = False
       end
       object cbExpert: TCheckBox
-        Left = 412
+        Left = 404
         Top = 256
         Width = 105
         Height = 17
