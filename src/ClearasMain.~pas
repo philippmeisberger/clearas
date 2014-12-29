@@ -13,7 +13,7 @@ interface
 uses
   Windows, SysUtils, Classes, Controls, Forms, ComCtrls, StdCtrls, ExtCtrls,
   Dialogs, Menus, Graphics, ShellAPI, ClearasAPI, ClearasInfo, LanguageFile,
-  OSUtils, Updater;
+  OSUtils, Updater, Contextmenu;
 
 type
   { TMain }
@@ -136,7 +136,6 @@ type
     procedure lCopy1Click(Sender: TObject);
     procedure pmOpenRegeditClick(Sender: TObject);
   private
-    FList: TRootList;
     FColumnToSort: Word;
     Startup: TStartupList;
     Context: TContextList;
@@ -189,9 +188,6 @@ begin
 
   // Set title
   Caption := Application.Title + TOSUtils.GetArchitecture();
-
-  // Pointer to current selected list
-  FList := Startup;
 end;
 
 { TMain.FormDestroy
@@ -200,7 +196,6 @@ end;
 
 procedure TMain.FormDestroy(Sender: TObject);
 begin
-  FList := nil;
   Context.Free;
   Startup.Free;
   FUpdateCheck.Free;
@@ -563,9 +558,9 @@ begin
       if SaveDialog.Execute then
       begin
         if (PageControl.ActivePage = tsStartup) then
-          Startup.Selected.ExportItem(SaveDialog.FileName)
+          Startup.ExportItem(SaveDialog.FileName)
         else
-          Context.Selected.ExportItem(SaveDialog.FileName);
+          Context.ExportItem(SaveDialog.FileName);
 
         result := True;
       end;  //of begin
@@ -1250,13 +1245,20 @@ end;
 procedure TMain.pmEditClick(Sender: TObject);
 var
   Path, EnteredPath: string;
+  SelectedList: TRootList;
 
 begin
   try
     if (PageControl.ActivePage = tsStartup) then
-      Path := Startup.Selected.FilePath
+    begin
+      SelectedList := Startup;
+      Path := Startup.Selected.FilePath;
+    end  //of begin
     else
-      Path := Context.Selected.FilePath;
+      begin
+        SelectedList := Context;
+        Path := Context.Selected.FilePath;
+      end;  //of if
 
     // Show input box for editing path
     EnteredPath := InputBox(FLang.GetString(33), FLang.GetString(54), Path);
@@ -1270,7 +1272,7 @@ begin
       EnteredPath := '"'+ EnteredPath +'"';
 
     // Try to change the file path
-    if not FList.ChangeItemFilePath(EnteredPath) then
+    if not SelectedList.ChangeItemFilePath(EnteredPath) then
       raise Exception.Create('Could not change path!');
 
     // Update file path in TListView
@@ -1294,8 +1296,19 @@ procedure TMain.mmAddClick(Sender: TObject);
 var
   OpenDialog: TOpenDialog;
   Name, Params: string;
+  ContextmenuDialog: TAddContextmenuDialog;
 
 begin
+  ContextmenuDialog := TAddContextmenuDialog.Create(Self, FLang);
+
+  if ContextmenuDialog.Execute then
+    ShowMessage('OK')
+  else
+    ShowMessage('cancel');
+
+  ContextmenuDialog.Free;
+  Exit;
+
   OpenDialog := TOpenDialog.Create(Self);
 
   // Set TOpenDialog options
@@ -1723,8 +1736,6 @@ begin
   // Disable some menu items not used on context menu page
   if (PageControl.ActivePage = tsContext) then
   begin
-    FList := Context;
-    mmAdd.Visible := False;
     mmImport.Visible := False;
     mmExportList.Visible := False;
     mmDate.Visible := False;
@@ -1737,8 +1748,6 @@ begin
   end  //of begin
   else
     begin
-      FList := Startup;
-      mmAdd.Visible := True;
       mmImport.Visible := True;
       mmExportList.Visible := True;
       mmDate.Visible := True;

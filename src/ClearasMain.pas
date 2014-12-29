@@ -1725,7 +1725,6 @@ begin
   // Disable some menu items not used on context menu page
   if (PageControl.ActivePage = tsContext) then
   begin
-    mmAdd.Visible := False;
     mmImport.Visible := False;
     mmExportList.Visible := False;
     mmDate.Visible := False;
@@ -1738,7 +1737,6 @@ begin
   end  //of begin
   else
     begin
-      mmAdd.Visible := True;
       mmImport.Visible := True;
       mmExportList.Visible := True;
       mmDate.Visible := True;
