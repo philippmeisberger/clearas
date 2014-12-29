@@ -558,9 +558,9 @@ begin
       if SaveDialog.Execute then
       begin
         if (PageControl.ActivePage = tsStartup) then
-          Startup.Selected.ExportItem(SaveDialog.FileName)
+          Startup.ExportItem(SaveDialog.FileName)
         else
-          Context.Selected.ExportItem(SaveDialog.FileName);
+          Context.ExportItem(SaveDialog.FileName);
 
         result := True;
       end;  //of begin
@@ -1095,8 +1095,11 @@ begin
 
     pmChangeStatus.Enabled := True;
 
-    // Enable properties for "Shell" entries only!
+    // Enable "properties" for "Shell" entries only
     pmProperties.Enabled := (Item.SubItems[2] = 'Shell');
+
+    // Enable "edit path" for "Shell" entries only
+    pmEdit.Enabled := pmProperties.Enabled;
 
     bDeleteContextItem.Enabled := True;
     pmDelete.Enabled := True;
@@ -1242,10 +1245,20 @@ end;
 procedure TMain.pmEditClick(Sender: TObject);
 var
   Path, EnteredPath: string;
+  SelectedList: TRootList;
 
 begin
   try
-    Path := Startup.Selected.FilePath;
+    if (PageControl.ActivePage = tsStartup) then
+    begin
+      SelectedList := Startup;
+      Path := Startup.Selected.FilePath;
+    end  //of begin
+    else
+      begin
+        SelectedList := Context;
+        Path := Context.Selected.FilePath;
+      end;  //of if
 
     // Show input box for editing path
     EnteredPath := InputBox(FLang.GetString(33), FLang.GetString(54), Path);
@@ -1259,10 +1272,12 @@ begin
       EnteredPath := '"'+ EnteredPath +'"';
 
     // Try to change the file path
-    if not Startup.ChangeItemFilePath(EnteredPath) then
+    if not SelectedList.ChangeItemFilePath(EnteredPath) then
       raise Exception.Create('Could not change path!');
 
-    lwStartup.ItemFocused.SubItems[1] := EnteredPath;
+    // Update file path in TListView
+    if (PageControl.ActivePage = tsStartup) then
+      lwStartup.ItemFocused.SubItems[1] := EnteredPath;
 
   except
     on E: EAccessViolation do
@@ -1715,8 +1730,7 @@ begin
     mmExportList.Visible := False;
     mmDate.Visible := False;
     mmRunOnce.Visible := False;
-    pmEdit.Visible := False;
-    lwContextSelectItem(Sender, lwContext.Selected, True);
+    lwContextSelectItem(Sender, lwContext.ItemFocused, True);
 
     // Load context menu entries dynamically
     if (Context.Count = 0) then
@@ -1729,8 +1743,7 @@ begin
       mmExportList.Visible := True;
       mmDate.Visible := True;
       mmRunOnce.Visible := True;
-      pmEdit.Visible := True;
-      lwStartupSelectItem(Sender, lwStartup.Selected, True);
+      lwStartupSelectItem(Sender, lwStartup.ItemFocused, True);
     end;  //of if
 end;
 

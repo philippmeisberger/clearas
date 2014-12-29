@@ -136,6 +136,7 @@ type
     procedure lCopy1Click(Sender: TObject);
     procedure pmOpenRegeditClick(Sender: TObject);
   private
+    FList: TRootList;
     FColumnToSort: Word;
     Startup: TStartupList;
     Context: TContextList;
@@ -188,6 +189,9 @@ begin
 
   // Set title
   Caption := Application.Title + TOSUtils.GetArchitecture();
+
+  // Pointer to current selected list
+  FList := Startup;
 end;
 
 { TMain.FormDestroy
@@ -196,6 +200,7 @@ end;
 
 procedure TMain.FormDestroy(Sender: TObject);
 begin
+  FList := nil;
   Context.Free;
   Startup.Free;
   FUpdateCheck.Free;
@@ -1033,8 +1038,7 @@ begin
       pmOpenRegedit.Enabled := False;
 
       // Disable "export" if backup already exists
-      if Startup.BackupExists() then
-        bExportStartupItem.Enabled := False;
+      bExportStartupItem.Enabled := not Startup.BackupExists();
     end  //of begin
     else
       begin
@@ -1096,8 +1100,11 @@ begin
 
     pmChangeStatus.Enabled := True;
 
-    // Enable properties for "Shell" entries only!
+    // Enable "properties" for "Shell" entries only
     pmProperties.Enabled := (Item.SubItems[2] = 'Shell');
+
+    // Enable "edit path" for "Shell" entries only
+    pmEdit.Enabled := pmProperties.Enabled;
 
     bDeleteContextItem.Enabled := True;
     pmDelete.Enabled := True;
@@ -1246,7 +1253,10 @@ var
 
 begin
   try
-    Path := Startup.Selected.FilePath;
+    if (PageControl.ActivePage = tsStartup) then
+      Path := Startup.Selected.FilePath
+    else
+      Path := Context.Selected.FilePath;
 
     // Show input box for editing path
     EnteredPath := InputBox(FLang.GetString(33), FLang.GetString(54), Path);
@@ -1260,10 +1270,12 @@ begin
       EnteredPath := '"'+ EnteredPath +'"';
 
     // Try to change the file path
-    if not Startup.ChangeItemFilePath(EnteredPath) then
+    if not FList.ChangeItemFilePath(EnteredPath) then
       raise Exception.Create('Could not change path!');
 
-    lwStartup.ItemFocused.SubItems[1] := EnteredPath;
+    // Update file path in TListView
+    if (PageControl.ActivePage = tsStartup) then
+      lwStartup.ItemFocused.SubItems[1] := EnteredPath;
 
   except
     on E: EAccessViolation do
@@ -1711,13 +1723,13 @@ begin
   // Disable some menu items not used on context menu page
   if (PageControl.ActivePage = tsContext) then
   begin
+    FList := Context;
     mmAdd.Visible := False;
     mmImport.Visible := False;
     mmExportList.Visible := False;
     mmDate.Visible := False;
     mmRunOnce.Visible := False;
-    pmEdit.Visible := False;
-    lwContextSelectItem(Sender, lwContext.Selected, True);
+    lwContextSelectItem(Sender, lwContext.ItemFocused, True);
 
     // Load context menu entries dynamically
     if (Context.Count = 0) then
@@ -1725,13 +1737,13 @@ begin
   end  //of begin
   else
     begin
+      FList := Startup;
       mmAdd.Visible := True;
       mmImport.Visible := True;
       mmExportList.Visible := True;
       mmDate.Visible := True;
       mmRunOnce.Visible := True;
-      pmEdit.Visible := True;
-      lwStartupSelectItem(Sender, lwStartup.Selected, True);
+      lwStartupSelectItem(Sender, lwStartup.ItemFocused, True);
     end;  //of if
 end;
 

@@ -63,6 +63,7 @@ type
     function Enable(): Boolean; virtual; abstract;
   public
     constructor Create(AIndex: Word; AEnabled: Boolean);
+    function ChangeFilePath(const ANewFilePath: string): Boolean; virtual; abstract;
     function ChangeStatus(): Boolean; virtual;
     function Delete(): Boolean; virtual; abstract;
     procedure ExportItem(const AFileName: string); virtual; abstract;
@@ -86,9 +87,11 @@ type
   public
     constructor Create;
     destructor Destroy; override;
+    function ChangeItemFilePath(const ANewFilePath: string): Boolean; virtual; abstract;
     function ChangeItemStatus(): Boolean; virtual; abstract;
     procedure Clear; override;
     function DeleteItem(): Boolean; virtual; abstract;
+    procedure ExportItem(const AFileName: string); virtual; abstract;
     function IndexOf(const AItemName: string): Integer; overload;
     function IndexOf(AItemName: string; AEnabled: Boolean): Integer; overload;
     { external }
@@ -108,6 +111,7 @@ type
     procedure WriteTime(const AKeyPath: string);
   public
     function CreateBackup(): Boolean; virtual; abstract;
+    function ChangeFilePath(const ANewFilePath: string): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
     function GetFullKeyPath(): string; override;
     { external }
@@ -170,10 +174,10 @@ type
     function CreateBackup(): Boolean;
     function AddProgram(const AFilePath: string; ANickName: string = ''): Boolean;
     function BackupExists(): Boolean;
+    function ChangeItemFilePath(const ANewFilePath: string): Boolean; override;
     function ChangeItemStatus(): Boolean; override;
-    function ChangeItemFilePath(const ANewFilePath: string): Boolean;
     function DeleteItem(): Boolean; override;
-    procedure ExportItem(const AFileName: string; ARegFile: Boolean = True);
+    procedure ExportItem(const AFileName: string); override;
     procedure ExportList(const AFileName: string);
     function GetBackupLnk(): string;
     function ImportBackup(const AFilePath: string): Boolean;
@@ -197,6 +201,7 @@ type
   TContextListItem = class(TRootItem)
   private
     FLocation: string;
+    function GetFilePath(): string; virtual; abstract;
     function GetKeyPath(): string; virtual; abstract;
   public
     function Delete(): Boolean; override;
@@ -206,24 +211,31 @@ type
     { external }
     property KeyPath: string read GetKeyPath;
     property Location: string read FLocation;
+    property FilePath: string read GetFilePath;
   end;
 
   { TShellItem }
   TShellItem = class(TContextListItem)
   private
+    function GetFilePath(): string; override;
     function GetKeyPath(): string; override;
   protected
     function Disable(): Boolean; override;
     function Enable(): Boolean; override;
+  public
+    function ChangeFilePath(const ANewFilePath: string): Boolean; override;
   end;
 
   { TShellExItem }
   TShellExItem = class(TContextListItem)
   private
+    function GetFilePath(): string; override;
     function GetKeyPath(): string; override;
   protected
     function Disable(): Boolean; override;
     function Enable(): Boolean; override;
+  public
+    function ChangeFilePath(const ANewFilePath: string): Boolean; override;
   end;
 
   { Search event }
@@ -246,9 +258,10 @@ type
     constructor Create;
     procedure AddEntry(); overload;
     procedure AddEntry(const AKeyName: string); overload;
+    function ChangeItemFilePath(const ANewFilePath: string): Boolean; override;
     function ChangeItemStatus(): Boolean; override;
     function DeleteItem(): Boolean; override;
-    procedure ExportItem(const AFileName: string);
+    procedure ExportItem(const AFileName: string); override;
     function IndexOf(AName, ALocation: string): Integer; overload;
     procedure LoadContextMenus();
     { external }
@@ -807,6 +820,54 @@ begin
     on E: Exception do
     begin
       E.Message := 'Error while writing deactivation time to "'+ AKeyPath +'": '+ E.Message;
+      raise;
+    end;  //of begin
+  end;  //of try
+end;
+
+{ public TStartupListItem.ChangeFilePath
+
+  Changes the file path of an TStartupListItem item. }
+
+function TStartupListItem.ChangeFilePath(const ANewFilePath: string): Boolean;
+var
+  reg: TRegistry;
+  ItemName: string;
+
+begin
+  result := False;
+  reg := TRegistry.Create(TWinWOW64.DenyWOW64Redirection(KEY_ALL_ACCESS));
+
+  try
+    try
+      reg.RootKey := TOSUtils.StrToHKey(FRootKey);
+
+      // Invalid key?
+      if not reg.OpenKey(FKeyPath, False) then
+        raise Exception.Create('Key does not exist!');
+
+      if FEnabled then
+        ItemName := FName
+      else
+        ItemName := 'command';
+
+      // Value must exist!
+      if not reg.ValueExists(ItemName) then
+        raise Exception.Create('Value does not exist!');
+
+      // Change path
+      reg.WriteString(ItemName, ANewFilePath);
+      FFilePath := ANewFilePath;
+      result := True;
+
+    finally
+      reg.Free;
+    end;  //of try
+
+  except
+    on E: Exception do
+    begin
+      E.Message := 'Error while changing file path of "'+ FName +'": '+ E.Message;
       raise;
     end;  //of begin
   end;  //of try
@@ -1551,6 +1612,24 @@ begin
     result := FileExists(GetBackupLnk());
 end;
 
+{ public TStartupList.ChangeItemFilePath
+
+  Changes the file path of an item. }
+
+function TStartupList.ChangeItemFilePath(const ANewFilePath: string): Boolean;
+var
+  reg: TRegistry;
+
+begin
+  result := False;
+
+  // Invalid item?
+  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
+    raise EInvalidItem.Create('No item selected!');
+
+  result := FItem.ChangeFilePath(ANewFilePath);
+end;
+
 { public TStartupList.ChangeItemStatus
 
   Changes the item status. }
@@ -1584,50 +1663,6 @@ begin
     Dec(FActCount);
 
   result := Changed;
-end;
-
-{ public TStartupList.ChangeItemFilePath
-
-  Changes the file path of an item. }
-
-function TStartupList.ChangeItemFilePath(const ANewFilePath: string): Boolean;
-var
-  reg: TRegistry;
-  ItemName: string;
-
-begin
-  result := False;
-
-  // Invalid item?
-  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
-    raise EInvalidItem.Create('No item selected!');
-
-  reg := TRegistry.Create(TWinWOW64.DenyWOW64Redirection(KEY_ALL_ACCESS));
-
-  try
-    reg.RootKey := TOSUtils.StrToHKey(FItem.RootKey);
-
-    // Invalid key?
-    if not reg.OpenKey(FItem.KeyPath, False) then
-      raise Exception.Create('Key does not exist!');
-
-    if FItem.Enabled then
-      ItemName := FItem.Name
-    else
-      ItemName := 'command';
-
-    // Value must exist!
-    if not reg.ValueExists(ItemName) then
-      raise Exception.Create('Value does not exist!');
-
-    // Change path
-    reg.WriteString(ItemName, ANewFilePath);
-    FItem.FFilePath := ANewFilePath;
-    result := True;
-
-  finally
-    reg.Free;
-  end;  //of try
 end;
 
 { public TStartupList.DeleteItem
@@ -1671,7 +1706,7 @@ end;
 
   Exports an item as .reg file. }
 
-procedure TStartupList.ExportItem(const AFileName: string; ARegFile: Boolean = True);
+procedure TStartupList.ExportItem(const AFileName: string);
 begin
   if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
     raise EInvalidItem.Create('No item selected!');
@@ -1955,6 +1990,15 @@ end;
 
 { TShellItem }
 
+{ private TShellItem.GetFilePath
+
+  Returns the command of a Shell entry. }
+
+function TShellItem.GetFilePath(): string;
+begin
+  result := TClearas.GetKeyValue('HKCR', GetKeyPath() +'\command', '');
+end;
+
 { private TShellItem.GetKeyPath
 
   Returns the Registry path of a TShellItem. }
@@ -2010,8 +2054,55 @@ begin
   end;  //try
 end;
 
+{ public TShellItem.ChangeFilePath
+
+  Changes the file path of an TShellItem item. }
+
+function TShellItem.ChangeFilePath(const ANewFilePath: string): Boolean;
+var
+  reg: TRegistry;
+  ItemName: string;
+
+begin
+  result := False;
+  reg := TRegistry.Create(TWinWOW64.DenyWOW64Redirection(KEY_ALL_ACCESS));
+
+  try
+    try
+      reg.RootKey := HKEY_CLASSES_ROOT;
+
+      // Invalid key?
+      if not reg.OpenKey(GetKeyPath() +'\command', False) then
+        raise Exception.Create('Key does not exist!');
+
+      // Change path
+      reg.WriteString('', ANewFilePath);
+      result := True;
+
+    finally
+      reg.Free;
+    end;  //of try
+
+  except
+    on E: Exception do
+    begin
+      E.Message := 'Error while changing file path of "'+ FName +'": '+ E.Message;
+      raise;
+    end;  //of begin
+  end;  //of try
+end;
+
 
 { TShellExItem }
+
+{ private TShellExItem.GetFilePath
+
+  Returns the command of a Shell entry. }
+
+function TShellExItem.GetFilePath(): string;
+begin
+  result := '';
+end;
 
 { private TShellExItem.GetKeyPath
 
@@ -2073,6 +2164,15 @@ begin
       raise;
     end;  //of begin
   end;  //try
+end;
+
+{ public TShellExItem.ChangeFilePath
+
+  Changes the file path of an TShellExItem item. }
+
+function TShellExItem.ChangeFilePath(const ANewFilePath: string): Boolean;
+begin
+  result := False;
 end;
 
 
@@ -2329,6 +2429,24 @@ begin
   AddEntry(AKeyName, False);
 end;
 
+{ public TContextList.ChangeItemFilePath
+
+  Changes the file path of an item. }
+
+function TContextList.ChangeItemFilePath(const ANewFilePath: string): Boolean;
+var
+  reg: TRegistry;
+
+begin
+  result := False;
+
+  // Invalid item?
+  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
+    raise EInvalidItem.Create('No item selected!');
+
+  result := FItem.ChangeFilePath(ANewFilePath);
+end;
+
 { public TContextList.ChangeItemStatus
 
   Changes the item status. }
@@ -2435,7 +2553,6 @@ begin
   AddEntry('Directory');
   AddEntry('Folder');
   AddEntry('Drive');
-  //AddEntry('CLSID\{645FF040-5081-101B-9F08-00AA002F954E}', True);
 end;
 
 end.
