@@ -310,7 +310,7 @@ object Main: TMain
         Height = 14
         Hint = 'Zur Website'
         Anchors = [akBottom]
-        Caption = #169' P.Meisberger 2014'
+        Caption = #169' P.Meisberger 2015'
         Font.Charset = ANSI_CHARSET
         Font.Color = clBlack
         Font.Height = -11
@@ -452,7 +452,7 @@ object Main: TMain
         Height = 14
         Hint = 'Zur Website'
         Anchors = [akBottom]
-        Caption = #169' P.Meisberger 2014'
+        Caption = #169' P.Meisberger 2015'
         Font.Charset = ANSI_CHARSET
         Font.Color = clBlack
         Font.Height = -11

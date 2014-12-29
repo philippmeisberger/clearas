@@ -2,7 +2,7 @@
 {                                                                         }
 { Clearas API Interface Unit v4.1                                         }
 {                                                                         }
-{ Copyright (c) 2011-2014 P.Meisberger (PM Code Works)                    }
+{ Copyright (c) 2011-2015 P.Meisberger (PM Code Works)                    }
 {                                                                         }
 { *********************************************************************** }
 
@@ -1242,7 +1242,8 @@ end;
 
   Returns the name and path of an item as formatted text. }
 
-procedure TStartupUserItem.GetItemInfo(var AProperties: string; ALangFile: TLanguageFile);
+procedure TStartupUserItem.GetItemInfo(var AProperties: string;
+  ALangFile: TLanguageFile);
 begin
   if FEnabled then
     AProperties := ALangFile.Format(45, [FName, FKeyPath])

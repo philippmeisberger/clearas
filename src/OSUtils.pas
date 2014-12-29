@@ -48,13 +48,14 @@ type
   public
     class function CheckWindows(): Boolean;
     class function CreateTempDir(const AFolderName: string): Boolean;
-    class function ExecuteFile(const AFilePath: string): Boolean;
+    class function ExecuteFile(const AFilePath: string;
+      AParameters: string = ''): Boolean;
     class function ExitWindows(AAction: Word): Boolean;
     class function ExplorerReboot(): Boolean;
     class function GetBuildNumber(): Cardinal;
     class function GetTempDir(): string;
     class function GetWinDir(): string;
-    class function GetWinVersion(AShowServicePack: Boolean = False): string;  //not by me
+    class function GetWinVersion(AShowServicePack: Boolean = False): string;
     class function HexToInt(AHexValue: string): Integer;
     class function HKeyToStr(AHKey: HKey): string;
     class function MakeUACShieldButton(AButtonHandle: HWND): Integer;
@@ -264,9 +265,11 @@ end;
 
   Executes an executable file using ShellExecute. }
 
-class function TOSUtils.ExecuteFile(const AFilePath: string): Boolean;
+class function TOSUtils.ExecuteFile(const AFilePath: string;
+  AParameters: string = ''): Boolean;
 begin
-  result := (ShellExecute(0, 'open', PChar(AFilePath), nil, nil, SW_SHOWNORMAL) >= 32);
+  result := (ShellExecute(0, 'open', PChar(AFilePath), PChar(AParameters), nil,
+    SW_SHOWNORMAL) >= 32);
 end;
 
 { public TOSUtils.ExitWindows

@@ -803,6 +803,9 @@ begin
 
       // Refresh counter label
       RefreshStartupCounter();
+
+      // Update popup menu
+      lwStartupSelectItem(Self, lwStartup.ItemFocused, True);
     end  //of begin
     else
       raise Exception.Create('Could not enable item!');
@@ -873,13 +876,11 @@ begin
       if mmDate.Checked then
         lwStartup.ItemFocused.SubItems[3] := Startup.Selected.Time;
 
-      if (Startup.Selected.StartupUser and not bExportStartupItem.Enabled) then
-        bExportStartupItem.Enabled := True;
-
-      pmExport.Enabled := bExportStartupItem.Enabled;
-
       // Refresh counter label
       RefreshStartupCounter();
+
+      // Update popup menu
+      lwStartupSelectItem(Self, lwStartup.ItemFocused, True);
     end  //of begin
     else
       raise Exception.Create('Could not disable item!');
@@ -1022,12 +1023,23 @@ begin
         pmEdit.Enabled := True;
       end;  //of if
 
-    // Disable "export" if backup already exists
-    if (Startup.Selected.StartupUser and Startup.Selected.Enabled
-      and Startup.BackupExists()) then
-      bExportStartupItem.Enabled := False
+    // Selected item is enabled and startup user type?
+    if (Startup.Selected.StartupUser and Startup.Selected.Enabled) then
+    begin
+      // Disable "edit path"
+      pmEdit.Enabled := False;
+
+      // Disable "open in RegEdit"
+      pmOpenRegedit.Enabled := False;
+
+      // Disable "export" if backup already exists
+      bExportStartupItem.Enabled := not Startup.BackupExists();
+    end  //of begin
     else
-      bExportStartupItem.Enabled := True;
+      begin
+        bExportStartupItem.Enabled := True;
+        pmOpenRegedit.Enabled := True;
+      end;  //of if
 
     pmExport.Enabled := bExportStartupItem.Enabled;
     pmProperties.Enabled := True;
@@ -1304,7 +1316,7 @@ begin
 
         // Item already exists?
         if not Startup.AddProgram(OpenDialog.FileName, Name) then
-          FLang.MessageBox(FLang.Format(40, [OpenDialog.FileName]), mtError)
+          FLang.MessageBox(FLang.Format(40, [OpenDialog.FileName]), mtWarning)
         else
           // Update TListView
           ShowStartupEntries(False);

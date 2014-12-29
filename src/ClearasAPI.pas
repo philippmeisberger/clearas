@@ -63,7 +63,6 @@ type
     function Enable(): Boolean; virtual; abstract;
   public
     constructor Create(AIndex: Word; AEnabled: Boolean);
-    destructor Destroy; override;
     function ChangeStatus(): Boolean; virtual;
     function Delete(): Boolean; virtual; abstract;
     procedure ExportItem(const AFileName: string); virtual; abstract;
@@ -586,15 +585,6 @@ begin
   inherited Create;
   FIndex := AIndex;
   FEnabled := AEnabled;
-end;
-
-{ public TRootItem.Destroy
-
-  General destructor for destroying a TRootItem instance. }
-
-destructor TRootItem.Destroy;
-begin
-  inherited Destroy;
 end;
 
 { public TRootItem.ChangeStatus
@@ -1242,7 +1232,8 @@ end;
 
   Returns the name and path of an item as formatted text. }
 
-procedure TStartupUserItem.GetItemInfo(var AProperties: string; ALangFile: TLanguageFile);
+procedure TStartupUserItem.GetItemInfo(var AProperties: string;
+  ALangFile: TLanguageFile);
 begin
   if FEnabled then
     AProperties := ALangFile.Format(45, [FName, FKeyPath])
