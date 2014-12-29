@@ -46,7 +46,7 @@ object Info: TInfo
         Width = 112
         Height = 14
         Anchors = [akBottom]
-        Caption = #169' P.Meisberger 2014'
+        Caption = #169' P.Meisberger 2015'
         Font.Charset = ANSI_CHARSET
         Font.Color = clBlack
         Font.Height = -11
@@ -364,7 +364,7 @@ object Info: TInfo
             '.'
           'F'#252'r Sch'#228'den an Hard- und Software, die durch die Benutzung'
           'dieses Programms entstehen, wird keine Haftung '#252'bernommen.'
-          '12/2014')
+          '01/2015')
         ReadOnly = True
         TabOrder = 1
       end
@@ -381,7 +381,7 @@ object Info: TInfo
         Width = 112
         Height = 14
         Anchors = [akBottom]
-        Caption = #169' P.Meisberger 2014'
+        Caption = #169' P.Meisberger 2015'
         Font.Charset = ANSI_CHARSET
         Font.Color = clBlack
         Font.Height = -11
@@ -412,7 +412,7 @@ object Info: TInfo
           'History'
           '--------'
           ''
-          'Version 3.1  [22.12.14]'
+          'Version 3.1  [02.01.15]'
           ''
           '- '#196'nderungen im Popup Men'#252':'
           '  - Neue Funktion "Pfad bearbeiten" hinzugef'#252'gt'
@@ -628,7 +628,7 @@ object Info: TInfo
             'hicken.'
           'Meine Adresse erfahren Sie unter team@pm-codeworks.de.'
           ''
-          '12/2014')
+          '01/2015')
         ReadOnly = True
         ScrollBars = ssVertical
         TabOrder = 1

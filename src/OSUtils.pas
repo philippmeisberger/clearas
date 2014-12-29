@@ -2,7 +2,7 @@
 {                                                                         }
 { PM Code Works Operating System Utilities Unit v1.7                      }
 {                                                                         }
-{ Copyright (c) 2011-2014 Philipp Meisberger (PM Code Works)              }
+{ Copyright (c) 2011-2015 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
 { *********************************************************************** }
 

@@ -2,7 +2,7 @@
 {                                                                         }
 { PM Code Works Cross Plattform Language Handler Unit v1.3                }
 {                                                                         }
-{ Copyright (c) 2011-2014 Philipp Meisberger (PM Code Works)              }
+{ Copyright (c) 2011-2015 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
 { *********************************************************************** }
 
@@ -363,4 +363,3 @@ begin
 end;
 
 end.
-

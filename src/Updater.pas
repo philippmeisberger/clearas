@@ -2,7 +2,7 @@
 {                                                                         }
 { PM Code Works Cross Plattform Updater v2.2                              }
 {                                                                         }
-{ Copyright (c) 2011-2014 Philipp Meisberger (PM Code Works)              }
+{ Copyright (c) 2011-2015 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
 { *********************************************************************** }
 

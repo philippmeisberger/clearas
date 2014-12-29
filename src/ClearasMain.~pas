@@ -684,12 +684,13 @@ begin
         Answer := FLang.MessageBox(52, mtQuestion);
 
       // Export item and only continue if this has succeeded
-      if ((Answer = IDYES) and CreateStartupUserBackup()) then
-        Startup.DeleteBackup := False
-      else
-        Exit;
+      if (Answer = IDYES) then
+        if CreateStartupUserBackup() then
+          Startup.DeleteBackup := False
+        else
+          Exit;
 
-      // Ask user to delete old existing backup and item was not exported
+      // Ask user to delete old existing backup
       if ((Answer = IDCANCEL) or (Startup.Selected.StartupUser
         and not Startup.Selected.Enabled and BackupExists)) then
         Startup.DeleteBackup := (FLang.MessageBox(44, mtQuestion) = IDYES);

@@ -2,7 +2,7 @@
 {                                                                         }
 { Clearas API Interface Unit v4.1                                         }
 {                                                                         }
-{ Copyright (c) 2011-2014 P.Meisberger (PM Code Works)                    }
+{ Copyright (c) 2011-2015 P.Meisberger (PM Code Works)                    }
 {                                                                         }
 { *********************************************************************** }
 

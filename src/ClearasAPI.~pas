@@ -1757,14 +1757,14 @@ begin
   if (ExtractFileExt(Name) = '') then
     Name := Name +'.lnk';
 
-  // File path already exists in another item?
-  for i := 0 to Count -1 do
-    if (ItemAt(i).FilePath = AFilePath) then
-      Exit;
-
   // Extract path to .exe
   if not TClearas.ReadLnkFile(AFilePath, Path) then
     raise EStartupException.Create('Could not read backup file!');
+
+  // File path already exists in another item?
+  for i := 0 to Count -1 do
+    if (ItemAt(i).FilePath = Path) then
+      Exit;
 
   // Create .lnk file and add it to list
   result := AddNewStartupUserItem(Name, Path, Ext = EXT_COMMON);

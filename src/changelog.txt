@@ -4,7 +4,7 @@ Ein Open-Source Projekt von PM Code Works
 History
 --------
 
-Version 3.1  [22.12.14]
+Version 3.1  [02.01.15]
 
 - Änderungen im Popup Menü:
   - Neue Funktion "Pfad bearbeiten" hinzugefügt
@@ -175,4 +175,4 @@ Soll Clearas auf eine kommerzielle CD-ROM (mit Magazin) gepresst werden,
 wäre es nett, mir eine Ausgabe dieser CD-ROM (mit Magazin) zu schicken.
 Meine Adresse erfahren Sie unter team@pm-codeworks.de.
 
-12/2014
+01/2015
