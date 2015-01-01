@@ -386,7 +386,12 @@ begin
   begin
     // File menu labels
     mmFile.Caption := GetString(68);
-    mmAdd.Caption := GetString(69);
+
+    if (PageControl.ActivePage = tsStartup) then
+      mmAdd.Caption := GetString(69)
+    else
+      mmAdd.Caption := GetString(34);
+
     mmImport.Caption := GetString(70);
     mmExport.Caption := GetString(71);
     mmExportlist.Caption := GetString(72);

@@ -1350,7 +1350,7 @@ begin
               List.Add('Drive');
 
               // Show dialog for location selection
-              if not InputCombo(FLang.GetString(84), FLang.GetString(90) +':',
+              if not InputCombo(FLang.GetString(34), FLang.GetString(90) +':',
                 List, Location) then
                 Exit;
 

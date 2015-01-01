@@ -425,6 +425,7 @@ object Info: TInfo
           
             '      - '#214'ffnet den Registry Pfad des aktuellen Elements in RegEd' +
             'it'
+          '- Neue Funktion "Programm hinzuf'#252'gen" in Kontextmen'#252
           '- Exception Handling stark verbessert'
           
             '- Ausw'#228'hlen von Elementen in Autostart und Kontextmen'#252' Listen be' +

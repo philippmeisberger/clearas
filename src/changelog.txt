@@ -13,6 +13,7 @@ Version 3.1  [02.01.15]
     - Funktion "Nach Programm suchen" entfernt
     - Neue Funktion "In RegEdit öffnen" hinzugefügt
       - Öffnet den Registry Pfad des aktuellen Elements in RegEdit
+- Neue Funktion "Kontextmenü hinzufügen"
 - Exception Handling stark verbessert
 - Auswählen von Elementen in Autostart und Kontextmenü Listen beschleunigt
 - "Backup importieren" verbessert
