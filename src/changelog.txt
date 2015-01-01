@@ -4,7 +4,7 @@ Ein Open-Source Projekt von PM Code Works
 History
 --------
 
-Version 3.1  [02.01.15]
+Version 4.0  [04.01.15]
 
 - Änderungen im Popup Menü:
   - Neue Funktion "Pfad bearbeiten" hinzugefügt
@@ -13,7 +13,9 @@ Version 3.1  [02.01.15]
     - Funktion "Nach Programm suchen" entfernt
     - Neue Funktion "In RegEdit öffnen" hinzugefügt
       - Öffnet den Registry Pfad des aktuellen Elements in RegEdit
-- Neue Funktion "Kontextmenü hinzufügen"
+- Änderungen im Menü auf der Seite "Kontextmenü":
+  - Neue Funktion "Kontextmenü hinzufügen"
+  - Neue Funktion "Einträge exportieren" 
 - Exception Handling stark verbessert
 - Auswählen von Elementen in Autostart und Kontextmenü Listen beschleunigt
 - "Backup importieren" verbessert

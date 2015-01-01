@@ -12,8 +12,8 @@ interface
 
 uses
   Windows, SysUtils, Classes, Controls, Forms, ComCtrls, StdCtrls, ExtCtrls,
-  Dialogs, Menus, Graphics, ShellAPI, ClearasAPI, ClearasInfo, LanguageFile,
-  OSUtils, Updater, AddDialogs;
+  Dialogs, Menus, Graphics, ClearasAPI, ClearasInfo, LanguageFile, OSUtils,
+  Updater, AddDialogs;
 
 type
   { TMain }
@@ -542,7 +542,7 @@ begin
     // Set TSaveDialog options
     with SaveDialog do
     begin
-      Title := FLang.GetString(95);
+      Title := StripHotkey(bExportStartupItem.Caption);
 
       // Confirm overwrite
       Options := Options + [ofOverwritePrompt];
@@ -1309,7 +1309,7 @@ begin
   // Set TOpenDialog options
   with OpenDialog do
   begin
-    Title := FLang.GetString(69);
+    Title := StripHotKey(mmAdd.Caption);
     InitialDir := '%ProgramFiles%';
 
     // Filter .exe files
@@ -1349,6 +1349,7 @@ begin
             List := TStringList.Create;
 
             try
+              // Init location ComboBox
               List.Add('AllFilesystemObjects');
               List.Add('Directory');
               List.Add('Folder');
@@ -1486,26 +1487,29 @@ var
 begin
   SaveDialog := TSaveDialog.Create(Self);
 
-  // Set TSaveDialog options
-  with SaveDialog do
-  begin
-    Title := FLang.GetString(72);
-
-    // Confirm overwrite
-    Options := Options + [ofOverwritePrompt];
-
-    // Filter .reg files only
-    Filter := FLang.GetString(36);
-    DefaultExt := '.reg';
-
-    // Sets a default file name
-    FileName := FLang.GetString(68) + DefaultExt;
-  end;  //of with
-
   try
+    // Set TSaveDialog options
+    with SaveDialog do
+    begin
+      Title := StripHotkey(mmExportList.Caption);
+
+      // Confirm overwrite
+      Options := Options + [ofOverwritePrompt];
+
+      // Filter .reg files only
+      Filter := FLang.GetString(36);
+      DefaultExt := '.reg';
+
+      // Sets a default file name
+      FileName := FLang.GetString(68) + DefaultExt;
+    end;  //of with
+
     // User clicked "save"?
     if SaveDialog.Execute then
-      Startup.ExportList(SaveDialog.FileName);
+      if (PageControl.ActivePage = tsStartup) then
+        Startup.ExportList(SaveDialog.FileName)
+      else
+        Context.ExportList(SaveDialog.FileName);
 
   finally
     SaveDialog.Free;
@@ -1531,7 +1535,7 @@ begin
     // Set TOpenDialog options
     with OpenDialog do
     begin
-      Title := FLang.GetString(70);
+      Title := StripHotkey(mmImport.Caption);
       InitialDir := TClearas.GetBackupDir();
       Filter := Format(FLang.GetString(39), [EXT_USER, EXT_USER, EXT_COMMON, EXT_COMMON]);
     end;  //of with
@@ -1671,7 +1675,7 @@ begin
     try
       with Updater do
       begin
-        Title := FLang.GetString(16);
+        Title := StripHotkey(mmDownloadCert.Caption);
         DownloadCertificate();
       end;  //of begin
 
@@ -1761,7 +1765,6 @@ begin
   if (PageControl.ActivePage = tsContext) then
   begin
     mmImport.Visible := False;
-    mmExportList.Visible := False;
     mmDate.Visible := False;
     mmRunOnce.Visible := False;
     mmAdd.Caption := FLang.GetString(34);
@@ -1774,7 +1777,6 @@ begin
   else
     begin
       mmImport.Visible := True;
-      mmExportList.Visible := True;
       mmDate.Visible := True;
       mmRunOnce.Visible := True;
       mmAdd.Caption := FLang.GetString(69);

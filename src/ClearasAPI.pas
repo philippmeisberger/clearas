@@ -92,6 +92,7 @@ type
     procedure Clear; override;
     function DeleteItem(): Boolean; virtual; abstract;
     procedure ExportItem(const AFileName: string); virtual; abstract;
+    procedure ExportList(const AFileName: string); virtual; abstract;
     function IndexOf(const AItemName: string): Integer; overload;
     function IndexOf(AItemName: string; AEnabled: Boolean): Integer; overload;
     { external }
@@ -178,7 +179,7 @@ type
     function ChangeItemStatus(): Boolean; override;
     function DeleteItem(): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
-    procedure ExportList(const AFileName: string);
+    procedure ExportList(const AFileName: string); override;
     function GetBackupLnk(): string;
     function ImportBackup(const AFilePath: string): Boolean;
     procedure LoadAutostart(AIncludeRunOnce: Boolean);
@@ -263,6 +264,7 @@ type
     function ChangeItemStatus(): Boolean; override;
     function DeleteItem(): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
+    procedure ExportList(const AFileName: string); override;
     function IndexOf(AName, ALocation: string): Integer; overload;
     procedure LoadContextMenus();
     { external }
@@ -1725,7 +1727,7 @@ var
   Item: TStartupListItem;
 
 begin
-  //init Reg file
+  // Init Reg file
   RegFile := TRegistryFile.Create(AFileName, True);
 
   try
@@ -2553,6 +2555,35 @@ begin
     raise EInvalidItem.Create('No item selected!');
 
   FItem.ExportItem(AFileName);
+end;
+
+{ public TContextList.ExportList
+
+  Exports the complete list as .reg file. }
+
+procedure TContextList.ExportList(const AFileName: string);
+var
+  i: Word;
+  RegFile: TRegistryFile;
+  Item: TContextListItem;
+
+begin
+  // Init Reg file
+  RegFile := TRegistryFile.Create(AFileName, True);
+
+  try
+    for i := 0 to Count -1 do
+    begin
+      Item := ItemAt(i);
+      RegFile.ExportKey(HKEY_CLASSES_ROOT, Item.KeyPath, True);
+    end;  //of for
+
+    // Save file
+    RegFile.Save();
+
+  finally
+    RegFile.Free;
+  end;  //of try
 end;
 
 { public TContextList.IndexOf

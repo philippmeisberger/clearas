@@ -319,7 +319,7 @@ object Info: TInfo
         Top = 68
         Width = 21
         Height = 14
-        Caption = 'v3.1'
+        Caption = 'v4.0'
       end
       object lBuild: TLabel
         Left = 14
@@ -412,7 +412,7 @@ object Info: TInfo
           'History'
           '--------'
           ''
-          'Version 3.1  [02.01.15]'
+          'Version 4.0  [04.01.15]'
           ''
           '- '#196'nderungen im Popup Men'#252':'
           '  - Neue Funktion "Pfad bearbeiten" hinzugef'#252'gt'
@@ -425,7 +425,9 @@ object Info: TInfo
           
             '      - '#214'ffnet den Registry Pfad des aktuellen Elements in RegEd' +
             'it'
-          '- Neue Funktion "Kontextmen'#252' hinzuf'#252'gen"'
+          '- '#196'nderungen im Men'#252' auf der Seite "Kontextmen'#252'":'
+          '  - Neue Funktion "Kontextmen'#252' hinzuf'#252'gen"'
+          '  - Neue Funktion "Eintr'#228'ge exportieren" '
           '- Exception Handling stark verbessert'
           
             '- Ausw'#228'hlen von Elementen in Autostart und Kontextmen'#252' Listen be' +
