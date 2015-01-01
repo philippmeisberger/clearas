@@ -13,7 +13,7 @@ interface
 uses
   Windows, SysUtils, Classes, Controls, Forms, ComCtrls, StdCtrls, ExtCtrls,
   Dialogs, Menus, Graphics, ShellAPI, ClearasAPI, ClearasInfo, LanguageFile,
-  OSUtils, Updater, Contextmenu;
+  OSUtils, Updater, AddDialogs;
 
 type
   { TMain }
@@ -496,7 +496,7 @@ begin
       Application.ProcessMessages;
 
       // Do the expert search!
-      Context.AddEntry();
+      Context.LoadContextmenu();
     end  //of begin
     else
       // Use default search mode
@@ -1295,20 +1295,10 @@ end;
 procedure TMain.mmAddClick(Sender: TObject);
 var
   OpenDialog: TOpenDialog;
-  Name, Params: string;
-  ContextmenuDialog: TAddContextmenuDialog;
+  Name, Params, Location: string;
+  List: TStringList;
 
 begin
-  ContextmenuDialog := TAddContextmenuDialog.Create(Self, FLang);
-
-  if ContextmenuDialog.Execute then
-    ShowMessage('OK')
-  else
-    ShowMessage('cancel');
-
-  ContextmenuDialog.Free;
-  Exit;
-
   OpenDialog := TOpenDialog.Create(Self);
 
   // Set TOpenDialog options
@@ -1340,12 +1330,41 @@ begin
         if not InputQuery(FLang.GetString(99), FLang.GetString(98), Params) then
           Exit;
 
-        // Item already exists?
-        if not Startup.AddProgram(OpenDialog.FileName, Name) then
-          FLang.MessageBox(FLang.Format(40, [OpenDialog.FileName]), mtWarning)
+        if (PageControl.ActivePage = tsStartup) then
+        begin
+          // Startup item already exists?
+          if not Startup.AddProgram(OpenDialog.FileName, Name) then
+            FLang.MessageBox(FLang.Format(40, [OpenDialog.FileName]), mtWarning)
+          else
+            // Update TListView
+            ShowStartupEntries(False);
+        end  //of begin
         else
-          // Update TListView
-          ShowStartupEntries(False);
+          begin
+            List := TStringList.Create;
+
+            try
+              List.Add('AllFilesystemObjects');
+              List.Add('Directory');
+              List.Add('Folder');
+              List.Add('Drive');
+
+              // Show dialog for location selection
+              if not InputCombo(FLang.GetString(84), FLang.GetString(90) +':',
+                List, Location) then
+                Exit;
+
+              // Contextmenu item already exists?
+              if not Context.AddEntry(OpenDialog.FileName, Location, Name) then
+                FLang.MessageBox(FLang.Format(41, [OpenDialog.FileName]), mtWarning)
+              else
+                // Update TListView
+                ShowContextMenuEntries(False);
+
+            finally
+              List.Free;
+            end;  //of try
+          end;  //of if
       end;  //of begin
 
     finally
@@ -1740,6 +1759,7 @@ begin
     mmExportList.Visible := False;
     mmDate.Visible := False;
     mmRunOnce.Visible := False;
+    mmAdd.Caption := FLang.GetString(34);
     lwContextSelectItem(Sender, lwContext.ItemFocused, True);
 
     // Load context menu entries dynamically
@@ -1752,6 +1772,7 @@ begin
       mmExportList.Visible := True;
       mmDate.Visible := True;
       mmRunOnce.Visible := True;
+      mmAdd.Caption := FLang.GetString(69);
       lwStartupSelectItem(Sender, lwStartup.ItemFocused, True);
     end;  //of if
 end;

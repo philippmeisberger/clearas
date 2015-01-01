@@ -172,7 +172,7 @@ type
   public
     constructor Create;
     function CreateBackup(): Boolean;
-    function AddProgram(const AFilePath: string; ANickName: string = ''): Boolean;
+    function AddProgram(const AFilePath: string; ADisplayedName: string = ''): Boolean;
     function BackupExists(): Boolean;
     function ChangeItemFilePath(const ANewFilePath: string): Boolean; override;
     function ChangeItemStatus(): Boolean; override;
@@ -251,13 +251,14 @@ type
     function FindDouble(AName, AKeyName: string): Boolean;
     function ItemAt(AIndex: Word): TContextListItem;
   protected
-    function AddShellItem(const AName,  ALocation: string; AEnabled: Boolean): Word;
+    function AddShellItem(const AName, ALocation: string; AEnabled: Boolean): Word;
     function AddShellExItem(const AName, ALocation: string; AEnabled: Boolean): Word;
-    procedure AddEntry(const AKeyName: string; AShell: Boolean); overload;
+    procedure LoadContextmenu(const AKeyName: string; AShell: Boolean); overload;
   public
     constructor Create;
-    procedure AddEntry(); overload;
-    procedure AddEntry(const AKeyName: string); overload;
+    function AddEntry(const AFilePath, ALocation, ADisplayedName: string): Boolean;
+    procedure LoadContextmenu(); overload;
+    procedure LoadContextmenu(const AKeyName: string); overload;
     function ChangeItemFilePath(const ANewFilePath: string): Boolean; override;
     function ChangeItemStatus(): Boolean; override;
     function DeleteItem(): Boolean; override;
@@ -273,7 +274,6 @@ type
   end;
 
 implementation
-
 
 { TClearas }
 
@@ -1553,10 +1553,10 @@ end;
 
 { public TStartupList.AddProgram
 
-  Checks if a backup file already exists. }
+  Adds a new startup item to autostart. }
 
 function TStartupList.AddProgram(const AFilePath: string;
-  ANickName: string = ''): Boolean;
+  ADisplayedName: string = ''): Boolean;
 var
   Name, Ext: string;
   i: Word;
@@ -1579,8 +1579,8 @@ begin
   // Add new startup user item?
   if ((Ext = '.exe') or (Ext = '.lnk')) then
   begin
-    if (ANickName <> '') then
-      Name := ANickName
+    if (ADisplayedName <> '') then
+      Name := ADisplayedName
     else
       Name := TClearas.DeleteExt(Name);
 
@@ -1589,10 +1589,10 @@ begin
   else
     begin
       // Adds new startup item to Registry
-      TClearas.WriteStrValue('HKCU', KEY_STARTUP, ANickName, AFilePath);
+      TClearas.WriteStrValue('HKCU', KEY_STARTUP, ADisplayedName, AFilePath);
 
       // Adds this item to list
-      AddItemEnabled('HKCU', KEY_STARTUP, ANickName, AFilePath);
+      AddItemEnabled('HKCU', KEY_STARTUP, ADisplayedName, AFilePath);
       result := True;
     end;  //of begin
 end;
@@ -2197,6 +2197,40 @@ begin
   result := inherited Add(AItem);
 end;
 
+{ public TContextList.AddEntry
+
+  Adds a new contextmenu entry. }
+
+function TContextList.AddEntry(const AFilePath, ALocation,
+  ADisplayedName: string): Boolean;
+var
+  Name, Ext: string;
+  i: Word;
+
+begin
+  result := False;
+  Ext := ExtractFileExt(AFilePath);
+  Name := TClearas.DeleteExt(ExtractFileName(AFilePath));
+
+  // Check invalid extension
+  if ((Ext <> '.exe') and (Ext <> '.lnk') and (Ext <> '.bat')) then
+    raise EInvalidArgument.Create('Invalid program extension! Must be ".exe"'
+      +', ".lnk" or ".bat"!');
+
+  // File path already exists in another item?
+  for i := 0 to Count -1 do
+    if (ItemAt(i).Location = AFilePath) then
+      Exit;
+
+  // Adds new context item to Registry
+  TClearas.WriteStrValue('HKCR', ALocation +'\Shell\'+ Name, '', ADisplayedName);
+  TClearas.WriteStrValue('HKCR', ALocation +'\Shell\'+ Name +'\command', '', AFilePath);
+
+  // Adds this item to list
+  AddShellItem(Name, ALocation, True);
+  result := True;
+end;
+
 { private TContextList.Add
 
   Checks if an TContextListItem already exists in list. }
@@ -2222,7 +2256,8 @@ end;
 
   Adds a shell item to list. }
 
-function TContextList.AddShellItem(const AName, ALocation: string; AEnabled: Boolean): Word;
+function TContextList.AddShellItem(const AName, ALocation: string;
+  AEnabled: Boolean): Word;
 var
   Item: TContextListItem;
 
@@ -2246,7 +2281,8 @@ end;
 
   Adds a shellex item to list. }
 
-function TContextList.AddShellExItem(const AName, ALocation: string; AEnabled: Boolean): Word;
+function TContextList.AddShellExItem(const AName, ALocation: string;
+  AEnabled: Boolean): Word;
 var
   Item: TContextListItem;
 
@@ -2270,7 +2306,7 @@ end;
 
   Adds a context item to list. }
 
-procedure TContextList.AddEntry(const AKeyName: string; AShell: Boolean);
+procedure TContextList.LoadContextmenu(const AKeyName: string; AShell: Boolean);
 var
   reg: TRegistry;
   i: Integer;
@@ -2331,11 +2367,11 @@ begin
   end;  //of try
 end;
 
-{ protected TContextList.AddEntry
+{ protected TContextList.LoadContextmenus
 
   Searches for context menu entries and adds them to the list. }
 
-procedure TContextList.AddEntry();
+procedure TContextList.LoadContextmenu();
 var
   reg: TRegistry;
   i, j, k: integer;
@@ -2399,7 +2435,7 @@ begin
                   reg.OpenKey(Hkcr[i] +'\'+ Temp[j] +'\'+ Shellex[k], False);
 
                   if reg.HasSubKeys then
-                    AddEntry(Hkcr[i]);
+                    LoadContextmenu(Hkcr[i]);
                 end;  //of for
             end;  //of begin
           end;  //of for
@@ -2423,10 +2459,10 @@ end;
   Searches for context menu entries in specific AKeyName and adds them
   to the list. }
 
-procedure TContextList.AddEntry(const AKeyName: string);
+procedure TContextList.LoadContextmenu(const AKeyName: string);
 begin
-  AddEntry(AKeyName, True);
-  AddEntry(AKeyName, False);
+  LoadContextmenu(AKeyName, True);
+  LoadContextmenu(AKeyName, False);
 end;
 
 { public TContextList.ChangeItemFilePath
@@ -2549,10 +2585,10 @@ end;
 
 procedure TContextList.LoadContextMenus();
 begin
-  AddEntry('AllFilesystemObjects');
-  AddEntry('Directory');
-  AddEntry('Folder');
-  AddEntry('Drive');
+  LoadContextmenu('AllFilesystemObjects');
+  LoadContextmenu('Directory');
+  LoadContextmenu('Folder');
+  LoadContextmenu('Drive');
 end;
 
 end.
