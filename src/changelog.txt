@@ -13,6 +13,7 @@ Version 4.0  [04.01.15]
     - Funktion "Nach Programm suchen" entfernt
     - Neue Funktion "In RegEdit öffnen" hinzugefügt
       - Öffnet den Registry Pfad des aktuellen Elements in RegEdit
+    - Neue Funktion "In Explorer öffnen" für "Startup User" und "Common Startup" hinzugefügt (ersetzt "In RegEdit öffnen")
 - Änderungen im Menü auf der Seite "Kontextmenü":
   - Neue Funktion "Kontextmenü hinzufügen"
   - Neue Funktion "Einträge exportieren" 

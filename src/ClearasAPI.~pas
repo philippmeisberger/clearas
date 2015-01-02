@@ -70,7 +70,7 @@ type
     function GetFullKeyPath(): string; virtual; abstract;
     procedure GetItemInfo(var AProperties: string; ALangFile: TLanguageFile); virtual; abstract;
     function GetStatus(ALangFile: TLanguageFile): string;
-    procedure OpenInRegedit();
+    procedure Open(); virtual;
     { external }
     property Enabled: Boolean read FEnabled;
     property ItemIndex: Word read FIndex;
@@ -150,6 +150,7 @@ type
     function Delete(): Boolean; override;
     function GetBackupLnk(): string;
     procedure GetItemInfo(var AProperties: string; ALangFile: TLanguageFile); override;
+    procedure Open(); override;
   end;
 
   { TStartupList }
@@ -614,11 +615,23 @@ begin
     result := Enable;
 end;
 
-{ public TRootItem.OpenInRegedit
+{ public TRootItem.GetStatus
 
-  Opens an TRootItem object in regedit. }
+  Returns the item status as text. }
 
-procedure TRootItem.OpenInRegedit();
+function TRootItem.GetStatus(ALangFile: TLanguageFile): string;
+begin
+  if FEnabled then
+    result := ALangFile.GetString(31)
+  else
+    result := ALangFile.GetString(32);
+end;
+
+{ public TRootItem.Open
+
+  Opens an TRootItem object in RegEdit. }
+
+procedure TRootItem.Open();
 begin
   // Set the Registry key to show
   WriteStrValue('HKCU', KEY_REGEDIT, 'LastKey', 'Computer\'+ GetFullKeyPath());
@@ -632,18 +645,6 @@ begin
   end  //of begin
   else
     TOSUtils.ExecuteFile('regedit.exe');
-end;
-
-{ public TRootItem.GetStatus
-
-  Returns the item status as text. }
-
-function TRootItem.GetStatus(ALangFile: TLanguageFile): string;
-begin
-  if FEnabled then
-    result := ALangFile.GetString(31)
-  else
-    result := ALangFile.GetString(32);
 end;
 
 
@@ -1304,6 +1305,15 @@ begin
     AProperties := ALangFile.Format(46, [FName, GetFullKeyPath()]);
 end;
 
+{ public TStartupUserItem.Open
+
+  Opens an TStartupUserItem object in Explorer. }
+
+procedure TStartupUserItem.Open();
+begin
+  TOSUtils.ExecuteFile('explorer.exe', 'select, '+ FKeyPath);
+end;
+
 
 { TStartupList }
 
@@ -1727,7 +1737,7 @@ var
   Item: TStartupListItem;
 
 begin
-  //init Reg file
+  // Init Reg file
   RegFile := TRegistryFile.Create(AFileName, True);
 
   try

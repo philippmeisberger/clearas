@@ -336,8 +336,8 @@ object Info: TInfo
         Anchors = [akBottom]
         Caption = 'OK'
         Default = True
+        ModalResult = 1
         TabOrder = 0
-        OnClick = bOkClick
       end
       object reInfo: TRichEdit
         Left = 82
@@ -397,8 +397,8 @@ object Info: TInfo
         Anchors = [akBottom]
         Caption = 'OK'
         Default = True
+        ModalResult = 1
         TabOrder = 0
-        OnClick = bOkClick
       end
       object reHistory: TRichEdit
         Left = 16
@@ -425,6 +425,10 @@ object Info: TInfo
           
             '      - '#214'ffnet den Registry Pfad des aktuellen Elements in RegEd' +
             'it'
+          
+            '    - Neue Funktion "In Explorer '#246'ffnen" f'#252'r "Startup User" und ' +
+            '"Common Startup" '
+          '      hinzugef'#252'gt (ersetzt "In RegEdit '#246'ffnen")'
           '- '#196'nderungen im Men'#252' auf der Seite "Kontextmen'#252'":'
           '  - Neue Funktion "Kontextmen'#252' hinzuf'#252'gen"'
           '  - Neue Funktion "Eintr'#228'ge exportieren" '

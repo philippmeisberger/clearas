@@ -1034,8 +1034,8 @@ begin
       // Disable "edit path"
       pmEdit.Enabled := False;
 
-      // Disable "open in RegEdit"
-      pmOpenRegedit.Enabled := False;
+      // Rename "open in RegEdit" to "open in Explorer"
+      pmOpenRegedit.Caption := FLang.GetString(51);
 
       // Disable "export" if backup already exists
       bExportStartupItem.Enabled := not Startup.BackupExists();
@@ -1043,7 +1043,7 @@ begin
     else
       begin
         bExportStartupItem.Enabled := True;
-        pmOpenRegedit.Enabled := True;
+        pmOpenRegedit.Caption := FLang.GetString(66);
       end;  //of if
 
     pmExport.Enabled := bExportStartupItem.Enabled;
@@ -1216,9 +1216,9 @@ end;
 procedure TMain.pmOpenRegeditClick(Sender: TObject);
 begin
   if (PageControl.ActivePage = tsStartup) then
-    Startup.Selected.OpenInRegedit()
+    Startup.Selected.Open()
   else
-    Context.Selected.OpenInRegedit();
+    Context.Selected.Open();
 end;
 
 { TMain.pmPropertiesClick
