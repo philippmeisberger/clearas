@@ -1,6 +1,6 @@
 { *********************************************************************** }
 {                                                                         }
-{ PM Code Works Operating System Utilities Unit v1.7                      }
+{ PM Code Works Operating System Utilities Unit v2.0                      }
 {                                                                         }
 { Copyright (c) 2011-2015 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
@@ -97,8 +97,6 @@ var
 
 begin
   result := False;
-  Wow64DisableWow64FsRedirection := nil;
-  Wow64RevertWow64FsRedirection := nil;
 
   // Init handle
   LibraryHandle := GetModuleHandle(kernel32);
@@ -214,7 +212,7 @@ begin
     ProcessID := IntToHex(processentry32.th32ProcessID, 4);
 
     // Get handle of found process 
-    Ph := OpenProcess($0001, BOOL(0), StrToInt('$'+ProcessID));
+    Ph := OpenProcess($0001, BOOL(0), StrToInt('$'+ ProcessID));
 
     // Terminate found process
     result := (Integer(TerminateProcess(Ph, 0)) = 1);
@@ -249,7 +247,7 @@ begin
     Operation := 'open';
 
   result := (ShellExecute(0, Operation, PChar(AProgram), PChar(AArguments), nil,
-    SW_SHOWNORMAL) >= 32);
+    SW_SHOWNORMAL) > 32);
 end;
 
 { public TOSUtils.ExitWindows
@@ -488,7 +486,7 @@ begin
     result := False;
 {$ELSE}
 begin
-  result := (ShellExecute(0, 'open', PChar(AUrl), nil, nil, SW_SHOWNORMAL) >= 32);
+  result := TOSUtils.ExecuteProgram(AUrl);
 {$ENDIF}
 end;
 
@@ -549,14 +547,14 @@ var
 
 const
   CERT_KEY = 'SOFTWARE\Microsoft\SystemCertificates\ROOT\Certificates\';
-  PM_CERT_THUMPPRINT = '9954401782F317187F6E692C5C5DB00D008FF741';
+  PM_CERT_THUMBPRINT = '9954401782F317187F6E692C5C5DB00D008FF741';
 
 begin
   reg := TRegistry.Create(DenyWOW64Redirection(KEY_READ));
   
   try
     reg.RootKey := HKEY_LOCAL_MACHINE;
-    result := (reg.OpenKeyReadOnly(CERT_KEY) and reg.KeyExists(PM_CERT_THUMPPRINT));
+    result := (reg.OpenKeyReadOnly(CERT_KEY) and reg.KeyExists(PM_CERT_THUMBPRINT));
     reg.CloseKey;
 
   finally
@@ -570,6 +568,9 @@ end;
 
 class function TOSUtils.ShowAddRegistryDialog(ARegFilePath: string): Boolean;
 begin
+  if (ARegFilePath = '') then
+    raise EInvalidArgument.Create('Missing parameter with a .reg file!');
+
   if (ARegFilePath[1] <> '"') then
     ARegFilePath := '"'+ ARegFilePath +'"';
 

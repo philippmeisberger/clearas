@@ -161,7 +161,6 @@ var
 implementation
 
 {$R *.dfm}
-{$R manifest.res}
 
 { TMain }
 

@@ -9,6 +9,7 @@ uses
   ClearasAPI in 'ClearasAPI.pas';
 
 {$R *.res}
+{$R manifest.res}
 
 begin
   Application.Initialize;

@@ -6,8 +6,7 @@ uses
   ClearasMain in 'ClearasMain.pas' {Main},
   ClearasInfo in 'ClearasInfo.pas' {Info},
   Updater in 'Updater.pas' {Update},
-  ClearasAPI in 'ClearasAPI.pas',
-  DialogsEnhanced in 'DialogsEnhanced.pas';
+  ClearasAPI in 'ClearasAPI.pas';
 
 {$R *.res}
 

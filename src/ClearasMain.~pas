@@ -214,12 +214,12 @@ var
 begin
   // Get version of Windows including service pack
   windows := TOSUtils.GetWinVersion(True);
-  newWindows := TOSUtils.CheckWindows();
+  newWindows := TOSUtils.WindowsVistaOrLater();
   lWindows.Caption := lWindows.Caption +' '+ windows;
   lWindows2.Caption := lWindows.Caption;
 
   // Check for incompatibility
-  if not (newWindows or (windows[1] in ['X','2'])) then
+  if not (newWindows or (windows <> '')) then
   begin
     Flang.MessageBox(FLang.Format([64, 65], [windows]), mtError);
     mmExportList.Enabled := False;

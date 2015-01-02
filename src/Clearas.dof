@@ -115,7 +115,7 @@ AutoIncBuild=1
 MajorVer=3
 MinorVer=1
 Release=0
-Build=564
+Build=565
 Debug=0
 PreRelease=0
 Special=0
@@ -126,7 +126,7 @@ CodePage=1252
 [Version Info Keys]
 CompanyName=PM Code Works
 FileDescription=Clearas
-FileVersion=3.1.0.564
+FileVersion=3.1.0.565
 InternalName=
 LegalCopyright=P. Meisberger 2015
 LegalTrademarks=PM Code Works
@@ -137,6 +137,3 @@ Comments=
 [HistoryLists\hlUnitAliases]
 Count=1
 Item0=WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE;
-[HistoryLists\hlOutputDirectorry]
-Count=1
-Item0=..\bin\
