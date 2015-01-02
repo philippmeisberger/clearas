@@ -32,8 +32,6 @@ type
 {$IFDEF MSWINDOWS}  
   { TWinWOW64 }
   TWinWOW64 = class(TObject)
-  protected
-    class function SetKeyAccessMode(): Cardinal; deprecated;
   public
     class function DenyWOW64Redirection(AAccessRight: Cardinal): Cardinal;
     class function Wow64FsRedirection(ADisable: Boolean): Boolean;
@@ -48,8 +46,8 @@ type
   public
     class function CheckWindows(): Boolean;
     class function CreateTempDir(const AFolderName: string): Boolean;
-    class function ExecuteFile(const AFilePath: string;
-      AParameters: string = ''): Boolean;
+    class function ExecuteProgram(const AProgram: string;
+      AArguments: string = ''; ARunAsAdmin: Boolean = False): Boolean;
     class function ExitWindows(AAction: Word): Boolean;
     class function ExplorerReboot(): Boolean;
     class function GetBuildNumber(): Cardinal;
@@ -155,23 +153,6 @@ begin
   end;  //of begin
 end;
 
-{ protected TWinWOW64.SetKeyAccessMode
-
-  Returns optimal access rights for writing a registry key under 64bit systems. }
-
-class function TWinWOW64.SetKeyAccessMode(): Cardinal;
-const
-  KEY_WOW64_64KEY = $0100;
-
-begin
-  // Used Windows is a 64bit OS?
-  if IsWindows64() then
-    // Deny WOW64 redirection
-    result := KEY_ALL_ACCESS or KEY_WOW64_64KEY
-  else
-    result := KEY_ALL_ACCESS;
-end;
-
 { public TWinWOW64.DenyWOW64Redirection
 
   Disables the WOW64 Registry redirection temporary under 64bit systems that
@@ -261,14 +242,22 @@ begin
   result := ForceDirectories(GetTempDir() + AFolderName);
 end;
 
-{ public TOSUtils.ExecuteFile
+{ public TOSUtils.ExecuteProgram
 
-  Executes an executable file using ShellExecute. }
+  Executes a program (optional as admin) using ShellExecute. }
 
-class function TOSUtils.ExecuteFile(const AFilePath: string;
-  AParameters: string = ''): Boolean;
+class function TOSUtils.ExecuteProgram(const AProgram: string;
+  AArguments: string = ''; ARunAsAdmin: Boolean = False): Boolean;
+var
+  Operation: PAnsiChar;
+
 begin
-  result := (ShellExecute(0, 'open', PChar(AFilePath), PChar(AParameters), nil,
+  if ARunAsAdmin then
+    Operation := 'runas'
+  else
+    Operation := 'open';
+
+  result := (ShellExecute(0, Operation, PChar(AProgram), PChar(AArguments), nil,
     SW_SHOWNORMAL) >= 32);
 end;
 
@@ -606,14 +595,8 @@ end;
   Shows an dialog where user has the choice to add a *.reg file.  }
 
 class function TOSUtils.ShowAddRegistryDialog(const ARegFilePath: string): Boolean;
-var
-  FileName, FilePath: PAnsiChar;
-
 begin
-  FileName := PChar(ExtractFileName(ARegFilePath));
-  FilePath := PChar(ExtractFilePath(ARegFilePath));
-  result := (ShellExecute(0, nil, PChar('regedit'), FileName, FilePath,
-    SW_SHOWNORMAL) >= 32);
+  result := TOSUtils.ExecuteProgram('regedit.exe', ARegFilePath);
 end;
 {$ENDIF}
 

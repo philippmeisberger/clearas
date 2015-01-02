@@ -322,8 +322,7 @@ begin
 {$IFDEF MSWINDOWS}
   // Show dialog to add certificate
   if (ExtractFileExt(FFileName) = '.reg') then
-    if TOSUtils.ShowAddRegistryDialog(FFileName) then
-      DeleteFile(PChar(FFileName));
+    TOSUtils.ShowAddRegistryDialog('"'+ FFileName +'"');
 {$ENDIF}
 
   // Notify all listeners

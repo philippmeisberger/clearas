@@ -336,8 +336,8 @@ object Info: TInfo
         Anchors = [akBottom]
         Caption = 'OK'
         Default = True
+        ModalResult = 1
         TabOrder = 0
-        OnClick = bOkClick
       end
       object reInfo: TRichEdit
         Left = 82
@@ -397,8 +397,8 @@ object Info: TInfo
         Anchors = [akBottom]
         Caption = 'OK'
         Default = True
+        ModalResult = 1
         TabOrder = 0
-        OnClick = bOkClick
       end
       object reHistory: TRichEdit
         Left = 16
@@ -416,10 +416,7 @@ object Info: TInfo
           ''
           '- '#196'nderungen im Popup Men'#252':'
           '  - Neue Funktion "Pfad bearbeiten" hinzugef'#252'gt'
-          
-            '    - Dateipfade von Autostart Eintr'#228'gen k'#246'nnen nach eigenem Erm' +
-            'essen '
-          '      bearbeitet werden'
+          '    - Dateipfade k'#246'nnen nach eigenem Ermessen bearbeitet werden'
           '    - Funktion "Nach Programm suchen" entfernt'
           '    - Neue Funktion "In RegEdit '#246'ffnen" hinzugef'#252'gt'
           

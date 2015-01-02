@@ -416,19 +416,14 @@ object Info: TInfo
           ''
           '- '#196'nderungen im Popup Men'#252':'
           '  - Neue Funktion "Pfad bearbeiten" hinzugef'#252'gt'
+          '    - Dateipfade k'#246'nnen nach eigenem Ermessen bearbeitet werden'
+          '  - Funktion "Nach Programm suchen" entfernt'
+          '  - Neue Funktion "In RegEdit '#246'ffnen" hinzugef'#252'gt'
+          '    - '#214'ffnet den Registry Pfad des aktuellen Elements in RegEdit'
           
-            '    - Dateipfade von Autostart Eintr'#228'gen k'#246'nnen nach eigenem Erm' +
-            'essen '
-          '      bearbeitet werden'
-          '    - Funktion "Nach Programm suchen" entfernt'
-          '    - Neue Funktion "In RegEdit '#246'ffnen" hinzugef'#252'gt'
-          
-            '      - '#214'ffnet den Registry Pfad des aktuellen Elements in RegEd' +
-            'it'
-          
-            '    - Neue Funktion "In Explorer '#246'ffnen" f'#252'r "Startup User" und ' +
-            '"Common Startup" '
-          '      hinzugef'#252'gt (ersetzt "In RegEdit '#246'ffnen")'
+            '  - Neue Funktion "In Explorer '#246'ffnen" f'#252'r "Startup User" und "C' +
+            'ommon Startup" '
+          '    hinzugef'#252'gt (ersetzt "In RegEdit '#246'ffnen")'
           '- '#196'nderungen im Men'#252' auf der Seite "Kontextmen'#252'":'
           '  - Neue Funktion "Kontextmen'#252' hinzuf'#252'gen"'
           '  - Neue Funktion "Eintr'#228'ge exportieren" '

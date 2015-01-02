@@ -15,7 +15,6 @@ object Update: TUpdate
   OldCreateOrder = False
   Position = poScreenCenter
   OnCloseQuery = FormCloseQuery
-  OnShow = FormShow
   PixelsPerInch = 96
   TextHeight = 14
   object lSize: TLabel

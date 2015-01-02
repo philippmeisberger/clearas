@@ -1311,7 +1311,7 @@ end;
 
 procedure TStartupUserItem.Open();
 begin
-  TOSUtils.ExecuteFile('explorer.exe', 'select, '+ FKeyPath);
+  TOSUtils.ExecuteFile('explorer.exe', '/select, '+ FKeyPath);
 end;
 
 

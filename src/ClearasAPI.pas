@@ -640,11 +640,11 @@ begin
   if TOSUtils.IsWindows64() then
   begin
     TOSUtils.Wow64FsRedirection(True);
-    TOSUtils.ExecuteFile('regedit.exe');
+    TOSUtils.ExecuteProgram('regedit.exe');
     TOSUtils.Wow64FsRedirection(False);
   end  //of begin
   else
-    TOSUtils.ExecuteFile('regedit.exe');
+    TOSUtils.ExecuteProgram('regedit.exe');
 end;
 
 
@@ -1311,7 +1311,7 @@ end;
 
 procedure TStartupUserItem.Open();
 begin
-  TOSUtils.ExecuteFile('explorer.exe', '/select, '+ FKeyPath);
+  TOSUtils.ExecuteProgram('explorer.exe', '/select, '+ FKeyPath);
 end;
 
 

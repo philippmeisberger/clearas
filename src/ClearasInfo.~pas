@@ -28,7 +28,6 @@ type
     lBuild: TLabel;
     reInfo: TRichEdit;
     reHistory: TRichEdit;
-    procedure bOkClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
   end;
 
@@ -36,12 +35,6 @@ type
 implementation
 
 {$R *.dfm}
-
-procedure TInfo.bOkClick(Sender: TObject);
-begin
-  Close;
-end;
-
 
 procedure TInfo.FormCreate(Sender: TObject);
 begin
