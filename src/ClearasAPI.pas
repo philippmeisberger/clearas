@@ -950,7 +950,7 @@ begin
         reg.WriteString('inimapping', '0');
 
         // Windows >= Vista?
-        if TOSUtils.CheckWindows() then
+        if TOSUtils.WindowsVistaOrLater() then
           // Save deactivation time stamp
           WriteTime(KEY_DEACT + FName);
 
@@ -1147,7 +1147,7 @@ begin
         reg.WriteString('backup', BackupLnk);
 
         // Special Registry entries only for Windows >= Vista
-        if TOSUtils.CheckWindows() then
+        if TOSUtils.WindowsVistaOrLater() then
         begin
           reg.WriteString('backupExtension', GetExtension());
           reg.WriteString('location', ExtractFileDir(FKeyPath));
@@ -1399,7 +1399,7 @@ var
 
 begin
   // Windows >= Vista?
-  if TOSUtils.CheckWindows() then
+  if TOSUtils.WindowsVistaOrLater() then
   begin
     st := TClearas.GetKeyValue('HKLM', AKeyPath, 'backupExtension');
 

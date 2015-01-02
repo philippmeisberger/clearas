@@ -1668,8 +1668,6 @@ begin
   if (TOSUtils.PMCertExists() and (FLang.MessageBox([27, NEW_LINE, 28],
     mtQuestion) = IDYES)) then
   begin
-    if TOSUtils.ShowAddRegistryDialog('');
-      ShowMEs
     // Init downloader
     Updater := TUpdate.Create(Self, FLang);
 

@@ -44,7 +44,6 @@ type
   protected
     class function KillProcess(AExeName: string): Boolean;
   public
-    class function CheckWindows(): Boolean;
     class function CreateTempDir(const AFolderName: string): Boolean;
     class function ExecuteProgram(const AProgram: string;
       AArguments: string = ''; ARunAsAdmin: Boolean = False): Boolean;
@@ -60,9 +59,10 @@ type
     class function OpenUrl(const AUrl: string): Boolean;
     class function PlaySound(AFileName: string; ASynchronized: Boolean = False): Boolean;
     class function PMCertExists(): Boolean;
-    class function ShowAddRegistryDialog(const ARegFilePath: string): Boolean;
+    class function ShowAddRegistryDialog(ARegFilePath: string): Boolean;
     class function Shutdown(): Boolean;
     class function StrToHKey(const AMainKey: string): HKEY;
+    class function WindowsVistaOrLater(): Boolean;
   end;
 {$ELSE}
   { TOSUtils }
@@ -222,15 +222,6 @@ begin
   finally
     CloseHandle(snapshotHandle);
   end;  //of try
-end;
-
-{ public TOSUtils.CheckWindows
-
-  Returns if current Windows version is newer than Windows XP. }
-
-class function TOSUtils.CheckWindows(): Boolean;
-begin
-  result := ((Win32Platform = 2) and (Win32MajorVersion >= 6));
 end;
 
 { public TOSUtils.CreateTempDir
@@ -400,42 +391,27 @@ end;
 
 class function TOSUtils.GetWinVersion(AShowServicePack: Boolean = False): string;
 begin
-  result := 'unbekannt';
+  result := '';
+  
+  // Windows NT platform
+  if (Win32Platform = 2) then
+    case Win32MajorVersion of
+      5: case Win32MinorVersion of
+           0: result := '2000';
+           1: result := 'XP';
+           2: result := 'XP 64-Bit Edition';
+         end; //of case
 
-  case Win32Platform of
-
-    // Windows 9x
-    1: if (Win32MajorVersion = 4) then
-         case Win32MinorVersion of
-            0: result := '95';
-           10: result := '98';
-           90: result := 'Me';
-         end;  //of case
-
-    // Windows NT
-    2: case Win32MajorVersion of
-         3: if (Win32MinorVersion = 51) then
-              result := 'NT 3.51';
-
-         4: if (Win32MinorVersion = 0) then
-              result := 'NT 4';
-
-         5: case Win32MinorVersion of
-              0: result := '2000';
-              1: result := 'XP';
-              2: result := '.NET Server';
-            end; //of case
-
-         6: case Win32MinorVersion of
-              0: result := 'Vista';
-              1: result := '7';
-              2: result := '8';
-            end; //of case
-       end; //of case
-  end; //of case
+      6: case Win32MinorVersion of
+           0: result := 'Vista';
+           1: result := '7';
+           2: result := '8';
+           3: result := '8.1';
+         end; //of case
+    end; //of case
 
   // Add information about service packs?
-  if (AShowServicePack and (Win32CSDVersion <> '')) then
+  if ((result <> '') and AShowServicePack and (Win32CSDVersion <> '')) then
     result := result +' '+ Win32CSDVersion;
 end;
 {$ENDIF}
@@ -570,23 +546,21 @@ end;
 class function TOSUtils.PMCertExists(): Boolean;
 var
   reg: TRegistry;
-  Exists: Boolean;
 
 const
   CERT_KEY = 'SOFTWARE\Microsoft\SystemCertificates\ROOT\Certificates\';
-  PM_CERT_ID = '9954401782F317187F6E692C5C5DB00D008FF741';
+  PM_CERT_THUMPPRINT = '9954401782F317187F6E692C5C5DB00D008FF741';
 
 begin
-  Exists := False;
   reg := TRegistry.Create(DenyWOW64Redirection(KEY_READ));
   
   try
     reg.RootKey := HKEY_LOCAL_MACHINE;
-    Exists := (reg.OpenKeyReadOnly(CERT_KEY) and reg.KeyExists(PM_CERT_ID));
+    result := (reg.OpenKeyReadOnly(CERT_KEY) and reg.KeyExists(PM_CERT_THUMPPRINT));
+    reg.CloseKey;
 
   finally
     reg.Free;
-    result := Exists;
   end;  //of try
 end;
 
@@ -594,8 +568,11 @@ end;
 
   Shows an dialog where user has the choice to add a *.reg file.  }
 
-class function TOSUtils.ShowAddRegistryDialog(const ARegFilePath: string): Boolean;
+class function TOSUtils.ShowAddRegistryDialog(ARegFilePath: string): Boolean;
 begin
+  if (ARegFilePath[1] <> '"') then
+    ARegFilePath := '"'+ ARegFilePath +'"';
+
   result := TOSUtils.ExecuteProgram('regedit.exe', ARegFilePath);
 end;
 {$ENDIF}
@@ -667,7 +644,15 @@ begin
             raise EInvalidArgument.Create('StrToHKey: Bad format error! '
               +'Unknown HKEY: "'+ AMainKey +'"!');
 end;
+
+{ public TOSUtils.WindowsVistaOrLater
+
+  Returns if current Windows version is equal or greater than Windows Vista. }
+
+class function TOSUtils.WindowsVistaOrLater(): Boolean;
+begin
+  result := ((Win32Platform = 2) and (Win32MajorVersion >= 6));
+end;
 {$ENDIF}
 
 end.
-
