@@ -97,7 +97,7 @@ implementation
   Constructor for creating a TLanguageFile instance. }
 
 {$IFDEF MSWINDOWS}
-{$R lang.res}
+{$R 'lang.res' 'lang.rc'}
 
 constructor TLanguageFile.Create(ALanguage: Word; AApplication: TApplication);
 begin

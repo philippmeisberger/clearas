@@ -6,10 +6,10 @@ uses
   ClearasMain in 'ClearasMain.pas' {Main},
   ClearasInfo in 'ClearasInfo.pas' {Info},
   Updater in 'Updater.pas' {Update},
-  ClearasAPI in 'ClearasAPI.pas';
+  ClearasAPI in 'ClearasAPI.pas',
+  AdminManifest in 'AdminManifest.pas';
 
 {$R *.res}
-{$R manifest.res}
 
 begin
   Application.Initialize;

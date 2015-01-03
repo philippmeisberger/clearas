@@ -440,8 +440,9 @@ object Info: TInfo
           
             '  - RunOnce Eintr'#228'ge werden nun auch in 32 Bit Schl'#252'sseln ausgel' +
             'esen'
+          '- Neues Manifest'
           '- Updater v2.2'
-          '- OSUtils v1.7'
+          '- OSUtils v2.0'
           ''
           '---------------------------------'
           ''

@@ -23,8 +23,9 @@ Version 4.0  [04.01.15]
 - Bug Fixes: 
   - Gelöschte Autostart Elemente werden nun korrekt aus Liste gelöscht
   - RunOnce Einträge werden nun auch in 32 Bit Schlüsseln ausgelesen
+- Neues Manifest
 - Updater v2.2
-- OSUtils v1.7
+- OSUtils v2.0
 
 ---------------------------------
 
