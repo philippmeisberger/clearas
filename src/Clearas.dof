@@ -112,10 +112,10 @@ RootDir=
 [Version Info]
 IncludeVerInfo=1
 AutoIncBuild=1
-MajorVer=3
-MinorVer=1
+MajorVer=4
+MinorVer=0
 Release=0
-Build=568
+Build=569
 Debug=0
 PreRelease=0
 Special=0
@@ -126,13 +126,13 @@ CodePage=1252
 [Version Info Keys]
 CompanyName=PM Code Works
 FileDescription=Clearas
-FileVersion=3.1.0.568
+FileVersion=4.0.0.569
 InternalName=
 LegalCopyright=P. Meisberger 2015
 LegalTrademarks=PM Code Works
 OriginalFilename=
 ProductName=Clearas
-ProductVersion=3.1
+ProductVersion=4.0
 Comments=
 [HistoryLists\hlUnitAliases]
 Count=1

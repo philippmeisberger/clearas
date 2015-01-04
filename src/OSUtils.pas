@@ -78,6 +78,8 @@ type
 
 implementation
 
+uses StrUtils;
+
 {$IFDEF MSWINDOWS}
 { TWinWOW64 }
 
@@ -241,6 +243,7 @@ var
   Operation: PAnsiChar;
 
 begin
+  // Run as administrator?
   if ARunAsAdmin then
     Operation := 'runas'
   else
@@ -281,8 +284,8 @@ begin
 
       if tpResult then
         Windows.AdjustTokenPrivileges(TTokenHd, False, TTokenPvg, cbtpPrevious, rTTokenPvg, pcbtpPreviousRequired);
-      end;  //of begin
-    end;  //begin
+    end;  //of begin
+  end;  //begin
 
   result := ExitWindowsEx(AAction, 0);   //EWX_SHUTDOWN, EWX_POWEROFF, (EWX_FORCE, EWX_FORCEIFHUNG)
 end;
@@ -392,7 +395,7 @@ begin
   result := '';
   
   // Windows NT platform
-  if (Win32Platform = 2) then
+  if (Win32Platform = VER_PLATFORM_WIN32_NT) then
     case Win32MajorVersion of
       5: case Win32MinorVersion of
            0: result := '2000';
@@ -463,8 +466,15 @@ class function TOSUtils.OpenUrl(const AUrl: string): Boolean;
 {$IFNDEF MSWINDOWS}
 var
   Process : TProcess;
-  
+{$ENDIF}
 begin
+  if not (AnsiStartsText('http://', AUrl) or AnsiStartsText('https://', AUrl)) then
+  begin
+    result := False;
+    Exit;
+  end;  //of begin
+
+{$IFNDEF MSWINDOWS}
   if FileExists('/usr/bin/xdg-open') then
     try
       Process := TProcess.Create(nil);
@@ -485,7 +495,6 @@ begin
   else
     result := False;
 {$ELSE}
-begin
   result := TOSUtils.ExecuteProgram(AUrl);
 {$ENDIF}
 end;
@@ -605,6 +614,7 @@ begin
         end;  //of with
 
         Process.Execute;
+        result := True;
 
       finally
         Process.Free;
@@ -652,7 +662,7 @@ end;
 
 class function TOSUtils.WindowsVistaOrLater(): Boolean;
 begin
-  result := ((Win32Platform = 2) and (Win32MajorVersion >= 6));
+  result := ((Win32Platform = VER_PLATFORM_WIN32_NT) and (Win32MajorVersion >= 6));
 end;
 {$ENDIF}
 
