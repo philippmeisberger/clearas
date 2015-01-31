@@ -149,7 +149,6 @@ type
     function CreateBackup(): Boolean; override;
     function Delete(): Boolean; override;
     function GetBackupLnk(): string;
-    function GetFullKeyPath(): string; override;
     procedure GetItemInfo(var AProperties: string; ALangFile: TLanguageFile); override;
     procedure Open(); override;
   end;
@@ -1291,15 +1290,6 @@ end;
 function TStartupUserItem.GetBackupLnk(): string;
 begin
   result := GetBackupDir() + FName + GetExtension();
-end;
-
-{ public TStartupUserItem.GetFullKeyPath
-
-  Returns the Registry path to a TStartupUserItem. }
-
-function TStartupUserItem.GetFullKeyPath(): string;
-begin
-  result := HKeyToStr(StrToHKey(FRootKey)) +'\'+ FKeyPath;
 end;
 
 { public TStartupUserItem.GetItemInfo

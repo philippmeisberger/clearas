@@ -1659,6 +1659,10 @@ begin
   if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
     raise EInvalidItem.Create('No item selected!');
 
+  // Decide to delete backup
+  if (FDeleteBackup and FItem.StartupUser) then
+    DeleteBackupLnk();
+
   // Change the status
   Changed := FItem.ChangeStatus();
 
@@ -1667,10 +1671,6 @@ begin
     // Item has been enabled?
     if FItem.Enabled then
     begin
-      // Decide to delete backup
-      if (FDeleteBackup and FItem.StartupUser) then
-        DeleteBackupLnk();
-
       // Update active counter
       Inc(FActCount);
     end  //of begin
