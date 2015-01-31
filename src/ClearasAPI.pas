@@ -1311,7 +1311,10 @@ end;
 
 procedure TStartupUserItem.Open();
 begin
-  TOSUtils.ExecuteProgram('explorer.exe', '/select, '+ FKeyPath);
+  if FEnabled then
+    TOSUtils.ExecuteProgram('explorer.exe', '/select, '+ FKeyPath)
+  else
+    inherited Open();
 end;
 
 
