@@ -1665,23 +1665,23 @@ var
 begin
   // Certificate already installed?
   if (TOSUtils.PMCertExists() and (FLang.MessageBox([27, NEW_LINE, 28],
-    mtQuestion) = IDYES)) then
-  begin
-    // Init downloader
-    Updater := TUpdate.Create(Self, FLang);
+    mtQuestion) = IDNO)) then
+    Exit;
 
-    // Download certificate
-    try
-      with Updater do
-      begin
-        Title := StripHotkey(mmDownloadCert.Caption);
-        DownloadCertificate();
-      end;  //of begin
+  // Init downloader
+  Updater := TUpdate.Create(Self, FLang);
 
-    finally
-      Updater.Free;
-    end;  //of try
-  end;  //of begin
+  // Download certificate
+  try
+    with Updater do
+    begin
+      Title := FLang.GetString(16);
+      DownloadCertificate();
+    end;  //of begin
+
+  finally
+    Updater.Free;
+  end;  //of try
 end;
 
 { TMain.mmUpdateClick

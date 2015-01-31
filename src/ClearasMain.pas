@@ -430,6 +430,7 @@ begin
     lwStartup.Columns[0].Caption := GetString(91);
     lwStartup.Columns[2].Caption := GetString(68);
     lwStartup.Columns[3].Caption := GetString(92);
+    lCopy1.Hint := GetString(29);
 
     // Context menu tab TButton labels
     bEnableContextItem.Caption := bEnableStartupItem.Caption;
@@ -445,6 +446,7 @@ begin
     lwContext.Columns[0].Caption := lwStartup.Columns[0].Caption;
     lwContext.Columns[2].Caption := GetString(90);
     lwContext.Columns[3].Caption := lwStartup.Columns[3].Caption;
+    lCopy2.Hint := lCopy1.Hint;
 
     // Popup menu labels
     pmChangeStatus.Caption := bDisableStartupItem.Caption;
