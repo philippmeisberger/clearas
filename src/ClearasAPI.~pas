@@ -1249,7 +1249,7 @@ begin
   try
     // Failed to create new .lnk file?
     if not CreateLnk(ANewFilePath, FKeyPath) then
-      raise EStartupException.Create('Could not create .lnk file!')
+      raise EStartupException.Create('Could not create .lnk file!');
 
     // Update file path
     FFilePath := ANewFilePath;

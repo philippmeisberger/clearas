@@ -2260,9 +2260,8 @@ begin
       +', ".lnk" or ".bat"!');
 
   // File path already exists in another item?
-  for i := 0 to Count -1 do
-    if (ItemAt(i).Location = AFilePath) then
-      Exit;
+  if (IndexOf(Name, ALocation) <> -1) then
+    Exit;
 
   // Adds new context item to Registry
   TClearas.WriteStrValue('HKCR', ALocation +'\Shell\'+ Name, '', ADisplayedName);

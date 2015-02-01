@@ -106,8 +106,8 @@ type
       Selected: Boolean);
     procedure lwContextDblClick(Sender: TObject);
     procedure lwStartupDblClick(Sender: TObject);
-    procedure lwStartupColumnClick(Sender: TObject; Column: TListColumn);  //http://www.delphipraxis.net/283-wie-kann-ich-eine-listview-sortieren.html
-    procedure lwStartupCompare(Sender: TObject; Item1, Item2: TListItem;   //http://www.delphipraxis.net/283-wie-kann-ich-eine-listview-sortieren.html
+    procedure lwStartupColumnClick(Sender: TObject; Column: TListColumn);
+    procedure lwStartupCompare(Sender: TObject; Item1, Item2: TListItem;
       Data: Integer; var Compare: Integer);
     procedure mmAddClick(Sender: TObject);
     procedure mmContextClick(Sender: TObject);
@@ -810,7 +810,7 @@ begin
       // Refresh counter label
       RefreshStartupCounter();
 
-      // Update popup menu
+      // Update TListView
       lwStartupSelectItem(Self, lwStartup.ItemFocused, True);
     end  //of begin
     else
@@ -846,6 +846,9 @@ begin
 
       // Refresh counter label
       RefreshContextCounter();
+
+      // Update TListView
+      lwContextSelectItem(Self, lwContext.ItemFocused, True);
     end  //of begin
     else
       raise Exception.Create('Could not enable item!');
@@ -885,7 +888,7 @@ begin
       // Refresh counter label
       RefreshStartupCounter();
 
-      // Update popup menu
+      // Update TListView
       lwStartupSelectItem(Self, lwStartup.ItemFocused, True);
     end  //of begin
     else
@@ -915,12 +918,15 @@ begin
 
       // Change button states
       bDisableStartupItem.Enabled := False;
-      bEnableStartupItem.Enabled := True;
-      bEnableStartupItem.Default := True;
-      pmChangeStatus.Caption := bEnableStartupItem.Caption;
+      bEnableContextItem.Enabled := True;
+      bEnableContextItem.Default := True;
+      pmChangeStatus.Caption := bEnableContextItem.Caption;
 
       // Refresh counter label
       RefreshContextCounter();
+
+      // Update TListView
+      lwContextSelectItem(Self, lwContext.ItemFocused, True);
     end  //of begin
     else
       raise Exception.Create('Could not disable item!');
