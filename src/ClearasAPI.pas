@@ -1609,9 +1609,9 @@ begin
   Ext := ExtractFileExt(Name);
 
   // Check invalid extension
-  if ((Ext <> '.exe') and (Ext <> '.lnk') and (Ext <> '.bat')) then
+  if ((Ext <> '.exe') and (Ext <> '.bat')) then
     raise EInvalidArgument.Create('Invalid program extension! Must be ".exe"'
-      +', ".lnk" or ".bat"!');
+      +' or ".bat"!');
 
   // File path already exists in another item?
   for i := 0 to Count -1 do
@@ -1619,7 +1619,7 @@ begin
       Exit;
 
   // Add new startup user item?
-  if ((Ext = '.exe') or (Ext = '.lnk')) then
+  if (Ext = '.exe') then
   begin
     if (ADisplayedName <> '') then
       Name := ADisplayedName
@@ -2255,9 +2255,9 @@ begin
   Name := TClearas.DeleteExt(ExtractFileName(AFilePath));
 
   // Check invalid extension
-  if ((Ext <> '.exe') and (Ext <> '.lnk') and (Ext <> '.bat')) then
+  if ((Ext <> '.exe') and (Ext <> '.bat')) then
     raise EInvalidArgument.Create('Invalid program extension! Must be ".exe"'
-      +', ".lnk" or ".bat"!');
+      +' or ".bat"!');
 
   // File path already exists in another item?
   if (IndexOf(Name, ALocation) <> -1) then
