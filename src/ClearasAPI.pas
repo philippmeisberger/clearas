@@ -146,6 +146,7 @@ type
     function Disable(): Boolean; override;
     function Enable(): Boolean; override;
   public
+    function ChangeFilePath(const ANewFilePath: string): Boolean; override;
     function CreateBackup(): Boolean; override;
     function Delete(): Boolean; override;
     function GetBackupLnk(): string;
@@ -1232,6 +1233,32 @@ begin
     on E: Exception do
     begin
       E.Message := 'Error while enabling "'+ FName +'": '+ E.Message;
+      raise;
+    end;  //of begin
+  end;  //of try
+end;
+
+{ public TStartupUserItem.ChangeFilePath
+
+  Changes the file path of a TStartupUserItem item. }
+
+function TStartupUserItem.ChangeFilePath(const ANewFilePath: string): Boolean;
+begin
+  result := False;
+
+  try
+    // Failed to create new .lnk file?
+    if not CreateLnk(ANewFilePath, FKeyPath) then
+      raise EStartupException.Create('Could not create .lnk file!');
+
+    // Update file path
+    FFilePath := ANewFilePath;
+    result := True;
+
+  except
+    on E: Exception do
+    begin
+      E.Message := 'Error while changing file path of "'+ FName +'": '+ E.Message;
       raise;
     end;  //of begin
   end;  //of try
