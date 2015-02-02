@@ -34,18 +34,34 @@ const
   TYPE_USER = 'Startup User';
 
 type
+  { TExeFileName }
+  TExeFileName = class(TObject)
+  private
+    FFileName, FArguments: string;
+    function GetFullPath(): string;
+    function GetFullPathEscaped(): string;
+  public
+    constructor Create(AFileName: string = ''; AArguments: string = '');
+    function CreateLnk(const ALinkFilename: string): Boolean;
+    function HasArguments(): Boolean;
+    function ReadLnkFile(const ALnkFileName: string): Boolean;
+    { external }
+    property Path: string read FFileName write FFileName;
+    property Arguments: string read FArguments write FArguments;
+    property FullPath: string read GetFullPath;
+    property FullPathEscaped: string read GetFullPathEscaped;
+  end;
+
   { TClearas }
   TClearas = class(TOSUtils)
   protected
     class function DeleteKey(AMainKey, AKeyPath, AKeyName: string): Boolean;
     class function DeleteValue(AMainKey, AKeyName, AValueName: string): Boolean;
   public
-    class function CreateLnk(const AExeFilename, ALinkFilename: string): Boolean;
     class function DeleteExt(AName: string): string;
     class function GetBackupDir(): string;
     class function GetKeyValue(AMainKey, AKeyPath, AValueName: string): string;
     class function GetStartUpDir(AAllUsers: Boolean): string;
-    class function ReadLnkFile(const ALnkFileName: string; out APath: string): Boolean;
     class function RegisterInContextMenu(ACheck: Boolean): Boolean;
     class function UpdateContextPath(): Boolean; overload;
     class function UpdateContextPath(ALangFile: TLanguageFile): Boolean; overload; deprecated;
@@ -169,13 +185,14 @@ type
     function AddItemDisabled(const AKeyPath: string): Word;
     function AddItemEnabled(const ARootKey, AKeyPath, AName, AFilePath: string): Word;
     function AddNewStartupUserItem(AName, AFilePath: string;
-      AAllUsers: Boolean = False): Boolean;
+      AArguments: string = ''; AAllUsers: Boolean = False): Boolean;
     function AddUserItemDisabled(const AKeyPath: string): Word;
     function AddUserItemEnabled(const ALnkFile: string; AAllUsers: Boolean): Word;
   public
     constructor Create;
     function CreateBackup(): Boolean;
-    function AddProgram(const AFilePath: string; ADisplayedName: string = ''): Boolean;
+    function AddProgram(AFilePath, AArguments: string;
+      ADisplayedName: string = ''): Boolean;
     function BackupExists(): Boolean;
     function ChangeItemFilePath(const ANewFilePath: string): Boolean; override;
     function ChangeItemStatus(): Boolean; override;
@@ -259,7 +276,8 @@ type
     procedure LoadContextmenu(const AKeyName: string; AShell: Boolean); overload;
   public
     constructor Create;
-    function AddEntry(const AFilePath, ALocation, ADisplayedName: string): Boolean;
+    function AddEntry(const AFilePath, AArguments, ALocation,
+      ADisplayedName: string): Boolean;
     procedure LoadContextmenu(); overload;
     procedure LoadContextmenu(const AKeyName: string); overload;
     function ChangeItemFilePath(const ANewFilePath: string): Boolean; override;
@@ -278,6 +296,138 @@ type
   end;
 
 implementation
+
+uses StrUtils;
+
+{ TExeFileName }
+
+{ public TExeFileName.Create
+
+  Constructor for creating a TFilePath object. }
+
+constructor TExeFileName.Create(AFileName: string = ''; AArguments: string = '');
+begin
+  inherited Create;
+  FFileName := AFileName;
+  FArguments := AArguments;
+end;
+
+{ private TExeFileName.GetFullPath
+
+  Returns the concatenation of file name and arguments. }
+
+function TExeFileName.GetFullPath(): string;
+begin
+  if HasArguments() then
+    result := FFileName +' '+ FArguments
+  else
+    Result := FFileName;
+end;
+
+{ private TExeFileName.GetFullPathEscaped
+
+  Returns the concatenation of file name and arguments escaped with quotes. }
+
+function TExeFileName.GetFullPathEscaped(): string;
+begin
+  if HasArguments() then
+    result := '"'+ FFileName +'" '+ FArguments
+  else
+    result := '"'+ FFileName +'"';
+end;
+
+{ public TExeFileName.CreateLnk
+
+  Creates a new .lnk file. }
+
+function TExeFileName.CreateLnk(const ALinkFilename: string): Boolean;
+var
+  ShellLink : IShellLink;
+  PersistFile : IPersistFile;
+  Name : PWideChar;
+
+begin
+  result := False;
+
+  if Succeeded(CoCreateInstance(CLSID_ShellLink, nil, CLSCTX_inPROC_SERVER,
+    IID_IShellLinkA, ShellLink)) then
+  begin
+    // Set path to .exe
+    ShellLink.SetPath(PChar(FFileName));
+
+    // Set arguments if specified
+    if (FArguments <> '') then
+      ShellLink.SetArguments(PChar(FArguments));
+
+    // Set working directory
+    ShellLink.SetWorkingDirectory(PChar(ExtractFilePath(FFileName)));
+
+    if Succeeded(ShellLink.QueryInterface(IPersistFile, PersistFile)) then
+    begin
+      GetMem(Name, MAX_PATH * 2);
+
+      try
+        // Write information
+        MultiByteToWideChar(CP_ACP, 0, PChar(ALinkFilename), -1, Name, MAX_PATH);
+
+        // Save .lnk
+        PersistFile.Save(Name, True);
+        result := True;
+
+      finally
+        FreeMem(Name, MAX_PATH*2);
+      end; //of finally
+    end; //of begin
+  end; //of begin
+end;
+
+{ public TExeFileName.HasArguments
+
+  Returns if arguments are specified. }
+
+function TExeFileName.HasArguments(): Boolean;
+begin
+  result := (FArguments <> '');
+end;
+
+{ public TExeFileName.ReadLnkFile
+
+  Returns the path of a .exe out of a .lnk file. }
+
+function TExeFileName.ReadLnkFile(const ALnkFileName: string): Boolean;
+var
+  ShellLink: IShellLink;
+  PersistFile: IPersistFile;
+  FileInfo: TWin32FindData;
+  Path, Arguments: string;
+
+begin
+  result := False;
+
+  if Succeeded(CoCreateInstance(CLSID_ShellLink, nil, CLSCTX_INPROC_SERVER,
+    IShellLink, ShellLink)) then
+  begin
+    PersistFile := ShellLink as IPersistFile;
+
+    if Succeeded(PersistFile.Load(StringToOleStr(ALnkFileName), STGM_READ)) then
+      with ShellLink do
+      begin
+        SetLength(Path, MAX_PATH + 1);
+
+        if Succeeded(GetPath(PChar(Path), MAX_PATH, FileInfo, SLR_ANY_MATCH)) then
+        begin
+          FFileName := PChar(Path);
+          SetLength(Arguments, MAX_PATH + 1);
+
+          if Succeeded(GetArguments(PChar(Arguments), MAX_PATH)) then
+            FArguments := PChar(Arguments);
+
+          result := True;
+        end;  //of begin
+      end; //of with
+  end;  //of begin
+end;
+
 
 { TClearas }
 
@@ -321,47 +471,6 @@ begin
   finally
     reg.Free;
   end;  //of try
-end;
-
-{ public TClearas.CreateLnk
-
-  Creates a new .lnk file. }
-
-class function TClearas.CreateLnk(const AExeFilename, ALinkFilename: string): Boolean;
-var
-  ShellLink : IShellLink;
-  PersistFile : IPersistFile;
-  Name : PWideChar;
-
-begin
-  result := False;
-
-  if Succeeded(CoCreateInstance(CLSID_ShellLink, nil, CLSCTX_inPROC_SERVER,
-    IID_IShellLinkA, ShellLink)) then
-  begin
-    // Set path to .exe
-    ShellLink.SetPath(PChar(AExeFileName));
-
-    // Set working directory
-    ShellLink.SetWorkingDirectory(PChar(ExtractFilePath(AExeFileName)));
-
-    if Succeeded(ShellLink.QueryInterface(IPersistFile, PersistFile)) then
-    begin
-      GetMem(Name, MAX_PATH * 2);
-
-      try
-        // Write information
-        MultiByteToWideChar(CP_ACP, 0, PChar(ALinkFilename), -1, Name, MAX_PATH);
-
-        // Save .lnk
-        PersistFile.Save(Name, True);
-        result := True;
-
-      finally
-        FreeMem(Name, MAX_PATH*2);
-      end; //of finally
-    end; //of begin
-  end; //of begin
 end;
 
 { public TClearas.DeleteExt
@@ -450,38 +559,6 @@ begin
   end  //of begin
   else
     result := '';
-end;
-
-{ public TClearas.ReadLnkFile
-
-  Returns the path of a .exe out of a .lnk file. }
-
-class function TClearas.ReadLnkFile(const ALnkFileName: string; out APath: string): Boolean;
-var
-  ShellLink: IShellLink;
-  PersistFile: IPersistFile;
-  FileInfo: TWin32FindData;
-
-begin
-  result := False;
-
-  if Succeeded(CoCreateInstance(CLSID_ShellLink, nil, CLSCTX_INPROC_SERVER,
-    IShellLink, ShellLink)) then
-  begin
-    PersistFile := ShellLink as IPersistFile;
-
-    if Succeeded(PersistFile.Load(StringToOleStr(ALnkFileName), STGM_READ)) then
-      with ShellLink do
-      begin
-        SetLength(APath, MAX_PATH + 1);
-
-        if Succeeded(GetPath(PChar(APath), MAX_PATH, FileInfo, SLR_ANY_MATCH)) then
-        begin
-          APath := PChar(APath);
-          result := True;
-        end;  //of begin
-      end; //of with
-  end;  //of begin
 end;
 
 { public TClearas.RegisterInContextMenu
@@ -1127,11 +1204,13 @@ end;
 function TStartupUserItem.Disable(): Boolean;
 var
   reg: TRegistry;
-  Path, KeyName, BackupLnk: string;
+  KeyName, BackupLnk: string;
+  FileName: TExeFileName;
 
 begin
   result := False;
   reg := TRegistry.Create(DenyWOW64Redirection(KEY_WRITE));
+  FileName := TExeFileName.Create();
 
   try
     try
@@ -1139,47 +1218,47 @@ begin
       KeyName := AddCircumflex(FKeyPath);
       BackupLnk := GetBackupLnk();
 
-      if (reg.OpenKey(KEY_DEACT_FOLDER + KeyName, True) and
-        ReadLnkFile(FKeyPath, Path)) then
-      begin
-        reg.WriteString('path', FKeyPath);
-        reg.WriteString('item', DeleteExt(ExtractFileName(FName)));
-        reg.WriteString('command', FFilePath);
-        reg.WriteString('backup', BackupLnk);
+      if not FileName.ReadLnkFile(FKeyPath) then
+        raise EStartupException.Create('Could not read .lnk file!');
 
-        // Special Registry entries only for Windows >= Vista
-        if TOSUtils.WindowsVistaOrLater() then
-        begin
-          reg.WriteString('backupExtension', GetExtension());
-          reg.WriteString('location', ExtractFileDir(FKeyPath));
-          WriteTime(KEY_DEACT_FOLDER + KeyName);
-        end  //of begin
-        else
-          reg.WriteString('location', FType);
-
-        // Create backup directory if not exist
-        if not DirectoryExists(GetBackupDir()) then
-          ForceDirectories(GetBackupDir());
-
-        // Create backup by copying original .lnk
-        if not CopyFile(PChar(FKeyPath), PChar(BackupLnk), False) then
-          raise EStartupException.Create('Could not create backup file!');
-
-        // Delete original .lnk
-        if not DeleteFile(FKeyPath) then
-          raise EStartupException.Create('Could not delete .lnk file!');
-
-        // Update information
-        FKeyPath := KEY_DEACT_FOLDER + KeyName;
-        FRootKey := 'HKLM';
-        FEnabled := False;
-      end  //of begin
-      else
+      if not reg.OpenKey(KEY_DEACT_FOLDER + KeyName, True) then
         raise EStartupException.Create('Could not create key "'+ FName +'"!');
 
+      reg.WriteString('path', FKeyPath);
+      reg.WriteString('item', DeleteExt(ExtractFileName(FName)));
+      reg.WriteString('command', FFilePath);
+      reg.WriteString('backup', BackupLnk);
+
+      // Special Registry entries only for Windows >= Vista
+      if TOSUtils.WindowsVistaOrLater() then
+      begin
+        reg.WriteString('backupExtension', GetExtension());
+        reg.WriteString('location', ExtractFileDir(FKeyPath));
+        WriteTime(KEY_DEACT_FOLDER + KeyName);
+      end  //of begin
+      else
+        reg.WriteString('location', FType);
+
+      // Create backup directory if not exist
+      if not DirectoryExists(GetBackupDir()) then
+        ForceDirectories(GetBackupDir());
+
+      // Create backup by copying original .lnk
+      if not CopyFile(PChar(FKeyPath), PChar(BackupLnk), False) then
+        raise EStartupException.Create('Could not create backup file!');
+
+      // Delete original .lnk
+      if not DeleteFile(FKeyPath) then
+        raise EStartupException.Create('Could not delete .lnk file!');
+
+      // Update information
+      FKeyPath := KEY_DEACT_FOLDER + KeyName;
+      FRootKey := 'HKLM';
+      FEnabled := False;
       result := True;
 
     finally
+      FileName.Free;
       reg.Free;
     end;  //of try
 
@@ -1199,6 +1278,7 @@ end;
 function TStartupUserItem.Enable(): Boolean;
 var
   Path, BackupLnk: string;
+  FileName: TExeFileName;
 
 begin
   result := False;
@@ -1215,9 +1295,18 @@ begin
         raise EStartupException.Create('Could not create .lnk file!');
     end  //of begin
     else
-      // Failed to create new .lnk file?
-      if not CreateLnk(FFilePath, Path) then
-        raise EStartupException.Create('Could not create .lnk file!');
+      begin
+        FileName := TExeFileName.Create();
+
+        try
+          // Failed to create new .lnk file?
+          if not FileName.CreateLnk(FFilePath) then
+            raise EStartupException.Create('Could not create .lnk file!');
+
+        finally
+          FileName.Free;
+        end;  //of try
+      end;  //of if
 
     // Could not delete old key?
     if not DeleteKey('HKLM', KEY_DEACT_FOLDER, AddCircumflex(Path)) then
@@ -1243,17 +1332,33 @@ end;
   Changes the file path of a TStartupUserItem item. }
 
 function TStartupUserItem.ChangeFilePath(const ANewFilePath: string): Boolean;
+var
+  FileName: TExeFileName;
+
 begin
   result := False;
 
-  try
-    // Failed to create new .lnk file?
-    if not CreateLnk(ANewFilePath, FKeyPath) then
-      raise EStartupException.Create('Could not create .lnk file!');
+  if not FEnabled then
+  begin
+    result := inherited ChangeFilePath(ANewFilePath);
+    Exit;
+  end;  //of begin
 
-    // Update file path
-    FFilePath := ANewFilePath;
-    result := True;
+  FileName := TExeFileName.Create(ANewFilePath);
+
+  try
+    try
+      // Failed to create new .lnk file?
+      if not FileName.CreateLnk(FKeyPath) then
+        raise EStartupException.Create('Could not create .lnk file!');
+
+      // Update file path
+      FFilePath := ANewFilePath;
+      result := True;
+
+    finally
+      FileName.Free;
+    end;  //of try
 
   except
     on E: Exception do
@@ -1269,8 +1374,19 @@ end;
   Creates a backup file and returns True if successful. }
 
 function TStartupUserItem.CreateBackup(): Boolean;
+var
+  FileName: TExeFileName;
+
 begin
-  result := TClearas.CreateLnk(FFilePath, GetBackupLnk());
+  result := False;
+  FileName := TExeFileName.Create(GetBackupLnk());
+
+  try
+    result := FileName.CreateLnk(FFilePath);
+
+  finally
+    FileName.Free;
+  end;  //of try
 end;
 
 { public TStartupUserItem.Delete
@@ -1500,9 +1616,10 @@ end;
   Adds a new startup user item to the autostart. }
 
 function TStartupList.AddNewStartupUserItem(AName, AFilePath: string;
-  AAllUsers: Boolean = False): Boolean;
+  AArguments: string = ''; AAllUsers: Boolean = False): Boolean;
 var
   LnkFilePath: string;
+  FileName: TExeFileName;
 
 begin
   result := False;
@@ -1510,17 +1627,23 @@ begin
   if (ExtractFileExt(AName) <> '.lnk') then
     AName := AName +'.lnk';
 
+  // Init .lnk file
+  FileName := TExeFileName.Create(AFilePath, AArguments);
+
   // Set startup location
   LnkFilePath := TClearas.GetStartUpDir(AAllUsers) + AName;
 
-  // Link file created successfully?
-  if TClearas.CreateLnk(AFilePath, LnkFilePath) then
-  begin
+  try
+    // Link file created successfully?
+    if not FileName.CreateLnk(LnkFilePath) then
+      raise EStartupException.Create('Could not create .lnk file!');
+
     AddUserItemEnabled(LnkFilePath, AAllUsers);
     result := True;
-  end  //of begin
-  else
-    raise EStartupException.Create('Could not create .lnk file!');
+
+  finally
+    FileName.Free;
+  end;  //of try
 end;
 
 { protected TStartupList.AddUserItemDisabled
@@ -1554,17 +1677,27 @@ end;
 function TStartupList.AddUserItemEnabled(const ALnkFile: string; AAllUsers: Boolean): Word;
 var
   Item: TStartupListItem;
-  ExeFile: string;
+  FileName: TExeFileName;
+  Path: string;
 
 begin
   Item := TStartupUserItem.Create(Count, True);
+  FileName := TExeFileName.Create();
+
+  // Try to read .lnk file
+  try
+    FileName.ReadLnkFile(ALnkFile);
+    Path := FileName.FullPath;
+
+  finally
+    FileName.Free;
+  end;  //of try
 
   with Item do
   begin
     RootKey := '';
-    ReadLnkFile(ALnkFile, ExeFile);
     KeyPath := ALnkFile;
-    FilePath := ExeFile;
+    FilePath := Path;
     Name := ExtractFileName(ALnkFile);
 
     if AAllUsers then
@@ -1597,7 +1730,7 @@ end;
 
   Adds a new startup item to autostart. }
 
-function TStartupList.AddProgram(const AFilePath: string;
+function TStartupList.AddProgram(AFilePath, AArguments: string;
   ADisplayedName: string = ''): Boolean;
 var
   Name, Ext: string;
@@ -1615,7 +1748,7 @@ begin
 
   // File path already exists in another item?
   for i := 0 to Count -1 do
-    if (ItemAt(i).FilePath = AFilePath) then
+    if AnsiContainsStr(ItemAt(i).FilePath, AFilePath) then
       Exit;
 
   // Add new startup user item?
@@ -1626,10 +1759,14 @@ begin
     else
       Name := TClearas.DeleteExt(Name);
 
-    result := AddNewStartupUserItem(Name, AFilePath);
+    result := AddNewStartupUserItem(Name, AFilePath, AArguments);
   end  //of begin
   else
     begin
+      // Append arguments if used
+      if (AArguments <> '') then
+        AFilePath := AFilePath +' '+ AArguments;
+
       // Adds new startup item to Registry
       TClearas.WriteStrValue('HKCU', KEY_STARTUP, ADisplayedName, AFilePath);
 
@@ -1808,9 +1945,12 @@ function TStartupList.ImportBackup(const AFilePath: string): Boolean;
 var
   Path, Name, Ext: string;
   i: Word;
+  FileName: TExeFileName;
+  LnkCreated: Boolean;
 
 begin
   result := False;
+  FileName := TExeFileName.Create();
   Ext := ExtractFileExt(AFilePath);
 
   // Check invalid extension
@@ -1825,17 +1965,22 @@ begin
   if (ExtractFileExt(Name) = '') then
     Name := Name +'.lnk';
 
-  // Extract path to .exe
-  if not TClearas.ReadLnkFile(AFilePath, Path) then
-    raise EStartupException.Create('Could not read backup file!');
+  try
+    // Extract path to .exe
+    if not FileName.ReadLnkFile(AFilePath) then
+      raise EStartupException.Create('Could not read backup file!');
 
-  // File path already exists in another item?
-  for i := 0 to Count -1 do
-    if (ItemAt(i).FilePath = Path) then
-      Exit;
+    // File path already exists in another item?
+    for i := 0 to Count -1 do
+      if (ItemAt(i).FilePath = FileName.Path) then
+        Exit;
 
-  // Create .lnk file and add it to list
-  result := AddNewStartupUserItem(Name, Path, Ext = EXT_COMMON);
+    // Create .lnk file and add it to list
+    result := AddNewStartupUserItem(Name, FileName.Path, FileName.Arguments, (Ext = EXT_COMMON));
+
+  finally
+    FileName.Free;
+  end;  //of try
 end;
 
 { public TStartupList.LoadAutostart
@@ -2243,10 +2388,10 @@ end;
 
   Adds a new contextmenu entry. }
 
-function TContextList.AddEntry(const AFilePath, ALocation,
+function TContextList.AddEntry(const AFilePath, AArguments, ALocation,
   ADisplayedName: string): Boolean;
 var
-  Name, Ext: string;
+  Name, Ext, FullPath: string;
   i: Word;
 
 begin
@@ -2263,9 +2408,16 @@ begin
   if (IndexOf(Name, ALocation) <> -1) then
     Exit;
 
+  // Escape space char using quotes
+  FullPath := '"'+ AFilePath +'"';
+
+  // Append arguments if used
+  if (AArguments <> '') then
+    FullPath := FullPath +' '+ AArguments;
+
   // Adds new context item to Registry
   TClearas.WriteStrValue('HKCR', ALocation +'\Shell\'+ Name, '', ADisplayedName);
-  TClearas.WriteStrValue('HKCR', ALocation +'\Shell\'+ Name +'\command', '', AFilePath);
+  TClearas.WriteStrValue('HKCR', ALocation +'\Shell\'+ Name +'\command', '', FullPath);
 
   // Adds this item to list
   AddShellItem(Name, ALocation, True);

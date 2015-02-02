@@ -1038,6 +1038,9 @@ begin
     // Selected item is enabled and startup user type?
     if (Startup.Selected.StartupUser and Startup.Selected.Enabled) then
     begin
+      // Disable editing path
+      pmEdit.Enabled := False;
+
       // Rename "open in RegEdit" to "open in Explorer"
       pmOpenRegedit.Caption := FLang.GetString(51);
 
@@ -1277,8 +1280,8 @@ begin
       Exit;
 
     // Escape file path in quotes
-    if ((Length(EnteredPath) > 0) and (EnteredPath[1] <> '"')) then
-      EnteredPath := '"'+ EnteredPath +'"';
+    //if ((Length(EnteredPath) > 0) and (EnteredPath[1] <> '"')) then
+    //  EnteredPath := '"'+ EnteredPath +'"';
 
     // Try to change the file path
     if not SelectedList.ChangeItemFilePath(EnteredPath) then
@@ -1304,7 +1307,7 @@ end;
 procedure TMain.mmAddClick(Sender: TObject);
 var
   OpenDialog: TOpenDialog;
-  Name, Params, Location: string;
+  Name, Args, Location: string;
   List: TStringList;
 
 begin
@@ -1336,13 +1339,14 @@ begin
           Exit;
 
         // optional parameters
-        if not InputQuery(FLang.GetString(99), FLang.GetString(98), Params) then
+        if not InputQuery(FLang.GetString(99), FLang.GetString(98), Args) then
           Exit;
 
+        // Add startup item?
         if (PageControl.ActivePage = tsStartup) then
         begin
           // Startup item already exists?
-          if not Startup.AddProgram(OpenDialog.FileName, Name) then
+          if not Startup.AddProgram(OpenDialog.FileName, Args, Name) then
             FLang.MessageBox(FLang.Format(40, [OpenDialog.FileName]), mtWarning)
           else
             // Update TListView
@@ -1365,7 +1369,7 @@ begin
                 Exit;
 
               // Contextmenu item already exists?
-              if not Context.AddEntry(OpenDialog.FileName, Location, Name) then
+              if not Context.AddEntry(OpenDialog.FileName, Args, Location, Name) then
                 FLang.MessageBox(FLang.Format(41, [OpenDialog.FileName]), mtWarning)
               else
                 // Update TListView
