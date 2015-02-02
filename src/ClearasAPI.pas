@@ -1296,11 +1296,11 @@ begin
     end  //of begin
     else
       begin
-        FileName := TExeFileName.Create();
+        FileName := TExeFileName.Create(FFilePath);
 
         try
           // Failed to create new .lnk file?
-          if not FileName.CreateLnk(FFilePath) then
+          if not FileName.CreateLnk(Path) then
             raise EStartupException.Create('Could not create .lnk file!');
 
         finally

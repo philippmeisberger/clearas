@@ -1039,7 +1039,7 @@ begin
     if (Startup.Selected.StartupUser and Startup.Selected.Enabled) then
     begin
       // Disable editing path
-      pmEdit.Enabled := False;
+      //pmEdit.Enabled := False;
 
       // Rename "open in RegEdit" to "open in Explorer"
       pmOpenRegedit.Caption := FLang.GetString(51);

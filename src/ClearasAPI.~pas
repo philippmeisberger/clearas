@@ -1337,6 +1337,13 @@ var
 
 begin
   result := False;
+
+  if not FEnabled then
+  begin
+    result := inherited ChangeFilePath(ANewFilePath);
+    Exit;
+  end;  //of begin
+
   FileName := TExeFileName.Create(ANewFilePath);
 
   try
