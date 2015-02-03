@@ -236,7 +236,7 @@ begin
   mmDate.Enabled := newWindows;
 
   //Pfad in Kontextmenü aktualisieren
-  mmContext.Checked := TClearas.UpdateContextPath(FLang);
+  mmContext.Checked := TRegUtils.UpdateContextPath(FLang);
 
   // Auslesen
   ShowStartupEntries();
@@ -1032,15 +1032,15 @@ begin
           pmChangeStatus.Caption := bEnableStartupItem.Caption;
 
         pmChangeStatus.Enabled := True;
-        pmEdit.Enabled := True;
+
+        // Edit path not possible for startup user items!
+        if not Startup.Selected.StartupUser then
+          pmEdit.Enabled := True;
       end;  //of if
 
     // Selected item is enabled and startup user type?
     if (Startup.Selected.StartupUser and Startup.Selected.Enabled) then
     begin
-      // Disable editing path
-      pmEdit.Enabled := False;
-
       // Rename "open in RegEdit" to "open in Explorer"
       pmOpenRegedit.Caption := FLang.GetString(51);
 
@@ -1329,7 +1329,7 @@ begin
       if OpenDialog.Execute then
       begin
         // Set default name
-        Name := TClearas.DeleteExt(ExtractFileName(OpenDialog.FileName));
+        Name := TRegUtils.DeleteExt(ExtractFileName(OpenDialog.FileName));
 
         // User can edit the name
         Name := InputBox(FLang.GetString(74), FLang.GetString(97), Name);
@@ -1531,20 +1531,22 @@ end;
 procedure TMain.mmImportClick(Sender: TObject);
 var
   OpenDialog: TOpenDialog;
+  BackupDir: string;
 
 begin
+  BackupDir := TLnkFile.GetBackupDir();
   OpenDialog := TOpenDialog.Create(Self);
 
   try
     // Create Backup directory if not exists
-    if not DirectoryExists(TClearas.GetBackupDir()) then
-      ForceDirectories(TClearas.GetBackupDir());
+    if not DirectoryExists(BackupDir) then
+      ForceDirectories(BackupDir);
 
     // Set TOpenDialog options
     with OpenDialog do
     begin
       Title := StripHotkey(mmImport.Caption);
-      InitialDir := TClearas.GetBackupDir();
+      InitialDir := BackupDir;
       Filter := Format(FLang.GetString(39), [EXT_USER, EXT_USER, EXT_COMMON, EXT_COMMON]);
     end;  //of with
 
@@ -1582,7 +1584,7 @@ end;
 
 procedure TMain.mmContextClick(Sender: TObject);
 begin
-  TClearas.RegisterInContextMenu(not mmContext.Checked);
+  TRegUtils.RegisterInContextMenu(not mmContext.Checked);
 end;
 
 { TMain.mmRefreshClick
