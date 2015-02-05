@@ -1034,8 +1034,7 @@ begin
         pmChangeStatus.Enabled := True;
 
         // Edit path not possible for startup user items!
-        if not Startup.Selected.StartupUser then
-          pmEdit.Enabled := True;
+        pmEdit.Enabled := not Startup.Selected.StartupUser;
       end;  //of if
 
     // Selected item is enabled and startup user type?

@@ -301,8 +301,14 @@ begin
     // Special .lnk file backup only for activated startup user entries!
     if (Startup.Selected.Enabled and Startup.Selected.StartupUser) then
     begin
+      Startup.Selected.ExportItem('');
+      FLang.MessageBox(Flang.Format(42, []));
+      bExportStartupItem.Enabled := False;
+      pmExport.Enabled := False;
+      result := False;
+
       // Successfully created backup of .lnk file?
-      if Startup.CreateBackup() then
+      {if Startup.CreateBackup() then
       begin
         FLang.MessageBox(Flang.Format(42, [Startup.GetBackupLnk()]));
         bExportStartupItem.Enabled := False;
@@ -313,7 +319,7 @@ begin
         begin
           Flang.MessageBox(43, mtError);
           result := False;
-        end;  //of if
+        end;  //of if}
     end  //of begin
     else
       // Default .reg file export

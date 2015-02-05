@@ -115,7 +115,6 @@ type
     function RootItemAt(AIndex: Word): TRootItem;
   public
     constructor Create;
-    destructor Destroy; override;
     function ChangeItemFilePath(const ANewFilePath: string): Boolean; virtual; abstract;
     function ChangeItemStatus(): Boolean; virtual; abstract;
     procedure Clear; override;
@@ -140,7 +139,6 @@ type
     function StartupUserType(): Boolean; virtual; abstract;
     procedure WriteTime(const AKeyPath: string);
   public
-    function CreateBackup(): Boolean; virtual; abstract;
     function ChangeFilePath(const ANewFilePath: string): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
     function GetFullKeyPath(): string; override;
@@ -160,7 +158,6 @@ type
     function Disable(): Boolean; override;
     function Enable(): Boolean; override;
   public
-    function CreateBackup(): Boolean; override;
     function Delete(): Boolean; override;
     procedure GetItemInfo(var AProperties: string; ALangFile: TLanguageFile); override;
   end;
@@ -170,18 +167,19 @@ type
   private
     FLnkFile: TLnkFile;
     function AddCircumflex(const AName: string): string;
-    function GetExtension(): string;
     function StartupUserType(): Boolean; override;
   protected
     function Disable(): Boolean; override;
     function Enable(): Boolean; override;
   public
+    destructor Destroy; override;
     function ChangeFilePath(const ANewFilePath: string): Boolean; override;
-    function CreateBackup(): Boolean; override;
     function Delete(): Boolean; override;
-    function GetBackupLnk(): string;
+    procedure ExportItem(const AFileName: string); override;
     procedure GetItemInfo(var AProperties: string; ALangFile: TLanguageFile); override;
     procedure Open(); override;
+    { external }
+    property LnkFile: TLnkFile read FLnkFile write FLnkFile;
   end;
 
   { TStartupList }
@@ -201,10 +199,9 @@ type
     function AddNewStartupUserItem(AName, AFilePath: string;
       AArguments: string = ''; AAllUsers: Boolean = False): Boolean;
     function AddUserItemDisabled(const AKeyPath: string): Word;
-    function AddUserItemEnabled(const ALnkFile: string; AAllUsers: Boolean): Word;
+    function AddUserItemEnabled(ALnkFile: TLnkFile; AAllUsers: Boolean): Word;
   public
     constructor Create;
-    function CreateBackup(): Boolean;
     function AddProgram(AFilePath, AArguments: string;
       ADisplayedName: string = ''): Boolean;
     function BackupExists(): Boolean;
@@ -213,7 +210,6 @@ type
     function DeleteItem(): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
     procedure ExportList(const AFileName: string); override;
-    function GetBackupLnk(): string;
     function ImportBackup(const AFilePath: string): Boolean;
     procedure LoadAutostart(AIncludeRunOnce: Boolean);
     procedure LoadDisabled(const AKeyPath: string);
@@ -416,7 +412,7 @@ end;
 
 function TLnkFile.DeleteBackup(): Boolean;
 begin
-
+  result := DeleteFile(GetBackupLnk());
 end;
 
 { public TLnkFile.Exists
@@ -838,15 +834,6 @@ begin
   FActCount := 0;
 end;
 
-{ public TRootList.Destroy
-
-  General destructor for destroying a TRootList instance. }
-
-destructor TRootList.Destroy;
-begin
-  inherited Destroy;
-end;
-
 { protected TRootList.RootItemAt
 
   Returns a TRootItem object at index. }
@@ -1217,15 +1204,6 @@ begin
   end;  //of try
 end;
 
-{ public TStartupItem.CreateBackup
-
-  Creates a backup file and returns True if successful. }
-
-function TStartupItem.CreateBackup(): Boolean;
-begin
-  result := False;
-end;
-
 { public TStartupItem.Delete
 
   Deletes a TStartupItem object and returns True if successful. }
@@ -1265,6 +1243,16 @@ end;
 
 { TStartupUserItem }
 
+{ public TStartupUserItem.Destroy
+
+  General destructor for destroying a TStartupUserItem instance. }
+
+destructor TStartupUserItem.Destroy;
+begin
+  FLnkFile.Free;
+  inherited Destroy;
+end;
+
 { private TStartupUserItem.AddCircumflex
 
   Replaces all backslashes in a path by circumflex. }
@@ -1272,18 +1260,6 @@ end;
 function TStartupUserItem.AddCircumflex(const AName: string): string;
 begin
   result := StringReplace(AName, '\', '^', [rfReplaceAll]);
-end;
-
-{ private TStartupUserItem.GetExtension
-
-  Returns the extension of an item used at the end of a backup file. }
-
-function TStartupUserItem.GetExtension(): string;
-begin
-  if AnsiContainsText(FType, 'Common') then
-    result := EXT_COMMON
-  else
-    result := EXT_USER;
 end;
 
 { private TStartupUserItem.StartupUserType
@@ -1302,21 +1278,18 @@ end;
 function TStartupUserItem.Disable(): Boolean;
 var
   reg: TRegistry;
-  KeyName, BackupLnk: string;
-  LnkFile: TLnkFile;
+  KeyName: string;
 
 begin
   result := False;
   reg := TRegistry.Create(TRegUtils.DenyWOW64Redirection(KEY_WRITE));
-  LnkFile := TLnkFile.Create(FKeyPath);
 
   try
     try
       reg.RootKey := HKEY_LOCAL_MACHINE;
       KeyName := AddCircumflex(FKeyPath);
-      BackupLnk := GetBackupLnk();
 
-      if not LnkFile.ReadLnkFile() then
+      if not FLnkFile.ReadLnkFile() then
         raise EStartupException.Create('Could not read .lnk file!');
 
       if not reg.OpenKey(KEY_DEACT_FOLDER + KeyName, True) then
@@ -1325,12 +1298,12 @@ begin
       reg.WriteString('path', FKeyPath);
       reg.WriteString('item', TRegUtils.DeleteExt(ExtractFileName(FName)));
       reg.WriteString('command', FFilePath);
-      reg.WriteString('backup', BackupLnk);
+      reg.WriteString('backup', FLnkFile.BackupLnk);
 
       // Special Registry entries only for Windows >= Vista
       if TOSUtils.WindowsVistaOrLater() then
       begin
-        reg.WriteString('backupExtension', GetExtension());
+        reg.WriteString('backupExtension', FLnkFile.BackupExt);
         reg.WriteString('location', ExtractFileDir(FKeyPath));
         WriteTime(KEY_DEACT_FOLDER + KeyName);
       end  //of begin
@@ -1342,11 +1315,11 @@ begin
         ForceDirectories(TLnkFile.GetBackupDir());
 
       // Create backup by copying original .lnk
-      if not CopyFile(PChar(FKeyPath), PChar(BackupLnk), False) then
+      if not CopyFile(PChar(FKeyPath), PChar(FLnkFile.BackupLnk), False) then
         raise EStartupException.Create('Could not create backup file!');
 
       // Delete original .lnk
-      if not DeleteFile(FKeyPath) then
+      if not FLnkFile.Delete() then
         raise EStartupException.Create('Could not delete .lnk file!');
 
       // Update information
@@ -1356,7 +1329,6 @@ begin
       result := True;
 
     finally
-      LnkFile.Free;
       reg.Free;
     end;  //of try
 
@@ -1375,34 +1347,23 @@ end;
 
 function TStartupUserItem.Enable(): Boolean;
 var
-  Path, BackupLnk: string;
-  LnkFile: TLnkFile;
+  Path: string;
 
 begin
   try
     Path := TRegUtils.GetKeyValue('HKLM', FKeyPath, 'path');
-    BackupLnk := GetBackupLnk();
 
     // Backup file exists?
-    if FileExists(BackupLnk) then
+    if FLnkFile.BackupExists() then
     begin
       // Failed to restore backup file?
-      if not CopyFile(PChar(BackupLnk), PChar(Path), True) then
+      if not CopyFile(PChar(FLnkFile.BackupLnk), PChar(Path), True) then
         raise EStartupException.Create('Could not create .lnk file!');
     end  //of begin
     else
-      begin
-        LnkFile := TLnkFile.Create();
-
-        try
-          // Failed to create new .lnk file?
-          if not LnkFile.WriteLnkFile(Path, FFilePath) then
-            raise EStartupException.Create('Could not create .lnk file!');
-
-        finally
-          LnkFile.Free;
-        end;  //of try
-      end;  //of if
+      // Failed to create new .lnk file?
+      if not FLnkFile.WriteLnkFile(Path, FFilePath) then
+        raise EStartupException.Create('Could not create .lnk file!');
 
     // Could not delete old key?
     if not TRegUtils.DeleteKey('HKLM', KEY_DEACT_FOLDER, AddCircumflex(Path)) then
@@ -1428,33 +1389,21 @@ end;
   Changes the file path of a TStartupUserItem item. }
 
 function TStartupUserItem.ChangeFilePath(const ANewFilePath: string): Boolean;
-var
-  LnkFile: TLnkFile;
-
 begin
-  result := False;
-
   if not FEnabled then
   begin
     result := inherited ChangeFilePath(ANewFilePath);
     Exit;
   end;  //of begin
 
-  LnkFile := TLnkFile.Create();
-
   try
-    try
-      // Failed to create new .lnk file?
-      if not LnkFile.WriteLnkFile(FKeyPath, ANewFilePath) then
-        raise EStartupException.Create('Could not create .lnk file!');
+    // Failed to create new .lnk file?
+    if not FLnkFile.WriteLnkFile(FKeyPath, ANewFilePath) then
+      raise EStartupException.Create('Could not create .lnk file!');
 
-      // Update file path
-      FFilePath := ANewFilePath;
-      result := True;
-
-    finally
-      LnkFile.Free;
-    end;  //of try
+    // Update file path
+    FFilePath := ANewFilePath;
+    result := True;
 
   except
     on E: Exception do
@@ -1462,26 +1411,6 @@ begin
       E.Message := 'Error while changing file path of "'+ FName +'": '+ E.Message;
       raise;
     end;  //of begin
-  end;  //of try
-end;
-
-{ public TStartupUserItem.CreateBackup
-
-  Creates a backup file and returns True if successful. }
-
-function TStartupUserItem.CreateBackup(): Boolean;
-var
-  LnkFile: TLnkFile;
-
-begin
-  // result := FLnkFile.CreateBackup();
-  LnkFile := TLnkFile.Create(FFilePath, GetBackupLnk());
-
-  try
-    result := LnkFile.WriteLnkFile();
-
-  finally
-    LnkFile.Free;
   end;  //of try
 end;
 
@@ -1520,13 +1449,16 @@ begin
   end;  //of try
 end;
 
-{ public TStartupUserItem.GetBackupLnk
+{ public TStartupUserItem.ExportItem
 
-  Returns the path to the backup file. }
+  Exports a TStartupUserItem object as .reg or .lnk backup file. }
 
-function TStartupUserItem.GetBackupLnk(): string;
+procedure TStartupUserItem.ExportItem(const AFileName: string);
 begin
-  result := TLnkFile.GetBackupDir() + FName + GetExtension();
+  if FEnabled then
+    FLnkFile.CreateBackup()
+  else
+    inherited ExportItem(AFileName);
 end;
 
 { public TStartupUserItem.GetItemInfo
@@ -1591,7 +1523,13 @@ end;
 
 function TStartupList.DeleteBackupLnk(): Boolean;
 begin
-  result := DeleteFile(GetBackupLnk());
+  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
+    raise EInvalidItem.Create('No item selected!');
+
+  if (FItem is TStartupUserItem) then
+    result := (FItem as TStartupUserItem).LnkFile.DeleteBackup()
+  else
+    result := False;
 end;
 
 { private TStartupList.ItemAt
@@ -1715,25 +1653,18 @@ var
   LnkFile: TLnkFile;
 
 begin
-  result := False;
-
   if (ExtractFileExt(AName) <> '.lnk') then
     AName := AName +'.lnk';
 
   // Init .lnk file
   LnkFile := TLnkFile.Create(AName, AAllUsers);
 
-  try
-    // Link file created successfully?
-    if not LnkFile.WriteLnkFile(AFilePath, AArguments) then
-      raise EStartupException.Create('Could not create .lnk file!');
+  // Link file created successfully?
+  if not LnkFile.WriteLnkFile(LnkFile.FileName, AFilePath, AArguments) then
+    raise EStartupException.Create('Could not create .lnk file!');
 
-    AddUserItemEnabled(LnkFile.FullPath, AAllUsers);
-    result := True;
-
-  finally
-    LnkFile.Free;
-  end;  //of try
+  AddUserItemEnabled(LnkFile, AAllUsers);
+  result := True;
 end;
 
 { protected TStartupList.AddUserItemDisabled
@@ -1764,54 +1695,34 @@ end;
 
   Adds a enabled startup user item to the list. }
 
-function TStartupList.AddUserItemEnabled(const ALnkFile: string; AAllUsers: Boolean): Word;
+function TStartupList.AddUserItemEnabled(ALnkFile: TLnkFile;
+  AAllUsers: Boolean): Word;
 var
   Item: TStartupListItem;
-  LnkFile: TLnkFile;
-  Path: string;
 
 begin
   Item := TStartupUserItem.Create(Count, True);
-  LnkFile := TLnkFile.Create(ALnkFile);
 
-  // Try to read .lnk file
-  try
-    LnkFile.ReadLnkFile();
-    Path := LnkFile.FullPath;
+  // Read .lnk file
+  ALnkFile.ReadLnkFile();
 
-  finally
-    LnkFile.Free;
-  end;  //of try
-
-  with Item do
+  with (Item as TStartupUserItem) do
   begin
     RootKey := '';
-    KeyPath := ALnkFile;
-    FilePath := Path;
-    Name := ExtractFileName(ALnkFile);
+    KeyPath := ALnkFile.FileName;
+    FilePath := ALnkFile.FullPath;
+    LnkFile := ALnkFile;
+    Name := ExtractFileName(ALnkFile.FileName);
+    Time := '';
 
     if AAllUsers then
       TypeOf := TYPE_COMMON
     else
       TypeOf := TYPE_USER;
-
-    Time := '';
   end;  //of with
 
   Inc(FActCount);
   result := Add(Item);
-end;
-
-{ public TStartupList.CreateBackup
-
-  Creates a backup file and returns True if successful. }
-
-function TStartupList.CreateBackup(): Boolean;
-begin
-  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
-    raise EInvalidItem.Create('No item selected!');
-
-  result := FItem.CreateBackup();
 end;
 
 { public TStartupList.AddProgram
@@ -1870,13 +1781,13 @@ end;
 
 function TStartupList.BackupExists(): Boolean;
 begin
-  result := False;
-
   if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
     raise EInvalidItem.Create('No item selected!');
 
-  if FItem.StartupUser then
-    result := FileExists(GetBackupLnk());
+  if (FItem is TStartupUserItem) then
+    result := (FItem as TStartupUserItem).LnkFile.BackupExists()
+  else
+    result := False;
 end;
 
 { public TStartupList.ChangeItemFilePath
@@ -2001,21 +1912,6 @@ begin
   end;  //of try
 end;
 
-{ public TStartupList.GetBackupLnk
-
-  Returns the path to the backup file. }
-
-function TStartupList.GetBackupLnk(): string;
-begin
-  result := '';
-
-  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
-    raise EInvalidItem.Create('No item selected!');
-
-  if (FItem is TStartupUserItem) then
-    result := (FItem as TStartupUserItem).GetBackupLnk();
-end;
-
 { public TStartupList.ImportBackup
 
   Imports a startup user backup file and adds it to the list. }
@@ -2133,6 +2029,7 @@ end;
 procedure TStartupList.LoadEnabled(const AAllUsers: Boolean);
 var
   List: TStringList;
+  LnkFile: TLnkFile;
   i: integer;
 
 begin
@@ -2144,7 +2041,10 @@ begin
 
     // Add every file to list
     for i := 0 to List.Count -1 do
-      AddUserItemEnabled(List[i], AAllUsers);
+    begin
+      LnkFile := TLnkFile.Create(ExtractFileName(List[i]), AAllUsers);
+      AddUserItemEnabled(LnkFile, AAllUsers);
+    end;  //of begin
 
   finally
     List.Free;
