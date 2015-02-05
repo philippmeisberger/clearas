@@ -37,22 +37,30 @@ type
   { TLnkFile }
   TLnkFile = class(TObject)
   private
-    FFileName, FExeFileName, FArguments: string;
+    FFileName, FExeFileName, FArguments, FBackupExt: string;
+    function GetBackupLnk(): string;
     function GetFullPath(): string;
     function GetFullPathEscaped(): string;
   public
     constructor Create(AFileName: string); overload;
     constructor Create(AName: string; AAllUsers: Boolean); overload;
     constructor Create(AFileName, AExeFileName: string; AArguments: string = ''); overload;
+    function BackupExists(): Boolean;
+    function CreateBackup(): Boolean;
+    function Delete(): Boolean;
+    function DeleteBackup(): Boolean;
     function Exists(): Boolean;
     class function GetBackupDir(): string;
     class function GetStartUpDir(AAllUsers: Boolean): string;
     function HasArguments(): Boolean;
     function ReadLnkFile(): Boolean;
     function WriteLnkFile(): Boolean; overload;
-    function WriteLnkFile(AExeFileName: string; AArguments: string = ''): Boolean; overload;
+    function WriteLnkFile(AFileName, AExeFileName: string;
+      AArguments: string = ''): Boolean; overload;
     { external }
     property Arguments: string read FArguments write FArguments;
+    property BackupExt: string read FBackupExt write FBackupExt;
+    property BackupLnk: string read GetBackupLnk;
     property ExeFileName: string read FExeFileName write FExeFileName;
     property FileName: string read FFileName write FFileName;
     property FullPath: string read GetFullPath;
@@ -160,6 +168,7 @@ type
   { TStartupUserItem }
   TStartupUserItem = class(TStartupListItem)
   private
+    FLnkFile: TLnkFile;
     function AddCircumflex(const AName: string): string;
     function GetExtension(): string;
     function StartupUserType(): Boolean; override;
@@ -323,6 +332,11 @@ end;
 constructor TLnkFile.Create(AName: string; AAllUsers: Boolean);
 begin
   Create(GetStartUpDir(AAllUsers) + AName);
+
+  if AAllUsers then
+    FBackupExt := EXT_COMMON
+  else
+    FBackupExt := EXT_USER;
 end;
 
 { public TLnkFile.Create
@@ -334,6 +348,15 @@ begin
   Create(AFileName);
   FExeFileName := AExeFileName;
   FArguments := AArguments;
+end;
+
+{ private TLnkFile.GetBackupLnk
+
+  Returns the absoulte path to the backup lnk file. }
+
+function TLnkFile.GetBackupLnk(): string;
+begin
+  result := GetBackupDir() + ExtractFileName(FFileName) + FBackupExt;
 end;
 
 { private TLnkFile.GetFullPath
@@ -358,6 +381,42 @@ begin
     result := '"'+ FFileName +'" '+ FArguments
   else
     result := '"'+ FFileName +'"';
+end;
+
+{ public TLnkFile.BackupExists
+
+  Returns True if the backup .lnk file in C:\Windows\pss\ exists. }
+
+function TLnkFile.BackupExists(): Boolean;
+begin
+  result := FileExists(GetBackupLnk());
+end;
+
+{ public TLnkFile.CreateBackup
+
+  Creates a backup .lnk file in C:\Windows\pss\. }
+
+function TLnkFile.CreateBackup(): Boolean;
+begin
+  result := WriteLnkFile(FFileName, GetBackupLnk());
+end;
+
+{ public TLnkFile.Delete
+
+  Deletes the .lnk file. }
+
+function TLnkFile.Delete(): Boolean;
+begin
+  result := DeleteFile(FFileName);
+end;
+
+{ public TLnkFile.DeleteBackup
+
+  Deletes the backup .lnk file. }
+
+function TLnkFile.DeleteBackup(): Boolean;
+begin
+
 end;
 
 { public TLnkFile.Exists
@@ -457,14 +516,14 @@ end;
 
 function TLnkFile.WriteLnkFile(): Boolean;
 begin
-  result := WriteLnkFile(FExeFileName, FArguments);
+  result := WriteLnkFile(FFileName, FExeFileName, FArguments);
 end;
 
 { public TLnkFile.WriteLnkFile
 
   Creates a new .lnk file. }
 
-function TLnkFile.WriteLnkFile(AExeFileName: string; AArguments: string = ''): Boolean;
+function TLnkFile.WriteLnkFile(AFileName, AExeFileName: string; AArguments: string = ''): Boolean;
 var
   ShellLink : IShellLink;
   PersistFile : IPersistFile;
@@ -477,14 +536,14 @@ begin
     IID_IShellLinkA, ShellLink)) then
   begin
     // Set path to .exe
-    ShellLink.SetPath(PChar(FFileName));
+    ShellLink.SetPath(PChar(AExeFileName));
 
     // Set arguments if specified
-    if (FArguments <> '') then
+    if (AArguments <> '') then
       ShellLink.SetArguments(PChar(FArguments));
 
     // Set working directory
-    ShellLink.SetWorkingDirectory(PChar(ExtractFilePath(FFileName)));
+    ShellLink.SetWorkingDirectory(PChar(ExtractFilePath(AExeFileName)));
 
     if Succeeded(ShellLink.QueryInterface(IPersistFile, PersistFile)) then
     begin
@@ -492,7 +551,7 @@ begin
 
       try
         // Set up information
-        MultiByteToWideChar(CP_ACP, 0, PChar(FFileName), -1, Name, MAX_PATH);
+        MultiByteToWideChar(CP_ACP, 0, PChar(AFileName), -1, Name, MAX_PATH);
 
         // Save .lnk
         result := Succeeded(PersistFile.Save(Name, True));
@@ -1333,11 +1392,11 @@ begin
     end  //of begin
     else
       begin
-        LnkFile := TLnkFile.Create(Path, FFilePath);
+        LnkFile := TLnkFile.Create();
 
         try
           // Failed to create new .lnk file?
-          if not LnkFile.WriteLnkFile() then
+          if not LnkFile.WriteLnkFile(Path, FFilePath) then
             raise EStartupException.Create('Could not create .lnk file!');
 
         finally
@@ -1381,12 +1440,12 @@ begin
     Exit;
   end;  //of begin
 
-  LnkFile := TLnkFile.Create(FKeyPath, ANewFilePath);
+  LnkFile := TLnkFile.Create();
 
   try
     try
       // Failed to create new .lnk file?
-      if not LnkFile.WriteLnkFile() then
+      if not LnkFile.WriteLnkFile(FKeyPath, ANewFilePath) then
         raise EStartupException.Create('Could not create .lnk file!');
 
       // Update file path
@@ -1415,6 +1474,7 @@ var
   LnkFile: TLnkFile;
 
 begin
+  // result := FLnkFile.CreateBackup();
   LnkFile := TLnkFile.Create(FFilePath, GetBackupLnk());
 
   try
@@ -1711,8 +1771,9 @@ var
   Path: string;
 
 begin
-  Item := TStartupUserItem.Create(Count, True);
   LnkFile := TLnkFile.Create(ALnkFile);
+  Item := TStartupUserItem.Create(Count, True);
+  // Item := TStartupUserItem.Create(LnkFile, Count, True);
 
   // Try to read .lnk file
   try
