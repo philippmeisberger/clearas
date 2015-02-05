@@ -299,27 +299,13 @@ begin
 
   try
     // Special .lnk file backup only for activated startup user entries!
-    if (Startup.Selected.Enabled and Startup.Selected.StartupUser) then
+    if (Startup.Selected.Enabled and (Startup.Selected is TStartupUserItem)) then
     begin
       Startup.Selected.ExportItem('');
-      FLang.MessageBox(Flang.Format(42, []));
+      FLang.MessageBox(Flang.Format(42, [(Startup.Selected as TStartupUserItem).LnkFile.BackupLnk]));
       bExportStartupItem.Enabled := False;
       pmExport.Enabled := False;
       result := False;
-
-      // Successfully created backup of .lnk file?
-      {if Startup.CreateBackup() then
-      begin
-        FLang.MessageBox(Flang.Format(42, [Startup.GetBackupLnk()]));
-        bExportStartupItem.Enabled := False;
-        pmExport.Enabled := False;
-        result := True;
-      end  //of begin
-      else
-        begin
-          Flang.MessageBox(43, mtError);
-          result := False;
-        end;  //of if}
     end  //of begin
     else
       // Default .reg file export
@@ -328,6 +314,9 @@ begin
   except
     on E: EAccessViolation do
       FLang.MessageBox([95, 18, NEW_LINE, 53], mtWarning);
+
+    on E: EStartupException do
+      Flang.MessageBox(43, mtError);
 
     on E: Exception do
       FLang.MessageBox(FLang.GetString([95, 18, NEW_LINE]) + E.Message, mtError);
@@ -690,7 +679,8 @@ begin
       BackupExists := Startup.BackupExists();
 
       // Skip export dialog for enabled startup user item with exising backup
-      if (Startup.Selected.StartupUser and Startup.Selected.Enabled and BackupExists) then
+      if ((Startup.Selected is TStartupUserItem) and Startup.Selected.Enabled
+        and BackupExists) then
         Answer := IDCANCEL
       else
         Answer := FLang.MessageBox(52, mtQuestion);
@@ -703,7 +693,7 @@ begin
           Exit;
 
       // Ask user to delete old existing backup
-      if ((Answer = IDCANCEL) or (Startup.Selected.StartupUser
+      if ((Answer = IDCANCEL) or ((Startup.Selected is TStartupUserItem)
         and not Startup.Selected.Enabled and BackupExists)) then
         Startup.DeleteBackup := (FLang.MessageBox(44, mtQuestion) = IDYES);
 
@@ -1040,11 +1030,11 @@ begin
         pmChangeStatus.Enabled := True;
 
         // Edit path not possible for startup user items!
-        pmEdit.Enabled := not Startup.Selected.StartupUser;
+        pmEdit.Enabled := not (Startup.Selected is TStartupUserItem);
       end;  //of if
 
     // Selected item is enabled and startup user type?
-    if (Startup.Selected.StartupUser and Startup.Selected.Enabled) then
+    if ((Startup.Selected is TStartupUserItem) and Startup.Selected.Enabled) then
     begin
       // Rename "open in RegEdit" to "open in Explorer"
       pmOpenRegedit.Caption := FLang.GetString(51);
