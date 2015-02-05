@@ -1546,7 +1546,6 @@ begin
   // Windows >= Vista?
   if TOSUtils.WindowsVistaOrLater() then
   begin
-
     st := TRegUtils.GetKeyValue('HKLM', AKeyPath, 'backupExtension');
 
     if (st = EXT_COMMON) then
@@ -1713,7 +1712,7 @@ begin
     LnkFile := ALnkFile;
     Name := ExtractFileName(ALnkFile.FileName);
     Time := '';
-    TypeOf := GetStartupUserType(KeyPath);
+    TypeOf := GetStartupUserType(AAllUsers);
   end;  //of with
 
   Inc(FActCount);

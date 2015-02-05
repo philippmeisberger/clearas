@@ -1563,9 +1563,6 @@ end;
   Returns the startup item type. }
 
 function TStartupList.GetStartupUserType(const AAllUsers: Boolean): string;
-var
-  st: string;
-
 begin
   // Windows >= Vista?
   if TOSUtils.WindowsVistaOrLater() then
