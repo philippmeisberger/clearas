@@ -644,9 +644,9 @@ object Main: TMain
       Caption = 'In RegEdit '#246'ffnen'
       OnClick = pmOpenRegeditClick
     end
-    object pmOpenPath: TMenuItem
+    object pmOpenExplorer: TMenuItem
       Caption = 'In Explorer '#246'ffnen'
-      OnClick = pmOpenPathClick
+      OnClick = pmOpenExplorerClick
     end
     object N11: TMenuItem
       Caption = '-'

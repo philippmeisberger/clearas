@@ -28,6 +28,7 @@ const
   { Context menu Registry subkeys }
   CONTEXTMENU_SHELL = '\shell';
   CONTEXTMENU_SHELLEX = '\shellex\ContextMenuHandlers';
+  CONTEXTMENU_SHELLEX_FILE = 'CLSID\%s\InProcServer32';
 
   { Extensions of backup files }
   EXT_COMMON = '.CommonStartup';
@@ -837,8 +838,9 @@ var
 
 begin
   FileName := GetProgramPath();
+  FileName := StringReplace(FileName, '"', '', [rfReplaceAll]);
 
-  if (FileName <> '') then
+  if ((FileName <> '') and FileExists(FileName)) then
     TOSUtils.ExecuteProgram('explorer.exe', '/select, '+ FileName);
 end;
 
@@ -2363,7 +2365,7 @@ begin
   try
     OldValue := TRegUtils.GetKeyValue('HKCR', KeyPath, '');
     NewValue := Copy(OldValue, 2, Length(OldValue));
-    TRegUtils.WriteStrValue('HKCR', KeyPath, '', NewValue);
+    TRegUtils.WriteStrValue('HKCR', GetKeyPath(), '', NewValue);
     FEnabled := True;
     result := True;
 
@@ -2381,8 +2383,13 @@ end;
   Returns the path of the correspondending program. }
 
 function TShellExItem.GetProgramPath(): string;
+var
+  KeyPath, GUID: string;
+
 begin
-  result := '';
+  GUID := TRegUtils.GetKeyValue('HKCR', GetKeyPath(), '');
+  KeyPath := Format(CONTEXTMENU_SHELLEX_FILE, [GUID]);
+  result := TRegUtils.GetKeyValue('HKCR', KeyPath, '');
 end;
 
 { public TShellExItem.ChangeFilePath

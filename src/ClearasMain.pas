@@ -85,7 +85,7 @@ type
     mmReport: TMenuItem;
     mmRunOnce: TMenuItem;
     pmOpenRegedit: TMenuItem;
-    pmOpenPath: TMenuItem;
+    pmOpenExplorer: TMenuItem;
     N11: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
@@ -137,7 +137,7 @@ type
     procedure lCopy1MouseEnter(Sender: TObject);
     procedure lCopy1Click(Sender: TObject);
     procedure pmOpenRegeditClick(Sender: TObject);
-    procedure pmOpenPathClick(Sender: TObject);
+    procedure pmOpenExplorerClick(Sender: TObject);
   private
     FColumnToSort: Word;
     Startup: TStartupList;
@@ -449,6 +449,7 @@ begin
     // Popup menu labels
     pmChangeStatus.Caption := bDisableStartupItem.Caption;
     pmOpenRegedit.Caption := GetString(66);
+    pmOpenExplorer.Caption := GetString(51);
     pmEdit.Caption := GetString(33);
     pmExport.Caption := mmExport.Caption;
     pmDelete.Caption := bDeleteStartupItem.Caption;
@@ -1033,14 +1034,15 @@ begin
         pmChangeStatus.Enabled := True;
 
         // Edit path not possible for startup user items!
+        // TODO: Make it possible with ExtractFileExt!
         pmEdit.Enabled := not (Startup.Selected is TStartupUserItem);
       end;  //of if
 
     // Selected item is enabled and startup user type?
     if ((Startup.Selected is TStartupUserItem) and Startup.Selected.Enabled) then
     begin
-      // Rename "open in RegEdit" to "open in Explorer"
-      pmOpenRegedit.Caption := FLang.GetString(51);
+      // Disable "open in RegEdit" because item is on file system!
+      pmOpenRegedit.Enabled := False;
 
       // Disable "export" if backup already exists
       bExportStartupItem.Enabled := not Startup.BackupExists();
@@ -1048,7 +1050,7 @@ begin
     else
       begin
         bExportStartupItem.Enabled := True;
-        pmOpenRegedit.Caption := FLang.GetString(66);
+        pmOpenRegedit.Enabled := True;
       end;  //of if
 
     pmExport.Enabled := bExportStartupItem.Enabled;
@@ -1113,7 +1115,7 @@ begin
 
     bDeleteContextItem.Enabled := True;
     pmDelete.Enabled := True;
-
+    pmOpenRegedit.Enabled := True;
     bExportContextItem.Enabled := True;
     pmExport.Enabled := True;
 
@@ -1218,7 +1220,7 @@ end;
 
   Opens the path of the current selected item in Explorer. }
 
-procedure TMain.pmOpenPathClick(Sender: TObject);
+procedure TMain.pmOpenExplorerClick(Sender: TObject);
 begin
   if (PageControl.ActivePage = tsStartup) then
     Startup.Selected.OpenInExplorer()
