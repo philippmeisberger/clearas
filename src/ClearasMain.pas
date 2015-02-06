@@ -85,6 +85,8 @@ type
     mmReport: TMenuItem;
     mmRunOnce: TMenuItem;
     pmOpenRegedit: TMenuItem;
+    pmOpenPath: TMenuItem;
+    N11: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -135,6 +137,7 @@ type
     procedure lCopy1MouseEnter(Sender: TObject);
     procedure lCopy1Click(Sender: TObject);
     procedure pmOpenRegeditClick(Sender: TObject);
+    procedure pmOpenPathClick(Sender: TObject);
   private
     FColumnToSort: Word;
     Startup: TStartupList;
@@ -1213,14 +1216,26 @@ end;
 
 { TMain.pmOpenRegeditClick
 
-  Opens the the current selected item in regedit. }
+  Opens the path of the current selected item in Explorer. }
+
+procedure TMain.pmOpenPathClick(Sender: TObject);
+begin
+  if (PageControl.ActivePage = tsStartup) then
+    Startup.Selected.OpenInExplorer()
+  else
+    Context.Selected.OpenInExplorer();
+end;
+
+{ TMain.pmOpenRegeditClick
+
+  Opens the current selected item in RegEdit. }
 
 procedure TMain.pmOpenRegeditClick(Sender: TObject);
 begin
   if (PageControl.ActivePage = tsStartup) then
-    Startup.Selected.Open()
+    Startup.Selected.OpenInRegEdit()
   else
-    Context.Selected.Open();
+    Context.Selected.OpenInRegEdit();
 end;
 
 { TMain.pmPropertiesClick
@@ -1806,5 +1821,7 @@ procedure TMain.bCloseStartupClick(Sender: TObject);
 begin
   Close;
 end;
+
+
 
 end.

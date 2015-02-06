@@ -306,20 +306,6 @@ begin
       bExportStartupItem.Enabled := False;
       pmExport.Enabled := False;
       result := False;
-
-      // Successfully created backup of .lnk file?
-      {if Startup.CreateBackup() then
-      begin
-        FLang.MessageBox(Flang.Format(42, [Startup.GetBackupLnk()]));
-        bExportStartupItem.Enabled := False;
-        pmExport.Enabled := False;
-        result := True;
-      end  //of begin
-      else
-        begin
-          Flang.MessageBox(43, mtError);
-          result := False;
-        end;  //of if}
     end  //of begin
     else
       // Default .reg file export
@@ -328,6 +314,9 @@ begin
   except
     on E: EAccessViolation do
       FLang.MessageBox([95, 18, NEW_LINE, 53], mtWarning);
+
+    on E: EStartupException do
+      Flang.MessageBox(43, mtError);
 
     on E: Exception do
       FLang.MessageBox(FLang.GetString([95, 18, NEW_LINE]) + E.Message, mtError);

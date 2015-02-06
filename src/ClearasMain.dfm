@@ -620,10 +620,6 @@ object Main: TMain
     object N1: TMenuItem
       Caption = '-'
     end
-    object pmOpenRegedit: TMenuItem
-      Caption = 'In Regedit '#246'ffnen'
-      OnClick = pmOpenRegeditClick
-    end
     object pmEdit: TMenuItem
       Caption = 'Pfad bearbeiten'
       Enabled = False
@@ -644,9 +640,19 @@ object Main: TMain
     object N2: TMenuItem
       Caption = '-'
     end
+    object pmOpenRegedit: TMenuItem
+      Caption = 'In RegEdit '#246'ffnen'
+      OnClick = pmOpenRegeditClick
+    end
+    object pmOpenPath: TMenuItem
+      Caption = 'In Explorer '#246'ffnen'
+      OnClick = pmOpenPathClick
+    end
+    object N11: TMenuItem
+      Caption = '-'
+    end
     object pmProperties: TMenuItem
       Caption = 'Eigenschaften'
-      Enabled = False
       OnClick = pmPropertiesClick
     end
   end

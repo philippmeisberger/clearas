@@ -16,7 +16,6 @@ uses
 
 const
   { Registry keys }
-  KEY_CONTEXTMENU = '\shellex\ContextMenuHandlers';
   KEY_DEACT = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\startupreg\';
   KEY_DEACT_FOLDER = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\startupfolder\';
   KEY_RECYCLEBIN = 'CLSID\{645FF040-5081-101B-9F08-00AA002F954E}\shell';
@@ -25,6 +24,10 @@ const
   KEY_STARTUP = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Run';
   KEY_STARTUP32 = 'SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Run';
   KEY_REGEDIT = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Regedit';
+
+  { Context menu Registry subkeys }
+  CONTEXTMENU_SHELL = '\shell';
+  CONTEXTMENU_SHELLEX = '\shellex\ContextMenuHandlers';
 
   { Extensions of backup files }
   EXT_COMMON = '.CommonStartup';
@@ -92,6 +95,8 @@ type
   protected
     function Disable(): Boolean; virtual; abstract;
     function Enable(): Boolean; virtual; abstract;
+    function GetProgramPath(): string; virtual; abstract;
+    function ExtractPathToFile(const APath: string): string;
   public
     constructor Create(AIndex: Word; AEnabled: Boolean);
     function ChangeFilePath(const ANewFilePath: string): Boolean; virtual; abstract;
@@ -99,9 +104,11 @@ type
     function Delete(): Boolean; virtual; abstract;
     procedure ExportItem(const AFileName: string); virtual; abstract;
     function GetFullKeyPath(): string; virtual; abstract;
-    procedure GetItemInfo(var AProperties: string; ALangFile: TLanguageFile); virtual; abstract;
+    procedure GetItemInfo(var AProperties: string;
+      ALangFile: TLanguageFile); virtual; abstract;
     function GetStatus(ALangFile: TLanguageFile): string;
-    procedure Open(); virtual;
+    procedure OpenInRegEdit(); virtual;
+    procedure OpenInExplorer(); virtual;
     { external }
     property Enabled: Boolean read FEnabled;
     property ItemIndex: Word read FIndex;
@@ -139,6 +146,8 @@ type
     FRootKey, FFilePath, FKeyPath, FTime: string;
     function GetTime(): string;
     procedure WriteTime(const AKeyPath: string);
+  protected
+    function GetProgramPath(): string; override;
   public
     function ChangeFilePath(const ANewFilePath: string): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
@@ -174,7 +183,7 @@ type
     function Delete(): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
     procedure GetItemInfo(var AProperties: string; ALangFile: TLanguageFile); override;
-    procedure Open(); override;
+    procedure OpenInRegEdit(); override;
     { external }
     property LnkFile: TLnkFile read FLnkFile write FLnkFile;
   end;
@@ -229,7 +238,6 @@ type
   TContextListItem = class(TRootItem)
   private
     FLocation: string;
-    function GetFilePath(): string; virtual; abstract;
     function GetKeyPath(): string; virtual; abstract;
   public
     function Delete(): Boolean; override;
@@ -238,18 +246,18 @@ type
     function GetFullKeyPath(): string; override;
     { external }
     property KeyPath: string read GetKeyPath;
-    property Location: string read FLocation;
-    property FilePath: string read GetFilePath;
+    property Location: string read FLocation write FLocation;
+    property FilePath: string read GetProgramPath;
   end;
 
   { TShellItem }
   TShellItem = class(TContextListItem)
   private
-    function GetFilePath(): string; override;
     function GetKeyPath(): string; override;
   protected
     function Disable(): Boolean; override;
     function Enable(): Boolean; override;
+    function GetProgramPath(): string; override;
   public
     function ChangeFilePath(const ANewFilePath: string): Boolean; override;
   end;
@@ -257,11 +265,11 @@ type
   { TShellExItem }
   TShellExItem = class(TContextListItem)
   private
-    function GetFilePath(): string; override;
     function GetKeyPath(): string; override;
   protected
     function Disable(): Boolean; override;
     function Enable(): Boolean; override;
+    function GetProgramPath(): string; override;
   public
     function ChangeFilePath(const ANewFilePath: string): Boolean; override;
   end;
@@ -766,6 +774,35 @@ begin
   FEnabled := AEnabled;
 end;
 
+{ protected TRootItem.ExtractPathToFile
+
+  Extracts the absolute file path + name without arguments from a path. }
+
+function TRootItem.ExtractPathToFile(const APath: string): string;
+var
+  GuessedLastChar: Integer;
+  PreparedPath: string;
+
+begin
+  // Guess last char or space delimiter between file and arguments
+  GuessedLastChar := AnsiPos(ExtractFileExt(APath), APath) + 4;
+
+  // No arguments given?
+  if (Length(APath) = GuessedLastChar) then
+  begin
+    result := APath;
+    Exit;
+  end;  //of begin
+  
+  PreparedPath := Trim(Copy(APath, 0, GuessedLastChar));
+
+  // Add missing quote
+  if ((PreparedPath = '"') and (PreparedPath[Length(PreparedPath)] <> '"')) then
+    PreparedPath := PreparedPath +'"';
+
+  result := PreparedPath;
+end;
+
 { public TRootItem.ChangeStatus
 
   Changes the item status. }
@@ -790,11 +827,26 @@ begin
     result := ALangFile.GetString(32);
 end;
 
-{ public TRootItem.Open
+{ public TRootItem.OpenInExplorer
+
+  Opens an TRootItem object in Explorer. }
+
+procedure TRootItem.OpenInExplorer();
+var
+  FileName: string;
+
+begin
+  FileName := GetProgramPath();
+
+  if (FileName <> '') then
+    TOSUtils.ExecuteProgram('explorer.exe', '/select, '+ FileName);
+end;
+
+{ public TRootItem.OpenInRegEdit
 
   Opens an TRootItem object in RegEdit. }
 
-procedure TRootItem.Open();
+procedure TRootItem.OpenInRegEdit();
 begin
   // Set the Registry key to show
   TRegUtils.WriteStrValue('HKCU', KEY_REGEDIT, 'LastKey', 'Computer\'+ GetFullKeyPath());
@@ -980,6 +1032,15 @@ begin
       raise;
     end;  //of begin
   end;  //of try
+end;
+
+{ protected TStartupListItem.GetProgramPath
+
+  Returns the path of the correspondending program. }
+
+function TStartupListItem.GetProgramPath(): string;
+begin
+  result := ExtractPathToFile(FFilePath);
 end;
 
 { public TStartupListItem.ChangeFilePath
@@ -1215,7 +1276,8 @@ end;
 
   Returns the name and path of an item as formatted text. }
 
-procedure TStartupItem.GetItemInfo(var AProperties: string; ALangFile: TLanguageFile);
+procedure TStartupItem.GetItemInfo(var AProperties: string;
+  ALangFile: TLanguageFile);
 begin
   AProperties := ALangFile.Format(46, [FName, GetFullKeyPath()]);
 end;
@@ -1441,16 +1503,16 @@ begin
     AProperties := ALangFile.Format(46, [FName, GetFullKeyPath()]);
 end;
 
-{ public TStartupUserItem.Open
+{ public TStartupUserItem.OpenInRegEdit
 
   Opens an TStartupUserItem object in Explorer. }
 
-procedure TStartupUserItem.Open();
+procedure TStartupUserItem.OpenInRegEdit();
 begin
   if FEnabled then
-    TOSUtils.ExecuteProgram('explorer.exe', '/select, '+ FKeyPath)
+
   else
-    inherited Open();
+    inherited OpenInRegEdit();
 end;
 
 
@@ -2129,7 +2191,8 @@ end;
 
   Returns the name and path of an item as formatted text. }
 
-procedure TContextListItem.GetItemInfo(var AProperties: string; ALangFile: TLanguageFile);
+procedure TContextListItem.GetItemInfo(var AProperties: string;
+  ALangFile: TLanguageFile);
 var
   Text: string;
 
@@ -2149,15 +2212,6 @@ end;
 
 
 { TShellItem }
-
-{ private TShellItem.GetFilePath
-
-  Returns the command of a Shell entry. }
-
-function TShellItem.GetFilePath(): string;
-begin
-  result := TRegUtils.GetKeyValue('HKCR', GetKeyPath() +'\command', '');
-end;
 
 { private TShellItem.GetKeyPath
 
@@ -2196,7 +2250,8 @@ function TShellItem.Enable(): Boolean;
 begin
   try
     if not TRegUtils.DeleteValue('HKCR', KeyPath, 'LegacyDisable') then
-      raise EStartupException.Create('Could not delete value "'+ KeyPath + '\LegacyDisable' +'"!');
+      raise EStartupException.Create('Could not delete value "'+ KeyPath
+        +'\LegacyDisable' +'"!');
 
     FEnabled := True;
     result := True;
@@ -2208,6 +2263,19 @@ begin
       raise;
     end;  //of begin
   end;  //try
+end;
+
+{ protected TShellItem.GetProgramPath
+
+  Returns the path of the correspondending program. }
+
+function TShellItem.GetProgramPath(): string;
+var
+  Path: string;
+
+begin
+  Path := TRegUtils.GetKeyValue('HKCR', GetKeyPath() +'\command', '');
+  result := ExtractPathToFile(Path);
 end;
 
 { public TShellItem.ChangeFilePath
@@ -2250,22 +2318,13 @@ end;
 
 { TShellExItem }
 
-{ private TShellExItem.GetFilePath
-
-  Returns the command of a Shell entry. }
-
-function TShellExItem.GetFilePath(): string;
-begin
-  result := '';
-end;
-
 { private TShellExItem.GetKeyPath
 
   Returns the Registry path to a TShellExItem. }
 
 function TShellExItem.GetKeyPath(): string;
 begin
-  result := FLocation + KEY_CONTEXTMENU +'\'+ FName;
+  result := FLocation + CONTEXTMENU_SHELLEX +'\'+ FName;
 end;
 
 { protected TShellExItem.Disable
@@ -2315,6 +2374,15 @@ begin
       raise;
     end;  //of begin
   end;  //try
+end;
+
+{ protected TShellExItem.GetProgramPath
+
+  Returns the path of the correspondending program. }
+
+function TShellExItem.GetProgramPath(): string;
+begin
+  result := '';
 end;
 
 { public TShellExItem.ChangeFilePath
@@ -2379,8 +2447,8 @@ begin
     FullPath := FullPath +' '+ AArguments;
 
   // Adds new context item to Registry
-  TRegUtils.WriteStrValue('HKCR', ALocation +'\Shell\'+ Name, '', ADisplayedName);
-  TRegUtils.WriteStrValue('HKCR', ALocation +'\Shell\'+ Name +'\command', '', FullPath);
+  TRegUtils.WriteStrValue('HKCR', ALocation + CONTEXTMENU_SHELL +'\'+ Name, '', ADisplayedName);
+  TRegUtils.WriteStrValue('HKCR', ALocation + CONTEXTMENU_SHELL + Name +'\command', '', FullPath);
 
   // Adds this item to list
   AddShellItem(Name, ALocation, True);
@@ -2422,9 +2490,9 @@ begin
 
   with Item do
   begin
-    FName := AName;
-    FLocation := ALocation;
-    FType := 'Shell';
+    Name := AName;
+    Location := ALocation;
+    TypeOf := 'Shell';
 
     if AEnabled then
       Inc(FActCount);
@@ -2447,9 +2515,9 @@ begin
 
   with Item do
   begin
-    FName := AName;
-    FLocation := ALocation;
-    FType := 'ShellEx';
+    Name := AName;
+    Location := ALocation;
+    TypeOf := 'ShellEx';
 
     if AEnabled then
       Inc(FActCount);
@@ -2475,9 +2543,9 @@ begin
   List := TStringList.Create;
 
   if AShell then
-    Key := AKeyName +'\shell'
+    Key := AKeyName + CONTEXTMENU_SHELL
   else
-    Key := AKeyName + KEY_CONTEXTMENU;
+    Key := AKeyName + CONTEXTMENU_SHELLEX;
 
   try
     reg.RootKey := HKEY_CLASSES_ROOT;
@@ -2761,9 +2829,9 @@ end;
 
 procedure TContextList.LoadContextMenus();
 begin
-  LoadContextmenu('AllFilesystemObjects');
   LoadContextmenu('Directory');
   LoadContextmenu('Folder');
+  LoadContextmenu('*');
   LoadContextmenu('Drive');
 end;
 
