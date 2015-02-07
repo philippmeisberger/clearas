@@ -569,11 +569,15 @@ var
   reg: TRegistry;
 
 begin
+  result := False;
   reg := TRegistry.Create(DenyWOW64Redirection(KEY_READ or KEY_WRITE));
 
   try
     reg.RootKey := StrToHKey(AMainKey);
-    reg.OpenKey(AKeyPath, False);
+
+    if not reg.OpenKey(AKeyName, False) then
+      raise Exception.Create('Key does not exist!');
+
     result := reg.DeleteKey(AKeyName);
 
   finally
@@ -590,12 +594,19 @@ var
   reg: TRegistry;
 
 begin
-  reg := TRegistry.Create(DenyWOW64Redirection(KEY_WRITE));
+  result := False;
+  reg := TRegistry.Create(DenyWOW64Redirection(KEY_READ or KEY_WRITE));
 
   try
     reg.RootKey := StrToHKey(AMainKey);
-    reg.OpenKey(AKeyName, False);
-    result := reg.DeleteValue(AValueName);
+
+    if not reg.OpenKey(AKeyName, False) then
+      raise Exception.Create('Key does not exist!');
+
+    if reg.ValueExists(AValueName) then
+      result := reg.DeleteValue(AValueName)
+    else
+      result := True;
 
   finally
     reg.Free;
@@ -2240,11 +2251,30 @@ end;
   Disables a TShellItem object and returns True if successful. }
 
 function TShellItem.Disable(): Boolean;
+var
+  reg: TRegistry;
+
 begin
+  result := False;
+  reg := TRegistry.Create(TRegUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
+
   try
-    TRegUtils.WriteStrValue('HKCR', KeyPath, 'LegacyDisable', '');
-    FEnabled := False;
-    result := True;
+    try
+      reg.RootKey := HKEY_CLASSES_ROOT;
+
+      // Key does not exist?
+      if not reg.OpenKey(GetKeyPath(), False) then
+        raise EContextMenuException.Create('Key does not exist!');
+
+      reg.WriteString('LegacyDisable', '');
+
+      // Update status
+      FEnabled := False;
+      result := True;
+
+    finally
+      reg.Free;
+    end;  //of try
 
   except
     on E: Exception do
@@ -2261,13 +2291,14 @@ end;
 
 function TShellItem.Enable(): Boolean;
 begin
-  try
-    if not TRegUtils.DeleteValue('HKCR', KeyPath, 'LegacyDisable') then
-      raise EStartupException.Create('Could not delete value "'+ KeyPath
-        +'\LegacyDisable' +'"!');
+  result := False;
 
+  try
+    if not TRegUtils.DeleteValue('HKCR', GetKeyPath(), 'LegacyDisable') then
+      raise EContextMenuException.Create('Could not delete value!');
+
+    // Update status
     FEnabled := True;
-    result := True;
 
   except
     on E: Exception do
@@ -2346,14 +2377,45 @@ end;
 
 function TShellExItem.Disable(): Boolean;
 var
-  OldValue: string;
+  reg: TRegistry;
+  OldValue, NewValue: string;
 
 begin
+  result := False;
+  reg := TRegistry.Create(TRegUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
+
   try
-    OldValue := TRegUtils.GetKeyValue('HKCR', KeyPath, '');
-    TRegUtils.WriteStrValue('HKCR', KeyPath, '', '-' + OldValue);
-    FEnabled := False;
-    result := True;
+    try
+      reg.RootKey := HKEY_CLASSES_ROOT;
+
+      // Key does not exist?
+      if not reg.OpenKey(GetKeyPath(), False) then
+        raise EContextMenuException.Create('Key does not exist!');
+
+      // Value does not exist?
+      if not reg.ValueExists('') then
+        raise EContextMenuException.Create('Value does not exist!');
+
+      OldValue := reg.ReadString('');
+
+      if (Trim(OldValue) = '') then
+        raise EContextMenuException.Create('Value must not be empty!');
+
+      // Item already disabled?
+      if (OldValue[1] <> '{') then
+        raise EContextMenuException.Create('Item already disabled!');
+
+      // set up new value and write it
+      NewValue := '-'+ OldValue;
+      reg.WriteString('', NewValue);
+
+      // Update status
+      FEnabled := False;
+      result := True;
+
+    finally
+      reg.Free;
+    end;  //of try
 
   except
     on E: Exception do
@@ -2370,15 +2432,45 @@ end;
 
 function TShellExItem.Enable(): Boolean;
 var
+  reg: TRegistry;
   OldValue, NewValue: string;
 
 begin
+  result := False;
+  reg := TRegistry.Create(TRegUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
+
   try
-    OldValue := TRegUtils.GetKeyValue('HKCR', KeyPath, '');
-    NewValue := Copy(OldValue, 2, Length(OldValue));
-    TRegUtils.WriteStrValue('HKCR', GetKeyPath(), '', NewValue);
-    FEnabled := True;
-    result := True;
+    try
+      reg.RootKey := HKEY_CLASSES_ROOT;
+
+      // Key does not exist?
+      if not reg.OpenKey(GetKeyPath(), False) then
+        raise EContextMenuException.Create('Key does not exist!');
+
+      // Value does not exist?
+      if not reg.ValueExists('') then
+        raise EContextMenuException.Create('Value does not exist!');
+
+      OldValue := reg.ReadString('');
+
+      if (Trim(OldValue) = '') then
+        raise EContextMenuException.Create('Value must not be empty!');
+
+      // Item already enabled?
+      if (OldValue[1] = '{') then
+        raise EContextMenuException.Create('Item already enabled!');
+
+      // set up new value and write it
+      NewValue := Copy(OldValue, 2, Length(OldValue));
+      reg.WriteString('', NewValue);
+
+      // Update status
+      FEnabled := True;
+      result := True;
+
+    finally
+      reg.Free;
+    end;  //of try
 
   except
     on E: Exception do
@@ -2542,7 +2634,7 @@ var
   reg: TRegistry;
   i: Integer;
   List: TStringList;
-  Item, Key, KeyName, FilePath: string;
+  Item, Key, KeyName, FilePath, GUID: string;
   Enabled: Boolean;
 
 begin
@@ -2588,11 +2680,16 @@ begin
         else
           // Search for shellex entries
           begin
-            // Get status
-            Enabled := (reg.ReadString('')[1] <> '-');
+            // Get status and GUID
+            Enabled := (reg.ReadString('')[1] = '{');
+            GUID := reg.ReadString('');
 
-            // Read GUID and set up Registry key
-            KeyName := Format(CONTEXTMENU_SHELLEX_FILE, [reg.ReadString('')]);
+            // Disabled ShellEx items got "-" before GUID!
+            if not Enabled then
+              GUID := Copy(GUID, 2, Length(GUID));
+
+            // Set up Registry key
+            KeyName := Format(CONTEXTMENU_SHELLEX_FILE, [GUID]);
             reg.CloseKey();
 
             // Get file path of command

@@ -1291,10 +1291,6 @@ begin
     if ((Trim(EnteredPath) = '') or (EnteredPath = Path)) then
       Exit;
 
-    // Escape file path in quotes
-    //if ((Length(EnteredPath) > 0) and (EnteredPath[1] <> '"')) then
-    //  EnteredPath := '"'+ EnteredPath +'"';
-
     // Try to change the file path
     if not SelectedList.ChangeItemFilePath(EnteredPath) then
       raise Exception.Create('Could not change path!');
@@ -1370,9 +1366,9 @@ begin
 
             try
               // Init location ComboBox
-              List.Add('AllFilesystemObjects');
               List.Add('Directory');
               List.Add('Folder');
+              List.Add('*');     
               List.Add('Drive');
 
               // Show dialog for location selection
