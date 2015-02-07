@@ -1110,8 +1110,11 @@ begin
     // Enable "properties" for "Shell" entries only
     pmProperties.Enabled := (Item.SubItems[2] = 'Shell');
 
-    // Enable "edit path" for "Shell" entries only
-    pmEdit.Enabled := pmProperties.Enabled;
+    // Enable "edit path" only if file path is present
+    pmEdit.Enabled := (Context.Selected.FilePath <> '');
+
+    // Enable "open in Explorer" only if file path is present
+    pmOpenExplorer.Enabled := pmEdit.Enabled;
 
     bDeleteContextItem.Enabled := True;
     pmDelete.Enabled := True;

@@ -92,11 +92,10 @@ type
   private
     FIndex: Word;
     FEnabled: Boolean;
-    FName, FType: string;
+    FName, FType, FFilePath: string;
   protected
     function Disable(): Boolean; virtual; abstract;
     function Enable(): Boolean; virtual; abstract;
-    function GetProgramPath(): string; virtual; abstract;
     function ExtractPathToFile(const APath: string): string;
   public
     constructor Create(AIndex: Word; AEnabled: Boolean);
@@ -112,6 +111,7 @@ type
     procedure OpenInExplorer(); virtual;
     { external }
     property Enabled: Boolean read FEnabled;
+    property FilePath: string read FFilePath write FFilePath;
     property ItemIndex: Word read FIndex;
     property Name: string read FName write FName;
     property TypeOf: string read FType write FType;
@@ -144,17 +144,14 @@ type
   { TStartupListItem }
   TStartupListItem = class(TRootItem)
   private
-    FRootKey, FFilePath, FKeyPath, FTime: string;
+    FRootKey, FKeyPath, FTime: string;
     function GetTime(): string;
     procedure WriteTime(const AKeyPath: string);
-  protected
-    function GetProgramPath(): string; override;
   public
     function ChangeFilePath(const ANewFilePath: string): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
     function GetFullKeyPath(): string; override;
     { external }
-    property FilePath: string read FFilePath write FFilePath;
     property KeyPath: string read FKeyPath write FKeyPath;
     property RootKey: string read FRootKey write FRootKey;
     property Time: string read FTime write FTime;
@@ -196,7 +193,6 @@ type
     FDeleteBackup: Boolean;
     function Add(AItem: TStartupListItem): Word; virtual;
     function DelCircumflex(AName: string): string;
-    function DeleteBackupLnk(): Boolean;
     function ItemAt(AIndex: Word): TStartupListItem;
     procedure GetLnkFileNames(AFileList: TStrings; AAllUsers: Boolean);
     function GetStartupUserType(const AKeyPath: string): string; overload;
@@ -248,7 +244,6 @@ type
     { external }
     property KeyPath: string read GetKeyPath;
     property Location: string read FLocation write FLocation;
-    property FilePath: string read GetProgramPath;
   end;
 
   { TShellItem }
@@ -258,7 +253,6 @@ type
   protected
     function Disable(): Boolean; override;
     function Enable(): Boolean; override;
-    function GetProgramPath(): string; override;
   public
     function ChangeFilePath(const ANewFilePath: string): Boolean; override;
   end;
@@ -267,10 +261,10 @@ type
   TShellExItem = class(TContextListItem)
   private
     function GetKeyPath(): string; override;
+    function GetProgramPathKey(): string;
   protected
     function Disable(): Boolean; override;
     function Enable(): Boolean; override;
-    function GetProgramPath(): string; override;
   public
     function ChangeFilePath(const ANewFilePath: string): Boolean; override;
   end;
@@ -285,18 +279,20 @@ type
     FWorkCount, FWorkCountMax: TOnSearchEvent;
     FContextCount: TNotifyEvent;
     function Add(AItem: TContextListItem): Word; virtual;
-    function FindDouble(AName, AKeyName: string): Boolean;
+    function FindDouble(AName, ALocation: string): Boolean;
     function ItemAt(AIndex: Word): TContextListItem;
   protected
-    function AddShellItem(const AName, ALocation: string; AEnabled: Boolean): Word;
-    function AddShellExItem(const AName, ALocation: string; AEnabled: Boolean): Word;
-    procedure LoadContextmenu(const AKeyName: string; AShell: Boolean); overload;
+    function AddShellItem(const AName, ALocation, AFilePath: string;
+      AEnabled: Boolean): Word;
+    function AddShellExItem(const AName, ALocation, AFilePath: string;
+      AEnabled: Boolean): Word;
+    procedure LoadContextmenu(const ALocation: string; AShell: Boolean); overload;
   public
     constructor Create;
     function AddEntry(const AFilePath, AArguments, ALocation,
       ADisplayedName: string): Boolean;
     procedure LoadContextmenu(); overload;
-    procedure LoadContextmenu(const AKeyName: string); overload;
+    procedure LoadContextmenu(const ALocation: string); overload;
     function ChangeItemFilePath(const ANewFilePath: string): Boolean; override;
     function ChangeItemStatus(): Boolean; override;
     function DeleteItem(): Boolean; override;
@@ -834,14 +830,22 @@ end;
 
 procedure TRootItem.OpenInExplorer();
 var
-  FileName: string;
+  PreparedFileName: string;
 
 begin
-  FileName := GetProgramPath();
-  FileName := StringReplace(FileName, '"', '', [rfReplaceAll]);
+  // Extract the file path only (without arguments)
+  PreparedFileName := ExtractPathToFile(FFilePath);
 
-  if ((FileName <> '') and FileExists(FileName)) then
-    TOSUtils.ExecuteProgram('explorer.exe', '/select, '+ FileName);
+  // Delete quote chars
+  PreparedFileName := StringReplace(PreparedFileName, '"', '', [rfReplaceAll]);
+
+  // Variable has to be expanded?
+  if (PreparedFileName[1] = '%') then
+    PreparedFileName := TOSUtils.ExpandEnvironmentVar(PreparedFileName);
+
+  // Open file in explorer
+  if ((PreparedFileName <> '') and FileExists(PreparedFileName)) then
+    TOSUtils.ExecuteProgram('explorer.exe', '/select, '+ PreparedFileName);
 end;
 
 { public TRootItem.OpenInRegEdit
@@ -851,7 +855,8 @@ end;
 procedure TRootItem.OpenInRegEdit();
 begin
   // Set the Registry key to show
-  TRegUtils.WriteStrValue('HKCU', KEY_REGEDIT, 'LastKey', 'Computer\'+ GetFullKeyPath());
+  TRegUtils.WriteStrValue('HKCU', KEY_REGEDIT, 'LastKey', 'Computer\'
+    + GetFullKeyPath());
 
   // Deny WOW64 redirection only on 64bit Windows
   if TOSUtils.IsWindows64() then
@@ -931,7 +936,7 @@ begin
   begin
     Item := RootItemAt(i);
 
-    if ((Item.Name = AItemName) and (Item.Enabled = AEnabled))then
+    if ((Item.Name = AItemName) and (Item.Enabled = AEnabled)) then
     begin
       result := i;
       Break;
@@ -1034,15 +1039,6 @@ begin
       raise;
     end;  //of begin
   end;  //of try
-end;
-
-{ protected TStartupListItem.GetProgramPath
-
-  Returns the path of the correspondending program. }
-
-function TStartupListItem.GetProgramPath(): string;
-begin
-  result := ExtractPathToFile(FFilePath);
 end;
 
 { public TStartupListItem.ChangeFilePath
@@ -1548,21 +1544,6 @@ begin
   result := StringReplace(AName, '^', '\', [rfReplaceAll]);
 end;
 
-{ private TStartupList.DeleteBackupLnk
-
-  Deletes the backup file and returns True if successful. }
-
-function TStartupList.DeleteBackupLnk(): Boolean;
-begin
-  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
-    raise EInvalidItem.Create('No item selected!');
-
-  if (FItem is TStartupUserItem) then
-    result := (FItem as TStartupUserItem).LnkFile.DeleteBackup()
-  else
-    result := False;
-end;
-
 { private TStartupList.ItemAt
 
   Returns a TStartupListItem object at index. }
@@ -1883,7 +1864,7 @@ begin
     begin
       // Decide to delete backup
       if (FDeleteBackup and (FItem is TStartupUserItem)) then
-        DeleteBackupLnk();
+        (FItem as TStartupUserItem).LnkFile.DeleteBackup();
 
       // Update active counter
       Inc(FActCount);
@@ -1913,8 +1894,8 @@ begin
   if Deleted then
   begin
     // Decide to delete backup
-    if (FDeleteBackup and (FItem is TStartupUserItem) and BackupExists()) then
-      DeleteBackupLnk();
+    if (FDeleteBackup and (FItem is TStartupUserItem)) then
+      (FItem as TStartupUserItem).LnkFile.DeleteBackup();
 
     // Item was enabled
     if FItem.Enabled then
@@ -2267,19 +2248,6 @@ begin
   end;  //try
 end;
 
-{ protected TShellItem.GetProgramPath
-
-  Returns the path of the correspondending program. }
-
-function TShellItem.GetProgramPath(): string;
-var
-  Path: string;
-
-begin
-  Path := TRegUtils.GetKeyValue('HKCR', GetKeyPath() +'\command', '');
-  result := ExtractPathToFile(Path);
-end;
-
 { public TShellItem.ChangeFilePath
 
   Changes the file path of an TShellItem item. }
@@ -2327,6 +2295,19 @@ end;
 function TShellExItem.GetKeyPath(): string;
 begin
   result := FLocation + CONTEXTMENU_SHELLEX +'\'+ FName;
+end;
+
+{ private TShellExItem.GetProgramPathKey
+
+  Returns the Registry key of the correspondending program. }
+
+function TShellExItem.GetProgramPathKey(): string;
+var
+  GUID: string;
+
+begin
+  GUID := TRegUtils.GetKeyValue('HKCR', GetKeyPath(), '');
+  result := Format(CONTEXTMENU_SHELLEX_FILE, [GUID]);
 end;
 
 { protected TShellExItem.Disable
@@ -2378,27 +2359,14 @@ begin
   end;  //try
 end;
 
-{ protected TShellExItem.GetProgramPath
-
-  Returns the path of the correspondending program. }
-
-function TShellExItem.GetProgramPath(): string;
-var
-  KeyPath, GUID: string;
-
-begin
-  GUID := TRegUtils.GetKeyValue('HKCR', GetKeyPath(), '');
-  KeyPath := Format(CONTEXTMENU_SHELLEX_FILE, [GUID]);
-  result := TRegUtils.GetKeyValue('HKCR', KeyPath, '');
-end;
-
 { public TShellExItem.ChangeFilePath
 
   Changes the file path of an TShellExItem item. }
 
 function TShellExItem.ChangeFilePath(const ANewFilePath: string): Boolean;
 begin
-  result := False;
+  TRegUtils.WriteStrValue('HKCR', GetProgramPathKey(), '', ANewFilePath);
+  result := True;
 end;
 
 
@@ -2458,20 +2426,20 @@ begin
   TRegUtils.WriteStrValue('HKCR', ALocation + CONTEXTMENU_SHELL + Name +'\command', '', FullPath);
 
   // Adds this item to list
-  AddShellItem(Name, ALocation, True);
+  AddShellItem(Name, ALocation, FullPath, True);
   result := True;
 end;
 
-{ private TContextList.Add
+{ private TContextList.FindDouble
 
   Checks if an TContextListItem already exists in list. }
 
-function TContextList.FindDouble(AName, AKeyName: string): Boolean;
+function TContextList.FindDouble(AName, ALocation: string): Boolean;
 begin
   result := False;
 
   if ((Count > 0) and (IndexOf(AName) <> -1)) then
-    result := (ItemAt(IndexOf(AName)).TypeOf = AKeyName);
+    result := (ItemAt(IndexOf(AName)).Location = ALocation);
 end;
 
 { private TContextList.ItemAt
@@ -2487,7 +2455,7 @@ end;
 
   Adds a shell item to list. }
 
-function TContextList.AddShellItem(const AName, ALocation: string;
+function TContextList.AddShellItem(const AName, ALocation, AFilePath: string;
   AEnabled: Boolean): Word;
 var
   Item: TContextListItem;
@@ -2499,6 +2467,7 @@ begin
   begin
     Name := AName;
     Location := ALocation;
+    FilePath := AFilePath;
     TypeOf := 'Shell';
 
     if AEnabled then
@@ -2512,7 +2481,7 @@ end;
 
   Adds a shellex item to list. }
 
-function TContextList.AddShellExItem(const AName, ALocation: string;
+function TContextList.AddShellExItem(const AName, ALocation, AFilePath: string;
   AEnabled: Boolean): Word;
 var
   Item: TContextListItem;
@@ -2524,6 +2493,7 @@ begin
   begin
     Name := AName;
     Location := ALocation;
+    FilePath := AFilePath;
     TypeOf := 'ShellEx';
 
     if AEnabled then
@@ -2537,12 +2507,12 @@ end;
 
   Adds a context item to list. }
 
-procedure TContextList.LoadContextmenu(const AKeyName: string; AShell: Boolean);
+procedure TContextList.LoadContextmenu(const ALocation: string; AShell: Boolean);
 var
   reg: TRegistry;
   i: Integer;
   List: TStringList;
-  Item, Key: string;
+  Item, Key, KeyName, FilePath: string;
   Enabled: Boolean;
 
 begin
@@ -2550,9 +2520,9 @@ begin
   List := TStringList.Create;
 
   if AShell then
-    Key := AKeyName + CONTEXTMENU_SHELL
+    Key := ALocation + CONTEXTMENU_SHELL
   else
-    Key := AKeyName + CONTEXTMENU_SHELLEX;
+    Key := ALocation + CONTEXTMENU_SHELLEX;
 
   try
     reg.RootKey := HKEY_CLASSES_ROOT;
@@ -2565,29 +2535,42 @@ begin
     begin
       reg.CloseKey;
       Item := List[i];
+      FilePath := '';
       reg.OpenKey(Key +'\'+ Item, False);
 
       // Filter empty, important and double entries
       if ((reg.ReadString('') <> '') and (Item[1] <> '{') and
-        (reg.ReadString('')[1] <> '@') and not FindDouble(Item, AKeyName)) then
+        (reg.ReadString('')[1] <> '@') and not FindDouble(Item, ALocation)) then
       begin
         // Search for shell entries
         if AShell then
-          begin
-            // Get status
-            Enabled := not reg.ValueExists('LegacyDisable');
+        begin
+          // Get status
+          Enabled := not reg.ValueExists('LegacyDisable');
 
-            // Add item to list
-            AddShellItem(Item, AKeyName, Enabled);
-          end  //of begin
+          // Get file path of command
+          if reg.OpenKey('command', False) then
+            FilePath := reg.ReadString('');
+
+          // Add item to list
+          AddShellItem(Item, ALocation, FilePath, Enabled);
+        end  //of begin
         else
           // Search for shellex entries
           begin
             // Get status
-            Enabled := reg.ReadString('')[1] <> '-';
+            Enabled := (reg.ReadString('')[1] <> '-');
+
+            // Read GUID and set up Registry key
+            KeyName := Format(CONTEXTMENU_SHELLEX_FILE, [reg.ReadString('')]);
+            reg.CloseKey();
+
+            // Get file path of command
+            if reg.OpenKey(KeyName, False) then
+              FilePath := reg.ReadString('');
 
             // Add item to list
-            AddShellExItem(Item, AKeyName, Enabled);
+            AddShellExItem(Item, ALocation, FilePath, Enabled);
           end  //of begin
         end;  //of begin
     end;  //of for
@@ -2690,10 +2673,10 @@ end;
   Searches for context menu entries in specific AKeyName and adds them
   to the list. }
 
-procedure TContextList.LoadContextmenu(const AKeyName: string);
+procedure TContextList.LoadContextmenu(const ALocation: string);
 begin
-  LoadContextmenu(AKeyName, True);
-  LoadContextmenu(AKeyName, False);
+  LoadContextmenu(ALocation, True);
+  LoadContextmenu(ALocation, False);
 end;
 
 { public TContextList.ChangeItemFilePath

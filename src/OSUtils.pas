@@ -1,6 +1,6 @@
 { *********************************************************************** }
 {                                                                         }
-{ PM Code Works Operating System Utilities Unit v2.0                      }
+{ PM Code Works Operating System Utilities Unit v2.0.1                    }
 {                                                                         }
 { Copyright (c) 2011-2015 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
@@ -49,6 +49,7 @@ type
       AArguments: string = ''; ARunAsAdmin: Boolean = False): Boolean;
     class function ExitWindows(AAction: Word): Boolean;
     class function ExplorerReboot(): Boolean;
+    class function ExpandEnvironmentVar(const AString: string): string;
     class function GetBuildNumber(): Cardinal;
     class function GetTempDir(): string;
     class function GetWinDir(): string;
@@ -288,6 +289,29 @@ begin
   end;  //begin
 
   result := ExitWindowsEx(AAction, 0);   //EWX_SHUTDOWN, EWX_POWEROFF, (EWX_FORCE, EWX_FORCEIFHUNG)
+end;
+
+{ public TOSUtils.ExplorerReboot
+
+  Expands an environment variable. }
+
+class function TOSUtils.ExpandEnvironmentVar(const AString: string): string;
+var
+  BufferSize: Integer;
+
+begin
+  // Get required buffer size
+  BufferSize := ExpandEnvironmentStrings(PChar(AString), nil, 0);
+
+  if (BufferSize > 0) then
+  begin
+    // Read expanded string into result string
+    SetLength(result, BufferSize - 1);
+    ExpandEnvironmentStrings(PChar(AString), PChar(result), BufferSize);
+  end
+  else
+    // Trying to expand empty string
+    result := '';
 end;
 
 { public TOSUtils.ExplorerReboot
