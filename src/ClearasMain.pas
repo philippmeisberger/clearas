@@ -1032,10 +1032,6 @@ begin
           pmChangeStatus.Caption := bEnableStartupItem.Caption;
 
         pmChangeStatus.Enabled := True;
-
-        // Edit path not possible for startup user items!
-        // TODO: Make it possible with ExtractFileExt!
-        pmEdit.Enabled := not (Startup.Selected is TStartupUserItem);
       end;  //of if
 
     // Selected item is enabled and startup user type?
@@ -1053,6 +1049,7 @@ begin
         pmOpenRegedit.Enabled := True;
       end;  //of if
 
+    pmEdit.Enabled := True;
     pmExport.Enabled := bExportStartupItem.Enabled;
     pmProperties.Enabled := True;
     bDeleteStartupItem.Enabled := True;

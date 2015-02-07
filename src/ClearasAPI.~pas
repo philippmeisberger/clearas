@@ -96,6 +96,7 @@ type
   protected
     function Disable(): Boolean; virtual; abstract;
     function Enable(): Boolean; virtual; abstract;
+    function ExtractArguments(const APath: string): string;
     function ExtractPathToFile(const APath: string): string;
   public
     constructor Create(AIndex: Word; AEnabled: Boolean);
@@ -181,7 +182,6 @@ type
     function Delete(): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
     procedure GetItemInfo(var AProperties: string; ALangFile: TLanguageFile); override;
-    procedure OpenInRegEdit(); override;
     { external }
     property LnkFile: TLnkFile read FLnkFile write FLnkFile;
   end;
@@ -513,7 +513,8 @@ end;
 
   Creates a new .lnk file. }
 
-function TLnkFile.WriteLnkFile(AFileName, AExeFileName: string; AArguments: string = ''): Boolean;
+function TLnkFile.WriteLnkFile(AFileName, AExeFileName: string;
+  AArguments: string = ''): Boolean;
 var
   ShellLink : IShellLink;
   PersistFile : IPersistFile;
@@ -521,6 +522,9 @@ var
 
 begin
   result := False;
+
+  if (AFileName = '') or (AExeFileName = '') then
+    raise EStartupException.Create('Arguments for .lnk file must not be empty!');
 
   if Succeeded(CoCreateInstance(CLSID_ShellLink, nil, CLSCTX_inPROC_SERVER,
     IID_IShellLinkA, ShellLink)) then
@@ -530,7 +534,7 @@ begin
 
     // Set arguments if specified
     if (AArguments <> '') then
-      ShellLink.SetArguments(PChar(FArguments));
+      ShellLink.SetArguments(PChar(AArguments));
 
     // Set working directory
     ShellLink.SetWorkingDirectory(PChar(ExtractFilePath(AExeFileName)));
@@ -771,6 +775,22 @@ begin
   FEnabled := AEnabled;
 end;
 
+{ protected TRootItem.ExtractArguments
+
+  Extracts the arguments from a file path. }
+
+function TRootItem.ExtractArguments(const APath: string): string;
+var
+  ExtWithArguments: string;
+
+begin
+  // Cut path from extension until end
+  ExtWithArguments := ExtractFileExt(APath);
+
+  // Copy arguments without entension and space char at front and end
+  result := Trim(Copy(ExtWithArguments, 5, Length(ExtWithArguments)));
+end;
+
 { protected TRootItem.ExtractPathToFile
 
   Extracts the absolute file path + name without arguments from a path. }
@@ -778,7 +798,7 @@ end;
 function TRootItem.ExtractPathToFile(const APath: string): string;
 var
   GuessedLastChar: Integer;
-  PreparedPath: string;
+  Path: string;
 
 begin
   // Guess last char or space delimiter between file and arguments
@@ -791,13 +811,13 @@ begin
     Exit;
   end;  //of begin
   
-  PreparedPath := Trim(Copy(APath, 0, GuessedLastChar));
+  Path := Trim(Copy(APath, 0, GuessedLastChar));
 
   // Add missing quote
-  if ((PreparedPath = '"') and (PreparedPath[Length(PreparedPath)] <> '"')) then
-    PreparedPath := PreparedPath +'"';
+  if ((Path = '"') and (Path[Length(Path)] <> '"')) then
+    Path := Path +'"';
 
-  result := PreparedPath;
+  result := Path;
 end;
 
 { public TRootItem.ChangeStatus
@@ -855,7 +875,8 @@ end;
 procedure TRootItem.OpenInRegEdit();
 begin
   // Set the Registry key to show
-  TRegUtils.WriteStrValue('HKCU', KEY_REGEDIT, 'LastKey', 'Computer\'+ GetFullKeyPath());
+  TRegUtils.WriteStrValue('HKCU', KEY_REGEDIT, 'LastKey', 'Computer\'
+    + GetFullKeyPath());
 
   // Deny WOW64 redirection only on 64bit Windows
   if TOSUtils.IsWindows64() then
@@ -935,7 +956,7 @@ begin
   begin
     Item := RootItemAt(i);
 
-    if ((Item.Name = AItemName) and (Item.Enabled = AEnabled))then
+    if ((Item.Name = AItemName) and (Item.Enabled = AEnabled)) then
     begin
       result := i;
       Break;
@@ -1376,6 +1397,9 @@ end;
   Enables an TStartupUserItem object and returns True if successful. }
 
 function TStartupUserItem.Enable(): Boolean;
+var
+  Path, Arguments: string;
+
 begin
   try
     // Backup file exists?
@@ -1386,9 +1410,14 @@ begin
         raise EStartupException.Create('Could not create .lnk file!');
     end  //of begin
     else
-      // Failed to create new .lnk file?
-      if not FLnkFile.WriteLnkFile(FLnkFile.FileName, FFilePath) then
-        raise EStartupException.Create('Could not create .lnk file!');
+      begin
+        Path := ExtractPathToFile(FFilePath);
+        Arguments := ExtractArguments(FFilePath);
+
+        // Failed to create new .lnk file?
+        if not FLnkFile.WriteLnkFile(FLnkFile.FileName, Path, Arguments) then
+          raise EStartupException.Create('Could not create .lnk file!');
+      end;  //of if
 
     // Could not delete old key?
     if not TRegUtils.DeleteKey('HKLM', KEY_DEACT_FOLDER, AddCircumflex(FLnkFile.FileName)) then
@@ -1414,20 +1443,31 @@ end;
   Changes the file path of a TStartupUserItem item. }
 
 function TStartupUserItem.ChangeFilePath(const ANewFilePath: string): Boolean;
+var
+  NewFilePath, Arguments: string;
+
 begin
+  // Must be outside try-except because inherited call catches exception already
   if not FEnabled then
-  begin
-    result := inherited ChangeFilePath(ANewFilePath);
-    Exit;
-  end;  //of begin
+    inherited ChangeFilePath(ANewFilePath);
 
   try
+    NewFilePath := ExtractPathToFile(ANewFilePath);
+    Arguments := ExtractArguments(ANewFilePath);
+
     // Failed to create new .lnk file?
-    if not FLnkFile.WriteLnkFile(FKeyPath, ANewFilePath) then
+    if (FEnabled and not FLnkFile.WriteLnkFile(FKeyPath, NewFilePath, Arguments)) then
       raise EStartupException.Create('Could not create .lnk file!');
 
-    // Update file path
+    // Update information
     FFilePath := ANewFilePath;
+    FLnkFile.ExeFileName := NewFilePath;
+    FLnkFile.Arguments := Arguments;
+
+    // Rewrite backup
+    if (not FEnabled and FLnkFile.BackupExists()) then
+      FLnkFile.CreateBackup();
+
     result := True;
 
   except
@@ -1498,18 +1538,6 @@ begin
     AProperties := ALangFile.Format(45, [FName, FKeyPath])
   else
     AProperties := ALangFile.Format(46, [FName, GetFullKeyPath()]);
-end;
-
-{ public TStartupUserItem.OpenInRegEdit
-
-  Opens an TStartupUserItem object in Explorer. }
-
-procedure TStartupUserItem.OpenInRegEdit();
-begin
-  if FEnabled then
-
-  else
-    inherited OpenInRegEdit();
 end;
 
 
@@ -1728,6 +1756,7 @@ begin
       Ext := EXT_COMMON;
 
     LnkFile := TLnkFile.Create(Path, Ext);
+    LnkFile.ReadLnkFile();
   end;  //of with
 
   result := Add(Item);
@@ -1754,6 +1783,7 @@ begin
     KeyPath := ALnkFile.FileName;
     FilePath := ALnkFile.FullPath;
     LnkFile := ALnkFile;
+    LnkFile.ReadLnkFile();
     Name := ExtractFileName(ALnkFile.FileName);
     Time := '';
     TypeOf := GetStartupUserType(AAllUsers);
