@@ -514,7 +514,13 @@ begin
       with lwContext.Items.Add do
       begin
         Caption := Context[i].GetStatus(FLang);
-        SubItems.Append(Context[i].Name);
+
+        // Show name or caption of item?
+        if (Context[i].Caption <> '') then
+          SubItems.Append(Context[i].Caption)
+        else
+          SubItems.Append(Context[i].Name);
+
         SubItems.Append(Context[i].Location);
         SubItems.Append(Context[i].TypeOf);
       end; //of with

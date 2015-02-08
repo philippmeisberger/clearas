@@ -13,7 +13,7 @@ interface
 uses
   Windows, SysUtils, Classes, Controls, Forms, ComCtrls, StdCtrls, ExtCtrls,
   Dialogs, Menus, Graphics, ClearasAPI, ClearasInfo, LanguageFile, OSUtils,
-  Updater, AddDialogs;
+  Updater, AddDialogs{, ClipBrd};
 
 type
   { TMain }
@@ -514,7 +514,13 @@ begin
       with lwContext.Items.Add do
       begin
         Caption := Context[i].GetStatus(FLang);
-        SubItems.Append(Context[i].Name);
+
+        // Show name or caption of item?
+        if (Context[i].Caption <> '') then
+          SubItems.Append(Context[i].Caption)
+        else
+          SubItems.Append(Context[i].Name);
+
         SubItems.Append(Context[i].Location);
         SubItems.Append(Context[i].TypeOf);
       end; //of with
@@ -1249,7 +1255,7 @@ var
   Properties: string;
 
 begin
-  try
+ try
     if (PageControl.ActivePage = tsStartup) then
       Startup.Selected.GetItemInfo(Properties, FLang)
     else

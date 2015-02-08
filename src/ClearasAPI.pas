@@ -234,7 +234,7 @@ type
   { TContextListItem }
   TContextListItem = class(TRootItem)
   private
-    FLocation: string;
+    FLocation, FCaption: string;
     function GetKeyPath(): string; virtual; abstract;
   public
     function Delete(): Boolean; override;
@@ -242,6 +242,7 @@ type
     procedure GetItemInfo(var AProperties: string; ALangFile: TLanguageFile); override;
     function GetFullKeyPath(): string; override;
     { external }
+    property Caption: string read FCaption write FCaption;
     property KeyPath: string read GetKeyPath;
     property Location: string read FLocation write FLocation;
   end;
@@ -282,11 +283,12 @@ type
     function FindDouble(AName, ALocation: string): Boolean;
     function ItemAt(AIndex: Word): TContextListItem;
   protected
-    function AddShellItem(const AName, ALocation, AFilePath: string;
+    function AddShellItem(const AName, ALocation, AFilePath, ACaption: string;
       AEnabled: Boolean): Word;
     function AddShellExItem(const AName, ALocation, AFilePath: string;
       AEnabled: Boolean): Word;
-    procedure LoadContextmenu(const ALocation: string; AShell: Boolean); overload;
+    procedure LoadContextmenu(const ALocation: string;
+      ASearchForShellItems: Boolean); overload;
   public
     constructor Create;
     function AddEntry(const AFilePath, AArguments, ALocation,
@@ -346,7 +348,7 @@ end;
 
 function TLnkFile.GetBackupLnk(): string;
 begin
-  result := GetBackupDir() + ExtractFileName(FFileName) + FBackupExt;
+  Result := GetBackupDir() + ExtractFileName(FFileName) + FBackupExt;
 end;
 
 { private TLnkFile.GetFullPath
@@ -356,9 +358,9 @@ end;
 function TLnkFile.GetFullPath(): string;
 begin
   if HasArguments() then
-    result := FExeFileName +' '+ FArguments
+    Result := FExeFileName +' '+ FArguments
   else
-    result := FExeFileName;
+    Result := FExeFileName;
 end;
 
 { private TLnkFile.GetFullPathEscaped
@@ -368,9 +370,9 @@ end;
 function TLnkFile.GetFullPathEscaped(): string;
 begin
   if HasArguments() then
-    result := '"'+ FFileName +'" '+ FArguments
+    Result := '"'+ FFileName +'" '+ FArguments
   else
-    result := '"'+ FFileName +'"';
+    Result := '"'+ FFileName +'"';
 end;
 
 { public TLnkFile.BackupExists
@@ -379,7 +381,7 @@ end;
 
 function TLnkFile.BackupExists(): Boolean;
 begin
-  result := FileExists(GetBackupLnk());
+  Result := FileExists(GetBackupLnk());
 end;
 
 { public TLnkFile.CreateBackup
@@ -388,7 +390,7 @@ end;
 
 function TLnkFile.CreateBackup(): Boolean;
 begin
-  result := WriteLnkFile(GetBackupLnk(), FExeFileName, FArguments);
+  Result := WriteLnkFile(GetBackupLnk(), FExeFileName, FArguments);
 end;
 
 { public TLnkFile.Delete
@@ -397,7 +399,7 @@ end;
 
 function TLnkFile.Delete(): Boolean;
 begin
-  result := DeleteFile(FFileName);
+  Result := DeleteFile(FFileName);
 end;
 
 { public TLnkFile.DeleteBackup
@@ -406,7 +408,7 @@ end;
 
 function TLnkFile.DeleteBackup(): Boolean;
 begin
-  result := DeleteFile(GetBackupLnk());
+  Result := DeleteFile(GetBackupLnk());
 end;
 
 { public TLnkFile.Exists
@@ -415,7 +417,7 @@ end;
 
 function TLnkFile.Exists(): Boolean;
 begin
-  result := FileExists(FFileName);
+  Result := FileExists(FFileName);
 end;
 
 { public TLnkFile.GetBackupDir
@@ -424,7 +426,7 @@ end;
 
 class function TLnkFile.GetBackupDir(): string;
 begin
-  result := TOSUtils.GetWinDir + '\pss\';
+  Result := TOSUtils.GetWinDir + '\pss\';
 end;
 
 { public TLnkFile.GetStartUpDir
@@ -447,10 +449,10 @@ begin
   begin
     Path := StrAlloc(MAX_PATH);
     SHGetPathFromIDList(ItemIDs, Path);
-    result := IncludeTrailingBackslash(string(Path));
+    Result := IncludeTrailingBackslash(string(Path));
   end  //of begin
   else
-    result := '';
+    Result := '';
 end;
 
 { public TLnkFile.HasArguments
@@ -459,7 +461,7 @@ end;
 
 function TLnkFile.HasArguments(): Boolean;
 begin
-  result := (FArguments <> '');
+  Result := (FArguments <> '');
 end;
 
 { public TLnkFile.ReadLnkFile
@@ -474,7 +476,7 @@ var
   Path, Arguments: string;
 
 begin
-  result := False;
+  Result := False;
 
   if Succeeded(CoCreateInstance(CLSID_ShellLink, nil, CLSCTX_INPROC_SERVER,
     IShellLink, ShellLink)) then
@@ -494,7 +496,7 @@ begin
           if Succeeded(GetArguments(PChar(Arguments), MAX_PATH)) then
             FArguments := PChar(Arguments);
 
-          result := True;
+          Result := True;
         end;  //of begin
       end; //of with
   end;  //of begin
@@ -506,7 +508,7 @@ end;
 
 function TLnkFile.WriteLnkFile(): Boolean;
 begin
-  result := WriteLnkFile(FFileName, FExeFileName, FArguments);
+  Result := WriteLnkFile(FFileName, FExeFileName, FArguments);
 end;
 
 { public TLnkFile.WriteLnkFile
@@ -521,7 +523,7 @@ var
   Name : PWideChar;
 
 begin
-  result := False;
+  Result := False;
 
   if (AFileName = '') or (AExeFileName = '') then
     raise EStartupException.Create('Arguments for .lnk file must not be empty!');
@@ -548,7 +550,7 @@ begin
         MultiByteToWideChar(CP_ACP, 0, PChar(AFileName), -1, Name, MAX_PATH);
 
         // Save .lnk
-        result := Succeeded(PersistFile.Save(Name, True));
+        Result := Succeeded(PersistFile.Save(Name, True));
 
       finally
         FreeMem(Name, MAX_PATH * 2);
@@ -569,7 +571,7 @@ var
   reg: TRegistry;
 
 begin
-  result := False;
+  Result := False;
   reg := TRegistry.Create(DenyWOW64Redirection(KEY_READ or KEY_WRITE));
 
   try
@@ -578,7 +580,7 @@ begin
     if not reg.OpenKey(AKeyName, False) then
       raise Exception.Create('Key does not exist!');
 
-    result := reg.DeleteKey(AKeyName);
+    Result := reg.DeleteKey(AKeyName);
 
   finally
     reg.Free;
@@ -594,7 +596,7 @@ var
   reg: TRegistry;
 
 begin
-  result := False;
+  Result := False;
   reg := TRegistry.Create(DenyWOW64Redirection(KEY_READ or KEY_WRITE));
 
   try
@@ -604,9 +606,9 @@ begin
       raise Exception.Create('Key does not exist!');
 
     if reg.ValueExists(AValueName) then
-      result := reg.DeleteValue(AValueName)
+      Result := reg.DeleteValue(AValueName)
     else
-      result := True;
+      Result := True;
 
   finally
     reg.Free;
@@ -633,7 +635,7 @@ begin
   if (Index <> 0) then
     Delete(AName, Index, Index + Length(Ext) -1);
 
-  result := AName;
+  Result := AName;
 end;
 
 { public TRegUtils.GetKeyValue
@@ -654,12 +656,12 @@ begin
     begin
       // Only read if value exists
       if (reg.ValueExists(AValueName)) then
-        result := reg.ReadString(AValueName)
+        Result := reg.ReadString(AValueName)
       else
-        result := '';
+        Result := '';
     end  //of begin
     else
-      result := '';
+      Result := '';
 
   finally
     reg.Free;
@@ -675,12 +677,12 @@ begin
   // Checkbox checked?
   if ACheck then
     // Remove recycle bin context menu entry
-    result := DeleteKey('HKCR', KEY_RECYCLEBIN, 'Clearas')
+    Result := DeleteKey('HKCR', KEY_RECYCLEBIN, 'Clearas')
   else
     begin
       // Add recycle bin context menu entry
       WriteStrValue('HKCR', KEY_RECYCLEBIN +'\Clearas\command', '', ParamStr(0));
-      result := True;
+      Result := True;
     end;  //of begin
 end;
 
@@ -701,10 +703,10 @@ begin
     if reg.OpenKey(KEY_RECYCLEBIN +'\Clearas\command', False) then
     begin
       reg.WriteString('', ParamStr(0));
-      result := True;
+      Result := True;
     end  //of begin
     else
-      result := False;
+      Result := False;
 
   finally
     reg.Free;
@@ -738,7 +740,7 @@ begin
 
   finally
     reg.Free;
-    result := UpdateContextPath();
+    Result := UpdateContextPath();
   end;  //of try
 end;
 
@@ -799,7 +801,7 @@ begin
   ExtWithArguments := ExtractFileExt(APath);
 
   // Copy arguments without entension and space char at front and end
-  result := Trim(Copy(ExtWithArguments, 5, Length(ExtWithArguments)));
+  Result := Trim(Copy(ExtWithArguments, 5, Length(ExtWithArguments)));
 end;
 
 { protected TRootItem.ExtractPathToFile
@@ -818,7 +820,7 @@ begin
   // No arguments given?
   if (Length(APath) = GuessedLastChar) then
   begin
-    result := APath;
+    Result := APath;
     Exit;
   end;  //of begin
   
@@ -828,7 +830,7 @@ begin
   if ((Path = '"') and (Path[Length(Path)] <> '"')) then
     Path := Path +'"';
 
-  result := Path;
+  Result := Path;
 end;
 
 { public TRootItem.ChangeStatus
@@ -838,9 +840,9 @@ end;
 function TRootItem.ChangeStatus(): Boolean;
 begin
   if FEnabled then
-    result := Disable
+    Result := Disable
   else
-    result := Enable;
+    Result := Enable;
 end;
 
 { public TRootItem.GetStatus
@@ -850,9 +852,9 @@ end;
 function TRootItem.GetStatus(ALangFile: TLanguageFile): string;
 begin
   if FEnabled then
-    result := ALangFile.GetString(31)
+    Result := ALangFile.GetString(31)
   else
-    result := ALangFile.GetString(32);
+    Result := ALangFile.GetString(32);
 end;
 
 { public TRootItem.OpenInExplorer
@@ -919,7 +921,7 @@ end;
 
 function TRootList.RootItemAt(AIndex: Word): TRootItem;
 begin
-  result := TRootItem(Self.Items[AIndex]);
+  Result := TRootItem(Self.Items[AIndex]);
 end;
 
 { public TRootList.Clear
@@ -941,12 +943,12 @@ var
   i: Integer;
 
 begin
-  result := -1;
+  Result := -1;
 
   for i := 0 to Count -1 do
     if (RootItemAt(i).Name = AItemName) then
     begin
-      result := i;
+      Result := i;
       Break;
     end;  //of begin
 end;
@@ -961,7 +963,7 @@ var
   Item: TRootItem;
 
 begin
-  result := -1;
+  Result := -1;
 
   for i := 0 to Count -1 do
   begin
@@ -969,7 +971,7 @@ begin
 
     if ((Item.Name = AItemName) and (Item.Enabled = AEnabled)) then
     begin
-      result := i;
+      Result := i;
       Break;
     end;  //of begin
   end;  //of for
@@ -989,7 +991,7 @@ var
   Date, Time: string;
 
 begin
-  result := '';
+  Result := '';
 
   // Deactivation timestamp only available for disabled items
   if FEnabled then
@@ -1012,7 +1014,7 @@ begin
       Sec := reg.ReadInteger('SECOND');
       Date := FormatDateTime('c', EncodeDate(Year, Month, Day));
       Time := FormatDateTime('tt', EncodeTime(Hour, Min, Sec, 0));
-      result := Date +'  '+ Time;
+      Result := Date +'  '+ Time;
     end;  //of if
 
   finally
@@ -1082,7 +1084,7 @@ var
   ItemName: string;
 
 begin
-  result := False;
+  Result := False;
   reg := TRegistry.Create(TWinWOW64.DenyWOW64Redirection(KEY_ALL_ACCESS));
 
   try
@@ -1105,7 +1107,7 @@ begin
       // Change path
       reg.WriteString(ItemName, ANewFilePath);
       FFilePath := ANewFilePath;
-      result := True;
+      Result := True;
 
     finally
       reg.Free;
@@ -1148,7 +1150,7 @@ end;
 
 function TStartupListItem.GetFullKeyPath(): string;
 begin
-  result := TRegUtils.HKeyToStr(TRegUtils.StrToHKey(FRootKey)) +'\'+ FKeyPath;
+  Result := TRegUtils.HKeyToStr(TRegUtils.StrToHKey(FRootKey)) +'\'+ FKeyPath;
 end;
 
 
@@ -1163,7 +1165,7 @@ var
   reg: TRegistry;
 
 begin
-  result := False;
+  Result := False;
   reg := TRegistry.Create(TRegUtils.DenyWOW64Redirection(KEY_WRITE));
 
   try
@@ -1197,7 +1199,7 @@ begin
       else
         raise EStartupException.Create('Could not create "'+ KEY_DEACT + FName +'"!');
 
-      result := True;
+      Result := True;
 
     finally
       reg.Free;
@@ -1222,7 +1224,7 @@ var
   NewHKey, NewKeyPath: string;
 
 begin
-  result := False;
+  Result := False;
   reg := TRegistry.Create(TRegUtils.DenyWOW64Redirection(KEY_ALL_ACCESS));
 
   try
@@ -1250,7 +1252,7 @@ begin
         reg.WriteString(FName, FFilePath);
 
         // Delete old key
-        result := TRegUtils.DeleteKey('HKLM', KEY_DEACT, FName);
+        Result := TRegUtils.DeleteKey('HKLM', KEY_DEACT, FName);
 
         // Update information
         FRootKey := NewHKey;
@@ -1290,7 +1292,7 @@ begin
       if not TRegUtils.DeleteKey('HKLM', KEY_DEACT, FName) then
         raise EStartupException.Create('Could not delete key!');
 
-    result := True;
+    Result := True;
 
   except
     on E: Exception do
@@ -1330,7 +1332,7 @@ end;
 
 function TStartupUserItem.AddCircumflex(const AName: string): string;
 begin
-  result := StringReplace(AName, '\', '^', [rfReplaceAll]);
+  Result := StringReplace(AName, '\', '^', [rfReplaceAll]);
 end;
 
 { protected TStartupUserItem.Disable
@@ -1343,7 +1345,7 @@ var
   KeyName: string;
 
 begin
-  result := False;
+  Result := False;
   reg := TRegistry.Create(TRegUtils.DenyWOW64Redirection(KEY_WRITE));
 
   try
@@ -1388,7 +1390,7 @@ begin
       FKeyPath := KEY_DEACT_FOLDER + KeyName;
       FRootKey := 'HKLM';
       FEnabled := False;
-      result := True;
+      Result := True;
 
     finally
       reg.Free;
@@ -1438,7 +1440,7 @@ begin
     FKeyPath := FLnkFile.FileName;
     FRootKey := '';
     FEnabled := True;
-    result := True;
+    Result := True;
 
   except
     on E: Exception do
@@ -1480,7 +1482,7 @@ begin
       FLnkFile.CreateBackup();
       //TODO: Add check for not successfully created backup
     
-    result := True;
+    Result := True;
 
   except
     on E: Exception do
@@ -1499,7 +1501,7 @@ function TStartupUserItem.Delete(): Boolean;
 
   function GetKeyName(): string;
   begin
-    result := AddCircumflex(TLnkFile.GetStartUpDir(AnsiContainsText('Common', FType)) + FName);
+    Result := AddCircumflex(TLnkFile.GetStartUpDir(AnsiContainsText('Common', FType)) + FName);
   end;
 
 begin
@@ -1515,7 +1517,7 @@ begin
       if not TRegUtils.DeleteKey('HKLM', KEY_DEACT_FOLDER, GetKeyName()) then
         raise EStartupException.Create('Could not delete key "'+ FKeyPath +'"!');
 
-    result := True;
+    Result := True;
 
   except
     on E: Exception do
@@ -1571,7 +1573,7 @@ end;
 
 function TStartupList.Add(AItem: TStartupListItem): Word;
 begin
-  result := inherited Add(AItem);
+  Result := inherited Add(AItem);
 end;
 
 { private TStartupList.DelCircumflex
@@ -1580,7 +1582,7 @@ end;
 
 function TStartupList.DelCircumflex(AName: string): string;
 begin
-  result := StringReplace(AName, '^', '\', [rfReplaceAll]);
+  Result := StringReplace(AName, '^', '\', [rfReplaceAll]);
 end;
 
 { private TStartupList.ItemAt
@@ -1589,7 +1591,7 @@ end;
 
 function TStartupList.ItemAt(AIndex: Word): TStartupListItem;
 begin
-  result := TStartupListItem(RootItemAt(AIndex));
+  Result := TStartupListItem(RootItemAt(AIndex));
 end;
 
 { private TStartupList.GetLnkFileNames
@@ -1633,12 +1635,12 @@ begin
     st := TRegUtils.GetKeyValue('HKLM', AKeyPath, 'backupExtension');
 
     if (st = EXT_COMMON) then
-      result := TYPE_COMMON
+      Result := TYPE_COMMON
     else
-      result := TYPE_USER;
+      Result := TYPE_USER;
   end  //of begin
   else
-    result := TRegUtils.GetKeyValue('HKLM', AKeyPath, 'location');
+    Result := TRegUtils.GetKeyValue('HKLM', AKeyPath, 'location');
 end;
 
 { private TStartupList.GetStartupUserType
@@ -1651,15 +1653,15 @@ begin
   if TOSUtils.WindowsVistaOrLater() then
   begin
     if AAllUsers then
-      result := TYPE_COMMON
+      Result := TYPE_COMMON
     else
-      result := TYPE_USER;
+      Result := TYPE_USER;
   end  //of begin
   else
     if AAllUsers then
-      result := TYPE_COMMON_XP
+      Result := TYPE_COMMON_XP
     else
-      result := TYPE_USER_XP;
+      Result := TYPE_USER_XP;
 end;
 
 { protected TStartupList.AddItemDisabled
@@ -1683,7 +1685,7 @@ begin
     TypeOf := TRegUtils.GetKeyValue('HKLM', AKeyPath, 'hkey');
   end;  //of with
 
-  result := Add(Item);
+  Result := Add(Item);
 end;
 
 { protected TStartupList.AddItemEnabled
@@ -1713,7 +1715,7 @@ begin
   end;  //of with
 
   Inc(FActCount);
-  result := Add(Item);
+  Result := Add(Item);
 end;
 
 { protected TStartupList.AddNewStartupUserItem
@@ -1737,7 +1739,7 @@ begin
     raise EStartupException.Create('Could not create .lnk file!');
 
   AddUserItemEnabled(LnkFile, AAllUsers);
-  result := True;
+  Result := True;
 end;
 
 { protected TStartupList.AddUserItemDisabled
@@ -1771,7 +1773,7 @@ begin
     LnkFile.ReadLnkFile();
   end;  //of with
 
-  result := Add(Item);
+  Result := Add(Item);
 end;
 
 { protected TStartupList.AddUserItemEnabled
@@ -1802,7 +1804,7 @@ begin
   end;  //of with
 
   Inc(FActCount);
-  result := Add(Item);
+  Result := Add(Item);
 end;
 
 { public TStartupList.AddProgram
@@ -1816,7 +1818,7 @@ var
   i: Word;
 
 begin
-  result := False;
+  Result := False;
   Name := ExtractFileName(AFilePath);
   Ext := ExtractFileExt(Name);
 
@@ -1838,7 +1840,7 @@ begin
     else
       Name := TRegUtils.DeleteExt(Name);
 
-    result := AddNewStartupUserItem(Name, AFilePath, AArguments);
+    Result := AddNewStartupUserItem(Name, AFilePath, AArguments);
   end  //of begin
   else
     begin
@@ -1851,7 +1853,7 @@ begin
 
       // Adds this item to list
       AddItemEnabled('HKCU', KEY_STARTUP, ADisplayedName, AFilePath);
-      result := True;
+      Result := True;
     end;  //of begin
 end;
 
@@ -1865,9 +1867,9 @@ begin
     raise EInvalidItem.Create('No item selected!');
 
   if (FItem is TStartupUserItem) then
-    result := (FItem as TStartupUserItem).LnkFile.BackupExists()
+    Result := (FItem as TStartupUserItem).LnkFile.BackupExists()
   else
-    result := False;
+    Result := False;
 end;
 
 { public TStartupList.ChangeItemFilePath
@@ -1880,7 +1882,7 @@ begin
   if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
     raise EInvalidItem.Create('No item selected!');
 
-  result := FItem.ChangeFilePath(ANewFilePath);
+  Result := FItem.ChangeFilePath(ANewFilePath);
 end;
 
 { public TStartupList.ChangeItemStatus
@@ -1913,7 +1915,7 @@ begin
   else
     Dec(FActCount);
 
-  result := Changed;
+  Result := Changed;
 end;
 
 { public TStartupList.DeleteItem
@@ -1948,7 +1950,7 @@ begin
     FItem := nil;
   end;  //of begin
 
-  result := Deleted;
+  Result := Deleted;
 end;
 
 { public TStartupList.ExportItem
@@ -2003,7 +2005,7 @@ var
   LnkFile: TLnkFile;
 
 begin
-  result := False;
+  Result := False;
   Ext := ExtractFileExt(AFilePath);
 
   // Check invalid extension
@@ -2032,7 +2034,7 @@ begin
         Exit;
 
     // Create .lnk file and add it to list
-    result := AddNewStartupUserItem(Name, LnkFile.ExeFileName, LnkFile.Arguments,
+    Result := AddNewStartupUserItem(Name, LnkFile.ExeFileName, LnkFile.Arguments,
       (Ext = EXT_COMMON));
 
   finally
@@ -2181,7 +2183,7 @@ begin
     if not TRegUtils.DeleteKey('HKCR', ExtractFileDir(KeyPath), FName) then
       raise EStartupException.Create('Could not delete key!')
     else
-      result := True;
+      Result := True;
 
   except
     on E: Exception do
@@ -2231,7 +2233,7 @@ end;
 
 function TContextListItem.GetFullKeyPath(): string;
 begin
-  result := TRegUtils.HKeyToStr(HKEY_CLASSES_ROOT) +'\'+ GetKeyPath();
+  Result := TRegUtils.HKeyToStr(HKEY_CLASSES_ROOT) +'\'+ GetKeyPath();
 end;
 
 
@@ -2243,7 +2245,7 @@ end;
 
 function TShellItem.GetKeyPath(): string;
 begin
-  result := FLocation +'\'+ FType +'\'+ FName;
+  Result := FLocation +'\'+ FType +'\'+ FName;
 end;
 
 { protected TShellItem.Disable
@@ -2255,7 +2257,7 @@ var
   reg: TRegistry;
 
 begin
-  result := False;
+  Result := False;
   reg := TRegistry.Create(TRegUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
 
   try
@@ -2270,7 +2272,7 @@ begin
 
       // Update status
       FEnabled := False;
-      result := True;
+      Result := True;
 
     finally
       reg.Free;
@@ -2291,7 +2293,7 @@ end;
 
 function TShellItem.Enable(): Boolean;
 begin
-  result := False;
+  Result := False;
 
   try
     if not TRegUtils.DeleteValue('HKCR', GetKeyPath(), 'LegacyDisable') then
@@ -2318,7 +2320,7 @@ var
   reg: TRegistry;
 
 begin
-  result := False;
+  Result := False;
   reg := TRegistry.Create(TWinWOW64.DenyWOW64Redirection(KEY_ALL_ACCESS));
 
   try
@@ -2331,7 +2333,7 @@ begin
 
       // Change path
       reg.WriteString('', ANewFilePath);
-      result := True;
+      Result := True;
 
     finally
       reg.Free;
@@ -2355,7 +2357,7 @@ end;
 
 function TShellExItem.GetKeyPath(): string;
 begin
-  result := FLocation + CONTEXTMENU_SHELLEX +'\'+ FName;
+  Result := FLocation + CONTEXTMENU_SHELLEX +'\'+ FName;
 end;
 
 { private TShellExItem.GetProgramPathKey
@@ -2368,7 +2370,7 @@ var
 
 begin
   GUID := TRegUtils.GetKeyValue('HKCR', GetKeyPath(), '');
-  result := Format(CONTEXTMENU_SHELLEX_FILE, [GUID]);
+  Result := Format(CONTEXTMENU_SHELLEX_FILE, [GUID]);
 end;
 
 { protected TShellExItem.Disable
@@ -2381,7 +2383,7 @@ var
   OldValue, NewValue: string;
 
 begin
-  result := False;
+  Result := False;
   reg := TRegistry.Create(TRegUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
 
   try
@@ -2401,17 +2403,17 @@ begin
       if (Trim(OldValue) = '') then
         raise EContextMenuException.Create('Value must not be empty!');
 
-      // Item already disabled?
-      if (OldValue[1] <> '{') then
-        raise EContextMenuException.Create('Item already disabled!');
-
-      // set up new value and write it
-      NewValue := '-'+ OldValue;
-      reg.WriteString('', NewValue);
-
+      // Item enabled?
+      if (OldValue[1] = '{') then
+      begin
+        // Set up new value and write it
+        NewValue := '-'+ OldValue;
+        reg.WriteString('', NewValue);
+      end;  //of begin
+      
       // Update status
       FEnabled := False;
-      result := True;
+      Result := True;
 
     finally
       reg.Free;
@@ -2436,7 +2438,7 @@ var
   OldValue, NewValue: string;
 
 begin
-  result := False;
+  Result := False;
   reg := TRegistry.Create(TRegUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
 
   try
@@ -2456,17 +2458,17 @@ begin
       if (Trim(OldValue) = '') then
         raise EContextMenuException.Create('Value must not be empty!');
 
-      // Item already enabled?
-      if (OldValue[1] = '{') then
-        raise EContextMenuException.Create('Item already enabled!');
-
-      // set up new value and write it
-      NewValue := Copy(OldValue, 2, Length(OldValue));
-      reg.WriteString('', NewValue);
+      // Item disabled?
+      if (OldValue[1] <> '{') then
+      begin
+        // Set up new value and write it
+        NewValue := Copy(OldValue, 2, Length(OldValue));
+        reg.WriteString('', NewValue);
+      end;  //of begin
 
       // Update status
       FEnabled := True;
-      result := True;
+      Result := True;
 
     finally
       reg.Free;
@@ -2488,7 +2490,7 @@ end;
 function TShellExItem.ChangeFilePath(const ANewFilePath: string): Boolean;
 begin
   TRegUtils.WriteStrValue('HKCR', GetProgramPathKey(), '', ANewFilePath);
-  result := True;
+  Result := True;
 end;
 
 
@@ -2510,7 +2512,7 @@ end;
 
 function TContextList.Add(AItem: TContextListItem): Word;
 begin
-  result := inherited Add(AItem);
+  Result := inherited Add(AItem);
 end;
 
 { public TContextList.AddEntry
@@ -2523,7 +2525,7 @@ var
   Name, Ext, FullPath: string;
 
 begin
-  result := False;
+  Result := False;
   Ext := ExtractFileExt(AFilePath);
   Name := TRegUtils.DeleteExt(ExtractFileName(AFilePath));
 
@@ -2548,8 +2550,8 @@ begin
   TRegUtils.WriteStrValue('HKCR', ALocation + CONTEXTMENU_SHELL + Name +'\command', '', FullPath);
 
   // Adds this item to list
-  AddShellItem(Name, ALocation, FullPath, True);
-  result := True;
+  AddShellItem(Name, ALocation, FullPath, ADisplayedName, True);
+  Result := True;
 end;
 
 { private TContextList.FindDouble
@@ -2558,10 +2560,10 @@ end;
 
 function TContextList.FindDouble(AName, ALocation: string): Boolean;
 begin
-  result := False;
+  Result := False;
 
   if ((Count > 0) and (IndexOf(AName) <> -1)) then
-    result := (ItemAt(IndexOf(AName)).Location = ALocation);
+    Result := (ItemAt(IndexOf(AName)).Location = ALocation);
 end;
 
 { private TContextList.ItemAt
@@ -2570,15 +2572,15 @@ end;
 
 function TContextList.ItemAt(AIndex: Word): TContextListItem;
 begin
-  result := TContextListItem(RootItemAt(AIndex));
+  Result := TContextListItem(RootItemAt(AIndex));
 end;
 
 { protected TContextList.AddShellItem
 
   Adds a shell item to list. }
 
-function TContextList.AddShellItem(const AName, ALocation, AFilePath: string;
-  AEnabled: Boolean): Word;
+function TContextList.AddShellItem(const AName, ALocation, AFilePath,
+  ACaption: string; AEnabled: Boolean): Word;
 var
   Item: TContextListItem;
 
@@ -2590,13 +2592,14 @@ begin
     Name := AName;
     Location := ALocation;
     FilePath := AFilePath;
+    Caption := ACaption;
     TypeOf := 'Shell';
 
     if AEnabled then
       Inc(FActCount);
   end;  //of with
 
-  result := Add(Item);
+  Result := Add(Item);
 end;
 
 { protected TContextList.AddShellExItem
@@ -2622,26 +2625,27 @@ begin
       Inc(FActCount);
   end;  //of with
 
-  result := Add(Item);
+  Result := Add(Item);
 end;
 
 { protected TContextList.AddEntry
 
   Adds a context item to list. }
 
-procedure TContextList.LoadContextmenu(const ALocation: string; AShell: Boolean);
+procedure TContextList.LoadContextmenu(const ALocation: string;
+  ASearchForShellItems: Boolean);
 var
   reg: TRegistry;
   i: Integer;
   List: TStringList;
-  Item, Key, KeyName, FilePath, GUID: string;
+  Item, Key, KeyName, FilePath, GUID, Caption: string;
   Enabled: Boolean;
 
 begin
   reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));
   List := TStringList.Create;
 
-  if AShell then
+  if ASearchForShellItems then
     Key := ALocation + CONTEXTMENU_SHELL
   else
     Key := ALocation + CONTEXTMENU_SHELLEX;
@@ -2657,17 +2661,21 @@ begin
     begin
       reg.CloseKey;
       Item := List[i];
-      FilePath := '';
       reg.OpenKey(Key +'\'+ Item, False);
+      FilePath := '';
+
+      // Default value of key is a GUID for ShellEx items and caption for Shell
+      GUID := reg.ReadString('');
+      Caption := GUID;
 
       // Filter empty, important and double entries
-      if ((reg.ReadString('') <> '') and (Item[1] <> '{') and
-        (reg.ReadString('')[1] <> '@') and not FindDouble(Item, ALocation)) then
+      if ((Caption <> '') and (Item[1] <> '{') and (GUID[1] <> '@')
+        and not FindDouble(Item, ALocation)) then
       begin
-        // Search for shell entries
-        if AShell then
+        // Search for shell entries?
+        if ASearchForShellItems then
         begin
-          // Get status
+          // Get status and caption
           Enabled := not reg.ValueExists('LegacyDisable');
 
           // Get file path of command
@@ -2675,14 +2683,13 @@ begin
             FilePath := reg.ReadString('');
 
           // Add item to list
-          AddShellItem(Item, ALocation, FilePath, Enabled);
+          AddShellItem(Item, ALocation, FilePath, Caption, Enabled);
         end  //of begin
         else
           // Search for shellex entries
           begin
             // Get status and GUID
-            Enabled := (reg.ReadString('')[1] = '{');
-            GUID := reg.ReadString('');
+            Enabled := (GUID[1] = '{');
 
             // Disabled ShellEx items got "-" before GUID!
             if not Enabled then
@@ -2816,7 +2823,7 @@ begin
   if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
     raise EInvalidItem.Create('No item selected!');
 
-  result := FItem.ChangeFilePath(ANewFilePath);
+  Result := FItem.ChangeFilePath(ANewFilePath);
 end;
 
 { public TContextList.ChangeItemStatus
@@ -2842,7 +2849,7 @@ begin
     else
       Dec(FActCount);
 
-  result := Changed;
+  Result := Changed;
 end;
 
 { public TContextList.DeleteItem
@@ -2872,7 +2879,7 @@ begin
     FItem := nil;
   end;  //of begin
 
-  result := Deleted;
+  Result := Deleted;
 end;
 
 { public TContextList.ExportItem
@@ -2926,7 +2933,7 @@ var
   Item: TContextListItem;
 
 begin
-  result := -1;
+  Result := -1;
 
   for i := 0 to Count -1 do
   begin
@@ -2934,7 +2941,7 @@ begin
 
     if ((Item.Name = AName) and (Item.Location = ALocation)) then
     begin
-      result := i;
+      Result := i;
       Break;
     end;  //of begin
   end;  //of for
