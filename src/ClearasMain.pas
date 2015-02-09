@@ -13,7 +13,7 @@ interface
 uses
   Windows, SysUtils, Classes, Controls, Forms, ComCtrls, StdCtrls, ExtCtrls,
   Dialogs, Menus, Graphics, ClearasAPI, ClearasInfo, LanguageFile, OSUtils,
-  Updater, AddDialogs{, ClipBrd};
+  Updater, AddDialogs, ClipBrd;
 
 type
   { TMain }
@@ -27,7 +27,7 @@ type
     mmView: TMenuItem;
     mmRefresh: TMenuItem;
     N2: TMenuItem;
-    pmProperties: TMenuItem;
+    pmCopyLocation: TMenuItem;
     mmHelp: TMenuItem;
     mmInfo: TMenuItem;
     mmEdit: TMenuItem;
@@ -86,7 +86,6 @@ type
     mmRunOnce: TMenuItem;
     pmOpenRegedit: TMenuItem;
     pmOpenExplorer: TMenuItem;
-    N11: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -130,7 +129,7 @@ type
     procedure mmReportClick(Sender: TObject);
     procedure PageControlChange(Sender: TObject);
     procedure pmChangeStatusClick(Sender: TObject);
-    procedure pmPropertiesClick(Sender: TObject);
+    procedure pmCopyLocationClick(Sender: TObject);
     procedure pmDeleteClick(Sender: TObject);
     procedure pmEditClick(Sender: TObject);
     procedure lCopy1MouseLeave(Sender: TObject);
@@ -453,7 +452,7 @@ begin
     pmEdit.Caption := GetString(33);
     pmExport.Caption := mmExport.Caption;
     pmDelete.Caption := bDeleteStartupItem.Caption;
-    pmProperties.Caption := GetString(35);
+    pmCopyLocation.Caption := GetString(35);
   end;  //of with
 
   // Update list labels
@@ -724,7 +723,7 @@ begin
         bCloseStartup.Default := True;
       end  //of begin
       else
-        raise Exception.Create('Could not delete item!');
+        raise Exception.Create('Unknown error!');
     end;  //of begin
 
   except
@@ -776,7 +775,7 @@ begin
           bCloseContext.Default := True;
         end  //of begin
         else
-          raise Exception.Create('Could not delete item!');
+          raise Exception.Create('Unknown error!');
     end;  //of begin
 
   except
@@ -820,7 +819,7 @@ begin
       lwStartupSelectItem(Self, lwStartup.ItemFocused, True);
     end  //of begin
     else
-      raise Exception.Create('Could not enable item!');
+      raise Exception.Create('Unknown error!');
 
   except
     on E: EInvalidItem do
@@ -857,7 +856,7 @@ begin
       lwContextSelectItem(Self, lwContext.ItemFocused, True);
     end  //of begin
     else
-      raise Exception.Create('Could not enable item!');
+      raise Exception.Create('Unknown error!');
 
   except
     on E: EInvalidItem do
@@ -898,7 +897,7 @@ begin
       lwStartupSelectItem(Self, lwStartup.ItemFocused, True);
     end  //of begin
     else
-      raise Exception.Create('Could not disable item!');
+      raise Exception.Create('Unknown error!');
 
   except
     on E: EInvalidItem do
@@ -935,7 +934,7 @@ begin
       lwContextSelectItem(Self, lwContext.ItemFocused, True);
     end  //of begin
     else
-      raise Exception.Create('Could not disable item!');
+      raise Exception.Create('Unknown error!');
 
   except
     on E: EInvalidItem do
@@ -1057,7 +1056,6 @@ begin
 
     pmEdit.Enabled := True;
     pmExport.Enabled := bExportStartupItem.Enabled;
-    pmProperties.Enabled := True;
     bDeleteStartupItem.Enabled := True;
     pmDelete.Enabled := True;
 
@@ -1109,9 +1107,6 @@ begin
       pmChangeStatus.Caption := bEnableContextItem.Caption;
 
     pmChangeStatus.Enabled := True;
-
-    // Enable "properties" for "Shell" entries only
-    pmProperties.Enabled := (Item.SubItems[2] = 'Shell');
 
     // Enable "edit path" only if file path is present
     pmEdit.Enabled := (Context.Selected.FilePath <> '');
@@ -1250,18 +1245,13 @@ end;
 
   Popup menu entry to show some properties. }
 
-procedure TMain.pmPropertiesClick(Sender: TObject);
-var
-  Properties: string;
-
+procedure TMain.pmCopyLocationClick(Sender: TObject);
 begin
  try
-    if (PageControl.ActivePage = tsStartup) then
-      Startup.Selected.GetItemInfo(Properties, FLang)
-    else
-      Context.Selected.GetItemInfo(Properties, FLang);
-
-    FLang.MessageBox(Properties);
+   if (PageControl.ActivePage = tsStartup) then
+     Clipboard.AsText := Startup.Selected.GetFullKeyPath()
+   else
+     Clipboard.AsText := Context.Selected.GetFullKeyPath();
 
   except
     FLang.MessageBox(53, mtWarning);

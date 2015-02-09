@@ -620,6 +620,10 @@ object Main: TMain
     object N1: TMenuItem
       Caption = '-'
     end
+    object pmCopyLocation: TMenuItem
+      Caption = 'Ort kopieren'
+      OnClick = pmCopyLocationClick
+    end
     object pmEdit: TMenuItem
       Caption = 'Pfad bearbeiten'
       Enabled = False
@@ -647,13 +651,6 @@ object Main: TMain
     object pmOpenExplorer: TMenuItem
       Caption = 'In Explorer '#246'ffnen'
       OnClick = pmOpenExplorerClick
-    end
-    object N11: TMenuItem
-      Caption = '-'
-    end
-    object pmProperties: TMenuItem
-      Caption = 'Eigenschaften'
-      OnClick = pmPropertiesClick
     end
   end
   object MainMenu: TMainMenu

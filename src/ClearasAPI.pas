@@ -105,8 +105,6 @@ type
     function Delete(): Boolean; virtual; abstract;
     procedure ExportItem(const AFileName: string); virtual; abstract;
     function GetFullKeyPath(): string; virtual; abstract;
-    procedure GetItemInfo(var AProperties: string;
-      ALangFile: TLanguageFile); virtual; abstract;
     function GetStatus(ALangFile: TLanguageFile): string;
     procedure OpenInRegEdit(); virtual;
     procedure OpenInExplorer(); virtual;
@@ -151,7 +149,6 @@ type
   public
     function ChangeFilePath(const ANewFilePath: string): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
-    function GetFullKeyPath(): string; override;
     { external }
     property KeyPath: string read FKeyPath write FKeyPath;
     property RootKey: string read FRootKey write FRootKey;
@@ -165,7 +162,7 @@ type
     function Enable(): Boolean; override;
   public
     function Delete(): Boolean; override;
-    procedure GetItemInfo(var AProperties: string; ALangFile: TLanguageFile); override;
+    function GetFullKeyPath(): string; override;
   end;
 
   { TStartupUserItem }
@@ -181,7 +178,7 @@ type
     function ChangeFilePath(const ANewFilePath: string): Boolean; override;
     function Delete(): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
-    procedure GetItemInfo(var AProperties: string; ALangFile: TLanguageFile); override;
+    function GetFullKeyPath(): string; override;
     { external }
     property LnkFile: TLnkFile read FLnkFile write FLnkFile;
   end;
@@ -239,7 +236,6 @@ type
   public
     function Delete(): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
-    procedure GetItemInfo(var AProperties: string; ALangFile: TLanguageFile); override;
     function GetFullKeyPath(): string; override;
     { external }
     property Caption: string read FCaption write FCaption;
@@ -577,7 +573,7 @@ begin
   try
     reg.RootKey := StrToHKey(AMainKey);
 
-    if not reg.OpenKey(AKeyName, False) then
+    if not reg.OpenKey(AKeyPath, False) then
       raise Exception.Create('Key does not exist!');
 
     Result := reg.DeleteKey(AKeyName);
@@ -1144,15 +1140,6 @@ begin
   end;  //of try
 end;
 
-{ public TStartupListItem.GetFullKeyPath
-
-  Returns the Registry path to a TStartupListItem. }
-
-function TStartupListItem.GetFullKeyPath(): string;
-begin
-  Result := TRegUtils.HKeyToStr(TRegUtils.StrToHKey(FRootKey)) +'\'+ FKeyPath;
-end;
-
 
 { TStartupItem }
 
@@ -1303,14 +1290,13 @@ begin
   end;  //of try
 end;
 
-{ public TStartupItem.GetItemInfo
+{ public TStartupItem.GetFullKeyPath
 
-  Returns the name and path of an item as formatted text. }
+  Returns the Registry path to a TStartupItem. }
 
-procedure TStartupItem.GetItemInfo(var AProperties: string;
-  ALangFile: TLanguageFile);
+function TStartupItem.GetFullKeyPath(): string;
 begin
-  AProperties := ALangFile.Format(46, [FName, GetFullKeyPath()]);
+  Result := TRegUtils.HKeyToStr(TRegUtils.StrToHKey(FRootKey)) +'\'+ FKeyPath;
 end;
 
 
@@ -1541,17 +1527,13 @@ begin
       raise EStartupException.Create('Could not create backup file!');
 end;
 
-{ public TStartupUserItem.GetItemInfo
+{ public TStartupUserItem.GetFullKeyPath
 
-  Returns the name and path of an item as formatted text. }
+  Returns the Registry path to a TStartupUserItem. }
 
-procedure TStartupUserItem.GetItemInfo(var AProperties: string;
-  ALangFile: TLanguageFile);
+function TStartupUserItem.GetFullKeyPath(): string;
 begin
-  if FEnabled then
-    AProperties := ALangFile.Format(45, [FName, FKeyPath])
-  else
-    AProperties := ALangFile.Format(46, [FName, GetFullKeyPath()]);
+  Result := FKeyPath;
 end;
 
 
@@ -2213,20 +2195,6 @@ begin
   end;  //of try
 end;
 
-{ public TContextListItem.GetItemInfo
-
-  Returns the name and path of an item as formatted text. }
-
-procedure TContextListItem.GetItemInfo(var AProperties: string;
-  ALangFile: TLanguageFile);
-var
-  Text: string;
-
-begin
-  Text := TRegUtils.GetKeyValue('HKCR', GetKeyPath(), '');
-  AProperties := ALangFile.Format(47, [FName, Text]);
-end;
-
 { public TContextListItem.GetFullKeyPath
 
   Returns the Registry path to a TStartupListItem. }
@@ -2293,14 +2261,13 @@ end;
 
 function TShellItem.Enable(): Boolean;
 begin
-  Result := False;
-
   try
     if not TRegUtils.DeleteValue('HKCR', GetKeyPath(), 'LegacyDisable') then
       raise EContextMenuException.Create('Could not delete value!');
 
     // Update status
     FEnabled := True;
+    Result := True;
 
   except
     on E: Exception do
@@ -2939,7 +2906,8 @@ begin
   begin
     Item := ItemAt(i);
 
-    if ((Item.Name = AName) and (Item.Location = ALocation)) then
+    if (((Item.Name = AName) or (Item.Caption = AName))
+      and (Item.Location = ALocation)) then
     begin
       Result := i;
       Break;
