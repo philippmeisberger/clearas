@@ -4,7 +4,7 @@ Ein Open-Source Projekt von PM Code Works
 History
 --------
 
-Version 4.0  [07.01.15]
+Version 4.0  [28.01.15]
 
 - Änderungen im Popup Menü:
   - Neue Funktion "Pfad bearbeiten" hinzugefügt
@@ -12,10 +12,16 @@ Version 4.0  [07.01.15]
   - Funktion "Nach Programm suchen" entfernt
   - Neue Funktion "In RegEdit öffnen" hinzugefügt
     - Öffnet den Registry Pfad des aktuellen Elements in RegEdit
-  - Neue Funktion "In Explorer öffnen" für "Startup User" und "Common Startup" hinzugefügt (ersetzt "In RegEdit öffnen")
-- Änderungen im Menü auf der Seite "Kontextmenü":
-  - Neue Funktion "Kontextmenü hinzufügen"
-  - Neue Funktion "Einträge exportieren" 
+  - Neue Funktion "In Explorer öffnen"
+    - Öffnet den Dateipfad des aktuellen Elements im Explorer
+  - Neue Funktion "Ort kopieren"
+    - Kopiert den Pfad des aktuellen Elements in die Zwischenablage
+  - Funktion "Eigenschaften" entfernt (durch "Ort kopieren" ersetzt)
+- Änderungen auf der Seite "Kontextmenü":
+  - Menü:
+    - Neue Funktion "Kontextmenü hinzufügen"
+    - Neue Funktion "Einträge exportieren"
+  - Beschriftungen von Shell-Eintägen werden nun direkt angezeigt
 - Exception Handling stark verbessert
 - Auswählen von Elementen in Autostart und Kontextmenü Listen beschleunigt
 - "Backup importieren" verbessert
@@ -25,7 +31,8 @@ Version 4.0  [07.01.15]
   - RunOnce Einträge werden nun auch in 32 Bit Schlüsseln ausgelesen
 - Neues Manifest
 - Updater v2.2
-- OSUtils v2.0
+- OSUtils v2.0.1
+- BSD-Lizenz
 
 ---------------------------------
 

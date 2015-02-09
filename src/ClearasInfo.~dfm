@@ -364,7 +364,7 @@ object Info: TInfo
             '.'
           'F'#252'r Sch'#228'den an Hard- und Software, die durch die Benutzung'
           'dieses Programms entstehen, wird keine Haftung '#252'bernommen.'
-          '01/2015')
+          '02/2015')
         ReadOnly = True
         TabOrder = 1
       end
@@ -412,7 +412,7 @@ object Info: TInfo
           'History'
           '--------'
           ''
-          'Version 4.0  [07.01.15]'
+          'Version 4.0  [07.02.15]'
           ''
           '- '#196'nderungen im Popup Men'#252':'
           '  - Neue Funktion "Pfad bearbeiten" hinzugef'#252'gt'
@@ -631,7 +631,7 @@ object Info: TInfo
             'hicken.'
           'Meine Adresse erfahren Sie unter team@pm-codeworks.de.'
           ''
-          '01/2015')
+          '02/2015')
         ReadOnly = True
         ScrollBars = ssVertical
         TabOrder = 1

@@ -412,7 +412,7 @@ object Info: TInfo
           'History'
           '--------'
           ''
-          'Version 4.0  [07.02.15]'
+          'Version 4.0  [28.02.15]'
           ''
           '- '#196'nderungen im Popup Men'#252':'
           '  - Neue Funktion "Pfad bearbeiten" hinzugef'#252'gt'
@@ -420,13 +420,22 @@ object Info: TInfo
           '  - Funktion "Nach Programm suchen" entfernt'
           '  - Neue Funktion "In RegEdit '#246'ffnen" hinzugef'#252'gt'
           '    - '#214'ffnet den Registry Pfad des aktuellen Elements in RegEdit'
+          '  - Neue Funktion "In Explorer '#246'ffnen"'
+          '    - '#214'ffnet den Dateipfad des aktuellen Elements im Explorer'
+          '  - Neue Funktion "Ort kopieren"'
           
-            '  - Neue Funktion "In Explorer '#246'ffnen" f'#252'r "Startup User" und "C' +
-            'ommon Startup" '
-          '    hinzugef'#252'gt (ersetzt "In RegEdit '#246'ffnen")'
-          '- '#196'nderungen im Men'#252' auf der Seite "Kontextmen'#252'":'
-          '  - Neue Funktion "Kontextmen'#252' hinzuf'#252'gen"'
-          '  - Neue Funktion "Eintr'#228'ge exportieren" '
+            '    - Kopiert den Pfad des aktuellen Elements in die Zwischenabl' +
+            'age'
+          
+            '  - Funktion "Eigenschaften" entfernt (durch "Ort kopieren" erse' +
+            'tzt)'
+          '- '#196'nderungen auf der Seite "Kontextmen'#252'":'
+          '  - Men'#252':'
+          '    - Neue Funktion "Kontextmen'#252' hinzuf'#252'gen"'
+          '    - Neue Funktion "Eintr'#228'ge exportieren"'
+          
+            '  - Beschriftungen von Shell-Eint'#228'gen werden nun direkt angezeig' +
+            't'
           '- Exception Handling stark verbessert'
           
             '- Ausw'#228'hlen von Elementen in Autostart und Kontextmen'#252' Listen be' +
@@ -442,7 +451,8 @@ object Info: TInfo
             'esen'
           '- Neues Manifest'
           '- Updater v2.2'
-          '- OSUtils v2.0'
+          '- OSUtils v2.0.1'
+          '- BSD-Lizenz'
           ''
           '---------------------------------'
           ''
