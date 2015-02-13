@@ -1,3 +1,11 @@
+{ *********************************************************************** }
+{                                                                         }
+{ Clearas context menu search thread                                      }
+{                                                                         }
+{ Copyright (c) 2011-2015 P.Meisberger (PM Code Works)                    }
+{                                                                         }
+{ *********************************************************************** }
+
 unit SearchThread;
 
 interface
@@ -9,6 +17,7 @@ type
   { TContextMenuSearchThread }
   TContextMenuSearchThread = class(TThread)
   private
+    FReg: TRegistry;
     FProgress, FProgressMax: Cardinal;
     FContextList: TContextList;
     FOnStart, FOnSearching: TSearchEvent;
@@ -16,10 +25,12 @@ type
     procedure DoNotifyOnFinish();
     procedure DoNotifyOnStart();
     procedure DoNotifyOnSearching();
+    procedure SearchSubkey(AKeyName, ASearchPattern: string);
   protected
     procedure Execute; override;
   public
     constructor Create(AContextList: TContextList);
+    destructor Destroy(); override;
     { external }
     property OnSearching: TSearchEvent read FOnSearching write FOnSearching;
     property OnStart: TSearchEvent read FOnStart write FOnStart;
@@ -27,6 +38,8 @@ type
   end;
 
 implementation
+
+uses StrUtils;
 
 { TContextMenuSearchThread }
 
@@ -39,6 +52,20 @@ begin
   inherited Create(True);
   FreeOnTerminate := True;
   FContextList := AContextList;
+
+  // Init Registry access with read-only
+  FReg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));
+  FReg.RootKey := HKEY_CLASSES_ROOT;
+end;
+
+{ public TContextMenuSearchThread.Destroy
+
+  Destructor for destroying a TContextMenuSearchThread instance. }
+
+destructor TContextMenuSearchThread.Destroy();
+begin
+  FReg.Free;
+  inherited Destroy;
 end;
 
 { private TContextMenuSearchThread.DoNotifyOnFinish
@@ -71,26 +98,57 @@ begin
     FOnStart(Self, FProgressMax);
 end;
 
+{ private TContextMenuSearchThread.SearchSubkey
+
+  Searches for pattern keys in a Registry subkey. }
+
+procedure TContextMenuSearchThread.SearchSubkey(AKeyName, ASearchPattern: string);
+var
+  Keys: TStringList;
+  i: Integer;
+
+begin
+  Keys := TStringList.Create();
+
+  try
+    FReg.CloseKey;
+    FReg.OpenKey(AKeyName, False);
+
+    if FReg.HasSubKeys then
+    begin
+      // Load subkeys
+      FReg.GetKeyNames(Keys);
+
+      for i := 0 to Keys.Count - 1 do
+        // Pattern matches?
+        if AnsiContainsText(Keys[i], ASearchPattern) then
+        begin
+          // Load context menu in current key
+          FContextList.LoadContextmenu(AKeyName);
+          Break;
+        end;  //of for
+    end;  //of begin
+
+  finally
+    Keys.Free;
+  end;  //of try
+end;
+
 { protected TContextMenuSearchThread.Execute
 
   Searches for context menu items in Registry. }
 
 procedure TContextMenuSearchThread.Execute;
 var
-  reg: TRegistry;
-  i, j, k: integer;
-  Hkcr, Temp, Shellex: TStringList;
+  i: Integer;
+  Hkcr: TStringList;
 
 begin
-  reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));
   Hkcr := TStringList.Create;
-  Temp := TStringList.Create;
-  Shellex := TStringList.Create;
 
   try
-    reg.RootKey := HKEY_CLASSES_ROOT;
-    reg.OpenKey('', False);
-    reg.GetKeyNames(Hkcr);
+    FReg.OpenKey('', False);
+    FReg.GetKeyNames(Hkcr);
 
     FProgressMax := Hkcr.Count;
     FProgress := 0;
@@ -100,51 +158,18 @@ begin
 
     for i := 0 to Hkcr.Count -1 do
     begin
-      // Refresh current progress
-      Synchronize(DoNotifyOnSearching);
+      SearchSubkey(Hkcr[i], 'shell');
       Inc(FProgress);
 
-      reg.CloseKey;
-      reg.OpenKey(Hkcr[i], False);
-
-      if reg.HasSubKeys then
-      begin
-        Temp.Clear;
-        reg.GetKeyNames(Temp);
-
-        for j := 0 to Temp.Count -1 do
-          if ((Temp[j] = 'shellex') or (Temp[j] = 'ShellEx')) then
-          begin
-            reg.CloseKey;
-            reg.OpenKey(Hkcr[i] +'\'+ Temp[j], False);
-
-            if reg.HasSubKeys then
-            begin
-              Shellex.Clear;
-              reg.GetKeyNames(Shellex);
-
-              for k := 0 to Shellex.Count -1 do
-                if (Shellex[k] = 'ContextMenuHandlers') then
-                begin
-                  reg.CloseKey;
-                  reg.OpenKey(Hkcr[i] +'\'+ Temp[j] +'\'+ Shellex[k], False);
-
-                  if reg.HasSubKeys then
-                    FContextList.LoadContextmenu(Hkcr[i]);
-                end;  //of for
-            end;  //of begin
-          end;  //of for
-      end;  //of begin
+      // Refresh current progress
+      Synchronize(DoNotifyOnSearching);
     end;  //of for
-
-  finally
-    Temp.Free;
-    Hkcr.Free;
-    Shellex.Free;
-    reg.Free;
 
     // Notify end of search
     Synchronize(DoNotifyOnFinish);
+
+  finally
+    Hkcr.Free;
   end;  //of try
 end;
 
