@@ -620,14 +620,14 @@ object Main: TMain
     object N1: TMenuItem
       Caption = '-'
     end
+    object pmCopyLocation: TMenuItem
+      Caption = 'Ort kopieren'
+      OnClick = pmCopyLocationClick
+    end
     object pmEdit: TMenuItem
       Caption = 'Pfad bearbeiten'
       Enabled = False
       OnClick = pmEditClick
-    end
-    object pmCopyLocation: TMenuItem
-      Caption = 'Ort kopieren'
-      OnClick = pmCopyLocationClick
     end
     object pmExport: TMenuItem
       Caption = 'exportieren'

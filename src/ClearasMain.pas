@@ -342,6 +342,7 @@ procedure TMain.OnSearchStart(Sender: TObject; AWorkCountMax: Cardinal);
 begin
   pbLoad.Visible := True;
   pbLoad.Max := AWorkCountMax;
+  Cursor := crHourGlass;
 end;
 
 { private TMain.OnSearchProgress
@@ -352,6 +353,7 @@ procedure TMain.OnSearchEnd(Sender: TObject);
 begin
   pbLoad.Visible := False;
   pbLoad.Position := 0;
+  Cursor := crDefault;
 end;
 
 { private TMain.RefreshContextCounter
@@ -795,7 +797,7 @@ procedure TMain.bEnableStartupItemClick(Sender: TObject);
 begin
   try
     // Successfully activated item?
-    if Startup.ChangeItemStatus() then
+    if Startup.EnableItem() then
     begin
       // Change item visual status
       lwStartup.ItemFocused.Caption := Startup.Selected.GetStatus(FLang);
@@ -838,7 +840,7 @@ procedure TMain.bEnableContextItemClick(Sender: TObject);
 begin
   try
     // Successfully activated item?
-    if Context.ChangeItemStatus() then
+    if Context.EnableItem() then
     begin
       // Change item visual status
       lwContext.ItemFocused.Caption := Context.Selected.GetStatus(FLang);
@@ -875,7 +877,7 @@ procedure TMain.bDisableStartupItemClick(Sender: TObject);
 begin
   try
     // Successfully deactivated item?
-    if Startup.ChangeItemStatus() then
+    if Startup.DisableItem() then
     begin
       // Change item visual status
       lwStartup.ItemFocused.Caption := Startup.Selected.GetStatus(FLang);
@@ -916,7 +918,7 @@ procedure TMain.bDisableContextItemClick(Sender: TObject);
 begin
   try
     // Successfully deactivated item?
-    if Context.ChangeItemStatus() then
+    if Context.DisableItem() then
     begin
       // Change item visual status
       lwContext.ItemFocused.Caption := Context.Selected.GetStatus(FLang);
@@ -1815,7 +1817,5 @@ procedure TMain.bCloseStartupClick(Sender: TObject);
 begin
   Close;
 end;
-
-
 
 end.

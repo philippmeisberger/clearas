@@ -342,6 +342,7 @@ procedure TMain.OnSearchStart(Sender: TObject; AWorkCountMax: Cardinal);
 begin
   pbLoad.Visible := True;
   pbLoad.Max := AWorkCountMax;
+  Cursor := crHourGlass;
 end;
 
 { private TMain.OnSearchProgress
@@ -352,6 +353,7 @@ procedure TMain.OnSearchEnd(Sender: TObject);
 begin
   pbLoad.Visible := False;
   pbLoad.Position := 0;
+  Cursor := crDefault;
 end;
 
 { private TMain.RefreshContextCounter
@@ -723,7 +725,7 @@ begin
         bCloseStartup.Default := True;
       end  //of begin
       else
-        raise Exception.Create('Could not delete item!');
+        raise Exception.Create('Unknown error!');
     end;  //of begin
 
   except
@@ -775,7 +777,7 @@ begin
           bCloseContext.Default := True;
         end  //of begin
         else
-          raise Exception.Create('Could not delete item!');
+          raise Exception.Create('Unknown error!');
     end;  //of begin
 
   except
@@ -795,7 +797,7 @@ procedure TMain.bEnableStartupItemClick(Sender: TObject);
 begin
   try
     // Successfully activated item?
-    if Startup.ChangeItemStatus() then
+    if Startup.EnableItem() then
     begin
       // Change item visual status
       lwStartup.ItemFocused.Caption := Startup.Selected.GetStatus(FLang);
@@ -819,11 +821,14 @@ begin
       lwStartupSelectItem(Self, lwStartup.ItemFocused, True);
     end  //of begin
     else
-      raise Exception.Create('Could not enable item!');
+      raise Exception.Create('Unknown error!');
 
   except
     on E: EInvalidItem do
       FLang.MessageBox([93, 18, NEW_LINE, 53], mtWarning);
+
+    on E: EAbort do
+      FLang.MessageBox(45, mtWarning);
 
     on E: Exception do
       FLang.MessageBox(FLang.GetString([93, 18, NEW_LINE]) + E.Message, mtError);
@@ -838,7 +843,7 @@ procedure TMain.bEnableContextItemClick(Sender: TObject);
 begin
   try
     // Successfully activated item?
-    if Context.ChangeItemStatus() then
+    if Context.EnableItem() then
     begin
       // Change item visual status
       lwContext.ItemFocused.Caption := Context.Selected.GetStatus(FLang);
@@ -856,11 +861,14 @@ begin
       lwContextSelectItem(Self, lwContext.ItemFocused, True);
     end  //of begin
     else
-      raise Exception.Create('Could not enable item!');
+      raise Exception.Create('Unknown error!');
 
   except
     on E: EInvalidItem do
       FLang.MessageBox([93, 18, NEW_LINE, 53], mtWarning);
+
+    on E: EAbort do
+      FLang.MessageBox(45, mtWarning);
 
     on E: Exception do
       FLang.MessageBox(FLang.GetString([93, 18, NEW_LINE]) + E.Message, mtError);
@@ -875,7 +883,7 @@ procedure TMain.bDisableStartupItemClick(Sender: TObject);
 begin
   try
     // Successfully deactivated item?
-    if Startup.ChangeItemStatus() then
+    if Startup.DisableItem() then
     begin
       // Change item visual status
       lwStartup.ItemFocused.Caption := Startup.Selected.GetStatus(FLang);
@@ -897,11 +905,14 @@ begin
       lwStartupSelectItem(Self, lwStartup.ItemFocused, True);
     end  //of begin
     else
-      raise Exception.Create('Could not disable item!');
+      raise Exception.Create('Unknown error!');
 
   except
     on E: EInvalidItem do
       FLang.MessageBox([94, 18, NEW_LINE, 53], mtWarning);
+
+    on E: EAbort do
+      FLang.MessageBox(46, mtWarning);
 
     on E: Exception do
       FLang.MessageBox(FLang.GetString([94, 18, NEW_LINE]) + E.Message, mtError);
@@ -916,7 +927,7 @@ procedure TMain.bDisableContextItemClick(Sender: TObject);
 begin
   try
     // Successfully deactivated item?
-    if Context.ChangeItemStatus() then
+    if Context.DisableItem() then
     begin
       // Change item visual status
       lwContext.ItemFocused.Caption := Context.Selected.GetStatus(FLang);
@@ -934,11 +945,14 @@ begin
       lwContextSelectItem(Self, lwContext.ItemFocused, True);
     end  //of begin
     else
-      raise Exception.Create('Could not disable item!');
+      raise Exception.Create('Unknown error!');
 
   except
     on E: EInvalidItem do
       FLang.MessageBox([94, 18, NEW_LINE, 53], mtWarning);
+
+    on E: EAbort do
+      FLang.MessageBox(46, mtWarning);
 
     on E: Exception do
       FLang.MessageBox(FLang.GetString([94, 18, NEW_LINE]) + E.Message, mtError);
@@ -1815,7 +1829,5 @@ procedure TMain.bCloseStartupClick(Sender: TObject);
 begin
   Close;
 end;
-
-
 
 end.

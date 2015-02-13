@@ -94,8 +94,6 @@ type
     FEnabled: Boolean;
     FName, FType, FFilePath: string;
   protected
-    function Disable(): Boolean; virtual; abstract;
-    function Enable(): Boolean; virtual; abstract;
     function ExtractArguments(const APath: string): string;
     function ExtractPathToFile(const APath: string): string;
   public
@@ -103,6 +101,8 @@ type
     function ChangeFilePath(const ANewFilePath: string): Boolean; virtual; abstract;
     function ChangeStatus(): Boolean; virtual;
     function Delete(): Boolean; virtual; abstract;
+    function Disable(): Boolean; virtual; abstract;
+    function Enable(): Boolean; virtual; abstract;
     procedure ExportItem(const AFileName: string); virtual; abstract;
     function GetFullKeyPath(): string; virtual; abstract;
     function GetStatus(ALangFile: TLanguageFile): string;
@@ -128,6 +128,8 @@ type
     function ChangeItemStatus(): Boolean; virtual; abstract;
     procedure Clear; override;
     function DeleteItem(): Boolean; virtual; abstract;
+    function DisableItem(): Boolean; virtual; abstract;
+    function EnableItem(): Boolean; virtual; abstract;
     procedure ExportItem(const AFileName: string); virtual; abstract;
     procedure ExportList(const AFileName: string); virtual; abstract;
     function IndexOf(const AItemName: string): Integer; overload;
@@ -157,11 +159,10 @@ type
 
   { TStartupItem }
   TStartupItem = class(TStartupListItem)
-  protected
-    function Disable(): Boolean; override;
-    function Enable(): Boolean; override;
   public
     function Delete(): Boolean; override;
+    function Disable(): Boolean; override;
+    function Enable(): Boolean; override;
     function GetFullKeyPath(): string; override;
   end;
 
@@ -170,13 +171,12 @@ type
   private
     FLnkFile: TLnkFile;
     function AddCircumflex(const AName: string): string;
-  protected
-    function Disable(): Boolean; override;
-    function Enable(): Boolean; override;
   public
     destructor Destroy; override;
     function ChangeFilePath(const ANewFilePath: string): Boolean; override;
     function Delete(): Boolean; override;
+    function Disable(): Boolean; override;
+    function Enable(): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
     function GetFullKeyPath(): string; override;
     { external }
@@ -209,6 +209,8 @@ type
     function ChangeItemFilePath(const ANewFilePath: string): Boolean; override;
     function ChangeItemStatus(): Boolean; override;
     function DeleteItem(): Boolean; override;
+    function DisableItem(): Boolean; override;
+    function EnableItem(): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
     procedure ExportList(const AFileName: string); override;
     function ImportBackup(const AFilePath: string): Boolean;
@@ -247,11 +249,10 @@ type
   TShellItem = class(TContextListItem)
   private
     function GetKeyPath(): string; override;
-  protected
-    function Disable(): Boolean; override;
-    function Enable(): Boolean; override;
   public
     function ChangeFilePath(const ANewFilePath: string): Boolean; override;
+    function Disable(): Boolean; override;
+    function Enable(): Boolean; override;
   end;
 
   { TShellExItem }
@@ -259,11 +260,10 @@ type
   private
     function GetKeyPath(): string; override;
     function GetProgramPathKey(): string;
-  protected
-    function Disable(): Boolean; override;
-    function Enable(): Boolean; override;
   public
     function ChangeFilePath(const ANewFilePath: string): Boolean; override;
+    function Disable(): Boolean; override;
+    function Enable(): Boolean; override;
   end;
 
   { Search event }
@@ -294,6 +294,8 @@ type
     function ChangeItemFilePath(const ANewFilePath: string): Boolean; override;
     function ChangeItemStatus(): Boolean; override;
     function DeleteItem(): Boolean; override;
+    function DisableItem(): Boolean; override;
+    function EnableItem(): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
     procedure ExportList(const AFileName: string); override;
     function IndexOf(AName, ALocation: string): Integer; overload;
@@ -1143,7 +1145,34 @@ end;
 
 { TStartupItem }
 
-{ protected TStartupItem.Disable
+{ public TStartupItem.Delete
+
+  Deletes a TStartupItem object and returns True if successful. }
+
+function TStartupItem.Delete(): Boolean;
+begin
+  try
+    if FEnabled then
+    begin
+      if not TRegUtils.DeleteValue(FRootKey, FKeyPath, FName) then
+        raise EStartupException.Create('Could not delete value!');
+    end  //of begin
+    else
+      if not TRegUtils.DeleteKey('HKLM', KEY_DEACT, FName) then
+        raise EStartupException.Create('Could not delete key!');
+
+    Result := True;
+
+  except
+    on E: Exception do
+    begin
+      E.Message := 'Error while deleting "'+ FName +'": '+ E.Message;
+      raise;
+    end;  //of begin
+  end;  //of try
+end;
+
+{ public TStartupItem.Disable
 
   Disables an TStartupItem object and returns True if successful. }
 
@@ -1201,7 +1230,7 @@ begin
   end;  //of try
 end;
 
-{ protected TStartupItem.Enable
+{ public TStartupItem.Enable
 
   Enables an TStartupItem object and returns True if successful. }
 
@@ -1263,33 +1292,6 @@ begin
   end;  //of try
 end;
 
-{ public TStartupItem.Delete
-
-  Deletes a TStartupItem object and returns True if successful. }
-
-function TStartupItem.Delete(): Boolean;
-begin
-  try
-    if FEnabled then
-    begin
-      if not TRegUtils.DeleteValue(FRootKey, FKeyPath, FName) then
-        raise EStartupException.Create('Could not delete value!');
-    end  //of begin
-    else
-      if not TRegUtils.DeleteKey('HKLM', KEY_DEACT, FName) then
-        raise EStartupException.Create('Could not delete key!');
-
-    Result := True;
-
-  except
-    on E: Exception do
-    begin
-      E.Message := 'Error while deleting "'+ FName +'": '+ E.Message;
-      raise;
-    end;  //of begin
-  end;  //of try
-end;
-
 { public TStartupItem.GetFullKeyPath
 
   Returns the Registry path to a TStartupItem. }
@@ -1319,122 +1321,6 @@ end;
 function TStartupUserItem.AddCircumflex(const AName: string): string;
 begin
   Result := StringReplace(AName, '\', '^', [rfReplaceAll]);
-end;
-
-{ protected TStartupUserItem.Disable
-
-  Disables an TStartupUserItem object and returns True if successful. }
-
-function TStartupUserItem.Disable(): Boolean;
-var
-  reg: TRegistry;
-  KeyName: string;
-
-begin
-  Result := False;
-  reg := TRegistry.Create(TRegUtils.DenyWOW64Redirection(KEY_WRITE));
-
-  try
-    try
-      reg.RootKey := HKEY_LOCAL_MACHINE;
-      KeyName := AddCircumflex(FKeyPath);
-
-      if not FLnkFile.ReadLnkFile() then
-        raise EStartupException.Create('Could not read .lnk file!');
-
-      if not reg.OpenKey(KEY_DEACT_FOLDER + KeyName, True) then
-        raise EStartupException.Create('Could not create key "'+ FName +'"!');
-
-      reg.WriteString('path', FKeyPath);
-      reg.WriteString('item', TRegUtils.DeleteExt(ExtractFileName(FName)));
-      reg.WriteString('command', FFilePath);
-      reg.WriteString('backup', FLnkFile.BackupLnk);
-
-      // Special Registry entries only for Windows >= Vista
-      if TOSUtils.WindowsVistaOrLater() then
-      begin
-        reg.WriteString('backupExtension', FLnkFile.BackupExt);
-        reg.WriteString('location', ExtractFileDir(FKeyPath));
-        WriteTime(KEY_DEACT_FOLDER + KeyName);
-      end  //of begin
-      else
-        reg.WriteString('location', FType);
-
-      // Create backup directory if not exist
-      if not DirectoryExists(TLnkFile.GetBackupDir()) then
-        ForceDirectories(TLnkFile.GetBackupDir());
-
-      // Create backup by copying original .lnk
-      if not CopyFile(PChar(FKeyPath), PChar(FLnkFile.BackupLnk), False) then
-        raise EStartupException.Create('Could not create backup file!');
-
-      // Delete original .lnk
-      if not FLnkFile.Delete() then
-        raise EStartupException.Create('Could not delete .lnk file!');
-
-      // Update information
-      FKeyPath := KEY_DEACT_FOLDER + KeyName;
-      FRootKey := 'HKLM';
-      FEnabled := False;
-      Result := True;
-
-    finally
-      reg.Free;
-    end;  //of try
-
-  except
-    on E: Exception do
-    begin
-      E.Message := 'Error while disabling "'+ FName +'": '+ E.Message;
-      raise;
-    end;  //of begin
-  end;  //of try
-end;
-
-{ protected TStartupUserItem.Enable
-
-  Enables an TStartupUserItem object and returns True if successful. }
-
-function TStartupUserItem.Enable(): Boolean;
-var
-  Path, Arguments: string;
-
-begin
-  try
-    // Backup file exists?
-    if FLnkFile.BackupExists() then
-    begin
-      // Failed to restore backup file?
-      if not CopyFile(PChar(FLnkFile.BackupLnk), PChar(FLnkFile.FileName), True) then
-        raise EStartupException.Create('Could not create .lnk file!');
-    end  //of begin
-    else
-      begin
-        Path := ExtractPathToFile(FFilePath);
-        Arguments := ExtractArguments(FFilePath);
-
-        // Failed to create new .lnk file?
-        if not FLnkFile.WriteLnkFile(FLnkFile.FileName, Path, Arguments) then
-          raise EStartupException.Create('Could not create .lnk file!');
-      end;  //of if
-
-    // Could not delete old key?
-    if not TRegUtils.DeleteKey('HKLM', KEY_DEACT_FOLDER, AddCircumflex(FLnkFile.FileName)) then
-      raise EStartupException.Create('Could not delete key "'+ FKeyPath +'"!');
-
-    // Update information
-    FKeyPath := FLnkFile.FileName;
-    FRootKey := '';
-    FEnabled := True;
-    Result := True;
-
-  except
-    on E: Exception do
-    begin
-      E.Message := 'Error while enabling "'+ FName +'": '+ E.Message;
-      raise;
-    end;  //of begin
-  end;  //of try
 end;
 
 { public TStartupUserItem.ChangeFilePath
@@ -1509,6 +1395,122 @@ begin
     on E: Exception do
     begin
       E.Message := 'Error while deleting "'+ FName +'": '+ E.Message;
+      raise;
+    end;  //of begin
+  end;  //of try
+end;
+
+{ public TStartupUserItem.Disable
+
+  Disables an TStartupUserItem object and returns True if successful. }
+
+function TStartupUserItem.Disable(): Boolean;
+var
+  reg: TRegistry;
+  KeyName: string;
+
+begin
+  Result := False;
+  reg := TRegistry.Create(TRegUtils.DenyWOW64Redirection(KEY_WRITE));
+
+  try
+    try
+      reg.RootKey := HKEY_LOCAL_MACHINE;
+      KeyName := AddCircumflex(FKeyPath);
+
+      if not FLnkFile.ReadLnkFile() then
+        raise EStartupException.Create('Could not read .lnk file!');
+
+      if not reg.OpenKey(KEY_DEACT_FOLDER + KeyName, True) then
+        raise EStartupException.Create('Could not create key "'+ FName +'"!');
+
+      reg.WriteString('path', FKeyPath);
+      reg.WriteString('item', TRegUtils.DeleteExt(ExtractFileName(FName)));
+      reg.WriteString('command', FFilePath);
+      reg.WriteString('backup', FLnkFile.BackupLnk);
+
+      // Special Registry entries only for Windows >= Vista
+      if TOSUtils.WindowsVistaOrLater() then
+      begin
+        reg.WriteString('backupExtension', FLnkFile.BackupExt);
+        reg.WriteString('location', ExtractFileDir(FKeyPath));
+        WriteTime(KEY_DEACT_FOLDER + KeyName);
+      end  //of begin
+      else
+        reg.WriteString('location', FType);
+
+      // Create backup directory if not exist
+      if not DirectoryExists(TLnkFile.GetBackupDir()) then
+        ForceDirectories(TLnkFile.GetBackupDir());
+
+      // Create backup by copying original .lnk
+      if not CopyFile(PChar(FKeyPath), PChar(FLnkFile.BackupLnk), False) then
+        raise EStartupException.Create('Could not create backup file!');
+
+      // Delete original .lnk
+      if not FLnkFile.Delete() then
+        raise EStartupException.Create('Could not delete .lnk file!');
+
+      // Update information
+      FKeyPath := KEY_DEACT_FOLDER + KeyName;
+      FRootKey := 'HKLM';
+      FEnabled := False;
+      Result := True;
+
+    finally
+      reg.Free;
+    end;  //of try
+
+  except
+    on E: Exception do
+    begin
+      E.Message := 'Error while disabling "'+ FName +'": '+ E.Message;
+      raise;
+    end;  //of begin
+  end;  //of try
+end;
+
+{ public TStartupUserItem.Enable
+
+  Enables an TStartupUserItem object and returns True if successful. }
+
+function TStartupUserItem.Enable(): Boolean;
+var
+  Path, Arguments: string;
+
+begin
+  try
+    // Backup file exists?
+    if FLnkFile.BackupExists() then
+    begin
+      // Failed to restore backup file?
+      if not CopyFile(PChar(FLnkFile.BackupLnk), PChar(FLnkFile.FileName), True) then
+        raise EStartupException.Create('Could not create .lnk file!');
+    end  //of begin
+    else
+      begin
+        Path := ExtractPathToFile(FFilePath);
+        Arguments := ExtractArguments(FFilePath);
+
+        // Failed to create new .lnk file?
+        if not FLnkFile.WriteLnkFile(FLnkFile.FileName, Path, Arguments) then
+          raise EStartupException.Create('Could not create .lnk file!');
+      end;  //of if
+
+    // Could not delete old key?
+    if not TRegUtils.DeleteKey('HKLM', KEY_DEACT_FOLDER, AddCircumflex(FLnkFile.FileName)) then
+      raise EStartupException.Create('Could not delete key "'+ FKeyPath +'"!');
+
+    // Update information
+    FKeyPath := FLnkFile.FileName;
+    FRootKey := '';
+    FEnabled := True;
+    Result := True;
+
+  except
+    on E: Exception do
+    begin
+      E.Message := 'Error while enabling "'+ FName +'": '+ E.Message;
       raise;
     end;  //of begin
   end;  //of try
@@ -1900,6 +1902,49 @@ begin
   Result := Changed;
 end;
 
+{ public TStartupList.DisableItem
+
+  Disables the current selected item. }
+
+function TStartupList.DisableItem(): Boolean;
+begin
+  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
+    raise EInvalidItem.Create('No item selected!');
+
+  if not FItem.Enabled then
+    raise EAbort.Create('Item already disabled!');
+
+  Result := FItem.Disable();
+
+  if Result then
+    Dec(FActCount);
+end;
+
+{ public TStartupList.EnableItem
+
+  Enables the current selected item. }
+
+function TStartupList.EnableItem(): Boolean;
+begin
+  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
+    raise EInvalidItem.Create('No item selected!');
+
+  if FItem.Enabled then
+    raise EAbort.Create('Item already enabled!');
+
+  Result := FItem.Enable();
+
+  if Result then
+  begin
+    // Decide to delete backup
+    if (FDeleteBackup and (FItem is TStartupUserItem)) then
+      (FItem as TStartupUserItem).LnkFile.DeleteBackup();
+
+    // Update active counter
+    Inc(FActCount);
+  end;  //of begin
+end;
+
 { public TStartupList.DeleteItem
 
   Deletes an item from Registry and list. }
@@ -2216,7 +2261,44 @@ begin
   Result := FLocation +'\'+ FType +'\'+ FName;
 end;
 
-{ protected TShellItem.Disable
+{ public TShellItem.ChangeFilePath
+
+  Changes the file path of an TShellItem item. }
+
+function TShellItem.ChangeFilePath(const ANewFilePath: string): Boolean;
+var
+  reg: TRegistry;
+
+begin
+  Result := False;
+  reg := TRegistry.Create(TWinWOW64.DenyWOW64Redirection(KEY_ALL_ACCESS));
+
+  try
+    try
+      reg.RootKey := HKEY_CLASSES_ROOT;
+
+      // Invalid key?
+      if not reg.OpenKey(GetKeyPath() +'\command', False) then
+        raise Exception.Create('Key does not exist!');
+
+      // Change path
+      reg.WriteString('', ANewFilePath);
+      Result := True;
+
+    finally
+      reg.Free;
+    end;  //of try
+
+  except
+    on E: Exception do
+    begin
+      E.Message := 'Error while changing file path of "'+ FName +'": '+ E.Message;
+      raise;
+    end;  //of begin
+  end;  //of try
+end;
+
+{ public TShellItem.Disable
 
   Disables a TShellItem object and returns True if successful. }
 
@@ -2255,7 +2337,7 @@ begin
   end;  //try
 end;
 
-{ protected TShellItem.Enable
+{ public TShellItem.Enable
 
   Enables a TShellItem object and returns True if successful. }
 
@@ -2276,43 +2358,6 @@ begin
       raise;
     end;  //of begin
   end;  //try
-end;
-
-{ public TShellItem.ChangeFilePath
-
-  Changes the file path of an TShellItem item. }
-
-function TShellItem.ChangeFilePath(const ANewFilePath: string): Boolean;
-var
-  reg: TRegistry;
-
-begin
-  Result := False;
-  reg := TRegistry.Create(TWinWOW64.DenyWOW64Redirection(KEY_ALL_ACCESS));
-
-  try
-    try
-      reg.RootKey := HKEY_CLASSES_ROOT;
-
-      // Invalid key?
-      if not reg.OpenKey(GetKeyPath() +'\command', False) then
-        raise Exception.Create('Key does not exist!');
-
-      // Change path
-      reg.WriteString('', ANewFilePath);
-      Result := True;
-
-    finally
-      reg.Free;
-    end;  //of try
-
-  except
-    on E: Exception do
-    begin
-      E.Message := 'Error while changing file path of "'+ FName +'": '+ E.Message;
-      raise;
-    end;  //of begin
-  end;  //of try
 end;
 
 
@@ -2340,7 +2385,17 @@ begin
   Result := Format(CONTEXTMENU_SHELLEX_FILE, [GUID]);
 end;
 
-{ protected TShellExItem.Disable
+{ public TShellExItem.ChangeFilePath
+
+  Changes the file path of an TShellExItem item. }
+
+function TShellExItem.ChangeFilePath(const ANewFilePath: string): Boolean;
+begin
+  TRegUtils.WriteStrValue('HKCR', GetProgramPathKey(), '', ANewFilePath);
+  Result := True;
+end;
+
+{ public TShellExItem.Disable
 
   Disables a TShellExItem object and returns True if successful. }
 
@@ -2377,7 +2432,7 @@ begin
         NewValue := '-'+ OldValue;
         reg.WriteString('', NewValue);
       end;  //of begin
-      
+
       // Update status
       FEnabled := False;
       Result := True;
@@ -2395,7 +2450,7 @@ begin
   end;  //try
 end;
 
-{ protected TShellExItem.Enable
+{ public TShellExItem.Enable
 
   Enables a TShellExItem object and returns True if successful. }
 
@@ -2448,16 +2503,6 @@ begin
       raise;
     end;  //of begin
   end;  //try
-end;
-
-{ public TShellExItem.ChangeFilePath
-
-  Changes the file path of an TShellExItem item. }
-
-function TShellExItem.ChangeFilePath(const ANewFilePath: string): Boolean;
-begin
-  TRegUtils.WriteStrValue('HKCR', GetProgramPathKey(), '', ANewFilePath);
-  Result := True;
 end;
 
 
@@ -2847,6 +2892,42 @@ begin
   end;  //of begin
 
   Result := Deleted;
+end;
+
+{ public TContextList.DisableItem
+
+  Disables the current selected item. }
+
+function TContextList.DisableItem(): Boolean;
+begin
+  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
+    raise EInvalidItem.Create('No item selected!');
+
+  if not FItem.Enabled then
+    raise EAbort.Create('Item already disabled!');
+
+  Result := FItem.Disable();
+
+  if Result then
+    Dec(FActCount);
+end;
+
+{ public TContextList.EnableItem
+
+  Enables the current selected item. }
+
+function TContextList.EnableItem(): Boolean;
+begin
+  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
+    raise EInvalidItem.Create('No item selected!');
+
+  if FItem.Enabled then
+    raise EAbort.Create('Item already enabled!');
+
+  Result := FItem.Enable();
+
+  if Result then
+    Inc(FActCount);
 end;
 
 { public TContextList.ExportItem
