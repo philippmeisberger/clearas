@@ -266,15 +266,15 @@ type
     function Enable(): Boolean; override;
   end;
 
-  { Search event }
-  TOnSearchEvent = procedure(Sender: TObject; ACount: Cardinal) of object;
+  { Event }
+  TSearchEvent = procedure(Sender: TThread; ACount: Cardinal) of object;
 
   { TContextList }
   TContextList = class(TRootList)
   private
     FItem: TContextListItem;
-    FWorkCount, FWorkCountMax: TOnSearchEvent;
-    FContextCount: TNotifyEvent;
+    FOnSearchStart, FOnSearching: TSearchEvent;
+    FOnSearchFinish: TNotifyEvent;
     function Add(AItem: TContextListItem): Word; virtual;
     function FindDouble(AName, ALocation: string): Boolean;
     function ItemAt(AIndex: Word): TContextListItem;
@@ -303,14 +303,14 @@ type
     { external }
     property Items[AIndex: Word]: TContextListItem read ItemAt; default;
     property Selected: TContextListItem read FItem write FItem;
-    property OnSearch: TOnSearchEvent read FWorkCount write FWorkCount;
-    property OnSearchBegin: TOnSearchEvent read FWorkCountMax write FWorkCountMax;
-    property OnSearchEnd: TNotifyEvent read FContextCount write FContextCount;
+    property OnSearching: TSearchEvent read FOnSearching write FOnSearching;
+    property OnSearchStart: TSearchEvent read FOnSearchStart write FOnSearchStart;
+    property OnSearchFinish: TNotifyEvent read FOnSearchFinish write FOnSearchFinish;
   end;
 
 implementation
 
-uses StrUtils;
+uses StrUtils, SearchThread;
 
 { TLnkFile }
 
@@ -2640,9 +2640,10 @@ begin
   Result := Add(Item);
 end;
 
-{ protected TContextList.AddEntry
+{ protected TContextList.LoadContextmenu
 
-  Adds a context item to list. }
+  Searches for either Shell or ShellEx context menu entries in specific
+  Registry key and adds them to the list. }
 
 procedure TContextList.LoadContextmenu(const ALocation: string;
   ASearchForShellItems: Boolean);
@@ -2727,97 +2728,31 @@ begin
   end;  //of try
 end;
 
-{ protected TContextList.LoadContextmenus
+{ public TContextList.LoadContextmenu
 
   Searches for context menu entries and adds them to the list. }
 
 procedure TContextList.LoadContextmenu();
 var
-  reg: TRegistry;
-  i, j, k: integer;
-  Hkcr, Temp, Shellex: TStringList;
-  Progress, CountMax: Cardinal;
+  SearchThread: TContextMenuSearchThread;
 
 begin
-  reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));
-  Hkcr := TStringList.Create;
-  Temp := TStringList.Create;
-  Shellex := TStringList.Create;
+  // Init search thread
+  SearchThread := TContextMenuSearchThread.Create(Self);
 
-  try
-    reg.RootKey := HKEY_CLASSES_ROOT;
-
-    // Bad workaround to prevent an annoying bug of TRegistry
-    if not reg.KeyExists('$$$_auto_file') then
-      reg.CreateKey('$$$_auto_file');
-
-    // Read out all keys
-    reg.OpenKey('', False);
-    reg.GetKeyNames(Hkcr);
-    CountMax := Hkcr.Count;
-
-    // Notify start of search
-    FWorkCountMax(Self, CountMax);
-    Progress := 0;
-
-    for i := 0 to Hkcr.Count -1 do
-    begin
-      // Refresh current progress
-      if Assigned(FContextCount) then
-      begin
-        Inc(Progress);
-        FWorkCount(Self, Progress);
-      end;  //of begin
-
-      reg.CloseKey;
-      reg.OpenKey(Hkcr[i], False);
-
-      if reg.HasSubKeys then
-      begin
-        Temp.Clear;
-        reg.GetKeyNames(Temp);
-
-        for j := 0 to Temp.Count -1 do
-          if ((Temp[j] = 'shellex') or (Temp[j] = 'ShellEx')) then
-          begin
-            reg.CloseKey;
-            reg.OpenKey(Hkcr[i] +'\'+ Temp[j], False);
-
-            if reg.HasSubKeys then
-            begin
-              Shellex.Clear;
-              reg.GetKeyNames(Shellex);
-
-              for k := 0 to Shellex.Count -1 do
-                if (Shellex[k] = 'ContextMenuHandlers') then
-                begin
-                  reg.CloseKey;
-                  reg.OpenKey(Hkcr[i] +'\'+ Temp[j] +'\'+ Shellex[k], False);
-
-                  if reg.HasSubKeys then
-                    LoadContextmenu(Hkcr[i]);
-                end;  //of for
-            end;  //of begin
-          end;  //of for
-      end;  //of begin
-    end;  //of for
-
-  finally
-    Temp.Free;
-    Hkcr.Free;
-    Shellex.Free;
-    reg.Free;
-
-    // Notify end of search
-    if Assigned(FContextCount) then
-      FContextCount(Self);
-  end;  //of finally
+  with SearchThread do
+  begin
+    OnStart := FOnSearchStart;
+    OnSearching := FOnSearching;
+    OnFinish := FOnSearchFinish;
+    Resume;
+  end;  // of with
 end;
 
-{ public TContextList.AddEntry
+{ public TContextList.LoadContextmenu
 
-  Searches for context menu entries in specific AKeyName and adds them
-  to the list. }
+  Searches for Shell/ShellEx context menu entries in specific Registry key
+  and adds them to the list. }
 
 procedure TContextList.LoadContextmenu(const ALocation: string);
 begin

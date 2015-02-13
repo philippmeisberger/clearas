@@ -8,7 +8,8 @@ uses
   ClearasMain in 'ClearasMain.pas' {Main},
   ClearasInfo in 'ClearasInfo.pas' {Info},
   Updater in 'Updater.pas' {Update},
-  ClearasAPI in 'ClearasAPI.pas';
+  ClearasAPI in 'ClearasAPI.pas',
+  SearchThread in 'SearchThread.pas';
 
 {$R *.res}
 

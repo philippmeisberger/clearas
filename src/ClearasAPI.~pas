@@ -266,15 +266,15 @@ type
     function Enable(): Boolean; override;
   end;
 
-  { Search event }
-  TOnSearchEvent = procedure(Sender: TObject; ACount: Cardinal) of object;
+  { Event }
+  TSearchEvent = procedure(Sender: TThread; ACount: Cardinal) of object;
 
   { TContextList }
   TContextList = class(TRootList)
   private
     FItem: TContextListItem;
-    FWorkCount, FWorkCountMax: TOnSearchEvent;
-    FContextCount: TNotifyEvent;
+    FOnSearchStart, FOnSearching: TSearchEvent;
+    FOnSearchFinish: TNotifyEvent;
     function Add(AItem: TContextListItem): Word; virtual;
     function FindDouble(AName, ALocation: string): Boolean;
     function ItemAt(AIndex: Word): TContextListItem;
@@ -303,14 +303,14 @@ type
     { external }
     property Items[AIndex: Word]: TContextListItem read ItemAt; default;
     property Selected: TContextListItem read FItem write FItem;
-    property OnSearch: TOnSearchEvent read FWorkCount write FWorkCount;
-    property OnSearchBegin: TOnSearchEvent read FWorkCountMax write FWorkCountMax;
-    property OnSearchEnd: TNotifyEvent read FContextCount write FContextCount;
+    property OnSearching: TSearchEvent read FOnSearching write FOnSearching;
+    property OnSearchStart: TSearchEvent read FOnSearchStart write FOnSearchStart;
+    property OnSearchFinish: TNotifyEvent read FOnSearchFinish write FOnSearchFinish;
   end;
 
 implementation
 
-uses StrUtils;
+uses StrUtils, SearchThread;
 
 { TLnkFile }
 
@@ -1911,6 +1911,9 @@ begin
   if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
     raise EInvalidItem.Create('No item selected!');
 
+  if not FItem.Enabled then
+    raise EAbort.Create('Item already disabled!');
+
   Result := FItem.Disable();
 
   if Result then
@@ -1925,6 +1928,9 @@ function TStartupList.EnableItem(): Boolean;
 begin
   if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
     raise EInvalidItem.Create('No item selected!');
+
+  if FItem.Enabled then
+    raise EAbort.Create('Item already enabled!');
 
   Result := FItem.Enable();
 
@@ -2727,6 +2733,20 @@ end;
 
 procedure TContextList.LoadContextmenu();
 var
+  SearchThread: TContextMenuSearchThread;
+
+begin
+  SearchThread := TContextMenuSearchThread.Create(Self);
+
+  with SearchThread do
+  begin
+    OnStart := FOnSearchStart;
+    OnSearching := FOnSearching;
+    OnFinish := FOnSearchFinish;
+    Resume;
+  end;
+
+{var
   reg: TRegistry;
   i, j, k: integer;
   Hkcr, Temp, Shellex: TStringList;
@@ -2806,6 +2826,7 @@ begin
     if Assigned(FContextCount) then
       FContextCount(Self);
   end;  //of finally
+}
 end;
 
 { public TContextList.AddEntry
@@ -2897,6 +2918,9 @@ begin
   if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
     raise EInvalidItem.Create('No item selected!');
 
+  if not FItem.Enabled then
+    raise EAbort.Create('Item already disabled!');
+
   Result := FItem.Disable();
 
   if Result then
@@ -2911,6 +2935,9 @@ function TContextList.EnableItem(): Boolean;
 begin
   if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
     raise EInvalidItem.Create('No item selected!');
+
+  if FItem.Enabled then
+    raise EAbort.Create('Item already enabled!');
 
   Result := FItem.Enable();
 

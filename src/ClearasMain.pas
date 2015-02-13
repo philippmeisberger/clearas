@@ -146,8 +146,8 @@ type
     procedure AfterUpdate(Sender: TObject; ADownloadedFileName: string);
     procedure BeforeUpdate(Sender: TObject; const ANewBuild: Cardinal);
     function CreateStartupUserBackup(): Boolean;
-    procedure OnSearchProgress(Sender: TObject; AWorkCount: Cardinal);
-    procedure OnSearchStart(Sender: TObject; AWorkCountMax: Cardinal);
+    procedure OnSearchProgress(Sender: TThread; AWorkCount: Cardinal);
+    procedure OnSearchStart(Sender: TThread; AWorkCountMax: Cardinal);
     procedure OnSearchEnd(Sender: TObject);
     procedure RefreshContextCounter();
     procedure RefreshStartupCounter();
@@ -329,7 +329,7 @@ end;
 
   Event that is called when search is in progress. }
 
-procedure TMain.OnSearchProgress(Sender: TObject; AWorkCount: Cardinal);
+procedure TMain.OnSearchProgress(Sender: TThread; AWorkCount: Cardinal);
 begin
   pbLoad.Position := AWorkCount;
 end;
@@ -338,11 +338,11 @@ end;
 
   Event that is called when search starts. }
 
-procedure TMain.OnSearchStart(Sender: TObject; AWorkCountMax: Cardinal);
+procedure TMain.OnSearchStart(Sender: TThread; AWorkCountMax: Cardinal);
 begin
   pbLoad.Visible := True;
   pbLoad.Max := AWorkCountMax;
-  Cursor := crHourGlass;
+  lwContext.Cursor := crHourGlass;
 end;
 
 { private TMain.OnSearchProgress
@@ -353,7 +353,8 @@ procedure TMain.OnSearchEnd(Sender: TObject);
 begin
   pbLoad.Visible := False;
   pbLoad.Position := 0;
-  Cursor := crDefault;
+  lwContext.Cursor := crDefault;
+  ShowContextMenuEntries(False);
 end;
 
 { private TMain.RefreshContextCounter
@@ -496,13 +497,13 @@ begin
     if cbExpert.Checked then
     begin
       // Link search events
-      Context.OnSearchBegin := OnSearchStart;
-      Context.OnSearch := OnSearchProgress;
-      Context.OnSearchEnd := OnSearchEnd;
-      Application.ProcessMessages;
+      Context.OnSearchStart := OnSearchStart;
+      Context.OnSearching := OnSearchProgress;
+      Context.OnSearchFinish := OnSearchEnd;
 
-      // Do the expert search!
+      // Start the expert search in a thread
       Context.LoadContextmenu();
+      Exit;
     end  //of begin
     else
       // Use default search mode
@@ -525,9 +526,6 @@ begin
         SubItems.Append(Context[i].Location);
         SubItems.Append(Context[i].TypeOf);
       end; //of with
-
-  // Hide TProgressBar
-  pbLoad.Visible := False;
 
   // Refresh counter label
   RefreshContextCounter();
