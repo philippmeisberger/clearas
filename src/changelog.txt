@@ -4,12 +4,14 @@ Ein Open-Source Projekt von PM Code Works
 History
 --------
 
-Version 4.0  [28.01.15]
+Version 4.0  [28.02.15]
 
+- API Version 4.1
+- Exception Handling stark verbessert
 - Änderungen im Popup Menü:
   - Neue Funktion "Pfad bearbeiten" hinzugefügt
-    - Dateipfade können nach eigenem Ermessen bearbeitet werden
-  - Funktion "Nach Programm suchen" entfernt
+    - Dateipfade sowie Parameter können nach eigenem Ermessen bearbeitet werden
+  - Funktion "Nach Programm suchen" entfernt (durch "Pfad bearbeiten" ersetzt)
   - Neue Funktion "In RegEdit öffnen" hinzugefügt
     - Öffnet den Registry Pfad des aktuellen Elements in RegEdit
   - Neue Funktion "In Explorer öffnen"
@@ -22,7 +24,9 @@ Version 4.0  [28.01.15]
     - Neue Funktion "Kontextmenü hinzufügen"
     - Neue Funktion "Einträge exportieren"
   - Beschriftungen von Shell-Eintägen werden nun direkt angezeigt
-- Exception Handling stark verbessert
+  - "Expertenmodus" verbessert:
+    - Suche beschleunigt
+    - Mehr Ergebnisse
 - Auswählen von Elementen in Autostart und Kontextmenü Listen beschleunigt
 - "Backup importieren" verbessert
 - Registry Dateiexport verbessert (eigener Parser)
@@ -178,12 +182,8 @@ Features:
 - löschen von Autostart-Objekten
 
 -------------------------------------------------------------------------------------------------
-Clearas wurde unter der BSD-Lizenz veröffentlicht und ist somit 
-Open-Source. Der Quelltext kann auf der Website heruntergeladen 
-werden.
+Clearas wurde unter der BSD-Lizenz veröffentlicht und ist somit Open-Source. Der Quelltext kann auf der Website heruntergeladen werden.
 
-Soll Clearas auf eine kommerzielle CD-ROM (mit Magazin) gepresst werden, 
-wäre es nett, mir eine Ausgabe dieser CD-ROM (mit Magazin) zu schicken.
-Meine Adresse erfahren Sie unter team@pm-codeworks.de.
+Soll Clearas auf eine kommerzielle CD-ROM (mit Magazin) gepresst werden, wäre es nett, mir eine Ausgabe dieser CD-ROM (mit Magazin) zu schicken. Meine Adresse erfahren Sie unter team@pm-codeworks.de.
 
-01/2015
+02/2015

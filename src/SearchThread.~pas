@@ -53,6 +53,7 @@ begin
   FreeOnTerminate := True;
   FContextList := AContextList;
 
+  // Init Registry access with read-only
   FReg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));
   FReg.RootKey := HKEY_CLASSES_ROOT;
 end;
@@ -108,22 +109,29 @@ var
 
 begin
   Keys := TStringList.Create();
-  FReg.CloseKey;
-  FReg.OpenKey(AKeyName, False);
 
-  if FReg.HasSubKeys then
-  begin
-    FReg.GetKeyNames(Keys);
+  try
+    FReg.CloseKey;
+    FReg.OpenKey(AKeyName, False);
 
-    for i := 0 to Keys.Count - 1 do
-      if AnsiContainsText(Keys[i], ASearchPattern) then
-      begin
-        FContextList.LoadContextmenu(AKeyName);
-        Break;
-      end;  //of for
-  end;  //of begin
+    if FReg.HasSubKeys then
+    begin
+      // Load subkeys
+      FReg.GetKeyNames(Keys);
 
-  Keys.Free;
+      for i := 0 to Keys.Count - 1 do
+        // Pattern matches?
+        if AnsiContainsText(Keys[i], ASearchPattern) then
+        begin
+          // Load context menu in current key
+          FContextList.LoadContextmenu(AKeyName);
+          Break;
+        end;  //of for
+    end;  //of begin
+
+  finally
+    Keys.Free;
+  end;  //of try
 end;
 
 { protected TContextMenuSearchThread.Execute

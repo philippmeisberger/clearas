@@ -64,6 +64,7 @@ end;
 
 destructor TContextMenuSearchThread.Destroy();
 begin
+  FReg.CloseKey;
   FReg.Free;
   inherited Destroy;
 end;
