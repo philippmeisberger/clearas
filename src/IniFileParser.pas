@@ -29,12 +29,18 @@ type
     FFile: TStringList;
     FFileName: string;
     FSaveOnDestroy: Boolean;
-    function FindNextItem(AStartIndex: Integer = 0): Integer;
+    function Add(AIndex: Integer; AString: string): Integer;
+    function FindNextItem(AStartIndex: Integer = 0; AEndIndex: Integer = -1): Integer;
+    function FindNextSectionItem(AStartIndex: Integer = 0): Integer;
     function FindNextSection(AStartIndex: Integer = 0): Integer;
-    function GetEndOfSection(ASectionName: string): Integer;
+    function GetEndOfItem(AIndex: Integer): Integer; overload;
+    function GetEndOfItem(ASectionName, AKey: string): Integer; overload;
+    function GetEndOfSection(AIndex: Integer): Integer; overload;
+    function GetEndOfSection(ASectionName: string): Integer; overload;
     function GetKey(AIndex: Integer): string;
     function GetLength(): Integer;
     function GetValue(AIndex: Integer): string;
+    function Remove(AStartIndex, AEndIndex: Integer): Boolean; overload;
   protected
     function AddRaw(ALine: string): Integer;
     function ExtractKey(const AKeyValuePair: string): string;
@@ -50,18 +56,20 @@ type
     procedure GetSections(ASections: TStrings);
     function IndexOfKey(ASectionName, AKey: string): Integer;
     function IndexOfSection(ASectionName: string): Integer;
+    function IsSection(AIndex: Integer): Boolean;
     function KeyExists(ASectionName, AKey: string): Boolean;
     procedure ReadSection(ASectionName: string; ASection: TStrings);
     function ReadBoolean(ASectionName, AKey: string): Boolean;
-    function ReadInteger(ASectionName, AKey: string): Integer;
-    function ReadString(ASectionName, AKey: string): string;
-    function Remove(ASectionName, AKey: string): Boolean;
+    function ReadInteger(ASectionName, AKey: string; ADefault: Integer = -1): Integer;
+    function ReadString(ASectionName, AKey: string; ADefault: string = ''): string;
+    function Remove(ASectionName, AKey: string): Boolean; overload;
     function RemoveSection(ASectionName: string): Boolean;
     procedure Save();
     function SectionExists(ASectionName: string): Boolean;
-    procedure WriteBoolean(ASectionName, AKey: string; AValue: Boolean);
-    procedure WriteInteger(ASectionName, AKey: string; AValue: Integer);
-    procedure WriteString(ASectionName, AKey, AValue: string);
+    function WriteBoolean(ASectionName, AKey: string; AValue: Boolean): Integer;
+    function WriteInteger(ASectionName, AKey: string; AValue: Integer): Integer;
+    function WriteMultiLine(ASectionName, AKey: string; AValues: TStrings): Integer;
+    function WriteString(ASectionName, AKey, AValue: string): Integer;
     { external }
     property FileName: string read FFileName;
     property Lines: Integer read GetLength;
@@ -156,11 +164,26 @@ begin
   inherited Destroy;
 end;
 
+{ private TIniFile.Add
+
+  Inserts or adds a key/value pair to file. }
+
+function TIniFile.Add(AIndex: Integer; AString: string): Integer;
+begin
+  if (AIndex + 1 < FFile.Count) then
+  begin
+    FFile.Insert(AIndex, AString);
+    Result := AIndex;
+  end  //of if
+  else
+    Result := FFile.Add(AString);
+end;
+
 { private TIniFile.FindNextItem
 
   Returns the next index of an item beginning the search from AStartIndex. }
 
-function TIniFile.FindNextItem(AStartIndex: Integer = 0): Integer;
+function TIniFile.FindNextItem(AStartIndex: Integer = 0; AEndIndex: Integer = -1): Integer;
 var
   i: Integer;
   Line: string;
@@ -168,20 +191,34 @@ var
 begin
   Result := -1;
 
+  // Search until file ends?
+  if (AEndIndex = -1) then
+    AEndIndex := FFile.Count;
+
   // Index valid?
-  if (AStartIndex >= 0) then
-    for i := AStartIndex to FFile.Count -1 do
+  if (AStartIndex >= 0) and (AEndIndex <= FFile.Count) then
+    for i := AStartIndex + 1 to AEndIndex - 1 do
     begin
       // Remove spaces from line
       Line := Trim(FFile[i]);
 
-      // Current line is neither empty, a comment nor a section
-      if ((Line <> '') and not (Line[1] in ['#', ';', '['])) then
+      // Current line is neither empty nor a comment or a section and contains "="
+      if ((Line <> '') and not (Line[1] in ['#', ';', '[']) and AnsiContainsStr(Line, '=')) then
       begin
         Result := i;
         Break;
       end;  //of begin
     end;  //of for
+end;
+
+{ private TIniFile.FindNextSectionItem
+
+  Returns the next index of an item in section beginning the search from
+  AStartIndex until section ends. }
+
+function TIniFile.FindNextSectionItem(AStartIndex: Integer = 0): Integer;
+begin
+  Result := FindNextItem(AStartIndex, FindNextSection(AStartIndex));
 end;
 
 { private TIniFile.FindNextSection
@@ -191,29 +228,85 @@ end;
 function TIniFile.FindNextSection(AStartIndex: Integer = 0): Integer;
 var
   i: Integer;
-  Line: string;
 
 begin
   Result := -1;
 
   // Index valid and file not empty?
   if ((AStartIndex >= 0) and (FFile.Count > 0)) then
-    for i := AStartIndex to FFile.Count -1 do
-    begin
-      // Remove spaces from line
-      Line := Trim(FFile[i]);
-
-      // "[" is the start tag of a section
-      if ((Line <> '') and (Line[1] = '[')) then
+    for i := AStartIndex + 1 to FFile.Count - 1 do
+      if IsSection(i) then
       begin
-        // Find end tag "]" of a section
-        if (AnsiPos(']', Line) > 0) then
-        begin
-          Result := i;
-          Break;
-        end;  //of begin
+        Result := i;
+        Break;
       end;  //of begin
-    end;  //of for
+end;
+
+{ private TIniFile.GetEndOfItem
+
+  Returns the last line index of an item for appending text. }
+
+function TIniFile.GetEndOfItem(AIndex: Integer): Integer;
+var
+  NextItemIndex: Integer;
+
+begin
+  // Item index valid?
+  if (AIndex > 0) then
+  begin
+    // Find next item
+    NextItemIndex := FindNextSectionItem(AIndex);
+
+    // Maybe only one item or last item
+    if (NextItemIndex = -1) then
+      NextItemIndex := GetEndOfSection(NextItemIndex);
+
+    // Return end of current item (not of next)
+    if (NextItemIndex <> -1) then
+      Dec(NextItemIndex);
+
+    Result := NextItemIndex;
+  end  //of begin
+  else
+    Result := -1;
+end;
+
+{ private TIniFile.GetEndOfItem
+
+  Returns the last line index of an item for appending text. }
+
+function TIniFile.GetEndOfItem(ASectionName, AKey: string): Integer;
+begin
+  Result := GetEndOfItem(IndexOfKey(ASectionName, AKey));
+end;
+
+{ private TIniFile.GetEndOfSection
+
+  Returns the last line index of a section for appending text. }
+
+function TIniFile.GetEndOfSection(AIndex: Integer): Integer;
+var
+  NextSectionIndex: Integer;
+
+begin
+  // Index valid?
+  if (AIndex > 0) then
+  begin
+    // Find next section
+    NextSectionIndex := FindNextSection(AIndex);
+
+    // Maybe only one section or last section
+    if (NextSectionIndex < 0) then
+      NextSectionIndex := FFile.Count;
+
+    // Return end of current section (not of next)
+    if (NextSectionIndex <> -1) then
+      Dec(NextSectionIndex);
+
+    Result := NextSectionIndex;
+  end  //of begin
+  else
+    Result := -1;
 end;
 
 { private TIniFile.GetEndOfSection
@@ -221,26 +314,8 @@ end;
   Returns the last line index of a section for appending text. }
 
 function TIniFile.GetEndOfSection(ASectionName: string): Integer;
-var
-  SectionIndex, NextSectionIndex: Integer;
-
 begin
-  SectionIndex := IndexOfSection(ASectionName);
-
-  // Section found?
-  if (SectionIndex <> -1) then
-  begin
-    // Find next section
-    NextSectionIndex := FindNextSection(SectionIndex);
-
-    // Maybe only one section
-    if (NextSectionIndex = -1) then
-      NextSectionIndex := FFile.Count;
-
-    Result := NextSectionIndex;
-  end  //of begin
-  else
-    Result := -1;
+  Result := GetEndOfSection(IndexOfSection(ASectionName));
 end;
 
 { private TIniFile.GetKey
@@ -266,8 +341,54 @@ end;
   Returns the value of an item at index. }
 
 function TIniFile.GetValue(AIndex: Integer): string;
+var
+  Lines: TStringList;
+  EndIndex, i: Integer;
+  Line: string;
+
 begin
-  Result := ExtractValue(FFile[AIndex]);
+  Lines := TStringList.Create;
+
+  try
+    EndIndex := GetEndOfItem(AIndex);
+
+    // Multi-line value?
+    if (EndIndex > AIndex) then
+    begin
+      // Concatenate lines without backslash at the end
+      for i := AIndex to EndIndex do
+        Line := Line + TrimLeft(Copy(FFile[i], 0, Length(FFile[i]) - 1));
+    end  //of begin
+    else
+      // Single line value
+      Line := FFile[AIndex];
+
+    Result := ExtractValue(Line);
+
+  finally
+    Lines.Free;
+  end;  //of try
+end;
+
+{ private TIniFile.Remove
+
+  Removes lines from start to end index. }
+
+function TIniFile.Remove(AStartIndex, AEndIndex: Integer): Boolean;
+var
+  i: Integer;
+
+begin
+  // Section found?
+  if ((AStartIndex <> -1) and (AEndIndex <> -1)) then
+  begin
+    for i := AEndIndex downto AStartIndex do
+      FFile.Delete(i);
+
+    Result := True;
+  end  //of begin
+  else
+    Result := False;
 end;
 
 { protected TIniFile.AddRaw
@@ -377,7 +498,7 @@ begin
   begin
     // Write section content
     for i := 0 to AHashMap.Count -1 do
-      FFile.Insert(InsertPos + i, AHashMap[i]);
+      Add(InsertPos + i, AHashMap[i]);
 
     Result := True;
   end  //of begin
@@ -435,12 +556,8 @@ begin
     if (FFile[Index] = '['+ ASectionName +']') then
       Break;
 
-    Index := FindNextSection(Index + 1);
+    Index := FindNextSection(Index);
   end;  //of while
-
-  // File index starts with 1
-  if (Index <> -1) then
-    Inc(Index);
 
   Result := Index;
 end;
@@ -458,7 +575,7 @@ begin
   Index := IndexOfSection(ASectionName);
 
   // Find first item in section
-  Index := FindNextItem(Index);
+  Index := FindNextSectionItem(Index);
 
   // Section got items?
   while (Index <> -1) do
@@ -467,14 +584,28 @@ begin
     if (ExtractKey(FFile[Index]) = AKey) then
       Break;
 
-    Index := FindNextItem(Index + 1);
+    // Find next item in section
+    Index := FindNextSectionItem(Index);
   end;  //of while
 
-  // File index starts with 1
-  if (Index <> -1) then
-    Inc(Index);
-
   Result := Index;
+end;
+
+{ public TIniFile.IsSection
+
+  Checks if a line contains a section. }
+
+function TIniFile.IsSection(AIndex: Integer): Boolean;
+var
+  Line: string;
+
+begin
+  if ((AIndex > 0) and (FFile.Count > AIndex)) then
+    // Remove spaces from line
+    Line := Trim(FFile[AIndex]);
+
+  // Section starts with "[" and ends with "]"
+  result := ((Line <> '') and (Line[1] = '[') and (Line[Length(Line)] = ']'));
 end;
 
 { public TIniFile.KeyExists
@@ -511,7 +642,7 @@ begin
     if (AnsiPos('=', Line) > 0) then
       ASection.Append(Line);
 
-    Index := FindNextItem(Index + 1);
+    Index := FindNextSectionItem(Index + 1);
   end;  //of while
 end;
 
@@ -528,24 +659,17 @@ end;
 
   Returns an integer value of a key in section. }
 
-function TIniFile.ReadInteger(ASectionName, AKey: string): Integer;
-var
-  Value: string;
-
+function TIniFile.ReadInteger(ASectionName, AKey: string; ADefault: Integer = -1): Integer;
 begin
-  Value := ReadString(ASectionName, AKey);
-
-  if (Value = '') then
-    Result := -1
-  else
-    Result := StrToInt(Value);
+  Result := ADefault;
+  TryStrToInt(ReadString(ASectionName, AKey), Result);
 end;
 
 { public TIniFile.ReadString
 
   Returns a string value of a key in section. }
 
-function TIniFile.ReadString(ASectionName, AKey: string): string;
+function TIniFile.ReadString(ASectionName, AKey: string; ADefault: string = ''): string;
 var
   Index: Integer;
 
@@ -555,9 +679,9 @@ begin
 
   // Key found?
   if (Index > 0) then
-    Result := GetValue(Index - 1)
+    Result := GetValue(Index)
   else
-    Result := '';
+    Result := ADefault;
 end;
 
 { public TIniFile.Remove
@@ -566,20 +690,18 @@ end;
 
 function TIniFile.Remove(ASectionName, AKey: string): Boolean;
 var
-  Index: Integer;
+  StartIndex, EndIndex: Integer;
 
 begin
   // Search for key
-  Index := IndexOfKey(ASectionName, AKey);
+  StartIndex := IndexOfKey(ASectionName, AKey);
+  EndIndex := GetEndOfItem(StartIndex);
 
-  // Key found?
-  if (Index > 0) then
-  begin
-    FFile.Delete(Index - 1);
-    Result := True;
-  end  //of begin
-  else
-    Result := False;
+  // Item is last element in file?
+  if (EndIndex = -1) then
+    EndIndex := FFile.Count;
+
+  Result := Remove(StartIndex, EndIndex);
 end;
 
 { public TIniFile.RemoveSection
@@ -587,22 +709,8 @@ end;
   Removes an entire section with all items. }
 
 function TIniFile.RemoveSection(ASectionName: string): Boolean;
-var
-  StartIndex, EndIndex, i: Integer;
-
 begin
-  StartIndex := IndexOfSection(ASectionName);
-  EndIndex := GetEndOfSection(ASectionName);
-
-  if ((StartIndex <> -1) and (EndIndex <> -1)) then
-  begin
-    for i := EndIndex - 1 downto StartIndex -1 do
-      FFile.Delete(i);
-
-    Result := True;
-  end  //of begin
-  else
-    Result := False;
+  Result := Remove(IndexOfSection(ASectionName), GetEndOfSection(ASectionName));
 end;
 
 { public TIniFile.Save
@@ -611,18 +719,6 @@ end;
 
 procedure TIniFile.Save();
 begin
-{var
-  IniFile: TextFile;
-  i: Cardinal;
-
-begin
-  Assign(IniFile, FFileName);
-  Rewrite(IniFile);
-
-  for i := 0 to FFile.Count - 1 do
-    Writeln(IniFile, FFile[i]);
-
-  CloseFile(IniFile);}
   FFile.SaveToFile(FFileName);
 end;
 
@@ -639,59 +735,89 @@ end;
 
   Writes an boolean value to a a key in section. }
 
-procedure TIniFile.WriteBoolean(ASectionName, AKey: string; AValue: Boolean);
+function TIniFile.WriteBoolean(ASectionName, AKey: string; AValue: Boolean): Integer;
 begin
-  WriteInteger(ASectionName, AKey, Ord(AValue));
+  Result := WriteInteger(ASectionName, AKey, Ord(AValue));
 end;
 
 { public TIniFile.WriteInteger
 
   Writes an integer value to a key in section. }
 
-procedure TIniFile.WriteInteger(ASectionName, AKey: string; AValue: Integer);
+function TIniFile.WriteInteger(ASectionName, AKey: string; AValue: Integer): Integer;
 begin
-  WriteString(ASectionName, AKey, IntToStr(AValue));
+  Result := WriteString(ASectionName, AKey, IntToStr(AValue));
+end;
+
+{ public TIniFile.WriteMultiLine
+
+  Writes a multi-line string value to a key in section. }
+
+function TIniFile.WriteMultiLine(ASectionName, AKey: string; AValues: TStrings): Integer;
+var
+  Index, i: Integer;
+
+begin
+  // Insert key with first line
+  Index := WriteString(ASectionName, AKey, AValues[0]);
+
+  // Add other lines
+  for i := 1 to AValues.Count -1 do
+  begin
+    Inc(Index);
+    Add(Index, AValues[i]);
+  end;  //of for
+
+  // Insert empty line before another section
+  if IsSection(Index + 1) then
+    Add(Index + 1, '');
+
+  Result := Index;
 end;
 
 { public TIniFile.WriteString
 
   Writes a string value to a key in section. }
 
-procedure TIniFile.WriteString(ASectionName, AKey, AValue: string);
+function TIniFile.WriteString(ASectionName, AKey, AValue: string): Integer;
 var
-  Index, EndIndex: Integer;
+  Index, DeleteEnd: Integer;
 
 begin
   // Check for invalid key
   if (AKey = '') then
     raise EInvalidIniFormat.Create('Key must not be empty!');
 
-  // Search for key
+  // Search for key  
   Index := IndexOfKey(ASectionName, AKey);
 
-  // Key already exists?
-  if (Index <> -1) then
+  // Key does not exist? 
+  if (Index = -1) then
   begin
-    // Delete current item
-    FFile.Delete(Index - 1);
+    // Append item at the end of section
+    Index := GetEndOfSection(ASectionName);
 
-    // Replace with new item
-    FFile.Insert(Index - 1, AKey +'='+ AValue);
+    // Add section if not exists
+    if (Index = -1) then
+    begin      
+      AddSection(ASectionName);
+      Index := FFile.Count;
+    end;  //of begin
   end  //of begin
   else
     begin
-      // Append item at the end of section
-      EndIndex := GetEndOfSection(ASectionName);
+      DeleteEnd := GetEndOfItem(Index);
 
-      // Add section if not exists
-      if (EndIndex = -1) then
-      begin
-        AddSection(ASectionName);
-        EndIndex := FFile.Count;
-      end;  //of begin
+      // Last item?
+      if (DeleteEnd = -1) then
+        DeleteEnd := FFile.Count - 1;
 
-      FFile.Insert(EndIndex, AKey +'='+ AValue)
-    end;  //of if
+      // Delete current item
+      Remove(Index, DeleteEnd);
+    end;  //of begin
+
+  // Add item
+  Result := Add(Index, AKey +'='+ AValue);
 end;
 
 {$IFDEF MSWINDOWS}
@@ -797,12 +923,11 @@ begin
     // Append last line
     Lines.Append(Line);
 
-    // Write first line separated
-    Write(ASection, AIdent, Lines[0]);
-
-    // Append other lines
-    for i := 1 to Lines.Count - 1 do
-      AddRaw(Lines[i]);
+    // Write lines
+    if (AIdent = '') then
+      WriteMultiLine(ASection, '@', Lines)
+    else
+      WriteMultiLine(ASection, '"'+ AIdent +'"', Lines);
 
   finally
     Lines.Free;
@@ -902,7 +1027,7 @@ begin
         case FReg.GetDataType(Values[i]) of
           rdString:
             if (rdString in AFilter) then
-             WriteString(Section, Values[i], FReg.ReadString(Values[i]));
+              WriteString(Section, Values[i], FReg.ReadString(Values[i]));
 
           rdInteger:
             if (rdInteger in AFilter) then
@@ -931,7 +1056,7 @@ begin
       for i := 0 to Keys.Count -1 do
       begin
         FReg.CloseKey();
-        ExportKey(AHKey, AKeyPath +'\'+ Keys[i], True);
+        ExportKey(AHKey, AKeyPath +'\'+ Keys[i], True, AFilter);
       end;  //of for
     end;  //of begin
 
@@ -1082,7 +1207,10 @@ end;
 
 function TRegistryFile.Remove(ASection, AIdent: string): Boolean;
 begin
-  Result := inherited Remove(ASection, '"'+ AIdent +'"');
+  if (AIdent = '') then
+    Result := inherited Remove(ASection, '@')
+  else
+    Result := inherited Remove(ASection, '"'+ AIdent +'"');
 end;
 
 { public TRegistryFile.UnescapePathDelimiter
@@ -1136,7 +1264,7 @@ var
   Hex: array of Byte;
 
 begin
-  // Expand 1 Byte char to 2 Byte Hex chars
+  // Expand 1 Byte character to 2 Byte Hex characters
   SetLength(Hex, (Length(AValue) * 2) + 1);
   i := 0;
 
@@ -1161,4 +1289,4 @@ begin
 end;
 {$ENDIF}
 
-end.
+end.
