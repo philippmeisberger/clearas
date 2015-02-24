@@ -53,12 +53,12 @@ type
     function AddSection(ASectionName: string): Boolean; overload;
     function AddSection(ASectionName: string; AHashMap: TStrings): Boolean; overload;
     procedure Clear();
+    procedure GetKeys(ASectionName: string; AKeys: TStrings);
     procedure GetSections(ASections: TStrings);
     function IndexOfKey(ASectionName, AKey: string): Integer;
     function IndexOfSection(ASectionName: string): Integer;
     function IsSection(AIndex: Integer): Boolean;
     function KeyExists(ASectionName, AKey: string): Boolean;
-    procedure ReadSection(ASectionName: string; ASection: TStrings);
     function ReadBoolean(ASectionName, AKey: string): Boolean;
     function ReadInteger(ASectionName, AKey: string; ADefault: Integer = -1): Integer;
     function ReadString(ASectionName, AKey: string; ADefault: string = ''): string;
@@ -68,8 +68,8 @@ type
     function SectionExists(ASectionName: string): Boolean;
     function WriteBoolean(ASectionName, AKey: string; AValue: Boolean): Integer;
     function WriteInteger(ASectionName, AKey: string; AValue: Integer): Integer;
-    function WriteMultiLine(ASectionName, AKey: string; AValues: TStrings): Integer;
     function WriteString(ASectionName, AKey, AValue: string): Integer;
+    function WriteStrings(ASectionName, AKey: string; AValues: TStrings): Integer;
     { external }
     property FileName: string read FFileName;
     property Lines: Integer read GetLength;
@@ -254,15 +254,14 @@ begin
   // Item index valid?
   if (AIndex > 0) then
   begin
-    // Find next item
+    // Find next item 
     NextItemIndex := FindNextSectionItem(AIndex);
 
     // Maybe only one item or last item
     if (NextItemIndex = -1) then
-      NextItemIndex := GetEndOfSection(NextItemIndex);
-
-    // Return end of current item (not of next)
-    if (NextItemIndex <> -1) then
+      NextItemIndex := GetEndOfSection(AIndex)
+    else
+      // Return end of current item (not of next)
       Dec(NextItemIndex);
 
     Result := NextItemIndex;
@@ -296,11 +295,10 @@ begin
     NextSectionIndex := FindNextSection(AIndex);
 
     // Maybe only one section or last section
-    if (NextSectionIndex < 0) then
-      NextSectionIndex := FFile.Count;
-
-    // Return end of current section (not of next)
-    if (NextSectionIndex <> -1) then
+    if (NextSectionIndex = -1) then
+      NextSectionIndex := FFile.Count - 1
+    else
+      // Return end of current section (not of next)
       Dec(NextSectionIndex);
 
     Result := NextSectionIndex;
@@ -515,6 +513,34 @@ begin
   FFile.Clear;
 end;
 
+{ public TIniFile.GetKeys
+
+  Reads the keys of a section. }
+
+procedure TIniFile.GetKeys(ASectionName: string; AKeys: TStrings);
+var
+  Index, EndIndex, i: Integer;
+  Key: string;
+
+begin
+  // Find section
+  Index := IndexOfSection(ASectionName);
+
+  // Find first item in section
+  EndIndex := GetEndOfSection(Index);
+
+  if ((Index <> -1) and (EndIndex <> -1)) then
+    // Collect keys of section
+    for i := Index + 1 to EndIndex do
+    begin
+      Key := GetKey(i);
+
+      // Multi-line item?
+      if (Key <> '') then
+        AKeys.Append(Key);
+    end;  //of for
+end;
+
 { public TIniFile.GetSections
 
   Reads and collects all section names. }
@@ -615,35 +641,6 @@ end;
 function TIniFile.KeyExists(ASectionName, AKey: string): Boolean;
 begin
   Result := (IndexOfKey(ASectionName, AKey) <> -1);
-end;
-
-{ public TIniFile.ReadSection
-
-  Reads the content of a section. }
-
-procedure TIniFile.ReadSection(ASectionName: string; ASection: TStrings);
-var
-  Index: Integer;
-  Line: string;
-
-begin
-  // Find section
-  Index := IndexOfSection(ASectionName);
-
-  // Find first item in section
-  Index := FindNextItem(Index);
-
-  // Section got items?
-  while (Index <> -1) do
-  begin
-    Line := FFile[Index];
-
-    // Line contains =
-    if (AnsiPos('=', Line) > 0) then
-      ASection.Append(Line);
-
-    Index := FindNextSectionItem(Index + 1);
-  end;  //of while
 end;
 
 { public TIniFile.ReadBoolean
@@ -749,39 +746,13 @@ begin
   Result := WriteString(ASectionName, AKey, IntToStr(AValue));
 end;
 
-{ public TIniFile.WriteMultiLine
-
-  Writes a multi-line string value to a key in section. }
-
-function TIniFile.WriteMultiLine(ASectionName, AKey: string; AValues: TStrings): Integer;
-var
-  Index, i: Integer;
-
-begin
-  // Insert key with first line
-  Index := WriteString(ASectionName, AKey, AValues[0]);
-
-  // Add other lines
-  for i := 1 to AValues.Count -1 do
-  begin
-    Inc(Index);
-    Add(Index, AValues[i]);
-  end;  //of for
-
-  // Insert empty line before another section
-  if IsSection(Index + 1) then
-    Add(Index + 1, '');
-
-  Result := Index;
-end;
-
 { public TIniFile.WriteString
 
   Writes a string value to a key in section. }
 
 function TIniFile.WriteString(ASectionName, AKey, AValue: string): Integer;
 var
-  Index, DeleteEnd: Integer;
+  Index: Integer;
 
 begin
   // Check for invalid key
@@ -805,19 +776,37 @@ begin
     end;  //of begin
   end  //of begin
   else
-    begin
-      DeleteEnd := GetEndOfItem(Index);
-
-      // Last item?
-      if (DeleteEnd = -1) then
-        DeleteEnd := FFile.Count - 1;
-
-      // Delete current item
-      Remove(Index, DeleteEnd);
-    end;  //of begin
+    // Delete current item
+    Remove(Index, GetEndOfItem(Index));
 
   // Add item
   Result := Add(Index, AKey +'='+ AValue);
+end;
+
+{ public TIniFile.WriteStrings
+
+  Writes a multi-line string value to a key in section. }
+
+function TIniFile.WriteStrings(ASectionName, AKey: string; AValues: TStrings): Integer;
+var
+  Index, i: Integer;
+
+begin
+  // Insert key with first line
+  Index := WriteString(ASectionName, AKey, AValues[0]);
+
+  // Add other lines
+  for i := 1 to AValues.Count -1 do
+  begin
+    Inc(Index);
+    Add(Index, AValues[i]);
+  end;  //of for
+
+  // Insert empty line before another section
+  if IsSection(Index + 1) then
+    Add(Index + 1, '');
+
+  Result := Index;
 end;
 
 {$IFDEF MSWINDOWS}
@@ -925,9 +914,9 @@ begin
 
     // Write lines
     if (AIdent = '') then
-      WriteMultiLine(ASection, '@', Lines)
+      WriteStrings(ASection, '@', Lines)
     else
-      WriteMultiLine(ASection, '"'+ AIdent +'"', Lines);
+      WriteStrings(ASection, '"'+ AIdent +'"', Lines);
 
   finally
     Lines.Free;
