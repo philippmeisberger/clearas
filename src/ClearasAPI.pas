@@ -151,6 +151,7 @@ type
   public
     function ChangeFilePath(const ANewFilePath: string): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
+    function GetFullKeyPath(): string; override;
     { external }
     property KeyPath: string read FKeyPath write FKeyPath;
     property RootKey: string read FRootKey write FRootKey;
@@ -163,7 +164,6 @@ type
     function Delete(): Boolean; override;
     function Disable(): Boolean; override;
     function Enable(): Boolean; override;
-    function GetFullKeyPath(): string; override;
   end;
 
   { TStartupUserItem }
@@ -178,7 +178,6 @@ type
     function Disable(): Boolean; override;
     function Enable(): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
-    function GetFullKeyPath(): string; override;
     { external }
     property LnkFile: TLnkFile read FLnkFile write FLnkFile;
   end;
@@ -424,7 +423,7 @@ end;
 
 class function TLnkFile.GetBackupDir(): string;
 begin
-  Result := TOSUtils.GetWinDir + '\pss\';
+  Result := TOSUtils.GetWinDir +'\pss\';
 end;
 
 { public TLnkFile.GetStartUpDir
@@ -631,7 +630,7 @@ begin
 
   // Extension found?
   if (Index <> 0) then
-    Delete(AName, Index, Index + Length(Ext) -1);
+    Delete(AName, Index, Index + Length(Ext) - 1);
 
   Result := AName;
 end;
@@ -793,13 +792,21 @@ end;
 function TRootItem.ExtractArguments(const APath: string): string;
 var
   ExtWithArguments: string;
+  SpaceDelimiter: Integer;
 
 begin
   // Cut path from extension until end
   ExtWithArguments := ExtractFileExt(APath);
 
+  // Find space delimter between extension and arguments
+  SpaceDelimiter := AnsiPos(' ', ExtWithArguments);
+
+  // No space char after extension: no arguments!
+  if (SpaceDelimiter = 0) then
+    Exit;
+
   // Copy arguments without entension and space char at front and end
-  Result := Trim(Copy(ExtWithArguments, 5, Length(ExtWithArguments)));
+  Result := Trim(Copy(ExtWithArguments, SpaceDelimiter, Length(ExtWithArguments)));
 end;
 
 { protected TRootItem.ExtractPathToFile
@@ -808,27 +815,21 @@ end;
 
 function TRootItem.ExtractPathToFile(const APath: string): string;
 var
-  GuessedLastChar: Integer;
-  Path: string;
+  ArgumentsIndex: Integer;
 
 begin
-  // Guess last char or space delimiter between file and arguments
-  GuessedLastChar := AnsiPos(ExtractFileExt(APath), APath) + 4;
+  // Find index of arguments
+  ArgumentsIndex := AnsiPos(ExtractArguments(APath), APath);
 
-  // No arguments given?
-  if (Length(APath) = GuessedLastChar) then
-  begin
+  // Copy path without arguments
+  if (ArgumentsIndex > 0) then
+    Result := Trim(Copy(APath, 0, ArgumentsIndex - 1))
+  else
     Result := APath;
-    Exit;
-  end;  //of begin
-  
-  Path := Trim(Copy(APath, 0, GuessedLastChar));
 
   // Add missing quote
-  if ((Path = '"') and (Path[Length(Path)] <> '"')) then
-    Path := Path +'"';
-
-  Result := Path;
+  if ((Result = '"') and (Result[Length(Result)] <> '"')) then
+    Result := Result +'"';
 end;
 
 { public TRootItem.ChangeStatus
@@ -876,7 +877,9 @@ begin
 
   // Open file in explorer
   if ((PreparedFileName <> '') and FileExists(PreparedFileName)) then
-    TOSUtils.ExecuteProgram('explorer.exe', '/select, '+ PreparedFileName);
+    TOSUtils.ExecuteProgram('explorer.exe', '/select, '+ PreparedFileName)
+  else
+    raise EAbort.Create('File "'+ PreparedFileName +'" does not exist!');
 end;
 
 { public TRootItem.OpenInRegEdit
@@ -1142,6 +1145,15 @@ begin
   end;  //of try
 end;
 
+{ public TStartupListItem.GetFullKeyPath
+
+  Returns the Registry path to a TStartupListItem. }
+
+function TStartupListItem.GetFullKeyPath(): string;
+begin
+  Result := TRegUtils.HKeyToStr(TRegUtils.StrToHKey(FRootKey)) +'\'+ FKeyPath;
+end;
+
 
 { TStartupItem }
 
@@ -1290,15 +1302,6 @@ begin
       raise;
     end;  //of begin
   end;  //of try
-end;
-
-{ public TStartupItem.GetFullKeyPath
-
-  Returns the Registry path to a TStartupItem. }
-
-function TStartupItem.GetFullKeyPath(): string;
-begin
-  Result := TRegUtils.HKeyToStr(TRegUtils.StrToHKey(FRootKey)) +'\'+ FKeyPath;
 end;
 
 
@@ -1527,15 +1530,6 @@ begin
   else
     if not FLnkFile.CreateBackup() then
       raise EStartupException.Create('Could not create backup file!');
-end;
-
-{ public TStartupUserItem.GetFullKeyPath
-
-  Returns the Registry path to a TStartupUserItem. }
-
-function TStartupUserItem.GetFullKeyPath(): string;
-begin
-  Result := FKeyPath;
 end;
 
 

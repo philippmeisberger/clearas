@@ -364,7 +364,7 @@ object Info: TInfo
             '.'
           'F'#252'r Sch'#228'den an Hard- und Software, die durch die Benutzung'
           'dieses Programms entstehen, wird keine Haftung '#252'bernommen.'
-          '02/2015')
+          '03/2015')
         ReadOnly = True
         TabOrder = 1
       end
@@ -412,7 +412,7 @@ object Info: TInfo
           'History'
           '--------'
           ''
-          'Version 4.0  [28.02.15]'
+          'Version 4.0  [10.03.15]'
           ''
           '- API Version 4.1'
           '- Exception Handling stark verbessert'
@@ -461,7 +461,7 @@ object Info: TInfo
           '- Neues Manifest'
           '- Updater v2.2'
           '- OSUtils v2.0.1'
-          '- BSD-Lizenz'
+          '- Open-Source'
           ''
           '---------------------------------'
           ''
@@ -638,9 +638,10 @@ object Info: TInfo
           
             '----------------------------------------------------------------' +
             '---------------------------------'
-          'Clearas wurde unter der BSD-Lizenz ver'#246'ffentlicht und ist somit '
-          'Open-Source. Der Quelltext kann auf der Website heruntergeladen '
-          'werden.'
+          
+            'Clearas wurde unter der BSD-Lizenz ver'#246'ffentlicht und ist somit ' +
+            'Open-Source. '
+          'Der Quelltext kann auf der Website heruntergeladen werden.'
           ''
           
             'Soll Clearas auf eine kommerzielle CD-ROM (mit Magazin) gepresst' +
@@ -650,7 +651,7 @@ object Info: TInfo
             'hicken.'
           'Meine Adresse erfahren Sie unter team@pm-codeworks.de.'
           ''
-          '02/2015')
+          '03/2015')
         ReadOnly = True
         ScrollBars = ssVertical
         TabOrder = 1

@@ -414,10 +414,17 @@ object Info: TInfo
           ''
           'Version 4.0  [28.02.15]'
           ''
+          '- API Version 4.1'
+          '- Exception Handling stark verbessert'
           '- '#196'nderungen im Popup Men'#252':'
           '  - Neue Funktion "Pfad bearbeiten" hinzugef'#252'gt'
-          '    - Dateipfade k'#246'nnen nach eigenem Ermessen bearbeitet werden'
-          '  - Funktion "Nach Programm suchen" entfernt'
+          
+            '    - Dateipfade sowie Parameter k'#246'nnen nach eigenem Ermessen be' +
+            'arbeitet '
+          'werden'
+          
+            '  - Funktion "Nach Programm suchen" entfernt (durch "Pfad bearbe' +
+            'iten" ersetzt)'
           '  - Neue Funktion "In RegEdit '#246'ffnen" hinzugef'#252'gt'
           '    - '#214'ffnet den Registry Pfad des aktuellen Elements in RegEdit'
           '  - Neue Funktion "In Explorer '#246'ffnen"'
@@ -436,7 +443,9 @@ object Info: TInfo
           
             '  - Beschriftungen von Shell-Eint'#228'gen werden nun direkt angezeig' +
             't'
-          '- Exception Handling stark verbessert'
+          '  - "Expertenmodus" verbessert:'
+          '    - Suche beschleunigt'
+          '    - Mehr Ergebnisse'
           
             '- Ausw'#228'hlen von Elementen in Autostart und Kontextmen'#252' Listen be' +
             'schleunigt'

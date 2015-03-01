@@ -297,7 +297,7 @@ end;
 
 function TMain.CreateStartupUserBackup(): Boolean;
 begin
-  result := False;
+  Result := False;
 
   try
     // Special .lnk file backup only for activated startup user entries!
@@ -307,11 +307,11 @@ begin
       FLang.MessageBox(Flang.Format(42, [(Startup.Selected as TStartupUserItem).LnkFile.BackupLnk]));
       bExportStartupItem.Enabled := False;
       pmExport.Enabled := False;
-      result := False;
+      Result := False;
     end  //of begin
     else
       // Default .reg file export
-      result := ShowRegistryExportDialog();
+      Result := ShowRegistryExportDialog();
 
   except
     on E: EAccessViolation do
@@ -540,7 +540,7 @@ var
   SaveDialog: TSaveDialog;
 
 begin
-  result := False;
+  Result := False;
   SaveDialog := TSaveDialog.Create(Self);
 
   try
@@ -572,7 +572,7 @@ begin
         else
           Context.ExportItem(SaveDialog.FileName);
 
-        result := True;
+        Result := True;
       end;  //of begin
 
     finally
@@ -975,14 +975,14 @@ var
     i, j, k: Integer;
 
   begin
-    result := -1;
+    Result := -1;
     j := 0;
 
     for i := AStartIndex +1 to lwStartup.Items.Count -1 do
       if (AName = lwStartup.Items.Item[i].SubItems[0]) then
       begin
         Inc(j);
-        result := i;
+        Result := i;
         Break;
       end;  //of begin
 
@@ -990,7 +990,7 @@ var
       for k := 0 to Item.Index -1 do
         if (AName = lwStartup.Items.Item[k].SubItems[0]) then
         begin
-          result := k;
+          Result := k;
           Break;
         end;  //of begin
   end;
@@ -1223,10 +1223,16 @@ end;
 
 procedure TMain.pmOpenExplorerClick(Sender: TObject);
 begin
-  if (PageControl.ActivePage = tsStartup) then
-    Startup.Selected.OpenInExplorer()
-  else
-    Context.Selected.OpenInExplorer();
+  try
+    if (PageControl.ActivePage = tsStartup) then
+      Startup.Selected.OpenInExplorer()
+    else
+      Context.Selected.OpenInExplorer();
+
+  except
+    on E: EAbort do
+      FLang.MessageBox([45, NEW_LINE, 46], mtWarning);
+  end;  //of try
 end;
 
 { TMain.pmOpenRegeditClick
@@ -1247,11 +1253,11 @@ end;
 
 procedure TMain.pmCopyLocationClick(Sender: TObject);
 begin
- try
-   if (PageControl.ActivePage = tsStartup) then
-     Clipboard.AsText := Startup.Selected.GetFullKeyPath()
-   else
-     Clipboard.AsText := Context.Selected.GetFullKeyPath();
+  try
+    if (PageControl.ActivePage = tsStartup) then
+      Clipboard.AsText := Startup.Selected.GetFullKeyPath()
+    else
+      Clipboard.AsText := Context.Selected.GetFullKeyPath();
 
   except
     FLang.MessageBox(53, mtWarning);

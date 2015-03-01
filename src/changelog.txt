@@ -4,7 +4,7 @@ Ein Open-Source Projekt von PM Code Works
 History
 --------
 
-Version 4.0  [28.02.15]
+Version 4.0  [10.03.15]
 
 - API Version 4.1
 - Exception Handling stark verbessert
@@ -36,7 +36,7 @@ Version 4.0  [28.02.15]
 - Neues Manifest
 - Updater v2.2
 - OSUtils v2.0.1
-- BSD-Lizenz
+- Open-Source
 
 ---------------------------------
 
@@ -186,4 +186,4 @@ Clearas wurde unter der BSD-Lizenz veröffentlicht und ist somit Open-Source. Der
 
 Soll Clearas auf eine kommerzielle CD-ROM (mit Magazin) gepresst werden, wäre es nett, mir eine Ausgabe dieser CD-ROM (mit Magazin) zu schicken. Meine Adresse erfahren Sie unter team@pm-codeworks.de.
 
-02/2015
+03/2015

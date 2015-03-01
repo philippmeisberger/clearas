@@ -151,6 +151,7 @@ type
   public
     function ChangeFilePath(const ANewFilePath: string): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
+    function GetFullKeyPath(): string; override;
     { external }
     property KeyPath: string read FKeyPath write FKeyPath;
     property RootKey: string read FRootKey write FRootKey;
@@ -163,7 +164,6 @@ type
     function Delete(): Boolean; override;
     function Disable(): Boolean; override;
     function Enable(): Boolean; override;
-    function GetFullKeyPath(): string; override;
   end;
 
   { TStartupUserItem }
@@ -178,7 +178,6 @@ type
     function Disable(): Boolean; override;
     function Enable(): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
-    function GetFullKeyPath(): string; override;
     { external }
     property LnkFile: TLnkFile read FLnkFile write FLnkFile;
   end;
@@ -424,7 +423,7 @@ end;
 
 class function TLnkFile.GetBackupDir(): string;
 begin
-  Result := TOSUtils.GetWinDir + '\pss\';
+  Result := TOSUtils.GetWinDir +'\pss\';
 end;
 
 { public TLnkFile.GetStartUpDir
@@ -631,7 +630,7 @@ begin
 
   // Extension found?
   if (Index <> 0) then
-    Delete(AName, Index, Index + Length(Ext) -1);
+    Delete(AName, Index, Index + Length(Ext) - 1);
 
   Result := AName;
 end;
@@ -793,13 +792,21 @@ end;
 function TRootItem.ExtractArguments(const APath: string): string;
 var
   ExtWithArguments: string;
+  SpaceDelimiter: Integer;
 
 begin
   // Cut path from extension until end
   ExtWithArguments := ExtractFileExt(APath);
 
+  // Find space delimter between extension and arguments
+  SpaceDelimiter := AnsiPos(' ', ExtWithArguments);
+
+  // No space char after extension: no arguments!
+  if (SpaceDelimiter = 0) then
+    Exit;
+
   // Copy arguments without entension and space char at front and end
-  Result := Trim(Copy(ExtWithArguments, 5, Length(ExtWithArguments)));
+  Result := Trim(Copy(ExtWithArguments, SpaceDelimiter, Length(ExtWithArguments)));
 end;
 
 { protected TRootItem.ExtractPathToFile
@@ -808,27 +815,21 @@ end;
 
 function TRootItem.ExtractPathToFile(const APath: string): string;
 var
-  GuessedLastChar: Integer;
-  Path: string;
+  ArgumentsIndex: Integer;
 
 begin
-  // Guess last char or space delimiter between file and arguments
-  GuessedLastChar := AnsiPos(ExtractFileExt(APath), APath) + 4;
+  // Find index of arguments
+  ArgumentsIndex := AnsiPos(ExtractArguments(APath), APath);
 
-  // No arguments given?
-  if (Length(APath) = GuessedLastChar) then
-  begin
+  // Copy path without arguments
+  if (ArgumentsIndex > 0) then
+    Result := Trim(Copy(APath, 0, ArgumentsIndex - 1))
+  else
     Result := APath;
-    Exit;
-  end;  //of begin
-  
-  Path := Trim(Copy(APath, 0, GuessedLastChar));
 
   // Add missing quote
-  if ((Path = '"') and (Path[Length(Path)] <> '"')) then
-    Path := Path +'"';
-
-  Result := Path;
+  if ((Result = '"') and (Result[Length(Result)] <> '"')) then
+    Result := Result +'"';
 end;
 
 { public TRootItem.ChangeStatus
@@ -1142,6 +1143,15 @@ begin
   end;  //of try
 end;
 
+{ public TStartupListItem.GetFullKeyPath
+
+  Returns the Registry path to a TStartupListItem. }
+
+function TStartupListItem.GetFullKeyPath(): string;
+begin
+  Result := TRegUtils.HKeyToStr(TRegUtils.StrToHKey(FRootKey)) +'\'+ FKeyPath;
+end;
+
 
 { TStartupItem }
 
@@ -1290,15 +1300,6 @@ begin
       raise;
     end;  //of begin
   end;  //of try
-end;
-
-{ public TStartupItem.GetFullKeyPath
-
-  Returns the Registry path to a TStartupItem. }
-
-function TStartupItem.GetFullKeyPath(): string;
-begin
-  Result := TRegUtils.HKeyToStr(TRegUtils.StrToHKey(FRootKey)) +'\'+ FKeyPath;
 end;
 
 
@@ -1527,15 +1528,6 @@ begin
   else
     if not FLnkFile.CreateBackup() then
       raise EStartupException.Create('Could not create backup file!');
-end;
-
-{ public TStartupUserItem.GetFullKeyPath
-
-  Returns the Registry path to a TStartupUserItem. }
-
-function TStartupUserItem.GetFullKeyPath(): string;
-begin
-  Result := FKeyPath;
 end;
 
 
@@ -2640,9 +2632,10 @@ begin
   Result := Add(Item);
 end;
 
-{ protected TContextList.AddEntry
+{ protected TContextList.LoadContextmenu
 
-  Adds a context item to list. }
+  Searches for either Shell or ShellEx context menu entries in specific
+  Registry key and adds them to the list. }
 
 procedure TContextList.LoadContextmenu(const ALocation: string;
   ASearchForShellItems: Boolean);
@@ -2727,7 +2720,7 @@ begin
   end;  //of try
 end;
 
-{ protected TContextList.LoadContextmenus
+{ public TContextList.LoadContextmenu
 
   Searches for context menu entries and adds them to the list. }
 
@@ -2736,6 +2729,7 @@ var
   SearchThread: TContextMenuSearchThread;
 
 begin
+  // Init search thread
   SearchThread := TContextMenuSearchThread.Create(Self);
 
   with SearchThread do
@@ -2744,95 +2738,13 @@ begin
     OnSearching := FOnSearching;
     OnFinish := FOnSearchFinish;
     Resume;
-  end;
-
-{var
-  reg: TRegistry;
-  i, j, k: integer;
-  Hkcr, Temp, Shellex: TStringList;
-  Progress, CountMax: Cardinal;
-
-begin
-  reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));
-  Hkcr := TStringList.Create;
-  Temp := TStringList.Create;
-  Shellex := TStringList.Create;
-
-  try
-    reg.RootKey := HKEY_CLASSES_ROOT;
-
-    // Bad workaround to prevent an annoying bug of TRegistry
-    if not reg.KeyExists('$$$_auto_file') then
-      reg.CreateKey('$$$_auto_file');
-
-    // Read out all keys
-    reg.OpenKey('', False);
-    reg.GetKeyNames(Hkcr);
-    CountMax := Hkcr.Count;
-
-    // Notify start of search
-    FWorkCountMax(Self, CountMax);
-    Progress := 0;
-
-    for i := 0 to Hkcr.Count -1 do
-    begin
-      // Refresh current progress
-      if Assigned(FContextCount) then
-      begin
-        Inc(Progress);
-        FWorkCount(Self, Progress);
-      end;  //of begin
-
-      reg.CloseKey;
-      reg.OpenKey(Hkcr[i], False);
-
-      if reg.HasSubKeys then
-      begin
-        Temp.Clear;
-        reg.GetKeyNames(Temp);
-
-        for j := 0 to Temp.Count -1 do
-          if ((Temp[j] = 'shellex') or (Temp[j] = 'ShellEx')) then
-          begin
-            reg.CloseKey;
-            reg.OpenKey(Hkcr[i] +'\'+ Temp[j], False);
-
-            if reg.HasSubKeys then
-            begin
-              Shellex.Clear;
-              reg.GetKeyNames(Shellex);
-
-              for k := 0 to Shellex.Count -1 do
-                if (Shellex[k] = 'ContextMenuHandlers') then
-                begin
-                  reg.CloseKey;
-                  reg.OpenKey(Hkcr[i] +'\'+ Temp[j] +'\'+ Shellex[k], False);
-
-                  if reg.HasSubKeys then
-                    LoadContextmenu(Hkcr[i]);
-                end;  //of for
-            end;  //of begin
-          end;  //of for
-      end;  //of begin
-    end;  //of for
-
-  finally
-    Temp.Free;
-    Hkcr.Free;
-    Shellex.Free;
-    reg.Free;
-
-    // Notify end of search
-    if Assigned(FContextCount) then
-      FContextCount(Self);
-  end;  //of finally
-}
+  end;  // of with
 end;
 
-{ public TContextList.AddEntry
+{ public TContextList.LoadContextmenu
 
-  Searches for context menu entries in specific AKeyName and adds them
-  to the list. }
+  Searches for Shell/ShellEx context menu entries in specific Registry key
+  and adds them to the list. }
 
 procedure TContextList.LoadContextmenu(const ALocation: string);
 begin
