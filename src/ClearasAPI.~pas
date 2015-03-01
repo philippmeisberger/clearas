@@ -877,7 +877,9 @@ begin
 
   // Open file in explorer
   if ((PreparedFileName <> '') and FileExists(PreparedFileName)) then
-    TOSUtils.ExecuteProgram('explorer.exe', '/select, '+ PreparedFileName);
+    TOSUtils.ExecuteProgram('explorer.exe', '/select, '+ PreparedFileName)
+  else
+    raise EAbort.Create('File "'+ PreparedFileName +'" does not exist!');
 end;
 
 { public TRootItem.OpenInRegEdit
@@ -1338,7 +1340,7 @@ begin
     inherited ChangeFilePath(ANewFilePath);
 
   try
-    NewFilePath := ExtractPathToFile(ANewFilePath);
+    NewFilePath := StringReplace(ExtractPathToFile(ANewFilePath), '"', '', [rfReplaceAll]);
     Arguments := ExtractArguments(ANewFilePath);
 
     // Failed to create new .lnk file?
@@ -1490,7 +1492,7 @@ begin
     end  //of begin
     else
       begin
-        Path := ExtractPathToFile(FFilePath);
+        Path := StringReplace(ExtractPathToFile(FFilePath), '"', '', [rfReplaceAll]);
         Arguments := ExtractArguments(FFilePath);
 
         // Failed to create new .lnk file?

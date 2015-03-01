@@ -1340,7 +1340,7 @@ begin
     inherited ChangeFilePath(ANewFilePath);
 
   try
-    NewFilePath := ExtractPathToFile(ANewFilePath);
+    NewFilePath := StringReplace(ExtractPathToFile(ANewFilePath), '"', '', [rfReplaceAll]);
     Arguments := ExtractArguments(ANewFilePath);
 
     // Failed to create new .lnk file?
@@ -1354,9 +1354,9 @@ begin
 
     // Rewrite backup
     if (not FEnabled and FLnkFile.BackupExists()) then
-      FLnkFile.CreateBackup();
-      //TODO: Add check for not successfully created backup
-    
+      if not FLnkFile.CreateBackup() then
+        raise EStartupException.Create('Backup could not be created!');
+
     Result := True;
 
   except
@@ -1492,7 +1492,7 @@ begin
     end  //of begin
     else
       begin
-        Path := ExtractPathToFile(FFilePath);
+        Path := StringReplace(ExtractPathToFile(FFilePath), '"', '', [rfReplaceAll]);
         Arguments := ExtractArguments(FFilePath);
 
         // Failed to create new .lnk file?
