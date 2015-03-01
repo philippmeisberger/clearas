@@ -93,6 +93,8 @@ type
     FIndex: Word;
     FEnabled: Boolean;
     FName, FType, FFilePath: string;
+    function GetFilePath(): string;
+    function GetArguments(): string;
   protected
     function ExtractArguments(const APath: string): string;
     function ExtractPathToFile(const APath: string): string;
@@ -109,8 +111,10 @@ type
     procedure OpenInRegEdit(); virtual;
     procedure OpenInExplorer(); virtual;
     { external }
+    property Arguments: string read GetArguments;
     property Enabled: Boolean read FEnabled;
     property FilePath: string read FFilePath write FFilePath;
+    property FilePathOnly: string read GetFilePath;
     property ItemIndex: Word read FIndex;
     property Name: string read FName write FName;
     property TypeOf: string read FType write FType;
@@ -785,6 +789,24 @@ begin
   FEnabled := AEnabled;
 end;
 
+{ private TRootItem.GetArguments
+
+  Returns only the file path (without arguments) of the item. }
+
+function TRootItem.GetFilePath(): string;
+begin
+  Result := StringReplace(ExtractPathToFile(FFilePath), '"', '', [rfReplaceAll]);
+end;
+
+{ private TRootItem.GetArguments
+
+  Returns the arguments of the item file path. }
+
+function TRootItem.GetArguments(): string;
+begin
+  Result := StringReplace(ExtractArguments(FFilePath), '"', '', [rfReplaceAll]);
+end;
+
 { protected TRootItem.ExtractArguments
 
   Extracts the arguments from a file path. }
@@ -865,11 +887,8 @@ var
   PreparedFileName: string;
 
 begin
-  // Extract the file path only (without arguments)
-  PreparedFileName := ExtractPathToFile(FFilePath);
-
-  // Delete quote chars
-  PreparedFileName := StringReplace(PreparedFileName, '"', '', [rfReplaceAll]);
+  // Extract the file path only (without arguments and quote chars)
+  PreparedFileName := GetFilePath();
 
   // Variable has to be expanded?
   if (PreparedFileName[1] = '%') then
@@ -1354,9 +1373,9 @@ begin
 
     // Rewrite backup
     if (not FEnabled and FLnkFile.BackupExists()) then
-      FLnkFile.CreateBackup();
-      //TODO: Add check for not successfully created backup
-    
+      if not FLnkFile.CreateBackup() then
+        raise EStartupException.Create('Backup could not be created!');
+
     Result := True;
 
   except
@@ -1478,9 +1497,6 @@ end;
   Enables an TStartupUserItem object and returns True if successful. }
 
 function TStartupUserItem.Enable(): Boolean;
-var
-  Path, Arguments: string;
-
 begin
   try
     // Backup file exists?
@@ -1492,11 +1508,8 @@ begin
     end  //of begin
     else
       begin
-        Path := StringReplace(ExtractPathToFile(FFilePath), '"', '', [rfReplaceAll]);
-        Arguments := ExtractArguments(FFilePath);
-
         // Failed to create new .lnk file?
-        if not FLnkFile.WriteLnkFile(FLnkFile.FileName, Path, Arguments) then
+        if not FLnkFile.WriteLnkFile(FLnkFile.FileName, GetFilePath(), GetArguments()) then
           raise EStartupException.Create('Could not create .lnk file!');
       end;  //of if
 

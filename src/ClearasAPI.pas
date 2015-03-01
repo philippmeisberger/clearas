@@ -12,7 +12,7 @@ interface
 
 uses
   Windows, Classes, SysUtils, Registry, ShlObj, ActiveX, ComObj, CommCtrl,
-  Contnrs, OSUtils, LanguageFile, IniFileParser;
+  ShellAPI, Contnrs, OSUtils, LanguageFile, IniFileParser;
 
 const
   { Registry keys }
@@ -93,6 +93,9 @@ type
     FIndex: Word;
     FEnabled: Boolean;
     FName, FType, FFilePath: string;
+    function GetArguments(): string;
+    function GetFilePath(): string;
+    function GetIcon(): HICON;
   protected
     function ExtractArguments(const APath: string): string;
     function ExtractPathToFile(const APath: string): string;
@@ -109,8 +112,11 @@ type
     procedure OpenInRegEdit(); virtual;
     procedure OpenInExplorer(); virtual;
     { external }
+    property Arguments: string read GetArguments;
     property Enabled: Boolean read FEnabled;
     property FilePath: string read FFilePath write FFilePath;
+    property FilePathOnly: string read GetFilePath;
+    property Icon: HICON read GetIcon;
     property ItemIndex: Word read FIndex;
     property Name: string read FName write FName;
     property TypeOf: string read FType write FType;
@@ -785,6 +791,40 @@ begin
   FEnabled := AEnabled;
 end;
 
+{ private TRootItem.GetArguments
+
+  Returns the arguments of the item file path. }
+
+function TRootItem.GetArguments(): string;
+begin
+  Result := StringReplace(ExtractArguments(FFilePath), '"', '', [rfReplaceAll]);
+end;
+
+{ private TRootItem.GetFilePath
+
+  Returns only the file path (without arguments) of the item. }
+
+function TRootItem.GetFilePath(): string;
+begin
+  Result := StringReplace(ExtractPathToFile(FFilePath), '"', '', [rfReplaceAll]);
+end;
+
+{ private TRootItem.GetIcon
+
+  Returns the icon handle to the item file path. }
+
+function TRootItem.GetIcon(): HICON;
+var
+  FileInfo: SHFILEINFO;
+
+begin
+  if Succeeded(SHGetFileInfo(PChar(GetFilePath()), 0, FileInfo, SizeOf(FileInfo),
+    SHGFI_ICON or SHGFI_SMALLICON)) then
+    Result := FileInfo.hIcon
+  else
+    Result := 0;
+end;
+
 { protected TRootItem.ExtractArguments
 
   Extracts the arguments from a file path. }
@@ -863,23 +903,32 @@ end;
 procedure TRootItem.OpenInExplorer();
 var
   PreparedFileName: string;
+  Win64: Boolean;
 
 begin
-  // Extract the file path only (without arguments)
-  PreparedFileName := ExtractPathToFile(FFilePath);
-
-  // Delete quote chars
-  PreparedFileName := StringReplace(PreparedFileName, '"', '', [rfReplaceAll]);
+  // Extract the file path only (without arguments and quote chars)
+  PreparedFileName := GetFilePath();
 
   // Variable has to be expanded?
   if (PreparedFileName[1] = '%') then
     PreparedFileName := TOSUtils.ExpandEnvironmentVar(PreparedFileName);
+
+  // 64bit Windows?
+  Win64 := TOSUtils.IsWindows64();
+
+  // Deny WOW64 redirection only on 64bit Windows
+  if Win64 then
+    TOSUtils.Wow64FsRedirection(True);
 
   // Open file in explorer
   if ((PreparedFileName <> '') and FileExists(PreparedFileName)) then
     TOSUtils.ExecuteProgram('explorer.exe', '/select, '+ PreparedFileName)
   else
     raise EAbort.Create('File "'+ PreparedFileName +'" does not exist!');
+
+  // Allow WOW64 redirection only on 64bit Windows
+  if Win64 then
+    TOSUtils.Wow64FsRedirection(False);
 end;
 
 { public TRootItem.OpenInRegEdit
@@ -1478,9 +1527,6 @@ end;
   Enables an TStartupUserItem object and returns True if successful. }
 
 function TStartupUserItem.Enable(): Boolean;
-var
-  Path, Arguments: string;
-
 begin
   try
     // Backup file exists?
@@ -1492,11 +1538,8 @@ begin
     end  //of begin
     else
       begin
-        Path := StringReplace(ExtractPathToFile(FFilePath), '"', '', [rfReplaceAll]);
-        Arguments := ExtractArguments(FFilePath);
-
         // Failed to create new .lnk file?
-        if not FLnkFile.WriteLnkFile(FLnkFile.FileName, Path, Arguments) then
+        if not FLnkFile.WriteLnkFile(FLnkFile.FileName, GetFilePath(), GetArguments()) then
           raise EStartupException.Create('Could not create .lnk file!');
       end;  //of if
 

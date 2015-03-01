@@ -13,7 +13,7 @@ interface
 uses
   Windows, SysUtils, Classes, Controls, Forms, ComCtrls, StdCtrls, ExtCtrls,
   Dialogs, Menus, Graphics, ClearasAPI, ClearasInfo, LanguageFile, OSUtils,
-  Updater, AddDialogs, ClipBrd;
+  Updater, AddDialogs, ClipBrd, ImgList;
 
 type
   { TMain }
@@ -86,6 +86,8 @@ type
     mmRunOnce: TMenuItem;
     pmOpenRegedit: TMenuItem;
     pmOpenExplorer: TMenuItem;
+    mmShowIcons: TMenuItem;
+    IconList: TImageList;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -132,11 +134,11 @@ type
     procedure pmCopyLocationClick(Sender: TObject);
     procedure pmDeleteClick(Sender: TObject);
     procedure pmEditClick(Sender: TObject);
+    procedure pmOpenRegeditClick(Sender: TObject);
+    procedure pmOpenExplorerClick(Sender: TObject);
     procedure lCopy1MouseLeave(Sender: TObject);
     procedure lCopy1MouseEnter(Sender: TObject);
     procedure lCopy1Click(Sender: TObject);
-    procedure pmOpenRegeditClick(Sender: TObject);
-    procedure pmOpenExplorerClick(Sender: TObject);
   private
     FColumnToSort: Word;
     Startup: TStartupList;
@@ -408,6 +410,7 @@ begin
     mmOptimate.Caption := GetString(79);
     mmDate.Caption := GetString(80);
     mmRunOnce.Caption := GetString(81);
+    mmShowIcons.Caption := GetString(47);
     mmLang.Caption := GetString(25);
 
     // Help menu labels
@@ -595,6 +598,8 @@ end;
 procedure TMain.ShowStartupEntries(ATotalRefresh: Boolean = True);
 var
   i: Cardinal;
+  Icon: TIcon;
+  Win64: Boolean;
 
 begin
   if not Assigned(Startup) then
@@ -622,6 +627,14 @@ begin
     Startup.LoadAutostart(mmRunOnce.Checked);
   end;  //of begin
 
+  if mmShowIcons.Checked then
+    lwStartup.SmallImages := IconList
+  else
+    lwStartup.SmallImages := nil;
+
+  Icon := TIcon.Create;
+  Win64 := TOSUtils.IsWindows64();
+
   if (Startup.Count > 0) then
     // Print all information about startup entires
     for i := 0 to Startup.Count -1 do
@@ -635,7 +648,24 @@ begin
         // Show deactivation timestamp?
         if mmDate.Checked then
           SubItems.Append(Startup[i].Time);
+
+        // Show icon of program?
+        if mmShowIcons.Checked then
+        begin
+          // Deny WOW64 redirection only on 64bit Windows
+          if Win64 then
+            TOSUtils.Wow64FsRedirection(True);
+
+          // Get icon of program
+          Icon.Handle := Startup[i].Icon;
+          ImageIndex := IconList.AddIcon(Icon);
+
+          if Win64 then
+            TOSUtils.Wow64FsRedirection(False);
+        end;  //of begin
       end;  //of with
+
+  Icon.Free;
 
   // Refresh counter label
   RefreshStartupCounter();

@@ -734,6 +734,11 @@ object Main: TMain
         Caption = 'RunOnce-Eintr'#228'ge anzeigen'
         OnClick = mmRefreshClick
       end
+      object mmShowIcons: TMenuItem
+        AutoCheck = True
+        Caption = 'Symbole anzeigen'
+        OnClick = mmRefreshClick
+      end
       object N6: TMenuItem
         Caption = '-'
       end
@@ -785,5 +790,8 @@ object Main: TMain
         OnClick = mmInfoClick
       end
     end
+  end
+  object IconList: TImageList
+    Left = 432
   end
 end
