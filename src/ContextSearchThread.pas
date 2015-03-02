@@ -6,7 +6,7 @@
 {                                                                         }
 { *********************************************************************** }
 
-unit SearchThread;
+unit ContextSearchThread;
 
 interface
 

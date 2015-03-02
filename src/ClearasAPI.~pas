@@ -12,7 +12,7 @@ interface
 
 uses
   Windows, Classes, SysUtils, Registry, ShlObj, ActiveX, ComObj, CommCtrl,
-  Contnrs, OSUtils, LanguageFile, IniFileParser;
+  ShellAPI, Contnrs, OSUtils, LanguageFile, IniFileParser;
 
 const
   { Registry keys }
@@ -93,8 +93,9 @@ type
     FIndex: Word;
     FEnabled: Boolean;
     FName, FType, FFilePath: string;
-    function GetFilePath(): string;
     function GetArguments(): string;
+    function GetFilePath(): string;
+    function GetIcon(): HICON;
   protected
     function ExtractArguments(const APath: string): string;
     function ExtractPathToFile(const APath: string): string;
@@ -115,6 +116,7 @@ type
     property Enabled: Boolean read FEnabled;
     property FilePath: string read FFilePath write FFilePath;
     property FilePathOnly: string read GetFilePath;
+    property Icon: HICON read GetIcon;
     property ItemIndex: Word read FIndex;
     property Name: string read FName write FName;
     property TypeOf: string read FType write FType;
@@ -182,15 +184,21 @@ type
     function Disable(): Boolean; override;
     function Enable(): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
+    function GetFullKeyPath(): string; override;
     { external }
     property LnkFile: TLnkFile read FLnkFile write FLnkFile;
   end;
+
+  { Event }
+  TSearchEvent = procedure(Sender: TObject; ACount: Cardinal) of object;
 
   { TStartupList }
   TStartupList = class(TRootList)
   private
     FItem: TStartupListItem;
     FDeleteBackup: Boolean;
+    FOnSearchStart, FOnSearching: TSearchEvent;
+    FOnSearchFinish: TNotifyEvent;
     function Add(AItem: TStartupListItem): Word; virtual;
     function DelCircumflex(AName: string): string;
     function ItemAt(AIndex: Word): TStartupListItem;
@@ -224,6 +232,9 @@ type
     { external }
     property DeleteBackup: Boolean read FDeleteBackup write FDeleteBackup;
     property Items[AIndex: Word]: TStartupListItem read ItemAt; default;
+    property OnSearching: TSearchEvent read FOnSearching write FOnSearching;
+    property OnSearchStart: TSearchEvent read FOnSearchStart write FOnSearchStart;
+    property OnSearchFinish: TNotifyEvent read FOnSearchFinish write FOnSearchFinish;
     property Selected: TStartupListItem read FItem write FItem;
   end;
 
@@ -269,9 +280,6 @@ type
     function Enable(): Boolean; override;
   end;
 
-  { Event }
-  TSearchEvent = procedure(Sender: TThread; ACount: Cardinal) of object;
-
   { TContextList }
   TContextList = class(TRootList)
   private
@@ -305,15 +313,15 @@ type
     procedure LoadContextMenus();
     { external }
     property Items[AIndex: Word]: TContextListItem read ItemAt; default;
-    property Selected: TContextListItem read FItem write FItem;
     property OnSearching: TSearchEvent read FOnSearching write FOnSearching;
     property OnSearchStart: TSearchEvent read FOnSearchStart write FOnSearchStart;
     property OnSearchFinish: TNotifyEvent read FOnSearchFinish write FOnSearchFinish;
+    property Selected: TContextListItem read FItem write FItem;
   end;
 
 implementation
 
-uses StrUtils, SearchThread;
+uses StrUtils, ContextSearchThread, StartupSearchThread;
 
 { TLnkFile }
 
@@ -479,28 +487,35 @@ var
 begin
   Result := False;
 
-  if Succeeded(CoCreateInstance(CLSID_ShellLink, nil, CLSCTX_INPROC_SERVER,
-    IShellLink, ShellLink)) then
-  begin
-    PersistFile := ShellLink as IPersistFile;
+  try
+    CoInitialize(nil);
 
-    if Succeeded(PersistFile.Load(StringToOleStr(FFileName), STGM_READ)) then
-      with ShellLink do
-      begin
-        SetLength(Path, MAX_PATH + 1);
+    if Succeeded(CoCreateInstance(CLSID_ShellLink, nil, CLSCTX_INPROC_SERVER,
+      IShellLink, ShellLink)) then
+    begin
+      PersistFile := ShellLink as IPersistFile;
 
-        if Succeeded(GetPath(PChar(Path), MAX_PATH, FileInfo, SLR_ANY_MATCH)) then
+      if Succeeded(PersistFile.Load(StringToOleStr(FFileName), STGM_READ)) then
+        with ShellLink do
         begin
-          FExeFileName := PChar(Path);
-          SetLength(Arguments, MAX_PATH + 1);
+          SetLength(Path, MAX_PATH + 1);
 
-          if Succeeded(GetArguments(PChar(Arguments), MAX_PATH)) then
-            FArguments := PChar(Arguments);
+          if Succeeded(GetPath(PChar(Path), MAX_PATH, FileInfo, SLR_ANY_MATCH)) then
+          begin
+            FExeFileName := PChar(Path);
+            SetLength(Arguments, MAX_PATH + 1);
 
-          Result := True;
-        end;  //of begin
-      end; //of with
-  end;  //of begin
+            if Succeeded(GetArguments(PChar(Arguments), MAX_PATH)) then
+              FArguments := PChar(Arguments);
+
+            Result := True;
+          end;  //of begin
+        end; //of with
+    end;  //of begin
+
+  finally
+    CoUninitialize();
+  end;  //of try
 end;
 
 { public TLnkFile.WriteLnkFile
@@ -529,35 +544,42 @@ begin
   if (AFileName = '') or (AExeFileName = '') then
     raise EStartupException.Create('Arguments for .lnk file must not be empty!');
 
-  if Succeeded(CoCreateInstance(CLSID_ShellLink, nil, CLSCTX_inPROC_SERVER,
-    IID_IShellLinkA, ShellLink)) then
-  begin
-    // Set path to .exe
-    ShellLink.SetPath(PChar(AExeFileName));
+  try
+    CoInitialize(nil);
 
-    // Set arguments if specified
-    if (AArguments <> '') then
-      ShellLink.SetArguments(PChar(AArguments));
-
-    // Set working directory
-    ShellLink.SetWorkingDirectory(PChar(ExtractFilePath(AExeFileName)));
-
-    if Succeeded(ShellLink.QueryInterface(IPersistFile, PersistFile)) then
+    if Succeeded(CoCreateInstance(CLSID_ShellLink, nil, CLSCTX_inPROC_SERVER,
+      IID_IShellLinkA, ShellLink)) then
     begin
-      GetMem(Name, MAX_PATH * 2);
+      // Set path to .exe
+      ShellLink.SetPath(PChar(AExeFileName));
 
-      try
-        // Set up information
-        MultiByteToWideChar(CP_ACP, 0, PChar(AFileName), -1, Name, MAX_PATH);
+      // Set arguments if specified
+      if (AArguments <> '') then
+        ShellLink.SetArguments(PChar(AArguments));
 
-        // Save .lnk
-        Result := Succeeded(PersistFile.Save(Name, True));
+      // Set working directory
+      ShellLink.SetWorkingDirectory(PChar(ExtractFilePath(AExeFileName)));
 
-      finally
-        FreeMem(Name, MAX_PATH * 2);
-      end; //of finally
+      if Succeeded(ShellLink.QueryInterface(IPersistFile, PersistFile)) then
+      begin
+        GetMem(Name, MAX_PATH * 2);
+
+        try
+          // Set up information
+          MultiByteToWideChar(CP_ACP, 0, PChar(AFileName), -1, Name, MAX_PATH);
+
+          // Save .lnk
+          Result := Succeeded(PersistFile.Save(Name, True));
+
+        finally
+          FreeMem(Name, MAX_PATH * 2);
+        end; //of finally
+      end; //of begin
     end; //of begin
-  end; //of begin
+
+  finally
+    CoUninitialize();
+  end;  //of try
 end;
 
 
@@ -791,6 +813,15 @@ end;
 
 { private TRootItem.GetArguments
 
+  Returns the arguments of the item file path. }
+
+function TRootItem.GetArguments(): string;
+begin
+  Result := StringReplace(ExtractArguments(FFilePath), '"', '', [rfReplaceAll]);
+end;
+
+{ private TRootItem.GetFilePath
+
   Returns only the file path (without arguments) of the item. }
 
 function TRootItem.GetFilePath(): string;
@@ -798,13 +829,31 @@ begin
   Result := StringReplace(ExtractPathToFile(FFilePath), '"', '', [rfReplaceAll]);
 end;
 
-{ private TRootItem.GetArguments
+{ private TRootItem.GetIcon
 
-  Returns the arguments of the item file path. }
+  Returns the icon handle to the item file path. }
 
-function TRootItem.GetArguments(): string;
+function TRootItem.GetIcon(): HICON;
+var
+  FileInfo: SHFILEINFO;
+  Win64: Boolean;
+
 begin
-  Result := StringReplace(ExtractArguments(FFilePath), '"', '', [rfReplaceAll]);
+  Win64 := TOSUtils.IsWindows64();
+  
+  // Deny WOW64 redirection only on 64bit Windows
+  if Win64 then
+    TOSUtils.Wow64FsRedirection(True);
+
+  if Succeeded(SHGetFileInfo(PChar(GetFilePath()), 0, FileInfo, SizeOf(FileInfo),
+    SHGFI_ICON or SHGFI_SMALLICON)) then
+    Result := FileInfo.hIcon
+  else
+    Result := 0;
+
+  // Allow WOW64 redirection only on 64bit Windows
+  if Win64 then
+    TOSUtils.Wow64FsRedirection(False);
 end;
 
 { protected TRootItem.ExtractArguments
@@ -885,20 +934,32 @@ end;
 procedure TRootItem.OpenInExplorer();
 var
   PreparedFileName: string;
+  Win64: Boolean;
 
 begin
   // Extract the file path only (without arguments and quote chars)
   PreparedFileName := GetFilePath();
 
   // Variable has to be expanded?
-  if (PreparedFileName[1] = '%') then
+  if ((PreparedFileName <> '') and (PreparedFileName[1] = '%')) then
     PreparedFileName := TOSUtils.ExpandEnvironmentVar(PreparedFileName);
+
+  // 64bit Windows?
+  Win64 := TOSUtils.IsWindows64();
+
+  // Deny WOW64 redirection only on 64bit Windows
+  if Win64 then
+    TOSUtils.Wow64FsRedirection(True);
 
   // Open file in explorer
   if ((PreparedFileName <> '') and FileExists(PreparedFileName)) then
     TOSUtils.ExecuteProgram('explorer.exe', '/select, '+ PreparedFileName)
   else
     raise EAbort.Create('File "'+ PreparedFileName +'" does not exist!');
+
+  // Allow WOW64 redirection only on 64bit Windows
+  if Win64 then
+    TOSUtils.Wow64FsRedirection(False);
 end;
 
 { public TRootItem.OpenInRegEdit
@@ -1545,6 +1606,18 @@ begin
       raise EStartupException.Create('Could not create backup file!');
 end;
 
+{ public TStartupUserItem.GetFullKeyPath
+
+  Returns the file path of a TStartupUserItem. }
+
+function TStartupUserItem.GetFullKeyPath(): string;
+begin
+  if FEnabled then
+    Result := inherited GetFullKeyPath()
+  else
+    Result := FKeyPath;
+end;
+
 
 { TStartupList }
 
@@ -1788,7 +1861,6 @@ begin
     KeyPath := ALnkFile.FileName;
     FilePath := ALnkFile.FullPath;
     LnkFile := ALnkFile;
-    LnkFile.ReadLnkFile();
     Name := ExtractFileName(ALnkFile.FileName);
     Time := '';
     TypeOf := GetStartupUserType(AAllUsers);
@@ -2081,32 +2153,21 @@ end;
   Searches for startup items at different locations. }
 
 procedure TStartupList.LoadAutostart(AIncludeRunOnce: Boolean);
+var
+  StartupSearchThread: TStartupSearchThread;
+
 begin
-  LoadEnabled('HKLM', KEY_STARTUP);
+  // Init search thread
+  StartupSearchThread := TStartupSearchThread.Create(Self,
+    TOSUtils.IsWindows64(), AIncludeRunOnce);
 
-  // Load WOW6432 Registry key only on 64bit Windows
-  if TRegUtils.IsWindows64() then
-    LoadEnabled('HKLM', KEY_STARTUP32);
-
-  // Read RunOnce entries?
-  if AIncludeRunOnce then
+  with StartupSearchThread do
   begin
-    LoadEnabled('HKLM', KEY_RUNONCE);
-    LoadEnabled('HKCU', KEY_RUNONCE);
-
-    // Load WOW6432 Registry keys only on 64bit Windows
-    if TRegUtils.IsWindows64() then
-      begin
-        LoadEnabled('HKLM', KEY_RUNONCE32);
-        LoadEnabled('HKCU', KEY_RUNONCE32);
-      end;  //of begin
-  end;  //of begin
-
-  LoadEnabled('HKCU', KEY_STARTUP);
-  LoadEnabled(True);
-  LoadEnabled(False);
-  LoadDisabled(KEY_DEACT);
-  LoadDisabled(KEY_DEACT_FOLDER);
+    OnStart := FOnSearchStart;
+    OnSearching := FOnSearching;
+    OnFinish := FOnSearchFinish;
+    Resume;
+  end;  // of with
 end;
 
 { public TStartupList.LoadDisabled
@@ -2158,7 +2219,7 @@ begin
     GetLnkFileNames(List, AAllUsers);
 
     // Add every file to list
-    for i := 0 to List.Count -1 do
+    for i := 0 to List.Count - 1 do
     begin
       LnkFile := TLnkFile.Create(ExtractFileName(List[i]), AAllUsers);
       AddUserItemEnabled(LnkFile, AAllUsers);
@@ -2178,7 +2239,6 @@ var
   reg: TRegistry;
   List: TStringList;
   i: Integer;
-  FilePath: string;
 
 begin
   List := TStringList.Create;
@@ -2189,14 +2249,9 @@ begin
     reg.OpenKey(AKeyPath, True);
     reg.GetValueNames(List);
 
-    for i := 0 to List.Count -1 do
-    begin
-      // Read path to .exe
-      FilePath := reg.ReadString(List[i]);
-
-      // Add to list
-      AddItemEnabled(ARootKey, AKeyPath, List[i], FilePath);
-    end;  //of for
+    for i := 0 to List.Count - 1 do
+      // Read path to .exe and add item to list
+      AddItemEnabled(ARootKey, AKeyPath, List[i], reg.ReadString(List[i]));
 
   finally
     reg.Free;

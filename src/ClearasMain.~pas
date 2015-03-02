@@ -148,9 +148,12 @@ type
     procedure AfterUpdate(Sender: TObject; ADownloadedFileName: string);
     procedure BeforeUpdate(Sender: TObject; const ANewBuild: Cardinal);
     function CreateStartupUserBackup(): Boolean;
-    procedure OnSearchProgress(Sender: TThread; AWorkCount: Cardinal);
-    procedure OnSearchStart(Sender: TThread; AWorkCountMax: Cardinal);
-    procedure OnSearchEnd(Sender: TObject);
+    procedure OnContextSearchProgress(Sender: TObject; AWorkCount: Cardinal);
+    procedure OnContextSearchStart(Sender: TObject; AWorkCountMax: Cardinal);
+    procedure OnContextSearchEnd(Sender: TObject);
+    procedure OnStartupSearchProgress(Sender: TObject; AWorkCount: Cardinal);
+    procedure OnStartupSearchStart(Sender: TObject; AWorkCountMax: Cardinal);
+    procedure OnStartupSearchEnd(Sender: TObject);
     procedure RefreshContextCounter();
     procedure RefreshStartupCounter();
     procedure SetLanguage(Sender: TObject);
@@ -327,36 +330,64 @@ begin
   end;  //of try
 end;
 
-{ private TMain.OnSearchProgress
+{ private TMain.OnContextSearchProgress
 
   Event that is called when search is in progress. }
 
-procedure TMain.OnSearchProgress(Sender: TThread; AWorkCount: Cardinal);
+procedure TMain.OnContextSearchProgress(Sender: TObject; AWorkCount: Cardinal);
 begin
   pbLoad.Position := AWorkCount;
 end;
 
-{ private TMain.OnSearchProgress
+{ private TMain.OnContextSearchStart
 
   Event that is called when search starts. }
 
-procedure TMain.OnSearchStart(Sender: TThread; AWorkCountMax: Cardinal);
+procedure TMain.OnContextSearchStart(Sender: TObject; AWorkCountMax: Cardinal);
 begin
   pbLoad.Visible := True;
   pbLoad.Max := AWorkCountMax;
   lwContext.Cursor := crHourGlass;
 end;
 
-{ private TMain.OnSearchProgress
+{ private TMain.OnContextSearchEnd
 
   Event that is called when search ends. }
 
-procedure TMain.OnSearchEnd(Sender: TObject);
+procedure TMain.OnContextSearchEnd(Sender: TObject);
 begin
   pbLoad.Visible := False;
   pbLoad.Position := 0;
   lwContext.Cursor := crDefault;
   ShowContextMenuEntries(False);
+end;
+
+{ private TMain.OnContextSearchProgress
+
+  Event that is called when search is in progress. }
+
+procedure TMain.OnStartupSearchProgress(Sender: TObject; AWorkCount: Cardinal);
+begin
+  //RefreshStartupCounter();
+end;
+
+{ private TMain.OnContextSearchStart
+
+  Event that is called when search starts. }
+
+procedure TMain.OnStartupSearchStart(Sender: TObject; AWorkCountMax: Cardinal);
+begin
+  lwStartup.Cursor := crHourGlass;
+end;
+
+{ private TMain.OnContextSearchEnd
+
+  Event that is called when search ends. }
+
+procedure TMain.OnStartupSearchEnd(Sender: TObject);
+begin
+  lwStartup.Cursor := crDefault;
+  ShowStartupEntries(False);
 end;
 
 { private TMain.RefreshContextCounter
@@ -410,6 +441,7 @@ begin
     mmOptimate.Caption := GetString(79);
     mmDate.Caption := GetString(80);
     mmRunOnce.Caption := GetString(81);
+    mmShowIcons.Caption := GetString(47);
     mmLang.Caption := GetString(25);
 
     // Help menu labels
@@ -499,9 +531,9 @@ begin
     if cbExpert.Checked then
     begin
       // Link search events
-      Context.OnSearchStart := OnSearchStart;
-      Context.OnSearching := OnSearchProgress;
-      Context.OnSearchFinish := OnSearchEnd;
+      Context.OnSearchStart := OnContextSearchStart;
+      Context.OnSearching := OnContextSearchProgress;
+      Context.OnSearchFinish := OnContextSearchEnd;
 
       // Start the expert search in a thread
       Context.LoadContextmenu();
@@ -598,7 +630,6 @@ procedure TMain.ShowStartupEntries(ATotalRefresh: Boolean = True);
 var
   i: Cardinal;
   Icon: TIcon;
-  Win64: Boolean;
 
 begin
   if not Assigned(Startup) then
@@ -622,17 +653,23 @@ begin
     // Clears all data
     Startup.Clear();
 
-    // Load autostart with or without special RunOnce entires
+    // Link search events
+    Startup.OnSearchStart := OnStartupSearchStart;
+    Startup.OnSearching := OnStartupSearchProgress;
+    Startup.OnSearchFinish := OnStartupSearchEnd;
+
+    // Load autostart with or without special RunOnce entries
     Startup.LoadAutostart(mmRunOnce.Checked);
   end;  //of begin
 
+  IconList.Clear;
+  
   if mmShowIcons.Checked then
     lwStartup.SmallImages := IconList
   else
     lwStartup.SmallImages := nil;
 
   Icon := TIcon.Create;
-  Win64 := TOSUtils.IsWindows64();
 
   if (Startup.Count > 0) then
     // Print all information about startup entires
@@ -651,16 +688,9 @@ begin
         // Show icon of program?
         if mmShowIcons.Checked then
         begin
-          // Deny WOW64 redirection only on 64bit Windows
-          if Win64 then
-            TOSUtils.Wow64FsRedirection(True);
-
           // Get icon of program
           Icon.Handle := Startup[i].Icon;
           ImageIndex := IconList.AddIcon(Icon);
-
-          if Win64 then
-            TOSUtils.Wow64FsRedirection(False);
         end;  //of begin
       end;  //of with
 

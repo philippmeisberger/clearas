@@ -284,7 +284,7 @@ object Main: TMain
     Left = 0
     Top = 0
     Width = 541
-    Height = 307
+    Height = 308
     ActivePage = tsStartup
     Anchors = [akLeft, akTop, akRight, akBottom]
     TabOrder = 0
@@ -293,7 +293,7 @@ object Main: TMain
       Caption = 'Autostart'
       DesignSize = (
         533
-        278)
+        279)
       object lStartup: TLabel
         Left = 21
         Top = 32
@@ -305,7 +305,7 @@ object Main: TMain
       end
       object lCopy1: TLabel
         Left = 212
-        Top = 262
+        Top = 263
         Width = 112
         Height = 14
         Hint = 'Zur Website'
@@ -342,7 +342,7 @@ object Main: TMain
         Left = 21
         Top = 56
         Width = 396
-        Height = 195
+        Height = 196
         Anchors = [akLeft, akTop, akRight, akBottom]
         Columns = <
           item
@@ -444,10 +444,10 @@ object Main: TMain
       ImageIndex = 1
       DesignSize = (
         533
-        278)
+        279)
       object lCopy2: TLabel
         Left = 212
-        Top = 262
+        Top = 263
         Width = 112
         Height = 14
         Hint = 'Zur Website'
@@ -515,7 +515,7 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'beenden'
+        Caption = 'Beenden'
         Default = True
         TabOrder = 5
         OnClick = bCloseStartupClick
@@ -546,7 +546,7 @@ object Main: TMain
         Left = 21
         Top = 56
         Width = 396
-        Height = 195
+        Height = 196
         Anchors = [akLeft, akTop, akRight, akBottom]
         Columns = <
           item
@@ -589,7 +589,7 @@ object Main: TMain
       end
       object pbLoad: TProgressBar
         Left = 21
-        Top = 256
+        Top = 257
         Width = 150
         Height = 17
         Anchors = [akLeft, akBottom]
@@ -598,7 +598,7 @@ object Main: TMain
       end
       object cbExpert: TCheckBox
         Left = 404
-        Top = 256
+        Top = 257
         Width = 105
         Height = 17
         Anchors = [akRight, akBottom]
@@ -737,6 +737,7 @@ object Main: TMain
       object mmShowIcons: TMenuItem
         AutoCheck = True
         Caption = 'Symbole anzeigen'
+        Checked = True
         OnClick = mmRefreshClick
       end
       object N6: TMenuItem
