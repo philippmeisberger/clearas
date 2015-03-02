@@ -2999,10 +2999,16 @@ end;
 
 procedure TContextList.LoadContextMenus();
 begin
+  if Assigned(FOnSearchStart) then
+    FOnSearchStart(Self, 1);
+
   LoadContextmenu('Directory');
   LoadContextmenu('Folder');
   LoadContextmenu('*');
   LoadContextmenu('Drive');
+
+  if Assigned(FOnSearchFinish) then
+    FOnSearchFinish(Self);
 end;
 
 end.

@@ -157,9 +157,9 @@ type
     procedure RefreshContextCounter();
     procedure RefreshStartupCounter();
     procedure SetLanguage(Sender: TObject);
-    procedure ShowContextMenuEntries(ATotalRefresh: Boolean = True);
     function ShowRegistryExportDialog(): Boolean;
-    procedure ShowStartupEntries(ATotalRefresh: Boolean = True);
+    procedure LoadContextMenuEntries(ATotalRefresh: Boolean = True);
+    procedure LoadStartupEntries(ATotalRefresh: Boolean = True);
   end;
 
 var
@@ -190,7 +190,24 @@ begin
 
   // Init Clearas instances
   Startup := TStartupList.Create;
+
+  // Link search events
+  with Startup do
+  begin
+    Startup.OnSearchStart := OnStartupSearchStart;
+    Startup.OnSearching := OnStartupSearchProgress;
+    Startup.OnSearchFinish := OnStartupSearchEnd;
+  end;  //of with
+
   Context := TContextList.Create;
+
+  // Link search events
+  with Context do
+  begin
+    Context.OnSearchStart := OnContextSearchStart;
+    Context.OnSearching := OnContextSearchProgress;
+    Context.OnSearchFinish := OnContextSearchEnd;
+  end;  //of with
 
   // Set title
   Caption := Application.Title + TOSUtils.GetArchitecture();
@@ -239,14 +256,14 @@ begin
     Exit;
   end;  //of if
 
-  //"Deaktivierungsdatum" nur ab Vista
+  // Show "date of deactivation" only on Vista and later
   mmDate.Enabled := newWindows;
 
-  //Pfad in Kontextmenü aktualisieren
+  // Update Clearas recycle bin context menu entry
   mmContext.Checked := TRegUtils.UpdateContextPath(FLang);
 
-  // Auslesen
-  ShowStartupEntries();
+  // Load autostart
+  LoadStartupEntries();
 end;
 
 { private TMain.AfterUpdate
@@ -348,6 +365,10 @@ begin
   pbLoad.Visible := True;
   pbLoad.Max := AWorkCountMax;
   lwContext.Cursor := crHourGlass;
+
+  // Clear all data
+  lwContext.Clear;
+  Context.Clear;
 end;
 
 { private TMain.OnContextSearchEnd
@@ -355,11 +376,31 @@ end;
   Event that is called when search ends. }
 
 procedure TMain.OnContextSearchEnd(Sender: TObject);
+var
+  i: Integer;
+
 begin
+  // Print all information about context menu entires
+  for i := 0 to Context.Count -1 do
+    with lwContext.Items.Add do
+    begin
+      Caption := Context[i].GetStatus(FLang);
+
+      // Show name or caption of item?
+      if (Context[i].Caption <> '') then
+        SubItems.Append(Context[i].Caption)
+      else
+        SubItems.Append(Context[i].Name);
+
+      SubItems.Append(Context[i].Location);
+      SubItems.Append(Context[i].TypeOf);
+    end; //of with
+
+  // Refresh counter label
+  RefreshContextCounter();
   pbLoad.Visible := False;
   pbLoad.Position := 0;
   lwContext.Cursor := crDefault;
-  ShowContextMenuEntries(False);
 end;
 
 { private TMain.OnContextSearchProgress
@@ -378,6 +419,10 @@ end;
 procedure TMain.OnStartupSearchStart(Sender: TObject; AWorkCountMax: Cardinal);
 begin
   lwStartup.Cursor := crHourGlass;
+
+  // Clear all data
+  lwStartup.Clear;
+  Startup.Clear;
 end;
 
 { private TMain.OnContextSearchEnd
@@ -385,9 +430,50 @@ end;
   Event that is called when search ends. }
 
 procedure TMain.OnStartupSearchEnd(Sender: TObject);
+var
+  Icon: TIcon;
+  i: Integer;
+
 begin
+  IconList.Clear;
+
+  if mmShowIcons.Checked then
+    lwStartup.SmallImages := IconList
+  else
+    lwStartup.SmallImages := nil;
+
+  Icon := TIcon.Create;
+
+  try
+    // Print all information about startup entires
+    for i := 0 to Startup.Count -1 do
+      with lwStartup.Items.Add do
+      begin
+        Caption := Startup[i].GetStatus(FLang);
+        SubItems.Append(Startup[i].Name);
+        SubItems.Append(Startup[i].FilePath);
+        SubItems.Append(Startup[i].TypeOf);
+
+        // Show deactivation timestamp?
+        if mmDate.Checked then
+          SubItems.Append(Startup[i].Time);
+
+        // Show icon of program?
+        if mmShowIcons.Checked then
+        begin
+          // Get icon of program
+          Icon.Handle := Startup[i].Icon;
+          ImageIndex := IconList.AddIcon(Icon);
+        end;  //of begin
+      end;  //of with
+
+  finally
+    Icon.Free;
+  end;  //of try
+
+  // Refresh counter label
+  RefreshStartupCounter();
   lwStartup.Cursor := crDefault;
-  ShowStartupEntries(False);
 end;
 
 { private TMain.RefreshContextCounter
@@ -493,25 +579,19 @@ begin
   end;  //of with
 
   // Update list labels
-  ShowStartupEntries(False);
-  ShowContextMenuEntries(False);
+  if Assigned(Startup) and Assigned(Context) then
+  begin
+    LoadStartupEntries(False);
+    LoadContextMenuEntries(False);
+  end;  //of begin
 end;
 
-{ private TMain.ShowContextMenuEntries
+{ private TMain.LoadContextMenuEntries
 
   Loads context menu entries and brings them into a TListView. }
 
-procedure TMain.ShowContextMenuEntries(ATotalRefresh: Boolean = True);
-var
-  i: Cardinal;
-
+procedure TMain.LoadContextMenuEntries(ATotalRefresh: Boolean = True);
 begin
-  if not Assigned(Context) then
-    Exit;
-
-  // Clears all visual data
-  lwContext.Clear();
-
   // Make a total refresh or just use cached items
   if ATotalRefresh then
   begin
@@ -524,45 +604,16 @@ begin
     bDeleteContextItem.Enabled := False;
     bExportContextItem.Enabled := False;
 
-    // Clear all data in backend
-    Context.Clear();
-
     // Use expert search mode?
     if cbExpert.Checked then
-    begin
-      // Link search events
-      Context.OnSearchStart := OnContextSearchStart;
-      Context.OnSearching := OnContextSearchProgress;
-      Context.OnSearchFinish := OnContextSearchEnd;
-
       // Start the expert search in a thread
-      Context.LoadContextmenu();
-      Exit;
-    end  //of begin
+      Context.LoadContextmenu()
     else
       // Use default search mode
       Context.LoadContextMenus();
-  end;  //of begin
-
-  if (Context.Count > 0) then
-    // Print all information about context menu entires
-    for i := 0 to Context.Count -1 do
-      with lwContext.Items.Add do
-      begin
-        Caption := Context[i].GetStatus(FLang);
-
-        // Show name or caption of item?
-        if (Context[i].Caption <> '') then
-          SubItems.Append(Context[i].Caption)
-        else
-          SubItems.Append(Context[i].Name);
-
-        SubItems.Append(Context[i].Location);
-        SubItems.Append(Context[i].TypeOf);
-      end; //of with
-
-  // Refresh counter label
-  RefreshContextCounter();
+  end  //of begin
+  else
+    OnContextSearchEnd(Self);
 end;
 
 { private TMain.ShowRegistryExportDialog
@@ -622,22 +673,12 @@ begin
   end;  //of try
 end;
 
-{ private TMain.ShowStartupEntries
+{ private TMain.LoadStartupEntries
 
   Loads startup entries and brings them into a TListView. }
 
-procedure TMain.ShowStartupEntries(ATotalRefresh: Boolean = True);
-var
-  i: Cardinal;
-  Icon: TIcon;
-
+procedure TMain.LoadStartupEntries(ATotalRefresh: Boolean = True);
 begin
-  if not Assigned(Startup) then
-    Exit;
-
-  // Clears all visual data
-  lwStartup.Clear;
-
   // Make a total refresh or just use cached items
   if ATotalRefresh then
   begin
@@ -650,57 +691,11 @@ begin
     bDeleteStartupItem.Enabled := False;
     bExportStartupItem.Enabled := False;
 
-    // Clears all data
-    Startup.Clear();
-
-    // Link search events
-    Startup.OnSearchStart := OnStartupSearchStart;
-    Startup.OnSearching := OnStartupSearchProgress;
-    Startup.OnSearchFinish := OnStartupSearchEnd;
-
     // Load autostart with or without special RunOnce entries
     Startup.LoadAutostart(mmRunOnce.Checked);
-  end;  //of begin
-
-  IconList.Clear;
-  
-  if mmShowIcons.Checked then
-    lwStartup.SmallImages := IconList
+  end  //of begin
   else
-    lwStartup.SmallImages := nil;
-
-  Icon := TIcon.Create;
-
-  try
-    if (Startup.Count > 0) then
-      // Print all information about startup entires
-      for i := 0 to Startup.Count -1 do
-        with lwStartup.Items.Add do
-        begin
-          Caption := Startup[i].GetStatus(FLang);
-          SubItems.Append(Startup[i].Name);
-          SubItems.Append(Startup[i].FilePath);
-          SubItems.Append(Startup[i].TypeOf);
-
-          // Show deactivation timestamp?
-          if mmDate.Checked then
-            SubItems.Append(Startup[i].Time);
-
-          // Show icon of program?
-          if mmShowIcons.Checked then
-          begin
-            // Get icon of program
-            Icon.Handle := Startup[i].Icon;
-            ImageIndex := IconList.AddIcon(Icon);
-          end;  //of begin
-        end;  //of with
-
-  finally
-    Icon.Free;
-  end;  //of try
-
-  // Refresh counter label
-  RefreshStartupCounter();
+    OnStartupSearchEnd(Self);
 end;
 
 { TMain.bExportContextClick
@@ -1334,6 +1329,7 @@ procedure TMain.pmEditClick(Sender: TObject);
 var
   Path, EnteredPath: string;
   SelectedList: TRootList;
+  Icon: TIcon;
 
 begin
   try
@@ -1361,7 +1357,23 @@ begin
 
     // Update file path in TListView
     if (PageControl.ActivePage = tsStartup) then
+    begin
       lwStartup.ItemFocused.SubItems[1] := EnteredPath;
+
+      // Update icon
+      if mmShowIcons.Checked then
+      begin
+        Icon := TIcon.Create;
+
+        try
+          Icon.Handle := Startup.Selected.Icon;
+          lwStartup.ItemFocused.ImageIndex := IconList.AddIcon(Icon);
+
+        finally
+          Icon.Free;
+        end;  //of try
+      end;  //of begin
+    end;  //of begin
 
   except
     on E: EAccessViolation do
@@ -1422,7 +1434,7 @@ begin
             FLang.MessageBox(FLang.Format(40, [OpenDialog.FileName]), mtWarning)
           else
             // Update TListView
-            ShowStartupEntries(False);
+            LoadStartupEntries(False);
         end  //of begin
         else
           begin
@@ -1445,7 +1457,7 @@ begin
                 FLang.MessageBox(FLang.Format(41, [OpenDialog.FileName]), mtWarning)
               else
                 // Update TListView
-                ShowContextMenuEntries(False);
+                LoadContextMenuEntries(False);
 
             finally
               List.Free;
@@ -1504,7 +1516,7 @@ begin
       lwStartup.Columns.Delete(4);
 
       // Refresh counter label
-      ShowStartupEntries(False);
+      LoadStartupEntries(False);
     end;  //of if
   end  //of begin
   else
@@ -1516,7 +1528,7 @@ begin
       lwStartup.Columns.Add.Caption := FLang.GetString(80);
 
       if (WindowState = wsMaximized) then
-        ShowStartupEntries(False);
+        LoadStartupEntries(False);
 
       // Animation to add column smoothly
       repeat
@@ -1537,7 +1549,7 @@ begin
       Constraints.MinWidth := Constraints.MinWidth + lwStartup.Column[4].Width;
 
       if not (WindowState = wsMaximized) then
-        ShowStartupEntries(False);
+        LoadStartupEntries(False);
     end;  //of if
 end;
 
@@ -1630,7 +1642,7 @@ begin
           FLang.MessageBox(41, mtWarning)
         else
           // Update TListView
-          ShowStartupEntries(False);
+          LoadStartupEntries(False);
 
     finally
       OpenDialog.Free;
@@ -1666,9 +1678,9 @@ end;
 procedure TMain.mmRefreshClick(Sender: TObject);
 begin
   if (PageControl.ActivePage = tsStartup) then
-    ShowStartupEntries()
+    LoadStartupEntries()
   else
-    ShowContextMenuEntries();
+    LoadContextMenuEntries();
 end;
 
 { TMain.mmStandardClick
@@ -1849,18 +1861,20 @@ begin
     mmImport.Visible := False;
     mmDate.Visible := False;
     mmRunOnce.Visible := False;
+    mmShowIcons.Visible := False;
     mmAdd.Caption := FLang.GetString(34);
     lwContextSelectItem(Sender, lwContext.ItemFocused, True);
 
     // Load context menu entries dynamically
     if (Context.Count = 0) then
-      ShowContextMenuEntries();
+      LoadContextMenuEntries();
   end  //of begin
   else
     begin
       mmImport.Visible := True;
       mmDate.Visible := True;
       mmRunOnce.Visible := True;
+      mmShowIcons.Visible := True;
       mmAdd.Caption := FLang.GetString(69);
       lwStartupSelectItem(Sender, lwStartup.ItemFocused, True);
     end;  //of if
@@ -1872,7 +1886,7 @@ end;
 
 procedure TMain.cbExpertClick(Sender: TObject);
 begin
-  ShowContextMenuEntries();
+  LoadContextMenuEntries();
 end;
 
 { TMain.bCloseClick

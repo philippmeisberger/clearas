@@ -1613,9 +1613,9 @@ end;
 function TStartupUserItem.GetFullKeyPath(): string;
 begin
   if FEnabled then
-    Result := inherited GetFullKeyPath()
+    Result := FKeyPath
   else
-    Result := FKeyPath;
+    Result := inherited GetFullKeyPath()
 end;
 
 
