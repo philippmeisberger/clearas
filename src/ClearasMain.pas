@@ -120,6 +120,7 @@ type
     procedure mmExportClick(Sender: TObject);
     procedure mmImportClick(Sender: TObject);
     procedure mmRefreshClick(Sender: TObject);
+    procedure mmShowIconsClick(Sender: TObject);
     procedure mmGerClick(Sender: TObject);
     procedure mmEngClick(Sender: TObject);
     procedure mmFraClick(Sender: TObject);
@@ -139,6 +140,7 @@ type
     procedure lCopy1MouseLeave(Sender: TObject);
     procedure lCopy1MouseEnter(Sender: TObject);
     procedure lCopy1Click(Sender: TObject);
+
   private
     FColumnToSort: Word;
     Startup: TStartupList;
@@ -365,10 +367,6 @@ begin
   pbLoad.Visible := True;
   pbLoad.Max := AWorkCountMax;
   lwContext.Cursor := crHourGlass;
-
-  // Clear all data
-  lwContext.Clear;
-  Context.Clear;
 end;
 
 { private TMain.OnContextSearchEnd
@@ -419,10 +417,6 @@ end;
 procedure TMain.OnStartupSearchStart(Sender: TObject; AWorkCountMax: Cardinal);
 begin
   lwStartup.Cursor := crHourGlass;
-
-  // Clear all data
-  lwStartup.Clear;
-  Startup.Clear;
 end;
 
 { private TMain.OnContextSearchEnd
@@ -499,6 +493,9 @@ end;
   Updates all component captions with new language text. }
 
 procedure TMain.SetLanguage(Sender: TObject);
+var
+  i: Integer;
+
 begin
   with FLang do
   begin
@@ -581,8 +578,11 @@ begin
   // Update list labels
   if Assigned(Startup) and Assigned(Context) then
   begin
-    LoadStartupEntries(False);
-    LoadContextMenuEntries(False);
+    for i := 0 to Startup.Count - 1 do
+      lwStartup.Items[i].Caption := Startup[i].GetStatus(FLang);
+
+    for i := 0 to Context.Count - 1 do
+      lwContext.Items[i].Caption := Context[i].GetStatus(FLang);
   end;  //of begin
 end;
 
@@ -592,11 +592,17 @@ end;
 
 procedure TMain.LoadContextMenuEntries(ATotalRefresh: Boolean = True);
 begin
+  // Clear all visual data
+  lwContext.Clear;
+
   // Make a total refresh or just use cached items
   if ATotalRefresh then
   begin
     // Clear selected item
     Context.Selected := nil;
+
+    // Clear data in backend
+    Context.Clear;
 
     // Disable VCL buttons
     bDisableContextItem.Enabled := False;
@@ -679,11 +685,17 @@ end;
 
 procedure TMain.LoadStartupEntries(ATotalRefresh: Boolean = True);
 begin
+  // Clear all visual data
+  lwStartup.Clear;
+
   // Make a total refresh or just use cached items
   if ATotalRefresh then
   begin
     // Clear selected item
     Startup.Selected := nil;
+
+    // Clear data in backend
+    Startup.Clear;
 
     // Disable VCL buttons
     bDisableStartupItem.Enabled := False;
@@ -1673,7 +1685,7 @@ end;
 
 { TMain.mmRefreshClick
 
-  MainMenu entry to refreshe the current shown TListView. }
+  MainMenu entry to refresh the current shown TListView. }
 
 procedure TMain.mmRefreshClick(Sender: TObject);
 begin
@@ -1681,6 +1693,18 @@ begin
     LoadStartupEntries()
   else
     LoadContextMenuEntries();
+end;
+
+{ TMain.mmShowIconsClick
+
+  MainMenu entry to show/hide program icons in TListView. }
+
+procedure TMain.mmShowIconsClick(Sender: TObject);
+begin
+  if (PageControl.ActivePage = tsStartup) then
+    LoadStartupEntries(False)
+  else
+    LoadContextMenuEntries(False);
 end;
 
 { TMain.mmStandardClick

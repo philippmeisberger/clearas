@@ -7,6 +7,7 @@ History
 Version 4.0  [10.03.15]
 
 - API Version 4.1
+- Multi-Threaded
 - Exception Handling stark verbessert
 - Änderungen im Popup Menü:
   - Neue Funktion "Pfad bearbeiten" hinzugefügt
@@ -27,6 +28,9 @@ Version 4.0  [10.03.15]
   - "Expertenmodus" verbessert:
     - Suche beschleunigt
     - Mehr Ergebnisse
+- Änderungen auf der Seite "Autostart":
+  - Menü-Eintrag "Symbole anzeigen" hinzugefügt
+  - Icons von Programmen können werden nun standardmäßig angezeigt
 - Auswählen von Elementen in Autostart und Kontextmenü Listen beschleunigt
 - "Backup importieren" verbessert
 - Registry Dateiexport verbessert (eigener Parser)

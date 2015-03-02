@@ -415,6 +415,7 @@ object Info: TInfo
           'Version 4.0  [10.03.15]'
           ''
           '- API Version 4.1'
+          '- Multi-Threaded'
           '- Exception Handling stark verbessert'
           '- '#196'nderungen im Popup Men'#252':'
           '  - Neue Funktion "Pfad bearbeiten" hinzugef'#252'gt'
@@ -446,6 +447,11 @@ object Info: TInfo
           '  - "Expertenmodus" verbessert:'
           '    - Suche beschleunigt'
           '    - Mehr Ergebnisse'
+          '- '#196'nderungen auf der Seite "Autostart":'
+          '  - Men'#252'-Eintrag "Symbole anzeigen" hinzugef'#252'gt'
+          
+            '  - Icons von Programmen k'#246'nnen werden nun standardm'#228#223'ig angezei' +
+            'gt'
           
             '- Ausw'#228'hlen von Elementen in Autostart und Kontextmen'#252' Listen be' +
             'schleunigt'

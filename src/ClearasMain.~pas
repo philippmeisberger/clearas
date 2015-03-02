@@ -376,9 +376,6 @@ var
   i: Integer;
 
 begin
-  // Clear data
-  lwContext.Clear;
-
   // Print all information about context menu entires
   for i := 0 to Context.Count -1 do
     with lwContext.Items.Add do
@@ -430,10 +427,8 @@ var
   i: Integer;
 
 begin
-  // Clear data
-  lwStartup.Clear;
   IconList.Clear;
-  
+
   if mmShowIcons.Checked then
     lwStartup.SmallImages := IconList
   else
@@ -496,6 +491,9 @@ end;
   Updates all component captions with new language text. }
 
 procedure TMain.SetLanguage(Sender: TObject);
+var
+  i: Integer;
+
 begin
   with FLang do
   begin
@@ -578,8 +576,11 @@ begin
   // Update list labels
   if Assigned(Startup) and Assigned(Context) then
   begin
-    LoadStartupEntries(False);
-    LoadContextMenuEntries(False);
+    for i := 0 to Startup.Count - 1 do
+      lwStartup.Items[i].Caption := Startup[i].GetStatus(FLang);
+
+    for i := 0 to Context.Count - 1 do
+      lwContext.Items[i].Caption := Context[i].GetStatus(FLang);
   end;  //of begin
 end;
 
@@ -589,11 +590,17 @@ end;
 
 procedure TMain.LoadContextMenuEntries(ATotalRefresh: Boolean = True);
 begin
+  // Clear all visual data
+  lwContext.Clear;
+
   // Make a total refresh or just use cached items
   if ATotalRefresh then
   begin
     // Clear selected item
     Context.Selected := nil;
+
+    // Clear data in backend
+    Context.Clear;
 
     // Disable VCL buttons
     bDisableContextItem.Enabled := False;
@@ -676,11 +683,17 @@ end;
 
 procedure TMain.LoadStartupEntries(ATotalRefresh: Boolean = True);
 begin
+  // Clear all visual data
+  lwStartup.Clear;
+
   // Make a total refresh or just use cached items
   if ATotalRefresh then
   begin
     // Clear selected item
     Startup.Selected := nil;
+
+    // Clear data in backend
+    Startup.Clear;
 
     // Disable VCL buttons
     bDisableStartupItem.Enabled := False;
