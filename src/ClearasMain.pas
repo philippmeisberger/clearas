@@ -140,7 +140,6 @@ type
     procedure lCopy1MouseLeave(Sender: TObject);
     procedure lCopy1MouseEnter(Sender: TObject);
     procedure lCopy1Click(Sender: TObject);
-
   private
     FColumnToSort: Word;
     Startup: TStartupList;
@@ -153,7 +152,6 @@ type
     procedure OnContextSearchProgress(Sender: TObject; AWorkCount: Cardinal);
     procedure OnContextSearchStart(Sender: TObject; AWorkCountMax: Cardinal);
     procedure OnContextSearchEnd(Sender: TObject);
-    procedure OnStartupSearchProgress(Sender: TObject; AWorkCount: Cardinal);
     procedure OnStartupSearchStart(Sender: TObject; AWorkCountMax: Cardinal);
     procedure OnStartupSearchEnd(Sender: TObject);
     procedure RefreshContextCounter();
@@ -197,7 +195,6 @@ begin
   with Startup do
   begin
     Startup.OnSearchStart := OnStartupSearchStart;
-    Startup.OnSearching := OnStartupSearchProgress;
     Startup.OnSearchFinish := OnStartupSearchEnd;
   end;  //of with
 
@@ -364,6 +361,8 @@ end;
 
 procedure TMain.OnContextSearchStart(Sender: TObject; AWorkCountMax: Cardinal);
 begin
+  mmView.Enabled := False;
+  mmFile.Enabled := False;
   pbLoad.Visible := True;
   pbLoad.Max := AWorkCountMax;
   lwContext.Cursor := crHourGlass;
@@ -379,7 +378,7 @@ var
 
 begin
   // Print all information about context menu entires
-  for i := 0 to Context.Count -1 do
+  for i := 0 to Context.Count - 1 do
     with lwContext.Items.Add do
     begin
       Caption := Context[i].GetStatus(FLang);
@@ -399,27 +398,22 @@ begin
   pbLoad.Visible := False;
   pbLoad.Position := 0;
   lwContext.Cursor := crDefault;
+  mmView.Enabled := True;
+  mmFile.Enabled := True;
 end;
 
-{ private TMain.OnContextSearchProgress
-
-  Event that is called when search is in progress. }
-
-procedure TMain.OnStartupSearchProgress(Sender: TObject; AWorkCount: Cardinal);
-begin
-  //RefreshStartupCounter();
-end;
-
-{ private TMain.OnContextSearchStart
+{ private TMain.OnStartupSearchStart
 
   Event that is called when search starts. }
 
 procedure TMain.OnStartupSearchStart(Sender: TObject; AWorkCountMax: Cardinal);
 begin
+  mmView.Enabled := False;
+  mmFile.Enabled := False;
   lwStartup.Cursor := crHourGlass;
 end;
 
-{ private TMain.OnContextSearchEnd
+{ private TMain.OnStartupSearchEnd
 
   Event that is called when search ends. }
 
@@ -440,7 +434,7 @@ begin
 
   try
     // Print all information about startup entires
-    for i := 0 to Startup.Count -1 do
+    for i := 0 to Startup.Count - 1 do
       with lwStartup.Items.Add do
       begin
         Caption := Startup[i].GetStatus(FLang);
@@ -468,6 +462,8 @@ begin
   // Refresh counter label
   RefreshStartupCounter();
   lwStartup.Cursor := crDefault;
+  mmView.Enabled := True;
+  mmFile.Enabled := True;
 end;
 
 { private TMain.RefreshContextCounter
@@ -622,6 +618,37 @@ begin
     OnContextSearchEnd(Self);
 end;
 
+{ private TMain.LoadStartupEntries
+
+  Loads startup entries and brings them into a TListView. }
+
+procedure TMain.LoadStartupEntries(ATotalRefresh: Boolean = True);
+begin
+  // Clear all visual data
+  lwStartup.Clear;
+
+  // Make a total refresh or just use cached items
+  if ATotalRefresh then
+  begin
+    // Clear selected item
+    Startup.Selected := nil;
+
+    // Clear data in backend
+    Startup.Clear;
+
+    // Disable VCL buttons
+    bDisableStartupItem.Enabled := False;
+    bEnableStartupItem.Enabled := False;
+    bDeleteStartupItem.Enabled := False;
+    bExportStartupItem.Enabled := False;
+
+    // Load autostart with or without special RunOnce entries
+    Startup.LoadAutostart(mmRunOnce.Checked);
+  end  //of begin
+  else
+    OnStartupSearchEnd(Self);
+end;
+
 { private TMain.ShowRegistryExportDialog
 
   Shows a .reg file export dialog. }
@@ -677,37 +704,6 @@ begin
     on E: Exception do
       FLang.MessageBox(FLang.GetString([95, 18, NEW_LINE]) + E.Message, mtError);
   end;  //of try
-end;
-
-{ private TMain.LoadStartupEntries
-
-  Loads startup entries and brings them into a TListView. }
-
-procedure TMain.LoadStartupEntries(ATotalRefresh: Boolean = True);
-begin
-  // Clear all visual data
-  lwStartup.Clear;
-
-  // Make a total refresh or just use cached items
-  if ATotalRefresh then
-  begin
-    // Clear selected item
-    Startup.Selected := nil;
-
-    // Clear data in backend
-    Startup.Clear;
-
-    // Disable VCL buttons
-    bDisableStartupItem.Enabled := False;
-    bEnableStartupItem.Enabled := False;
-    bDeleteStartupItem.Enabled := False;
-    bExportStartupItem.Enabled := False;
-
-    // Load autostart with or without special RunOnce entries
-    Startup.LoadAutostart(mmRunOnce.Checked);
-  end  //of begin
-  else
-    OnStartupSearchEnd(Self);
 end;
 
 { TMain.bExportContextClick

@@ -11,7 +11,7 @@ unit ContextSearchThread;
 interface
 
 uses
-  Windows, Classes, Registry, OSUtils, ClearasAPI;
+  Windows, Classes, Registry, OSUtils, SyncObjs, ClearasAPI;
 
 type
   { TContextMenuSearchThread }
@@ -22,6 +22,7 @@ type
     FContextList: TContextList;
     FOnStart, FOnSearching: TSearchEvent;
     FOnFinish: TNotifyEvent;
+    FLock: TCriticalSection;
     procedure DoNotifyOnFinish();
     procedure DoNotifyOnStart();
     procedure DoNotifyOnSearching();
@@ -29,7 +30,7 @@ type
   protected
     procedure Execute; override;
   public
-    constructor Create(AContextList: TContextList);
+    constructor Create(AContextList: TContextList; ALock: TCriticalSection);
     destructor Destroy(); override;
     { external }
     property OnSearching: TSearchEvent read FOnSearching write FOnSearching;
@@ -47,11 +48,13 @@ uses StrUtils;
 
   Constructor for creating a TContextMenuSearchThread instance. }
 
-constructor TContextMenuSearchThread.Create(AContextList: TContextList);
+constructor TContextMenuSearchThread.Create(AContextList: TContextList;
+  ALock: TCriticalSection);
 begin
   inherited Create(True);
   FreeOnTerminate := True;
   FContextList := AContextList;
+  FLock := ALock;
 
   // Init Registry access with read-only
   FReg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));
@@ -145,6 +148,7 @@ var
   Hkcr: TStringList;
 
 begin
+  FLock.Acquire;
   Hkcr := TStringList.Create;
 
   try
@@ -157,7 +161,7 @@ begin
     // Notify start of search
     Synchronize(DoNotifyOnStart);
 
-    for i := 0 to Hkcr.Count -1 do
+    for i := 0 to Hkcr.Count - 1 do
     begin
       SearchSubkey(Hkcr[i], 'shell');
       Inc(FProgress);
@@ -171,6 +175,7 @@ begin
 
   finally
     Hkcr.Free;
+    FLock.Release;
   end;  //of try
 end;
 

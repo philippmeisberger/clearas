@@ -12,7 +12,7 @@ interface
 
 uses
   Windows, Classes, SysUtils, Registry, ShlObj, ActiveX, ComObj, CommCtrl,
-  ShellAPI, Contnrs, OSUtils, LanguageFile, IniFileParser;
+  ShellAPI, Contnrs, OSUtils, LanguageFile, IniFileParser, SyncObjs;
 
 const
   { Registry keys }
@@ -199,6 +199,7 @@ type
     FDeleteBackup: Boolean;
     FOnSearchStart, FOnSearching: TSearchEvent;
     FOnSearchFinish: TNotifyEvent;
+    FLock: TCriticalSection;
     function Add(AItem: TStartupListItem): Word; virtual;
     function DelCircumflex(AName: string): string;
     function ItemAt(AIndex: Word): TStartupListItem;
@@ -214,6 +215,7 @@ type
     function AddUserItemEnabled(ALnkFile: TLnkFile; AAllUsers: Boolean): Word;
   public
     constructor Create;
+    destructor Destroy; override;
     function AddProgram(AFilePath, AArguments: string;
       ADisplayedName: string = ''): Boolean;
     function BackupExists(): Boolean;
@@ -286,6 +288,7 @@ type
     FItem: TContextListItem;
     FOnSearchStart, FOnSearching: TSearchEvent;
     FOnSearchFinish: TNotifyEvent;
+    FLock: TCriticalSection;
     function Add(AItem: TContextListItem): Word; virtual;
     function FindDouble(AName, ALocation: string): Boolean;
     function ItemAt(AIndex: Word): TContextListItem;
@@ -298,6 +301,7 @@ type
       ASearchForShellItems: Boolean); overload;
   public
     constructor Create;
+    destructor Destroy; override;
     function AddEntry(const AFilePath, AArguments, ALocation,
       ADisplayedName: string): Boolean;
     procedure LoadContextmenu(); overload;
@@ -1629,6 +1633,17 @@ constructor TStartupList.Create;
 begin
   inherited Create;
   FDeleteBackup := True;
+  FLock := TCriticalSection.Create;
+end;
+
+{ public TStartupList.Destroy
+
+  Destructor for destroying a TStartupList instance. }
+
+destructor TStartupList.Destroy;
+begin
+  FLock.Free;
+  inherited Destroy;
 end;
 
 { private TStartupList.Add
@@ -2159,7 +2174,7 @@ var
 begin
   // Init search thread
   StartupSearchThread := TStartupSearchThread.Create(Self,
-    TOSUtils.IsWindows64(), AIncludeRunOnce);
+    TOSUtils.IsWindows64(), AIncludeRunOnce, FLock);
 
   with StartupSearchThread do
   begin
@@ -2578,6 +2593,17 @@ constructor TContextList.Create;
 begin
   inherited Create;
   FActCount := 0;
+  FLock := TCriticalSection.Create;
+end;
+
+{ public TContextList.Destroy
+
+  Destructor for destroying a TContextList instance. }
+
+destructor TContextList.Destroy;
+begin
+  FLock.Free;
+  inherited Destroy;
 end;
 
 { private TContextList.Add
@@ -2800,7 +2826,7 @@ var
 
 begin
   // Init search thread
-  SearchThread := TContextMenuSearchThread.Create(Self);
+  SearchThread := TContextMenuSearchThread.Create(Self, FLock);
 
   with SearchThread do
   begin

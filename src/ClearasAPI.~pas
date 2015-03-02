@@ -12,7 +12,7 @@ interface
 
 uses
   Windows, Classes, SysUtils, Registry, ShlObj, ActiveX, ComObj, CommCtrl,
-  ShellAPI, Contnrs, OSUtils, LanguageFile, IniFileParser;
+  ShellAPI, Contnrs, OSUtils, LanguageFile, IniFileParser, SyncObjs;
 
 const
   { Registry keys }
@@ -199,6 +199,7 @@ type
     FDeleteBackup: Boolean;
     FOnSearchStart, FOnSearching: TSearchEvent;
     FOnSearchFinish: TNotifyEvent;
+    FLock: TCriticalSection;
     function Add(AItem: TStartupListItem): Word; virtual;
     function DelCircumflex(AName: string): string;
     function ItemAt(AIndex: Word): TStartupListItem;
@@ -214,6 +215,7 @@ type
     function AddUserItemEnabled(ALnkFile: TLnkFile; AAllUsers: Boolean): Word;
   public
     constructor Create;
+    destructor Destroy; override;
     function AddProgram(AFilePath, AArguments: string;
       ADisplayedName: string = ''): Boolean;
     function BackupExists(): Boolean;
@@ -1629,6 +1631,17 @@ constructor TStartupList.Create;
 begin
   inherited Create;
   FDeleteBackup := True;
+  FLock := TCriticalSection.Create;
+end;
+
+{ public TStartupList.Destroy
+
+  Destructor for destroying a TStartupList instance. }
+
+destructor TStartupList.Destroy;
+begin
+  FLock.Free;
+  inherited Destroy;
 end;
 
 { private TStartupList.Add
@@ -2159,7 +2172,7 @@ var
 begin
   // Init search thread
   StartupSearchThread := TStartupSearchThread.Create(Self,
-    TOSUtils.IsWindows64(), AIncludeRunOnce);
+    TOSUtils.IsWindows64(), AIncludeRunOnce, FLock);
 
   with StartupSearchThread do
   begin
@@ -2999,10 +3012,16 @@ end;
 
 procedure TContextList.LoadContextMenus();
 begin
+  if Assigned(FOnSearchStart) then
+    FOnSearchStart(Self, 1);
+
   LoadContextmenu('Directory');
   LoadContextmenu('Folder');
   LoadContextmenu('*');
   LoadContextmenu('Drive');
+
+  if Assigned(FOnSearchFinish) then
+    FOnSearchFinish(Self);
 end;
 
 end.

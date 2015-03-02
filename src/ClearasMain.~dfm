@@ -738,7 +738,7 @@ object Main: TMain
         AutoCheck = True
         Caption = 'Symbole anzeigen'
         Checked = True
-        OnClick = mmRefreshClick
+        OnClick = mmShowIconsClick
       end
       object N6: TMenuItem
         Caption = '-'
