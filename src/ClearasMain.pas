@@ -361,8 +361,9 @@ end;
 
 procedure TMain.OnContextSearchStart(Sender: TObject; AWorkCountMax: Cardinal);
 begin
-  mmView.Enabled := False;
-  mmFile.Enabled := False;
+  mmLang.Enabled := False;
+  mmAdd.Enabled := False;
+  mmExportList.Enabled := False;
   pbLoad.Visible := True;
   pbLoad.Max := AWorkCountMax;
   lwContext.Cursor := crHourGlass;
@@ -395,11 +396,14 @@ begin
 
   // Refresh counter label
   RefreshContextCounter();
+
+  // Update some VCL
   pbLoad.Visible := False;
   pbLoad.Position := 0;
   lwContext.Cursor := crDefault;
-  mmView.Enabled := True;
-  mmFile.Enabled := True;
+  mmLang.Enabled := True;
+  mmAdd.Enabled := True;
+  mmExportList.Enabled := True;
 end;
 
 { private TMain.OnStartupSearchStart
@@ -408,8 +412,10 @@ end;
 
 procedure TMain.OnStartupSearchStart(Sender: TObject; AWorkCountMax: Cardinal);
 begin
-  mmView.Enabled := False;
-  mmFile.Enabled := False;
+  mmLang.Enabled := False;
+  mmAdd.Enabled := False;
+  mmImport.Enabled := False;
+  mmExportList.Enabled := False;
   lwStartup.Cursor := crHourGlass;
 end;
 
@@ -462,8 +468,10 @@ begin
   // Refresh counter label
   RefreshStartupCounter();
   lwStartup.Cursor := crDefault;
-  mmView.Enabled := True;
-  mmFile.Enabled := True;
+  mmLang.Enabled := True;
+  mmAdd.Enabled := True;
+  mmImport.Enabled := True;
+  mmExportList.Enabled := True;
 end;
 
 { private TMain.RefreshContextCounter
@@ -594,12 +602,6 @@ begin
   // Make a total refresh or just use cached items
   if ATotalRefresh then
   begin
-    // Clear selected item
-    Context.Selected := nil;
-
-    // Clear data in backend
-    Context.Clear;
-
     // Disable VCL buttons
     bDisableContextItem.Enabled := False;
     bEnableContextItem.Enabled := False;
@@ -630,19 +632,13 @@ begin
   // Make a total refresh or just use cached items
   if ATotalRefresh then
   begin
-    // Clear selected item
-    Startup.Selected := nil;
-
-    // Clear data in backend
-    Startup.Clear;
-
     // Disable VCL buttons
     bDisableStartupItem.Enabled := False;
     bEnableStartupItem.Enabled := False;
     bDeleteStartupItem.Enabled := False;
     bExportStartupItem.Enabled := False;
 
-    // Load autostart with or without special RunOnce entries
+    // Load autostart with or without special RunOnce entries (threaded)
     Startup.LoadAutostart(mmRunOnce.Checked);
   end  //of begin
   else
@@ -1578,7 +1574,7 @@ end;
 
 { TMain.mmExportListClick
 
-  MainMenu entry to export the complete autostart as .reg file (for backup). }
+  MainMenu entry to export the complete autostart as .reg (backup) file. }
 
 procedure TMain.mmExportListClick(Sender: TObject);
 var

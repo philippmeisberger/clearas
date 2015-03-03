@@ -304,8 +304,6 @@ type
     destructor Destroy; override;
     function AddEntry(const AFilePath, AArguments, ALocation,
       ADisplayedName: string): Boolean;
-    procedure LoadContextmenu(); overload;
-    procedure LoadContextmenu(const ALocation: string); overload;
     function ChangeItemFilePath(const ANewFilePath: string): Boolean; override;
     function ChangeItemStatus(): Boolean; override;
     function DeleteItem(): Boolean; override;
@@ -314,6 +312,8 @@ type
     procedure ExportItem(const AFileName: string); override;
     procedure ExportList(const AFileName: string); override;
     function IndexOf(AName, ALocation: string): Integer; overload;
+    procedure LoadContextmenu(); overload;
+    procedure LoadContextmenu(const ALocation: string); overload;
     procedure LoadContextMenus();
     { external }
     property Items[AIndex: Word]: TContextListItem read ItemAt; default;
@@ -325,7 +325,7 @@ type
 
 implementation
 
-uses StrUtils, ContextSearchThread, StartupSearchThread;
+uses StrUtils, ContextMenuSearchThread, ContextSearchThread, StartupSearchThread;
 
 { TLnkFile }
 
@@ -2092,7 +2092,7 @@ end;
 
 procedure TStartupList.ExportList(const AFileName: string);
 var
-  i: Word;
+  i: Integer;
   RegFile: TRegistryFile;
   Item: TStartupListItem;
 
@@ -2101,7 +2101,7 @@ begin
   RegFile := TRegistryFile.Create(AFileName, True);
 
   try
-    for i := 0 to Count -1 do
+    for i := 0 to Count - 1 do
     begin
       Item := ItemAt(i);
       RegFile.ExportKey(TOSUtils.StrToHKey(Item.RootKey), Item.KeyPath, True);
@@ -2122,7 +2122,7 @@ end;
 function TStartupList.ImportBackup(const AFilePath: string): Boolean;
 var
   Name, Ext: string;
-  i: Word;
+  i: Integer;
   LnkFile: TLnkFile;
 
 begin
@@ -2150,7 +2150,7 @@ begin
       raise EStartupException.Create('Could not read backup file!');
 
     // File path already exists in another item?
-    for i := 0 to Count -1 do
+    for i := 0 to Count - 1 do
       if (ItemAt(i).FilePath = LnkFile.ExeFileName) then
         Exit;
 
@@ -2816,38 +2816,6 @@ begin
   end;  //of try
 end;
 
-{ public TContextList.LoadContextmenu
-
-  Searches for context menu entries and adds them to the list. }
-
-procedure TContextList.LoadContextmenu();
-var
-  SearchThread: TContextMenuSearchThread;
-
-begin
-  // Init search thread
-  SearchThread := TContextMenuSearchThread.Create(Self, FLock);
-
-  with SearchThread do
-  begin
-    OnStart := FOnSearchStart;
-    OnSearching := FOnSearching;
-    OnFinish := FOnSearchFinish;
-    Resume;
-  end;  // of with
-end;
-
-{ public TContextList.LoadContextmenu
-
-  Searches for Shell/ShellEx context menu entries in specific Registry key
-  and adds them to the list. }
-
-procedure TContextList.LoadContextmenu(const ALocation: string);
-begin
-  LoadContextmenu(ALocation, True);
-  LoadContextmenu(ALocation, False);
-end;
-
 { public TContextList.ChangeItemFilePath
 
   Changes the file path of an item. }
@@ -3019,22 +2987,58 @@ begin
   end;  //of for
 end;
 
+{ public TContextList.LoadContextmenu
+
+  Searches for context menu entries and adds them to the list. }
+
+procedure TContextList.LoadContextmenu();
+var
+  SearchThread: TContextMenuSearchThread;
+
+begin
+  // Init search thread
+  SearchThread := TContextMenuSearchThread.Create(Self, FLock);
+
+  with SearchThread do
+  begin
+    OnStart := FOnSearchStart;
+    OnSearching := FOnSearching;
+    OnFinish := FOnSearchFinish;
+    Resume;
+  end;  // of with
+end;
+
+{ public TContextList.LoadContextmenu
+
+  Searches for Shell/ShellEx context menu entries in specific Registry key
+  and adds them to the list. }
+
+procedure TContextList.LoadContextmenu(const ALocation: string);
+begin
+  LoadContextmenu(ALocation, True);
+  LoadContextmenu(ALocation, False);
+end;
+
 { public TContextList.LoadContextMenus
 
   Searches for context menu entries at different locations. }
 
 procedure TContextList.LoadContextMenus();
+var
+  SearchThread: TContextSearchThread;
+
 begin
-  if Assigned(FOnSearchStart) then
-    FOnSearchStart(Self, 1);
+  // Init search thread
+  SearchThread := TContextSearchThread.Create(Self, FLock);
 
-  LoadContextmenu('Directory');
-  LoadContextmenu('Folder');
-  LoadContextmenu('*');
-  LoadContextmenu('Drive');
-
-  if Assigned(FOnSearchFinish) then
-    FOnSearchFinish(Self);
+  with SearchThread do
+  begin
+    Locations.CommaText := 'Directory, Folder, *, Drive';
+    OnStart := FOnSearchStart;
+    OnSearching := FOnSearching;
+    OnFinish := FOnSearchFinish;
+    Resume;
+  end;  // of with
 end;
 
 end.

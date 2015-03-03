@@ -10,7 +10,8 @@ uses
   Updater in 'Updater.pas' {Update},
   ClearasAPI in 'ClearasAPI.pas',
   StartupSearchThread in 'StartupSearchThread.pas',
-  ContextSearchThread in 'ContextSearchThread.pas';
+  ContextSearchThread in 'ContextSearchThread.pas',
+  ContextMenuSearchThread in 'ContextMenuSearchThread.pas';
 
 {$R *.res}
 

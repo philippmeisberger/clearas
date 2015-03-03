@@ -145,6 +145,14 @@ begin
   // Notify start of search
   Synchronize(DoNotifyOnStart);
   FProgress := 0;
+
+  // Clear selected item
+  FStartupList.Selected := nil;
+
+  // Clear data
+  FStartupList.Clear;
+
+  // Start loading...
   LoadEnabled('HKLM', KEY_STARTUP);
 
   // Load WOW6432 Registry key only on 64bit Windows
@@ -173,7 +181,6 @@ begin
 
   // Notify end of search
   Synchronize(DoNotifyOnFinish);
-
   FLock.Release;
 end;
 

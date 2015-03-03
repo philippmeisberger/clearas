@@ -18,7 +18,7 @@ type
   TContextSearchThread = class(TThread)
   private
     FLocations: TStringList;
-    FProgress: Cardinal;
+    FProgress, FProgressMax: Cardinal;
     FContextList: TContextList;
     FOnStart, FOnSearching: TSearchEvent;
     FOnFinish: TNotifyEvent;
@@ -93,7 +93,7 @@ end;
 procedure TContextSearchThread.DoNotifyOnStart();
 begin
   if Assigned(FOnSearching) then
-    FOnStart(Self, FLocations.Count);
+    FOnStart(Self, FProgressMax);
 end;
 
 { protected TContextSearchThread.Execute
@@ -121,7 +121,6 @@ begin
   begin
     Synchronize(DoNotifyOnSearching);
     FContextList.LoadContextmenu(FLocations[i]);
-    Inc(FProgress);
   end;  //of for
 
   // Notify end of search

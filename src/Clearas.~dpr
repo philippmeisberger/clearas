@@ -9,7 +9,8 @@ uses
   ClearasInfo in 'ClearasInfo.pas' {Info},
   Updater in 'Updater.pas' {Update},
   ClearasAPI in 'ClearasAPI.pas',
-  SearchThread in 'SearchThread.pas';
+  StartupSearchThread in 'StartupSearchThread.pas',
+  ContextSearchThread in 'ContextSearchThread.pas';
 
 {$R *.res}
 

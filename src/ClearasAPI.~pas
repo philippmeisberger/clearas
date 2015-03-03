@@ -288,6 +288,7 @@ type
     FItem: TContextListItem;
     FOnSearchStart, FOnSearching: TSearchEvent;
     FOnSearchFinish: TNotifyEvent;
+    FLock: TCriticalSection;
     function Add(AItem: TContextListItem): Word; virtual;
     function FindDouble(AName, ALocation: string): Boolean;
     function ItemAt(AIndex: Word): TContextListItem;
@@ -300,6 +301,7 @@ type
       ASearchForShellItems: Boolean); overload;
   public
     constructor Create;
+    destructor Destroy; override;
     function AddEntry(const AFilePath, AArguments, ALocation,
       ADisplayedName: string): Boolean;
     procedure LoadContextmenu(); overload;
@@ -2090,7 +2092,7 @@ end;
 
 procedure TStartupList.ExportList(const AFileName: string);
 var
-  i: Word;
+  i: Integer;
   RegFile: TRegistryFile;
   Item: TStartupListItem;
 
@@ -2099,7 +2101,7 @@ begin
   RegFile := TRegistryFile.Create(AFileName, True);
 
   try
-    for i := 0 to Count -1 do
+    for i := 0 to Count - 1 do
     begin
       Item := ItemAt(i);
       RegFile.ExportKey(TOSUtils.StrToHKey(Item.RootKey), Item.KeyPath, True);
@@ -2120,7 +2122,7 @@ end;
 function TStartupList.ImportBackup(const AFilePath: string): Boolean;
 var
   Name, Ext: string;
-  i: Word;
+  i: Integer;
   LnkFile: TLnkFile;
 
 begin
@@ -2148,7 +2150,7 @@ begin
       raise EStartupException.Create('Could not read backup file!');
 
     // File path already exists in another item?
-    for i := 0 to Count -1 do
+    for i := 0 to Count - 1 do
       if (ItemAt(i).FilePath = LnkFile.ExeFileName) then
         Exit;
 
@@ -2591,6 +2593,17 @@ constructor TContextList.Create;
 begin
   inherited Create;
   FActCount := 0;
+  FLock := TCriticalSection.Create;
+end;
+
+{ public TContextList.Destroy
+
+  Destructor for destroying a TContextList instance. }
+
+destructor TContextList.Destroy;
+begin
+  FLock.Free;
+  inherited Destroy;
 end;
 
 { private TContextList.Add
@@ -2813,7 +2826,7 @@ var
 
 begin
   // Init search thread
-  SearchThread := TContextMenuSearchThread.Create(Self);
+  SearchThread := TContextMenuSearchThread.Create(Self, FLock);
 
   with SearchThread do
   begin
@@ -3012,6 +3025,12 @@ end;
 
 procedure TContextList.LoadContextMenus();
 begin
+  // Clear selected item
+  Selected := nil;
+
+  // Clear data
+  Clear;
+
   if Assigned(FOnSearchStart) then
     FOnSearchStart(Self, 1);
 

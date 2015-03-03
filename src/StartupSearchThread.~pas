@@ -11,7 +11,7 @@ unit StartupSearchThread;
 interface
 
 uses
-  Classes, ClearasAPI;
+  Classes, SyncObjs, ClearasAPI;
 
 type
   TStartupSearchThread = class(TThread)
@@ -21,6 +21,7 @@ type
     FProgress, FProgressMax: Byte;
     FOnSearching, FOnStart: TSearchEvent;
     FOnFinish: TNotifyEvent;
+    FLock: TCriticalSection;
     procedure DoNotifyOnFinish();
     procedure DoNotifyOnSearching();
     procedure DoNotifyOnStart();
@@ -30,7 +31,8 @@ type
   protected
     procedure Execute; override;
   public
-    constructor Create(AStartupList: TStartupList; AWin64, AIncludeRunOnce: Boolean);
+    constructor Create(AStartupList: TStartupList; AWin64, AIncludeRunOnce: Boolean;
+      ALock: TCriticalSection);
     { external }
     property OnSearching: TSearchEvent read FOnSearching write FOnSearching;
     property OnStart: TSearchEvent read FOnStart write FOnStart;
@@ -46,7 +48,7 @@ implementation
   Constructor for creating a TStartupSearchThread instance. }
 
 constructor TStartupSearchThread.Create(AStartupList: TStartupList;
-  AWin64, AIncludeRunOnce: Boolean);
+  AWin64, AIncludeRunOnce: Boolean; ALock: TCriticalSection);
 const
   KEYS_COUNT_MAX = 11;
 
@@ -54,8 +56,9 @@ begin
   inherited Create(True);
   FreeOnTerminate := True;
   FStartupList := AStartupList;
-  FIncludeRunOnce := AIncludeRunOnce;
   FWin64 := AWin64;
+  FIncludeRunOnce := AIncludeRunOnce;
+  FLock := ALock;
 
   // Calculate key count for events
   if FWin64 then
@@ -137,9 +140,19 @@ end;
 
 procedure TStartupSearchThread.Execute;
 begin
+  FLock.Acquire;
+
   // Notify start of search
   Synchronize(DoNotifyOnStart);
   FProgress := 0;
+
+  // Clear selected item
+  Startup.Selected := nil;
+
+  // Clear data
+  Startup.Clear;
+
+  // Start loading...
   LoadEnabled('HKLM', KEY_STARTUP);
 
   // Load WOW6432 Registry key only on 64bit Windows
@@ -168,6 +181,7 @@ begin
 
   // Notify end of search
   Synchronize(DoNotifyOnFinish);
+  FLock.Release;
 end;
 
 end.
