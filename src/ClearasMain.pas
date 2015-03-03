@@ -1161,6 +1161,7 @@ begin
     if AnsiStartsText(Key, lwStartup.Items[i].SubItems[0]) then
     begin
       lwStartup.ItemIndex := i;
+      lwStartup.ItemFocused := lwStartup.Items[i];
       Break;
     end;  //of begin
 end;

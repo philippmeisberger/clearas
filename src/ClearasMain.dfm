@@ -341,7 +341,7 @@ object Main: TMain
       object lwStartup: TListView
         Left = 21
         Top = 56
-        Width = 398
+        Width = 396
         Height = 196
         Anchors = [akLeft, akTop, akRight, akBottom]
         Columns = <
@@ -544,7 +544,7 @@ object Main: TMain
       object lwContext: TListView
         Left = 21
         Top = 56
-        Width = 398
+        Width = 396
         Height = 196
         Anchors = [akLeft, akTop, akRight, akBottom]
         Columns = <
