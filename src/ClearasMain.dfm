@@ -283,7 +283,7 @@ object Main: TMain
   object PageControl: TPageControl
     Left = 0
     Top = 0
-    Width = 541
+    Width = 543
     Height = 308
     ActivePage = tsStartup
     Anchors = [akLeft, akTop, akRight, akBottom]
@@ -292,7 +292,7 @@ object Main: TMain
     object tsStartup: TTabSheet
       Caption = 'Autostart'
       DesignSize = (
-        533
+        535
         279)
       object lStartup: TLabel
         Left = 21
@@ -304,8 +304,8 @@ object Main: TMain
           'rt geladen.'
       end
       object lCopy1: TLabel
-        Left = 212
-        Top = 263
+        Left = 213
+        Top = 261
         Width = 112
         Height = 14
         Hint = 'Zur Website'
@@ -324,7 +324,7 @@ object Main: TMain
         OnMouseLeave = lCopy1MouseLeave
       end
       object lVersion: TLabel
-        Left = 508
+        Left = 510
         Top = 4
         Width = 21
         Height = 14
@@ -341,7 +341,7 @@ object Main: TMain
       object lwStartup: TListView
         Left = 21
         Top = 56
-        Width = 396
+        Width = 398
         Height = 196
         Anchors = [akLeft, akTop, akRight, akBottom]
         Columns = <
@@ -381,10 +381,11 @@ object Main: TMain
         OnColumnClick = lwStartupColumnClick
         OnCompare = lwStartupCompare
         OnDblClick = lwStartupDblClick
+        OnKeyPress = lwStartupKeyPress
         OnSelectItem = lwStartupSelectItem
       end
       object bEnableStartupItem: TButton
-        Left = 426
+        Left = 428
         Top = 56
         Width = 91
         Height = 33
@@ -395,7 +396,7 @@ object Main: TMain
         OnClick = bEnableStartupItemClick
       end
       object bCloseStartup: TButton
-        Left = 426
+        Left = 428
         Top = 216
         Width = 91
         Height = 33
@@ -405,7 +406,7 @@ object Main: TMain
         OnClick = bCloseStartupClick
       end
       object bDisableStartupItem: TButton
-        Left = 426
+        Left = 428
         Top = 96
         Width = 91
         Height = 33
@@ -416,7 +417,7 @@ object Main: TMain
         OnClick = bDisableStartupItemClick
       end
       object bDeleteStartupItem: TButton
-        Left = 426
+        Left = 428
         Top = 176
         Width = 91
         Height = 33
@@ -427,7 +428,7 @@ object Main: TMain
         OnClick = bDeleteStartupItemClick
       end
       object bExportStartupItem: TButton
-        Left = 426
+        Left = 428
         Top = 136
         Width = 91
         Height = 33
@@ -442,11 +443,11 @@ object Main: TMain
       Caption = 'Kontextmen'#252
       ImageIndex = 1
       DesignSize = (
-        533
+        535
         279)
       object lCopy2: TLabel
-        Left = 212
-        Top = 263
+        Left = 213
+        Top = 261
         Width = 112
         Height = 14
         Hint = 'Zur Website'
@@ -472,7 +473,7 @@ object Main: TMain
         Caption = 'Eintr'#228'ge dieser Liste sehen Sie in verschiedenen Kontextmen'#252's.'
       end
       object lVersion2: TLabel
-        Left = 508
+        Left = 510
         Top = 4
         Width = 21
         Height = 14
@@ -487,7 +488,7 @@ object Main: TMain
         Caption = 'Windows'
       end
       object bExportContextItem: TButton
-        Left = 426
+        Left = 428
         Top = 136
         Width = 91
         Height = 33
@@ -498,7 +499,7 @@ object Main: TMain
         OnClick = bExportContextItemClick
       end
       object bDeleteContextItem: TButton
-        Left = 426
+        Left = 428
         Top = 176
         Width = 91
         Height = 33
@@ -509,7 +510,7 @@ object Main: TMain
         OnClick = bDeleteContextItemClick
       end
       object bCloseContext: TButton
-        Left = 426
+        Left = 428
         Top = 216
         Width = 91
         Height = 33
@@ -519,7 +520,7 @@ object Main: TMain
         OnClick = bCloseStartupClick
       end
       object bDisableContextItem: TButton
-        Left = 426
+        Left = 428
         Top = 96
         Width = 91
         Height = 33
@@ -530,7 +531,7 @@ object Main: TMain
         OnClick = bDisableContextItemClick
       end
       object bEnableContextItem: TButton
-        Left = 426
+        Left = 428
         Top = 56
         Width = 91
         Height = 33
@@ -543,12 +544,12 @@ object Main: TMain
       object lwContext: TListView
         Left = 21
         Top = 56
-        Width = 396
+        Width = 398
         Height = 196
         Anchors = [akLeft, akTop, akRight, akBottom]
         Columns = <
           item
-            Caption = 'Aktiv'
+            Caption = 'Aktiviert'
             MaxWidth = 53
             MinWidth = 53
             Width = 53
@@ -583,6 +584,7 @@ object Main: TMain
         OnColumnClick = lwStartupColumnClick
         OnCompare = lwStartupCompare
         OnDblClick = lwContextDblClick
+        OnKeyPress = lwContextKeyPress
         OnSelectItem = lwContextSelectItem
       end
       object pbLoad: TProgressBar
@@ -595,8 +597,8 @@ object Main: TMain
         Visible = False
       end
       object cbExpert: TCheckBox
-        Left = 404
-        Top = 257
+        Left = 406
+        Top = 258
         Width = 105
         Height = 17
         Anchors = [akRight, akBottom]
@@ -608,7 +610,8 @@ object Main: TMain
         Left = 21
         Top = 256
         Width = 148
-        Height = 18
+        Height = 22
+        Anchors = [akLeft, akBottom]
         TabOrder = 8
         OnChange = eSearchChange
         OnKeyPress = eSearchKeyPress

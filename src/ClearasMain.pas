@@ -106,15 +106,16 @@ type
     procedure eSearchKeyPress(Sender: TObject; var Key: Char);
     procedure FormKeyDown(Sender: TObject; var Key: Word;
       Shift: TShiftState);
-    procedure lwStartupSelectItem(Sender: TObject; Item: TListItem;
-      Selected: Boolean);
+    procedure lwContextDblClick(Sender: TObject);
     procedure lwContextSelectItem(Sender: TObject; Item: TListItem;
       Selected: Boolean);
-    procedure lwContextDblClick(Sender: TObject);
-    procedure lwStartupDblClick(Sender: TObject);
     procedure lwStartupColumnClick(Sender: TObject; Column: TListColumn);
     procedure lwStartupCompare(Sender: TObject; Item1, Item2: TListItem;
       Data: Integer; var Compare: Integer);
+    procedure lwStartupDblClick(Sender: TObject);
+    procedure lwStartupKeyPress(Sender: TObject; var Key: Char);
+    procedure lwStartupSelectItem(Sender: TObject; Item: TListItem;
+      Selected: Boolean);
     procedure mmAddClick(Sender: TObject);
     procedure mmContextClick(Sender: TObject);
     procedure mmDateClick(Sender: TObject);
@@ -143,6 +144,7 @@ type
     procedure lCopy1MouseLeave(Sender: TObject);
     procedure lCopy1MouseEnter(Sender: TObject);
     procedure lCopy1Click(Sender: TObject);
+    procedure lwContextKeyPress(Sender: TObject; var Key: Char);
   private
     FColumnToSort: Word;
     Startup: TStartupList;
@@ -1016,6 +1018,153 @@ begin
         bDeleteContextItem.Click;
 end;
 
+{ TMain.lwContextDblClick
+
+  Event method that is called when user double clicks on TListView item. }
+
+procedure TMain.lwContextDblClick(Sender: TObject);
+begin
+  if bEnableContextItem.Enabled then
+    bEnableContextItem.Click
+  else
+    if bDisableContextItem.Enabled then
+      bDisableContextItem.Click
+    else
+      if bDeleteContextItem.Enabled then
+        bDeleteContextItem.Click
+      else
+        FLang.MessageBox(53, mtWarning);
+end;
+
+{ TMain.lwContextKeyPress
+
+  Event method that is called when user pushes a button inside TListView. }
+
+procedure TMain.lwContextKeyPress(Sender: TObject; var Key: Char);
+begin
+  eSearch.SetFocus;
+end;
+
+{ TMain.lwContextSelectItem
+
+  Event method that is called when user selects an item in list. }
+
+procedure TMain.lwContextSelectItem(Sender: TObject; Item: TListItem;
+  Selected: Boolean);
+var
+  Index: Integer;
+
+begin
+  // Item selected?
+  if (Selected and Assigned(Item)) then
+  begin
+    // Find index of currently selected item in backend
+    Index := Context.IndexOf(Item.SubItems[0], Item.SubItems[1]);
+
+    // Item not found?
+    if (Index = -1) then
+      Exit;
+
+    // Load item into cache
+    Context.Selected := Context.Items[Index];
+
+    // Change button states
+    bEnableContextItem.Enabled := not Context.Selected.Enabled;
+    bDisableContextItem.Enabled := not bEnableContextItem.Enabled;
+
+    // Change text of "change status" button
+    if bDisableContextItem.Enabled then
+      pmChangeStatus.Caption := bDisableContextItem.Caption
+    else
+      pmChangeStatus.Caption := bEnableContextItem.Caption;
+
+    pmChangeStatus.Enabled := True;
+
+    // Enable "edit path" only if file path is present
+    pmEdit.Enabled := (Context.Selected.FilePath <> '');
+
+    // Enable "open in Explorer" only if file path is present
+    pmOpenExplorer.Enabled := pmEdit.Enabled;
+
+    bDeleteContextItem.Enabled := True;
+    pmDelete.Enabled := True;
+    pmOpenRegedit.Enabled := True;
+    bExportContextItem.Enabled := True;
+    pmExport.Enabled := True;
+
+    // Show popup menu
+    PopupMenu.AutoPopup := True;
+  end  //of begin
+  else
+    // Nothing selected: Hide popup menu!
+    PopupMenu.AutoPopup := False;
+end;
+
+{ TMain.lwStartupColumnClick
+
+  Event method that is called when user clicks on TListView column. }
+
+procedure TMain.lwStartupColumnClick(Sender: TObject; Column: TListColumn);
+begin
+  FColumnToSort := Column.Index;
+  (Sender as TCustomListView).AlphaSort;
+end;
+
+{ TMain.lwStartupCompare
+
+  Sorts a TListView column alphabetically. }
+
+procedure TMain.lwStartupCompare(Sender: TObject; Item1, Item2: TListItem;
+  Data: Integer; var Compare: Integer);
+begin
+  // Status column?
+  if (FColumnToSort = 0) then
+    Compare := CompareText(Item1.Caption, Item2.Caption)
+  else
+    begin
+      Data := FColumnToSort -1;
+
+      if (Data < 3) then
+        Compare := CompareText(Item1.SubItems[Data], Item2.SubItems[Data]);
+    end;  //of if
+end;
+
+{ TMain.lwStartupDblClick
+
+  Event method that is called when user double clicks on TListView item. }
+
+procedure TMain.lwStartupDblClick(Sender: TObject);
+begin
+  if bEnableStartupItem.Enabled then
+    bEnableStartupItem.Click
+  else
+    if bDisableStartupItem.Enabled then
+      bDisableStartupItem.Click
+    else
+      if bDeleteStartupItem.Enabled then
+        bDeleteStartupItem.Click
+      else
+        FLang.MessageBox(53, mtWarning);
+end;
+
+{ TMain.lwStartupKeyPress
+
+  Event method that is called when user pushes a button inside TListView. }
+
+procedure TMain.lwStartupKeyPress(Sender: TObject; var Key: Char);
+var
+  i: Integer;
+
+begin
+  // Find item whose first char starts with key
+  for i := 0 to lwStartup.Items.Count - 1 do
+    if AnsiStartsText(Key, lwStartup.Items[i].SubItems[0]) then
+    begin
+      lwStartup.ItemIndex := i;
+      Break;
+    end;  //of begin
+end;
+
 { TMain.lwStartupSelectItem
 
   Event method that is called when user selects an item in list. }
@@ -1112,126 +1261,6 @@ begin
   else
     // Nothing selected: Hide popup menu!
     PopupMenu.AutoPopup := False;
-end;
-
-{ TMain.lwContextSelectItem
-
-  Event method that is called when user selects an item in list. }
-
-procedure TMain.lwContextSelectItem(Sender: TObject; Item: TListItem;
-  Selected: Boolean);
-var
-  Index: Integer;
-
-begin
-  // Item selected?
-  if (Selected and Assigned(Item)) then
-  begin
-    // Find index of currently selected item in backend
-    Index := Context.IndexOf(Item.SubItems[0], Item.SubItems[1]);
-
-    // Item not found?
-    if (Index = -1) then
-      Exit;
-
-    // Load item into cache
-    Context.Selected := Context.Items[Index];
-
-    // Change button states
-    bEnableContextItem.Enabled := not Context.Selected.Enabled;
-    bDisableContextItem.Enabled := not bEnableContextItem.Enabled;
-
-    // Change text of "change status" button
-    if bDisableContextItem.Enabled then
-      pmChangeStatus.Caption := bDisableContextItem.Caption
-    else
-      pmChangeStatus.Caption := bEnableContextItem.Caption;
-
-    pmChangeStatus.Enabled := True;
-
-    // Enable "edit path" only if file path is present
-    pmEdit.Enabled := (Context.Selected.FilePath <> '');
-
-    // Enable "open in Explorer" only if file path is present
-    pmOpenExplorer.Enabled := pmEdit.Enabled;
-
-    bDeleteContextItem.Enabled := True;
-    pmDelete.Enabled := True;
-    pmOpenRegedit.Enabled := True;
-    bExportContextItem.Enabled := True;
-    pmExport.Enabled := True;
-
-    // Show popup menu
-    PopupMenu.AutoPopup := True;
-  end  //of begin
-  else
-    // Nothing selected: Hide popup menu!
-    PopupMenu.AutoPopup := False;
-end;
-
-{ TMain.lwStartupDblClick
-
-  Event method that is called when user double clicks on TListView item. }
-
-procedure TMain.lwStartupDblClick(Sender: TObject);
-begin
-  if bEnableStartupItem.Enabled then
-    bEnableStartupItem.Click
-  else
-    if bDisableStartupItem.Enabled then
-      bDisableStartupItem.Click
-    else
-      if bDeleteStartupItem.Enabled then
-        bDeleteStartupItem.Click
-      else
-        FLang.MessageBox(53, mtWarning);
-end;
-
-{ TMain.lwContextDblClick
-
-  Event method that is called when user double clicks on TListView item. }
-
-procedure TMain.lwContextDblClick(Sender: TObject);
-begin
-  if bEnableContextItem.Enabled then
-    bEnableContextItem.Click
-  else
-    if bDisableContextItem.Enabled then
-      bDisableContextItem.Click
-    else
-      if bDeleteContextItem.Enabled then
-        bDeleteContextItem.Click
-      else
-        FLang.MessageBox(53, mtWarning);
-end;
-
-{ TMain.lwStartupColumnClick
-
-  Event method that is called when user clicks on TListView column. }
-
-procedure TMain.lwStartupColumnClick(Sender: TObject; Column: TListColumn);
-begin
-  FColumnToSort := Column.Index;
-  (Sender as TCustomListView).AlphaSort;
-end;
-
-{ TMain.lwStartupCompare
-
-  Sorts a TListView column alphabetically. }
-
-procedure TMain.lwStartupCompare(Sender: TObject; Item1, Item2: TListItem;
-  Data: Integer; var Compare: Integer);
-begin
-  // Status column?
-  if (FColumnToSort = 0) then
-    Compare := CompareText(Item1.Caption, Item2.Caption)
-  else
-    begin
-      Data := FColumnToSort -1;
-
-      if (Data < 3) then
-        Compare := CompareText(Item1.SubItems[Data], Item2.SubItems[Data]);
-    end;  //of if
 end;
 
 { TMain.pmChangeStatusClick
@@ -1908,7 +1937,7 @@ end;
 
 { TMain.eSearchKeyPress
 
-  Event method that is called when user pushes a button. }
+  Event method that is called when user pushes a button inside TEdit. }
 
 procedure TMain.eSearchKeyPress(Sender: TObject; var Key: Char);
 begin
