@@ -361,8 +361,9 @@ end;
 
 procedure TMain.OnContextSearchStart(Sender: TObject; AWorkCountMax: Cardinal);
 begin
-  //mmView.Enabled := False;
-  //mmFile.Enabled := False;
+  mmLang.Enabled := False;
+  mmAdd.Enabled := False;
+  mmExportList.Enabled := False;
   pbLoad.Visible := True;
   pbLoad.Max := AWorkCountMax;
   lwContext.Cursor := crHourGlass;
@@ -395,11 +396,14 @@ begin
 
   // Refresh counter label
   RefreshContextCounter();
+
+  // Update some VCL
   pbLoad.Visible := False;
   pbLoad.Position := 0;
   lwContext.Cursor := crDefault;
-  //mmView.Enabled := True;
-  //mmFile.Enabled := True;
+  mmLang.Enabled := True;
+  mmAdd.Enabled := True;
+  mmExportList.Enabled := True;
 end;
 
 { private TMain.OnStartupSearchStart
@@ -408,8 +412,10 @@ end;
 
 procedure TMain.OnStartupSearchStart(Sender: TObject; AWorkCountMax: Cardinal);
 begin
-  //mmView.Enabled := False;
-  //mmFile.Enabled := False;
+  mmLang.Enabled := False;
+  mmAdd.Enabled := False;
+  mmImport.Enabled := False;
+  mmExportList.Enabled := False;
   lwStartup.Cursor := crHourGlass;
 end;
 
@@ -462,8 +468,10 @@ begin
   // Refresh counter label
   RefreshStartupCounter();
   lwStartup.Cursor := crDefault;
-  //mmView.Enabled := True;
-  //mmFile.Enabled := True;
+  mmLang.Enabled := True;
+  mmAdd.Enabled := True;
+  mmImport.Enabled := True;
+  mmExportList.Enabled := True;
 end;
 
 { private TMain.RefreshContextCounter

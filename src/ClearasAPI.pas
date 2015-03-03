@@ -2622,7 +2622,7 @@ end;
 function TContextList.AddEntry(const AFilePath, AArguments, ALocation,
   ADisplayedName: string): Boolean;
 var
-  Name, Ext, FullPath: string;
+  Name, Ext, FullPath, KeyName: string;
 
 begin
   Result := False;
@@ -2645,9 +2645,12 @@ begin
   if (AArguments <> '') then
     FullPath := FullPath +' '+ AArguments;
 
+  // Build Registry key name
+  KeyName := ALocation + CONTEXTMENU_SHELL +'\'+ Name;
+
   // Adds new context item to Registry
-  TRegUtils.WriteStrValue('HKCR', ALocation + CONTEXTMENU_SHELL +'\'+ Name, '', ADisplayedName);
-  TRegUtils.WriteStrValue('HKCR', ALocation + CONTEXTMENU_SHELL + Name +'\command', '', FullPath);
+  TRegUtils.WriteStrValue('HKCR', KeyName, '', ADisplayedName);
+  TRegUtils.WriteStrValue('HKCR', KeyName +'\command', '', FullPath);
 
   // Adds this item to list
   AddShellItem(Name, ALocation, FullPath, ADisplayedName, True);

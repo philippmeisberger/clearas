@@ -1446,10 +1446,7 @@ begin
 
             try
               // Init location ComboBox
-              List.Add('Directory');
-              List.Add('Folder');
-              List.Add('*');     
-              List.Add('Drive');
+              List.CommaText := 'Directory, Folder, *, Drive';
 
               // Show dialog for location selection
               if not InputCombo(FLang.GetString(34), FLang.GetString(90) +':',
