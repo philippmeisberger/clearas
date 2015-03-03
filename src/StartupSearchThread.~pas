@@ -147,10 +147,10 @@ begin
   FProgress := 0;
 
   // Clear selected item
-  Startup.Selected := nil;
+  FStartupList.Selected := nil;
 
   // Clear data
-  Startup.Clear;
+  FStartupList.Clear;
 
   // Start loading...
   LoadEnabled('HKLM', KEY_STARTUP);

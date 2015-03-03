@@ -149,13 +149,13 @@ type
     procedure AfterUpdate(Sender: TObject; ADownloadedFileName: string);
     procedure BeforeUpdate(Sender: TObject; const ANewBuild: Cardinal);
     function CreateStartupUserBackup(): Boolean;
-    procedure OnContextSearchProgress(Sender: TObject; AWorkCount: Cardinal);
-    procedure OnContextSearchStart(Sender: TObject; AWorkCountMax: Cardinal);
+    procedure OnContextSearchProgress(Sender: TObject; const AWorkCount: Cardinal);
+    procedure OnContextSearchStart(Sender: TObject; const AWorkCountMax: Cardinal);
     procedure OnContextSearchEnd(Sender: TObject);
-    procedure OnStartupSearchStart(Sender: TObject; AWorkCountMax: Cardinal);
+    procedure OnStartupSearchStart(Sender: TObject; const AWorkCountMax: Cardinal);
     procedure OnStartupSearchEnd(Sender: TObject);
-    procedure RefreshContextCounter();
-    procedure RefreshStartupCounter();
+    procedure OnContextItemChanged(Sender: TObject);
+    procedure OnStartupItemChanged(Sender: TObject);
     procedure SetLanguage(Sender: TObject);
     function ShowRegistryExportDialog(): Boolean;
     procedure LoadContextMenuEntries(ATotalRefresh: Boolean = True);
@@ -194,6 +194,7 @@ begin
   // Link search events
   with Startup do
   begin
+    Startup.OnChanged := OnStartupItemChanged;
     Startup.OnSearchStart := OnStartupSearchStart;
     Startup.OnSearchFinish := OnStartupSearchEnd;
   end;  //of with
@@ -203,6 +204,7 @@ begin
   // Link search events
   with Context do
   begin
+    Context.OnChanged := OnContextItemChanged;
     Context.OnSearchStart := OnContextSearchStart;
     Context.OnSearching := OnContextSearchProgress;
     Context.OnSearchFinish := OnContextSearchEnd;
@@ -350,7 +352,7 @@ end;
 
   Event that is called when search is in progress. }
 
-procedure TMain.OnContextSearchProgress(Sender: TObject; AWorkCount: Cardinal);
+procedure TMain.OnContextSearchProgress(Sender: TObject; const AWorkCount: Cardinal);
 begin
   pbLoad.Position := AWorkCount;
 end;
@@ -359,7 +361,7 @@ end;
 
   Event that is called when search starts. }
 
-procedure TMain.OnContextSearchStart(Sender: TObject; AWorkCountMax: Cardinal);
+procedure TMain.OnContextSearchStart(Sender: TObject; const AWorkCountMax: Cardinal);
 begin
   mmLang.Enabled := False;
   mmAdd.Enabled := False;
@@ -395,7 +397,7 @@ begin
     end; //of with
 
   // Refresh counter label
-  RefreshContextCounter();
+  OnContextItemChanged(Sender);
 
   // Update some VCL
   pbLoad.Visible := False;
@@ -410,7 +412,7 @@ end;
 
   Event that is called when search starts. }
 
-procedure TMain.OnStartupSearchStart(Sender: TObject; AWorkCountMax: Cardinal);
+procedure TMain.OnStartupSearchStart(Sender: TObject; const AWorkCountMax: Cardinal);
 begin
   mmLang.Enabled := False;
   mmAdd.Enabled := False;
@@ -466,7 +468,7 @@ begin
   end;  //of try
 
   // Refresh counter label
-  RefreshStartupCounter();
+  OnStartupItemChanged(Sender);
   lwStartup.Cursor := crDefault;
   mmLang.Enabled := True;
   mmAdd.Enabled := True;
@@ -474,20 +476,20 @@ begin
   mmExportList.Enabled := True;
 end;
 
-{ private TMain.RefreshContextCounter
+{ private TMain.OnContextItemChanged
 
   Refreshs the counter label of context menu items. }
 
-procedure TMain.RefreshContextCounter();
+procedure TMain.OnContextItemChanged(Sender: TObject);
 begin
   lwContext.Columns[1].Caption := FLang.Format(87, [Context.ActCount, Context.Count]);
 end;
 
-{ private TMain.RefreshStartupCounter
+{ private TMain.OnStartupItemChanged
 
   Refreshs the counter label of startup items. }
 
-procedure TMain.RefreshStartupCounter();
+procedure TMain.OnStartupItemChanged(Sender: TObject);
 begin
   lwStartup.Columns[1].Caption := FLang.Format(88, [Startup.ActCount, Startup.Count]);
 end;
@@ -773,9 +775,6 @@ begin
         // Delete item from TListView
         lwStartup.DeleteSelected();
 
-        // Refresh counter label
-        RefreshStartupCounter();
-
         // Change button states
         bEnableStartupItem.Enabled := False;
         bDisableStartupItem.Enabled := False;
@@ -825,9 +824,6 @@ begin
           // Delete item from TListView
           lwContext.DeleteSelected();
 
-          // Refresh counter label
-          RefreshContextCounter();
-
           // Change button states
           bEnableContextItem.Enabled := False;
           bDisableContextItem.Enabled := False;
@@ -873,11 +869,12 @@ begin
       if mmDate.Checked then
         lwStartup.ItemFocused.SubItems[3] := '';
 
-      // Refresh counter label
-      RefreshStartupCounter();
-
       // Update TListView
       lwStartupSelectItem(Self, lwStartup.ItemFocused, True);
+
+      // Warn if file does not exist
+      if not FileExists(Startup.Selected.FilePathOnly) then
+        FLang.MessageBox([45, NEW_LINE, 46], mtWarning);
     end  //of begin
     else
       raise Exception.Create('Unknown error!');
@@ -910,11 +907,12 @@ begin
       bDisableContextItem.Default := True;
       pmChangeStatus.Caption := bDisableStartupItem.Caption;
 
-      // Refresh counter label
-      RefreshContextCounter();
-
       // Update TListView
       lwContextSelectItem(Self, lwContext.ItemFocused, True);
+
+      // Warn if file does not exist
+      if not FileExists(Context.Selected.FilePathOnly) then
+        FLang.MessageBox([45, NEW_LINE, 46], mtWarning);
     end  //of begin
     else
       raise Exception.Create('Unknown error!');
@@ -951,9 +949,6 @@ begin
       if mmDate.Checked then
         lwStartup.ItemFocused.SubItems[3] := Startup.Selected.Time;
 
-      // Refresh counter label
-      RefreshStartupCounter();
-
       // Update TListView
       lwStartupSelectItem(Self, lwStartup.ItemFocused, True);
     end  //of begin
@@ -987,9 +982,6 @@ begin
       bEnableContextItem.Enabled := True;
       bEnableContextItem.Default := True;
       pmChangeStatus.Caption := bEnableContextItem.Caption;
-
-      // Refresh counter label
-      RefreshContextCounter();
 
       // Update TListView
       lwContextSelectItem(Self, lwContext.ItemFocused, True);
@@ -1446,10 +1438,7 @@ begin
 
             try
               // Init location ComboBox
-              List.Add('Directory');
-              List.Add('Folder');
-              List.Add('*');     
-              List.Add('Drive');
+              List.CommaText := 'Directory, Folder, *, Drive';
 
               // Show dialog for location selection
               if not InputCombo(FLang.GetString(34), FLang.GetString(90) +':',

@@ -122,10 +122,16 @@ type
     property TypeOf: string read FType write FType;
   end;
 
+  { Events }
+  TSearchEvent = procedure(Sender: TObject; const ACount: Cardinal) of object;
+
   { TRootList }
   TRootList = class(TObjectList)
   private
     FActCount: Word;
+    FOnSearchStart, FOnSearching: TSearchEvent;
+    FOnSearchFinish: TNotifyEvent;
+    FOnChanged: TNotifyEvent;
   protected
     function RootItemAt(AIndex: Word): TRootItem;
   public
@@ -142,6 +148,10 @@ type
     function IndexOf(AItemName: string; AEnabled: Boolean): Integer; overload;
     { external }
     property ActCount: Word read FActCount;
+    property OnChanged: TNotifyEvent read FOnChanged write FOnChanged;
+    property OnSearching: TSearchEvent read FOnSearching write FOnSearching;
+    property OnSearchStart: TSearchEvent read FOnSearchStart write FOnSearchStart;
+    property OnSearchFinish: TNotifyEvent read FOnSearchFinish write FOnSearchFinish;
   end;
 
   { Exception class }
@@ -189,16 +199,11 @@ type
     property LnkFile: TLnkFile read FLnkFile write FLnkFile;
   end;
 
-  { Event }
-  TSearchEvent = procedure(Sender: TObject; ACount: Cardinal) of object;
-
   { TStartupList }
   TStartupList = class(TRootList)
   private
     FItem: TStartupListItem;
     FDeleteBackup: Boolean;
-    FOnSearchStart, FOnSearching: TSearchEvent;
-    FOnSearchFinish: TNotifyEvent;
     FLock: TCriticalSection;
     function Add(AItem: TStartupListItem): Word; virtual;
     function DelCircumflex(AName: string): string;
@@ -234,9 +239,6 @@ type
     { external }
     property DeleteBackup: Boolean read FDeleteBackup write FDeleteBackup;
     property Items[AIndex: Word]: TStartupListItem read ItemAt; default;
-    property OnSearching: TSearchEvent read FOnSearching write FOnSearching;
-    property OnSearchStart: TSearchEvent read FOnSearchStart write FOnSearchStart;
-    property OnSearchFinish: TNotifyEvent read FOnSearchFinish write FOnSearchFinish;
     property Selected: TStartupListItem read FItem write FItem;
   end;
 
@@ -286,8 +288,6 @@ type
   TContextList = class(TRootList)
   private
     FItem: TContextListItem;
-    FOnSearchStart, FOnSearching: TSearchEvent;
-    FOnSearchFinish: TNotifyEvent;
     FLock: TCriticalSection;
     function Add(AItem: TContextListItem): Word; virtual;
     function FindDouble(AName, ALocation: string): Boolean;
@@ -317,9 +317,6 @@ type
     procedure LoadContextMenus(ALocations: string = 'Directory, Folder, *, Drive');
     { external }
     property Items[AIndex: Word]: TContextListItem read ItemAt; default;
-    property OnSearching: TSearchEvent read FOnSearching write FOnSearching;
-    property OnSearchStart: TSearchEvent read FOnSearchStart write FOnSearchStart;
-    property OnSearchFinish: TNotifyEvent read FOnSearchFinish write FOnSearchFinish;
     property Selected: TContextListItem read FItem write FItem;
   end;
 
@@ -1961,6 +1958,10 @@ begin
     raise EInvalidItem.Create('No item selected!');
 
   Result := FItem.ChangeFilePath(ANewFilePath);
+
+  // Notify changed
+  if Assigned(FOnChanged) then
+    FOnChanged(Self);
 end;
 
 { public TStartupList.ChangeItemStatus
@@ -1994,6 +1995,10 @@ begin
     Dec(FActCount);
 
   Result := Changed;
+
+  // Notify changed
+  if Assigned(FOnChanged) then
+    FOnChanged(Self);
 end;
 
 { public TStartupList.DisableItem
@@ -2012,6 +2017,10 @@ begin
 
   if Result then
     Dec(FActCount);
+
+  // Notify changed
+  if Assigned(FOnChanged) then
+    FOnChanged(Self);
 end;
 
 { public TStartupList.EnableItem
@@ -2037,6 +2046,10 @@ begin
     // Update active counter
     Inc(FActCount);
   end;  //of begin
+
+  // Notify changed
+  if Assigned(FOnChanged) then
+    FOnChanged(Self);
 end;
 
 { public TStartupList.DeleteItem
@@ -2072,6 +2085,10 @@ begin
   end;  //of begin
 
   Result := Deleted;
+
+  // Notify changed
+  if Assigned(FOnChanged) then
+    FOnChanged(Self);
 end;
 
 { public TStartupList.ExportItem
@@ -2830,6 +2847,10 @@ begin
     raise EInvalidItem.Create('No item selected!');
 
   Result := FItem.ChangeFilePath(ANewFilePath);
+
+  // Notify changed
+  if Assigned(FOnChanged) then
+    FOnChanged(Self);
 end;
 
 { public TContextList.ChangeItemStatus
@@ -2856,6 +2877,10 @@ begin
       Dec(FActCount);
 
   Result := Changed;
+
+  // Notify changed
+  if Assigned(FOnChanged) then
+    FOnChanged(Self);
 end;
 
 { public TContextList.DeleteItem
@@ -2886,6 +2911,10 @@ begin
   end;  //of begin
 
   Result := Deleted;
+
+  // Notify delete
+  if Assigned(FOnChanged) then
+    FOnChanged(Self);
 end;
 
 { public TContextList.DisableItem
@@ -2904,6 +2933,10 @@ begin
 
   if Result then
     Dec(FActCount);
+
+  // Notify changed
+  if Assigned(FOnChanged) then
+    FOnChanged(Self);
 end;
 
 { public TContextList.EnableItem
@@ -2922,6 +2955,10 @@ begin
 
   if Result then
     Inc(FActCount);
+
+  // Notify changed
+  if Assigned(FOnChanged) then
+    FOnChanged(Self);
 end;
 
 { public TContextList.ExportItem

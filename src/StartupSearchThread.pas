@@ -100,7 +100,7 @@ end;
 
 procedure TStartupSearchThread.DoNotifyOnStart();
 begin
-  if Assigned(FOnSearching) then
+  if Assigned(FOnStart) then
     FOnStart(Self, FProgressMax);
 end;
 
