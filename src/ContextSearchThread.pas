@@ -1,6 +1,6 @@
 { *********************************************************************** }
 {                                                                         }
-{ Clearas general context menu search thread                              }
+{ Clearas context menu search thread                                      }
 {                                                                         }
 { Copyright (c) 2011-2015 P.Meisberger (PM Code Works)                    }
 {                                                                         }
@@ -11,14 +11,15 @@ unit ContextSearchThread;
 interface
 
 uses
-  Classes, SyncObjs, ClearasAPI;
+  Windows, Classes, Registry, OSUtils, SyncObjs, ClearasAPI;
 
 type
   { TContextSearchThread }
   TContextSearchThread = class(TThread)
   private
+    FReg: TRegistry;
     FLocations: TStringList;
-    FProgress: Cardinal;
+    FProgress, FProgressMax: Cardinal;
     FContextList: TContextList;
     FOnStart, FOnSearching: TSearchEvent;
     FOnFinish: TNotifyEvent;
@@ -26,6 +27,9 @@ type
     procedure DoNotifyOnFinish();
     procedure DoNotifyOnStart();
     procedure DoNotifyOnSearching();
+    procedure LoadContextMenu();
+    procedure LoadContextMenus();
+    procedure SearchSubkey(AKeyName, ASearchPattern: string);
   protected
     procedure Execute; override;
   public
@@ -39,6 +43,8 @@ type
   end;
 
 implementation
+
+uses StrUtils;
 
 { TContextSearchThread }
 
@@ -54,6 +60,10 @@ begin
   FContextList := AContextList;
   FLock := ALock;
   FLocations := TStringList.Create;
+
+  // Init Registry access with read-only
+  FReg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));
+  FReg.RootKey := HKEY_CLASSES_ROOT;
 end;
 
 { public TContextSearchThread.Destroy
@@ -62,6 +72,8 @@ end;
 
 destructor TContextSearchThread.Destroy();
 begin
+  FReg.CloseKey;
+  FReg.Free;
   FLocations.Free;
   inherited Destroy;
 end;
@@ -93,28 +105,93 @@ end;
 procedure TContextSearchThread.DoNotifyOnStart();
 begin
   if Assigned(FOnSearching) then
-    FOnStart(Self, FLocations.Count);
+    FOnStart(Self, FProgressMax);
 end;
 
-{ protected TContextSearchThread.Execute
+{ private TContextSearchThread.SearchSubkey
+
+  Searches for pattern keys in a Registry subkey. }
+
+procedure TContextSearchThread.SearchSubkey(AKeyName, ASearchPattern: string);
+var
+  Keys: TStringList;
+  i: Integer;
+
+begin
+  Keys := TStringList.Create();
+
+  try
+    FReg.CloseKey;
+    FReg.OpenKey(AKeyName, False);
+
+    if FReg.HasSubKeys then
+    begin
+      // Load subkeys
+      FReg.GetKeyNames(Keys);
+
+      for i := 0 to Keys.Count - 1 do
+        // Pattern matches?
+        if AnsiContainsText(Keys[i], ASearchPattern) then
+        begin
+          // Load context menu in current key
+          FContextList.LoadContextmenu(AKeyName);
+          Break;
+        end;  //of for
+    end;  //of begin
+
+  finally
+    Keys.Free;
+  end;  //of try
+end;
+
+{ private TContextSearchThread.LoadContextMenu
 
   Searches for context menu items in Registry. }
 
-procedure TContextSearchThread.Execute;
+procedure TContextSearchThread.LoadContextMenu();
+var
+  i: Integer;
+  Hkcr: TStringList;
+
+begin
+  Hkcr := TStringList.Create;
+
+  try
+    FReg.OpenKey('', False);
+    FReg.GetKeyNames(Hkcr);
+
+    FProgressMax := Hkcr.Count;
+    FProgress := 0;
+
+    // Notify start of search
+    Synchronize(DoNotifyOnStart);
+
+    for i := 0 to Hkcr.Count - 1 do
+    begin
+      Synchronize(DoNotifyOnSearching);
+      SearchSubkey(Hkcr[i], 'shell');
+      Inc(FProgress);
+    end;  //of for
+
+  finally
+    Hkcr.Free;
+  end;  //of try
+end;
+
+{ private TContextSearchThread.LoadContextMenus
+
+  Searches for specific context menu items in Registry. }
+
+procedure TContextSearchThread.LoadContextMenus();
 var
   i: Integer;
 
 begin
-  FLock.Acquire;
+  FProgressMax := FLocations.Count;
+  FProgress := 0;
 
   // Notify start of search
   Synchronize(DoNotifyOnStart);
-
-  // Clear selected item
-  FContextList.Selected := nil;
-
-  // Clear data
-  FContextList.Clear;
 
   // Search ...
   for i := 0 to FLocations.Count - 1 do
@@ -123,6 +200,27 @@ begin
     FContextList.LoadContextmenu(FLocations[i]);
     Inc(FProgress);
   end;  //of for
+end;
+
+{ protected TContextSearchThread.Execute
+
+  Searches for context menu items in Registry. }
+
+procedure TContextSearchThread.Execute;
+begin
+  FLock.Acquire;
+
+  // Clear selected item
+  FContextList.Selected := nil;
+
+  // Clear data
+  FContextList.Clear;
+
+  // Load specific menus or search for all?
+  if (FLocations.Count > 0) then
+    LoadContextMenus()
+  else
+    LoadContextMenu();
 
   // Notify end of search
   Synchronize(DoNotifyOnFinish);
@@ -130,4 +228,3 @@ begin
 end;
 
 end.
- 

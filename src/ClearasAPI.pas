@@ -314,7 +314,7 @@ type
     function IndexOf(AName, ALocation: string): Integer; overload;
     procedure LoadContextmenu(); overload;
     procedure LoadContextmenu(const ALocation: string); overload;
-    procedure LoadContextMenus();
+    procedure LoadContextMenus(ALocations: string = 'Directory, Folder, *, Drive');
     { external }
     property Items[AIndex: Word]: TContextListItem read ItemAt; default;
     property OnSearching: TSearchEvent read FOnSearching write FOnSearching;
@@ -325,7 +325,7 @@ type
 
 implementation
 
-uses StrUtils, ContextMenuSearchThread, ContextSearchThread, StartupSearchThread;
+uses StrUtils, StartupSearchThread, ContextSearchThread;
 
 { TLnkFile }
 
@@ -2992,20 +2992,8 @@ end;
   Searches for context menu entries and adds them to the list. }
 
 procedure TContextList.LoadContextmenu();
-var
-  SearchThread: TContextMenuSearchThread;
-
 begin
-  // Init search thread
-  SearchThread := TContextMenuSearchThread.Create(Self, FLock);
-
-  with SearchThread do
-  begin
-    OnStart := FOnSearchStart;
-    OnSearching := FOnSearching;
-    OnFinish := FOnSearchFinish;
-    Resume;
-  end;  // of with
+  LoadContextMenus('');
 end;
 
 { public TContextList.LoadContextmenu
@@ -3023,7 +3011,7 @@ end;
 
   Searches for context menu entries at different locations. }
 
-procedure TContextList.LoadContextMenus();
+procedure TContextList.LoadContextMenus(ALocations: string = 'Directory, Folder, *, Drive');
 var
   SearchThread: TContextSearchThread;
 
@@ -3033,7 +3021,7 @@ begin
 
   with SearchThread do
   begin
-    Locations.CommaText := 'Directory, Folder, *, Drive';
+    Locations.CommaText := ALocations;
     OnStart := FOnSearchStart;
     OnSearching := FOnSearching;
     OnFinish := FOnSearchFinish;
