@@ -13,7 +13,7 @@ interface
 uses
   Windows, SysUtils, Classes, Controls, Forms, ComCtrls, StdCtrls, ExtCtrls,
   Dialogs, Menus, Graphics, ClearasAPI, ClearasInfo, LanguageFile, OSUtils,
-  Updater, AddDialogs, ClipBrd, ImgList;
+  Updater, AddDialogs, ClipBrd, ImgList, StrUtils;
 
 type
   { TMain }
@@ -88,6 +88,7 @@ type
     pmOpenExplorer: TMenuItem;
     mmShowIcons: TMenuItem;
     IconList: TImageList;
+    eSearch: TEdit;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -101,6 +102,8 @@ type
     procedure bExportStartupItemClick(Sender: TObject);
     procedure bExportContextItemClick(Sender: TObject);
     procedure cbExpertClick(Sender: TObject);
+    procedure eSearchChange(Sender: TObject);
+    procedure eSearchKeyPress(Sender: TObject; var Key: Char);
     procedure FormKeyDown(Sender: TObject; var Key: Word;
       Shift: TShiftState);
     procedure lwStartupSelectItem(Sender: TObject; Item: TListItem;
@@ -366,6 +369,7 @@ begin
   mmLang.Enabled := False;
   mmAdd.Enabled := False;
   mmExportList.Enabled := False;
+  eSearch.Visible := False;
   pbLoad.Visible := True;
   pbLoad.Max := AWorkCountMax;
   lwContext.Cursor := crHourGlass;
@@ -402,6 +406,7 @@ begin
   // Update some VCL
   pbLoad.Visible := False;
   pbLoad.Position := 0;
+  eSearch.Visible := True;
   lwContext.Cursor := crDefault;
   mmLang.Enabled := True;
   mmAdd.Enabled := True;
@@ -563,6 +568,9 @@ begin
     bCloseContext.Caption := bCloseStartup.Caption;
     cbExpert.Caption := GetString(89);
     tsStartup.Caption := GetString(83);
+
+    // Set placeholder text for search
+    TOSUtils.SetCueBanner(eSearch.Handle, GetString(63));
 
     // Context menu tab TListView labels
     lContext.Caption := GetString(86);
@@ -780,7 +788,6 @@ begin
         bDisableStartupItem.Enabled := False;
         bDeleteStartupItem.Enabled := False;
         bExportStartupItem.Enabled := False;
-        bCloseStartup.Default := True;
       end  //of begin
       else
         raise Exception.Create('Unknown error!');
@@ -829,7 +836,6 @@ begin
           bDisableContextItem.Enabled := False;
           bDeleteContextItem.Enabled := False;
           bExportContextItem.Enabled := False;
-          bCloseContext.Default := True;
         end  //of begin
         else
           raise Exception.Create('Unknown error!');
@@ -860,7 +866,6 @@ begin
       // Change button states
       bEnableStartupItem.Enabled := False;
       bDisableStartupItem.Enabled := True;
-      bDisableStartupItem.Default := True;
       bExportStartupItem.Enabled := not Startup.BackupExists;
       pmExport.Enabled := bExportStartupItem.Enabled;
       pmChangeStatus.Caption := bDisableStartupItem.Caption;
@@ -904,7 +909,6 @@ begin
       // Change button states
       bEnableContextItem.Enabled := False;
       bDisableContextItem.Enabled := True;
-      bDisableContextItem.Default := True;
       pmChangeStatus.Caption := bDisableStartupItem.Caption;
 
       // Update TListView
@@ -942,7 +946,6 @@ begin
       // Change button states
       bDisableStartupItem.Enabled := False;
       bEnableStartupItem.Enabled := True;
-      bEnableStartupItem.Default := True;
       pmChangeStatus.Caption := bEnableStartupItem.Caption;
 
       // Show deactivation timestamp?
@@ -980,7 +983,6 @@ begin
       // Change button states
       bDisableStartupItem.Enabled := False;
       bEnableContextItem.Enabled := True;
-      bEnableContextItem.Default := True;
       pmChangeStatus.Caption := bEnableContextItem.Caption;
 
       // Update TListView
@@ -1062,26 +1064,18 @@ begin
     // Load item into cache
     Startup.Selected := Startup.Items[Index];
 
-    bCloseStartup.Default := False;
-
     // Check for multiple items with the same name
     if (IsDouble(Item.SubItems[0], Item.Index) <> -1) then
     begin
       bEnableStartupItem.Enabled := False;
       bDisableStartupItem.Enabled := False;
       pmChangeStatus.Enabled := False;
-      bDeleteStartupItem.Default := True;
       pmEdit.Enabled := False;
     end  //of begin
     else
       begin
-        bDeleteStartupItem.Default := False;
-
         bEnableStartupItem.Enabled := not Startup.Selected.Enabled;
-        bEnableStartupItem.Default := bEnableStartupItem.Enabled;
-
         bDisableStartupItem.Enabled := not bEnableStartupItem.Enabled;
-        bDisableStartupItem.Default := bDisableStartupItem.Enabled;
 
         // Change text of "change status" button
         if bDisableStartupItem.Enabled then
@@ -1144,14 +1138,8 @@ begin
     Context.Selected := Context.Items[Index];
 
     // Change button states
-    bCloseContext.Default := False;
-    bDeleteContextItem.Default := False;
-
     bEnableContextItem.Enabled := not Context.Selected.Enabled;
-    bEnableContextItem.Default := bEnableContextItem.Enabled;
-
     bDisableContextItem.Enabled := not bEnableContextItem.Enabled;
-    bDisableContextItem.Default := bDisableContextItem.Enabled;
 
     // Change text of "change status" button
     if bDisableContextItem.Enabled then
@@ -1205,13 +1193,13 @@ end;
 
 procedure TMain.lwContextDblClick(Sender: TObject);
 begin
-  if bEnableContextItem.Default then
+  if bEnableContextItem.Enabled then
     bEnableContextItem.Click
   else
-    if bDisableContextItem.Default then
+    if bDisableContextItem.Enabled then
       bDisableContextItem.Click
     else
-      if bDeleteContextItem.Default then
+      if bDeleteContextItem.Enabled then
         bDeleteContextItem.Click
       else
         FLang.MessageBox(53, mtWarning);
@@ -1895,7 +1883,44 @@ begin
   LoadContextMenuEntries();
 end;
 
-{ TMain.bCloseClick
+{ TMain.eSearchChange
+
+  Event method that is called when user changes the search string. }
+
+procedure TMain.eSearchChange(Sender: TObject);
+var
+  i: Integer;
+
+begin
+  // Fill the listview
+  LoadContextMenuEntries(False);
+
+  // Exit on empty key word
+  if (Trim(eSearch.Text) = '') then
+    Exit;
+
+  // Search for items that do not match and delete them from list
+  for i := lwContext.Items.Count -1 downto 0 do
+    if not AnsiContainsStr(lwContext.Items[i].SubItems[0], eSearch.Text) and
+      not AnsiContainsStr(lwContext.Items[i].SubItems[1], eSearch.Text) then
+      lwContext.Items.Delete(i);
+end;
+
+{ TMain.eSearchKeyPress
+
+  Event method that is called when user pushes a button. }
+
+procedure TMain.eSearchKeyPress(Sender: TObject; var Key: Char);
+begin
+  // User hit "enter"
+  if (Key = #13) then
+  begin
+    eSearchChange(Sender);
+    Key := #0;
+  end;  //of begin
+end;
+
+{ TMain.bCloseStartupClick
 
   Closes Clearas. }
 

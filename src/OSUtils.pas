@@ -60,6 +60,7 @@ type
     class function OpenUrl(const AUrl: string): Boolean;
     class function PlaySound(AFileName: string; ASynchronized: Boolean = False): Boolean;
     class function PMCertExists(): Boolean;
+    class function SetCueBanner(AHandle: THandle; AText: WideString): Integer;
     class function ShowAddRegistryDialog(ARegFilePath: string): Boolean;
     class function Shutdown(): Boolean;
     class function StrToHKey(const AMainKey: string): HKEY;
@@ -593,6 +594,19 @@ begin
   finally
     reg.Free;
   end;  //of try
+end;
+
+{ public TOSUtils.SetCueBanner
+
+  Sets a placeholder text for an empty e.g. TEdit. }
+
+class function TOSUtils.SetCueBanner(AHandle: THandle; AText: WideString): Integer;
+const
+ ECM_FIRST = $1500;
+ EM_SETCUEBANNER = ECM_FIRST + 1;
+
+begin
+  Result := SendMessage(AHandle, EM_SETCUEBANNER, Ord(True), LParam(PWideChar(AText)));
 end;
 
 { public TOSUtils.ShowAddRegistryDialog

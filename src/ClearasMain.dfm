@@ -401,7 +401,6 @@ object Main: TMain
         Height = 33
         Anchors = [akTop, akRight]
         Caption = 'Beenden'
-        Default = True
         TabOrder = 5
         OnClick = bCloseStartupClick
       end
@@ -516,7 +515,6 @@ object Main: TMain
         Height = 33
         Anchors = [akTop, akRight]
         Caption = 'Beenden'
-        Default = True
         TabOrder = 5
         OnClick = bCloseStartupClick
       end
@@ -591,7 +589,7 @@ object Main: TMain
         Left = 21
         Top = 257
         Width = 150
-        Height = 17
+        Height = 18
         Anchors = [akLeft, akBottom]
         TabOrder = 7
         Visible = False
@@ -605,6 +603,15 @@ object Main: TMain
         Caption = 'Expertenmodus'
         TabOrder = 6
         OnClick = cbExpertClick
+      end
+      object eSearch: TEdit
+        Left = 21
+        Top = 256
+        Width = 148
+        Height = 18
+        TabOrder = 8
+        OnChange = eSearchChange
+        OnKeyPress = eSearchKeyPress
       end
     end
   end
