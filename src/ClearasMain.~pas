@@ -1121,12 +1121,12 @@ begin
   if (FColumnToSort = 0) then
     Compare := CompareText(Item1.Caption, Item2.Caption)
   else
-    begin
-      Data := FColumnToSort -1;
+  begin
+    Data := FColumnToSort - 1;
 
-      if (Data < 3) then
-        Compare := CompareText(Item1.SubItems[Data], Item2.SubItems[Data]);
-    end;  //of if
+    if (Data < 3) then
+      Compare := CompareText(Item1.SubItems[Data], Item2.SubItems[Data]);
+  end;  //of if
 end;
 
 { TMain.lwStartupDblClick
@@ -1153,11 +1153,17 @@ end;
 
 procedure TMain.lwStartupKeyPress(Sender: TObject; var Key: Char);
 var
-  i: Integer;
+  i, StartIndex: Integer;
 
 begin
-  // Find item whose first char starts with key
-  for i := 0 to lwStartup.Items.Count - 1 do
+  StartIndex := 0;
+
+  // Current selected item already starts with key?
+  if AnsiStartsText(Key, lwStartup.ItemFocused.SubItems[0]) then
+    StartIndex := lwStartup.ItemFocused.Index + 1;
+
+  // Find next item whose first char starts with key
+  for i := StartIndex to lwStartup.Items.Count - 1 do
     if AnsiStartsText(Key, lwStartup.Items[i].SubItems[0]) then
     begin
       lwStartup.ItemIndex := i;
@@ -1223,18 +1229,18 @@ begin
       pmEdit.Enabled := False;
     end  //of begin
     else
-      begin
-        bEnableStartupItem.Enabled := not Startup.Selected.Enabled;
-        bDisableStartupItem.Enabled := not bEnableStartupItem.Enabled;
+    begin
+      bEnableStartupItem.Enabled := not Startup.Selected.Enabled;
+      bDisableStartupItem.Enabled := not bEnableStartupItem.Enabled;
 
-        // Change text of "change status" button
-        if bDisableStartupItem.Enabled then
-          pmChangeStatus.Caption := bDisableStartupItem.Caption
-        else
-          pmChangeStatus.Caption := bEnableStartupItem.Caption;
+      // Change text of "change status" button
+      if bDisableStartupItem.Enabled then
+        pmChangeStatus.Caption := bDisableStartupItem.Caption
+      else
+        pmChangeStatus.Caption := bEnableStartupItem.Caption;
 
-        pmChangeStatus.Enabled := True;
-      end;  //of if
+      pmChangeStatus.Enabled := True;
+    end;  //of if
 
     // Selected item is enabled and startup user type?
     if ((Startup.Selected is TStartupUserItem) and Startup.Selected.Enabled) then
@@ -1246,10 +1252,10 @@ begin
       bExportStartupItem.Enabled := not Startup.BackupExists();
     end  //of begin
     else
-      begin
-        bExportStartupItem.Enabled := True;
-        pmOpenRegedit.Enabled := True;
-      end;  //of if
+    begin
+      bExportStartupItem.Enabled := True;
+      pmOpenRegedit.Enabled := True;
+    end;  //of if
 
     pmEdit.Enabled := True;
     pmExport.Enabled := bExportStartupItem.Enabled;
@@ -1353,10 +1359,10 @@ begin
       Path := Startup.Selected.FilePath;
     end  //of begin
     else
-      begin
-        SelectedList := Context;
-        Path := Context.Selected.FilePath;
-      end;  //of if
+    begin
+      SelectedList := Context;
+      Path := Context.Selected.FilePath;
+    end;  //of if
 
     // Show input box for editing path
     EnteredPath := InputBox(FLang.GetString(33), FLang.GetString(54), Path);
@@ -1451,29 +1457,29 @@ begin
             LoadStartupEntries(False);
         end  //of begin
         else
-          begin
-            List := TStringList.Create;
+        begin
+          List := TStringList.Create;
 
-            try
-              // Init location ComboBox
-              List.CommaText := 'Directory, Folder, *, Drive';
+          try
+            // Init location ComboBox
+            List.CommaText := 'Directory, Folder, *, Drive';
 
-              // Show dialog for location selection
-              if not InputCombo(FLang.GetString(34), FLang.GetString(90) +':',
-                List, Location) then
-                Exit;
+            // Show dialog for location selection
+            if not InputCombo(FLang.GetString(34), FLang.GetString(90) +':',
+              List, Location) then
+              Exit;
 
-              // Contextmenu item already exists?
-              if not Context.AddEntry(OpenDialog.FileName, Args, Location, Name) then
-                FLang.MessageBox(FLang.Format(41, [OpenDialog.FileName]), mtWarning)
-              else
-                // Update TListView
-                LoadContextMenuEntries(False);
+            // Contextmenu item already exists?
+            if not Context.AddEntry(OpenDialog.FileName, Args, Location, Name) then
+              FLang.MessageBox(FLang.Format(41, [OpenDialog.FileName]), mtWarning)
+            else
+              // Update TListView
+              LoadContextMenuEntries(False);
 
-            finally
-              List.Free;
-            end;  //of try
-          end;  //of if
+          finally
+            List.Free;
+          end;  //of try
+        end;  //of if
       end;  //of begin
 
     finally
@@ -1531,37 +1537,37 @@ begin
     end;  //of if
   end  //of begin
   else
-    begin
-      mmDate.Checked := True;
-      endOf := Width + 120;
+  begin
+    mmDate.Checked := True;
+    endOf := Width + 120;
 
-      // Add column
-      lwStartup.Columns.Add.Caption := FLang.GetString(80);
+    // Add column
+    lwStartup.Columns.Add.Caption := FLang.GetString(80);
+
+    if (WindowState = wsMaximized) then
+      LoadStartupEntries(False);
+
+    // Animation to add column smoothly
+    repeat
+      Width := Width + 1;
 
       if (WindowState = wsMaximized) then
-        LoadStartupEntries(False);
+        endOf := Width;
 
-      // Animation to add column smoothly
-      repeat
-        Width := Width + 1;
+      if (lwStartup.Column[4].Width < 120) then
+        lwStartup.Column[4].Width := lwStartup.Column[4].Width + 1;
 
-        if (WindowState = wsMaximized) then
-          endOf := Width;
+      Update;
+      Sleep(0);
+    until ((lwStartup.Column[4].Width >= 120) and (Width = endOf));
 
-        if (lwStartup.Column[4].Width < 120) then
-          lwStartup.Column[4].Width := lwStartup.Column[4].Width + 1;
+    lwStartup.Column[4].MinWidth := lwStartup.Column[4].Width;
+    lwStartup.Column[4].MaxWidth := lwStartup.Column[4].Width;
+    Constraints.MinWidth := Constraints.MinWidth + lwStartup.Column[4].Width;
 
-        Update;
-        Sleep(0);
-      until ((lwStartup.Column[4].Width >= 120) and (Width = endOf));
-
-      lwStartup.Column[4].MinWidth := lwStartup.Column[4].Width;
-      lwStartup.Column[4].MaxWidth := lwStartup.Column[4].Width;
-      Constraints.MinWidth := Constraints.MinWidth + lwStartup.Column[4].Width;
-
-      if not (WindowState = wsMaximized) then
-        LoadStartupEntries(False);
-    end;  //of if
+    if not (WindowState = wsMaximized) then
+      LoadStartupEntries(False);
+  end;  //of if
 end;
 
 { TMain.mmExportClick
@@ -1719,11 +1725,11 @@ begin
     lwStartup.Columns[3].Width := 75;
   end  //of begin
   else
-    begin
-      lwContext.Columns[1].Width := 150;
-      lwContext.Columns[2].Width := 107;
-      lwContext.Columns[3].Width := 65;
-    end;  //of if
+  begin
+    lwContext.Columns[1].Width := 150;
+    lwContext.Columns[2].Width := 107;
+    lwContext.Columns[3].Width := 65;
+  end;  //of if
 end;
 
 { TMain.mmOptimateClick
@@ -1739,10 +1745,10 @@ begin
     lwStartup.Columns[3].Width := ColumnTextWidth;
   end  //of begin
   else
-    begin
-      lwContext.Columns[1].Width := ColumnTextWidth;
-      lwContext.Columns[2].Width := ColumnTextWidth;
-    end;  //of if
+  begin
+    lwContext.Columns[1].Width := ColumnTextWidth;
+    lwContext.Columns[2].Width := ColumnTextWidth;
+  end;  //of if
 end;
 
 { TMain.mmGerClick
@@ -1893,15 +1899,15 @@ begin
       LoadContextMenuEntries();
   end  //of begin
   else
-    begin
-      mmImport.Visible := True;
-      mmDate.Visible := True;
-      mmRunOnce.Visible := True;
-      mmShowIcons.Visible := True;
-      mmAdd.Caption := FLang.GetString(69);
-      pmOpenExplorer.Enabled := True;
-      lwStartupSelectItem(Sender, lwStartup.ItemFocused, True);
-    end;  //of if
+  begin
+    mmImport.Visible := True;
+    mmDate.Visible := True;
+    mmRunOnce.Visible := True;
+    mmShowIcons.Visible := True;
+    mmAdd.Caption := FLang.GetString(69);
+    pmOpenExplorer.Enabled := True;
+    lwStartupSelectItem(Sender, lwStartup.ItemFocused, True);
+  end;  //of if
 end;
 
 { TMain.cbExpertClick
@@ -1931,8 +1937,8 @@ begin
 
   // Search for items that do not match and delete them from list
   for i := lwContext.Items.Count -1 downto 0 do
-    if not AnsiContainsStr(lwContext.Items[i].SubItems[0], eSearch.Text) and
-      not AnsiContainsStr(lwContext.Items[i].SubItems[1], eSearch.Text) then
+    if (not AnsiContainsText(lwContext.Items[i].SubItems[0], eSearch.Text) and not
+      AnsiContainsText(lwContext.Items[i].SubItems[1], eSearch.Text)) then
       lwContext.Items.Delete(i);
 end;
 

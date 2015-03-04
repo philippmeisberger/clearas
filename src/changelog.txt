@@ -25,6 +25,7 @@ Version 4.0  [10.03.15]
     - Neue Funktion "Kontextmenü hinzufügen"
     - Neue Funktion "Einträge exportieren"
   - Beschriftungen von Shell-Eintägen werden nun direkt angezeigt
+  - Suchfeld hinzugefügt
   - "Expertenmodus" verbessert:
     - Suche beschleunigt
     - Mehr Ergebnisse

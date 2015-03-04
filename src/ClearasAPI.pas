@@ -12,7 +12,7 @@ interface
 
 uses
   Windows, Classes, SysUtils, Registry, ShlObj, ActiveX, ComObj, CommCtrl,
-  ShellAPI, Contnrs, OSUtils, LanguageFile, IniFileParser, SyncObjs;
+  ShellAPI, Contnrs, OSUtils, LanguageFile, IniFileParser, SyncObjs, StrUtils;
 
 const
   { Registry keys }
@@ -322,7 +322,7 @@ type
 
 implementation
 
-uses StrUtils, StartupSearchThread, ContextSearchThread;
+uses StartupSearchThread, ContextSearchThread;
 
 { TLnkFile }
 
@@ -592,22 +592,22 @@ end;
 
 class function TRegUtils.DeleteKey(AMainKey, AKeyPath, AKeyName: string): Boolean;
 var
-  reg: TRegistry;
+  Reg: TRegistry;
 
 begin
   Result := False;
-  reg := TRegistry.Create(DenyWOW64Redirection(KEY_READ or KEY_WRITE));
+  Reg := TRegistry.Create(DenyWOW64Redirection(KEY_READ or KEY_WRITE));
 
   try
-    reg.RootKey := StrToHKey(AMainKey);
+    Reg.RootKey := StrToHKey(AMainKey);
 
-    if not reg.OpenKey(AKeyPath, False) then
+    if not Reg.OpenKey(AKeyPath, False) then
       raise Exception.Create('Key does not exist!');
 
-    Result := reg.DeleteKey(AKeyName);
+    Result := Reg.DeleteKey(AKeyName);
 
   finally
-    reg.Free;
+    Reg.Free;
   end;  //of try
 end;
 
@@ -617,25 +617,25 @@ end;
 
 class function TRegUtils.DeleteValue(AMainKey, AKeyName, AValueName: string): Boolean;
 var
-  reg: TRegistry;
+  Reg: TRegistry;
 
 begin
   Result := False;
-  reg := TRegistry.Create(DenyWOW64Redirection(KEY_READ or KEY_WRITE));
+  Reg := TRegistry.Create(DenyWOW64Redirection(KEY_READ or KEY_WRITE));
 
   try
-    reg.RootKey := StrToHKey(AMainKey);
+    Reg.RootKey := StrToHKey(AMainKey);
 
-    if not reg.OpenKey(AKeyName, False) then
+    if not Reg.OpenKey(AKeyName, False) then
       raise Exception.Create('Key does not exist!');
 
-    if reg.ValueExists(AValueName) then
-      Result := reg.DeleteValue(AValueName)
+    if Reg.ValueExists(AValueName) then
+      Result := Reg.DeleteValue(AValueName)
     else
       Result := True;
 
   finally
-    reg.Free;
+    Reg.Free;
   end;  //of try
 end;
 
@@ -668,19 +668,19 @@ end;
 
 class function TRegUtils.GetKeyValue(AMainKey, AKeyPath, AValueName: string): string;
 var
-  reg: TRegistry;
+  Reg: TRegistry;
 
 begin
-  reg := TRegistry.Create(DenyWOW64Redirection(KEY_READ));
+  Reg := TRegistry.Create(DenyWOW64Redirection(KEY_READ));
 
   try
-    reg.RootKey := StrToHKey(AMainKey);
+    Reg.RootKey := StrToHKey(AMainKey);
 
-    if reg.OpenKey(AKeyPath, False) then
+    if Reg.OpenKey(AKeyPath, False) then
     begin
       // Only read if value exists
-      if (reg.ValueExists(AValueName)) then
-        Result := reg.ReadString(AValueName)
+      if (Reg.ValueExists(AValueName)) then
+        Result := Reg.ReadString(AValueName)
       else
         Result := '';
     end  //of begin
@@ -688,7 +688,8 @@ begin
       Result := '';
 
   finally
-    reg.Free;
+    Reg.CloseKey();
+    Reg.Free;
   end;  //of try
 end;
 
@@ -716,24 +717,25 @@ end;
 
 class function TRegUtils.UpdateContextPath(): Boolean;
 var
-  reg: TRegistry;
+  Reg: TRegistry;
 
 begin
-  reg := TRegistry.Create(DenyWOW64Redirection(KEY_WRITE));
-  reg.RootKey := HKEY_CLASSES_ROOT;
+  Reg := TRegistry.Create(DenyWOW64Redirection(KEY_WRITE));
+  Reg.RootKey := HKEY_CLASSES_ROOT;
 
   try
     // Only update if context menu entry exists
-    if reg.OpenKey(KEY_RECYCLEBIN +'\Clearas\command', False) then
+    if Reg.OpenKey(KEY_RECYCLEBIN +'\Clearas\command', False) then
     begin
-      reg.WriteString('', ParamStr(0));
+      Reg.WriteString('', ParamStr(0));
       Result := True;
     end  //of begin
     else
       Result := False;
 
   finally
-    reg.Free;
+    Reg.CloseKey();
+    Reg.Free;
   end;  //of try
 end;
 
@@ -743,27 +745,28 @@ end;
 
 class function TRegUtils.UpdateContextPath(ALangFile: TLanguageFile): Boolean;
 var
-  reg: TRegistry;
+  Reg: TRegistry;
   ClearasKey: string;
 
 begin
-  reg := TRegistry.Create(DenyWOW64Redirection(KEY_ALL_ACCESS));
-  reg.RootKey := HKEY_CLASSES_ROOT;
+  Reg := TRegistry.Create(DenyWOW64Redirection(KEY_ALL_ACCESS));
+  Reg.RootKey := HKEY_CLASSES_ROOT;
 
   try
-    reg.OpenKey(KEY_RECYCLEBIN, False);
+    Reg.OpenKey(KEY_RECYCLEBIN, False);
     ClearasKey := ALangFile.GetString(37);
 
     // Only update if context menu entry exists
-    if (reg.KeyExists(ClearasKey)) then
+    if (Reg.KeyExists(ClearasKey)) then
     begin
       // Delete old context menu key
-      if not reg.DeleteKey(ClearasKey) then
+      if not Reg.DeleteKey(ClearasKey) then
         raise Exception.Create('Could not delete key: '+ ClearasKey);
     end;  //of begin
 
   finally
-    reg.Free;
+    Reg.CloseKey();
+    Reg.Free;
     Result := UpdateContextPath();
   end;  //of try
 end;
@@ -774,19 +777,20 @@ end;
 
 class procedure TRegUtils.WriteStrValue(AMainKey, AKeyName, AName, AValue: string);
 var
-  reg: TRegistry;
+  Reg: TRegistry;
 
 begin
-  reg := TRegistry.Create(DenyWOW64Redirection(KEY_WRITE));
+  Reg := TRegistry.Create(DenyWOW64Redirection(KEY_WRITE));
 
   try
     try
-      reg.RootKey := StrToHKey(AMainKey);
-      reg.OpenKey(AKeyName, True);
-      reg.WriteString(AName, AValue);
+      Reg.RootKey := StrToHKey(AMainKey);
+      Reg.OpenKey(AKeyName, True);
+      Reg.WriteString(AName, AValue);
 
     finally
-      reg.Free;
+      Reg.CloseKey();
+      Reg.Free;
     end;  //of try
 
   except
@@ -1068,7 +1072,7 @@ end;
 
 function TStartupListItem.GetTime(): string;
 var
-  reg: TRegistry;
+  Reg: TRegistry;
   Year, Month, Day, Hour, Min, Sec: Word;
   Date, Time: string;
 
@@ -1079,28 +1083,29 @@ begin
   if FEnabled then
     Exit;
 
-  reg := TRegistry.Create(TRegUtils.DenyWOW64Redirection(KEY_READ));
+  Reg := TRegistry.Create(TRegUtils.DenyWOW64Redirection(KEY_READ));
 
   try
-    reg.RootKey := TRegUtils.StrToHKey(FRootKey);
-    reg.OpenKey(FKeyPath, False);
+    Reg.RootKey := TRegUtils.StrToHKey(FRootKey);
+    Reg.OpenKey(FKeyPath, False);
 
     // At least one valid date entry exists?
-    if reg.ValueExists('YEAR') then
+    if Reg.ValueExists('YEAR') then
     begin
-      Year := reg.ReadInteger('YEAR');
-      Month := reg.ReadInteger('MONTH');
-      Day := reg.ReadInteger('DAY');
-      Hour := reg.ReadInteger('HOUR');
-      Min := reg.ReadInteger('MINUTE');
-      Sec := reg.ReadInteger('SECOND');
+      Year := Reg.ReadInteger('YEAR');
+      Month := Reg.ReadInteger('MONTH');
+      Day := Reg.ReadInteger('DAY');
+      Hour := Reg.ReadInteger('HOUR');
+      Min := Reg.ReadInteger('MINUTE');
+      Sec := Reg.ReadInteger('SECOND');
       Date := FormatDateTime('c', EncodeDate(Year, Month, Day));
       Time := FormatDateTime('tt', EncodeTime(Hour, Min, Sec, 0));
       Result := Date +'  '+ Time;
     end;  //of if
 
   finally
-    reg.Free;
+    Reg.CloseKey();
+    Reg.Free;
   end;  //of try
 end;
 
@@ -1110,17 +1115,17 @@ end;
 
 procedure TStartupListItem.WriteTime(const AKeyPath: string);
 var
-  reg: TRegistry;
+  Reg: TRegistry;
   Year, Month, Day, Hour, Min, Sec, MSec: Word;
   TimeNow: TDateTime;
 
 begin
-  reg := TRegistry.Create(TRegUtils.DenyWOW64Redirection(KEY_WRITE));
-  reg.RootKey := HKEY_LOCAL_MACHINE;
+  Reg := TRegistry.Create(TRegUtils.DenyWOW64Redirection(KEY_WRITE));
+  Reg.RootKey := HKEY_LOCAL_MACHINE;
 
   try
     try
-      reg.OpenKey(AKeyPath, True);
+      Reg.OpenKey(AKeyPath, True);
 
       // Read current time
       TimeNow := Now();
@@ -1133,7 +1138,7 @@ begin
       DecodeTime(TimeNow, Hour, Min, Sec, MSec);
 
       // Write time stamp
-      with reg do
+      with Reg do
       begin
         WriteInteger('YEAR', Year);
         WriteInteger('MONTH', Month);
@@ -1144,7 +1149,8 @@ begin
       end;  //of with
 
     finally
-      reg.Free;
+      Reg.CloseKey();
+      Reg.Free;
     end;  //of try
 
   except
@@ -1162,19 +1168,19 @@ end;
 
 function TStartupListItem.ChangeFilePath(const ANewFilePath: string): Boolean;
 var
-  reg: TRegistry;
+  Reg: TRegistry;
   ItemName: string;
 
 begin
   Result := False;
-  reg := TRegistry.Create(TWinWOW64.DenyWOW64Redirection(KEY_ALL_ACCESS));
+  Reg := TRegistry.Create(TWinWOW64.DenyWOW64Redirection(KEY_ALL_ACCESS));
 
   try
     try
-      reg.RootKey := TOSUtils.StrToHKey(FRootKey);
+      Reg.RootKey := TOSUtils.StrToHKey(FRootKey);
 
       // Invalid key?
-      if not reg.OpenKey(FKeyPath, False) then
+      if not Reg.OpenKey(FKeyPath, False) then
         raise Exception.Create('Key does not exist!');
 
       if FEnabled then
@@ -1183,16 +1189,17 @@ begin
         ItemName := 'command';
 
       // Value must exist!
-      if not reg.ValueExists(ItemName) then
+      if not Reg.ValueExists(ItemName) then
         raise Exception.Create('Value does not exist!');
 
       // Change path
-      reg.WriteString(ItemName, ANewFilePath);
+      Reg.WriteString(ItemName, ANewFilePath);
       FFilePath := ANewFilePath;
       Result := True;
 
     finally
-      reg.Free;
+      Reg.CloseKey();
+      Reg.Free;
     end;  //of try
 
   except
@@ -1271,29 +1278,29 @@ end;
 
 function TStartupItem.Disable(): Boolean;
 var
-  reg: TRegistry;
+  Reg: TRegistry;
 
 begin
   Result := False;
-  reg := TRegistry.Create(TRegUtils.DenyWOW64Redirection(KEY_WRITE));
+  Reg := TRegistry.Create(TRegUtils.DenyWOW64Redirection(KEY_WRITE));
 
   try
     try
-      reg.RootKey := HKEY_LOCAL_MACHINE;
+      Reg.RootKey := HKEY_LOCAL_MACHINE;
 
       // Successfully deleted old entry?
       if not TRegUtils.DeleteValue(FRootKey, FKeyPath, FName) then
         raise EStartupException.Create('Could not delete value!');
 
       // Successfully created new key?
-      if (reg.OpenKey(KEY_DEACT + FName, True)) then
+      if (Reg.OpenKey(KEY_DEACT + FName, True)) then
       begin
         // Write values
-        reg.WriteString('hkey', FRootKey);
-        reg.WriteString('key', FKeyPath);
-        reg.WriteString('item', FName);
-        reg.WriteString('command', FFilePath);
-        reg.WriteString('inimapping', '0');
+        Reg.WriteString('hkey', FRootKey);
+        Reg.WriteString('key', FKeyPath);
+        Reg.WriteString('item', FName);
+        Reg.WriteString('command', FFilePath);
+        Reg.WriteString('inimapping', '0');
 
         // Windows >= Vista?
         if TOSUtils.WindowsVistaOrLater() then
@@ -1311,7 +1318,8 @@ begin
       Result := True;
 
     finally
-      reg.Free;
+      Reg.CloseKey();
+      Reg.Free;
     end;  //of try
 
   except
@@ -1329,36 +1337,36 @@ end;
 
 function TStartupItem.Enable(): Boolean;
 var
-  reg: TRegistry;
+  Reg: TRegistry;
   NewHKey, NewKeyPath: string;
 
 begin
   Result := False;
-  reg := TRegistry.Create(TRegUtils.DenyWOW64Redirection(KEY_ALL_ACCESS));
+  Reg := TRegistry.Create(TRegUtils.DenyWOW64Redirection(KEY_ALL_ACCESS));
 
   try
     try
-      reg.RootKey := HKEY_LOCAL_MACHINE;
+      Reg.RootKey := HKEY_LOCAL_MACHINE;
 
-      if not reg.OpenKey(FKeyPath, False) then
+      if not Reg.OpenKey(FKeyPath, False) then
         raise EStartupException.Create('Key does not exist!');
 
       // Set new values
-      NewHKey := reg.ReadString('hkey');
-      NewKeyPath := reg.ReadString('key');
-      reg.CloseKey;
+      NewHKey := Reg.ReadString('hkey');
+      NewKeyPath := Reg.ReadString('key');
+      Reg.CloseKey;
 
       if ((NewHKey = '') or (NewKeyPath = '')) then
         raise EStartupException.Create('Missing destination Registry values '
           +'"hkey" and "key"!');
 
-      reg.RootKey := TRegUtils.StrToHKey(NewHKey);
+      Reg.RootKey := TRegUtils.StrToHKey(NewHKey);
 
       // Successfully created new key?
-      if reg.OpenKey(NewKeyPath, True) then
+      if Reg.OpenKey(NewKeyPath, True) then
       begin
         // Write startup entry
-        reg.WriteString(FName, FFilePath);
+        Reg.WriteString(FName, FFilePath);
 
         // Delete old key
         Result := TRegUtils.DeleteKey('HKLM', KEY_DEACT, FName);
@@ -1373,7 +1381,8 @@ begin
         raise EStartupException.Create('Could not create key "'+ NewKeyPath +'"!');
 
     finally
-      reg.Free;
+      Reg.CloseKey();
+      Reg.Free;
     end;  //of try
 
   except
@@ -1490,38 +1499,38 @@ end;
 
 function TStartupUserItem.Disable(): Boolean;
 var
-  reg: TRegistry;
+  Reg: TRegistry;
   KeyName: string;
 
 begin
   Result := False;
-  reg := TRegistry.Create(TRegUtils.DenyWOW64Redirection(KEY_WRITE));
+  Reg := TRegistry.Create(TRegUtils.DenyWOW64Redirection(KEY_WRITE));
 
   try
     try
-      reg.RootKey := HKEY_LOCAL_MACHINE;
+      Reg.RootKey := HKEY_LOCAL_MACHINE;
       KeyName := AddCircumflex(FKeyPath);
 
       if not FLnkFile.ReadLnkFile() then
         raise EStartupException.Create('Could not read .lnk file!');
 
-      if not reg.OpenKey(KEY_DEACT_FOLDER + KeyName, True) then
+      if not Reg.OpenKey(KEY_DEACT_FOLDER + KeyName, True) then
         raise EStartupException.Create('Could not create key "'+ FName +'"!');
 
-      reg.WriteString('path', FKeyPath);
-      reg.WriteString('item', TRegUtils.DeleteExt(ExtractFileName(FName)));
-      reg.WriteString('command', FFilePath);
-      reg.WriteString('backup', FLnkFile.BackupLnk);
+      Reg.WriteString('path', FKeyPath);
+      Reg.WriteString('item', TRegUtils.DeleteExt(ExtractFileName(FName)));
+      Reg.WriteString('command', FFilePath);
+      Reg.WriteString('backup', FLnkFile.BackupLnk);
 
       // Special Registry entries only for Windows >= Vista
       if TOSUtils.WindowsVistaOrLater() then
       begin
-        reg.WriteString('backupExtension', FLnkFile.BackupExt);
-        reg.WriteString('location', ExtractFileDir(FKeyPath));
+        Reg.WriteString('backupExtension', FLnkFile.BackupExt);
+        Reg.WriteString('location', ExtractFileDir(FKeyPath));
         WriteTime(KEY_DEACT_FOLDER + KeyName);
       end  //of begin
       else
-        reg.WriteString('location', FType);
+        Reg.WriteString('location', FType);
 
       // Create backup directory if not exist
       if not DirectoryExists(TLnkFile.GetBackupDir()) then
@@ -1542,7 +1551,8 @@ begin
       Result := True;
 
     finally
-      reg.Free;
+      Reg.CloseKey();
+      Reg.Free;
     end;  //of try
 
   except
@@ -2208,18 +2218,18 @@ end;
 
 procedure TStartupList.LoadDisabled(const AKeyPath: string);
 var
-  reg: TRegistry;
+  Reg: TRegistry;
   List: TStringList;
   i: Integer;
 
 begin
   List := TStringList.Create;
-  reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));
-  reg.RootKey := HKEY_LOCAL_MACHINE;
+  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));
+  Reg.RootKey := HKEY_LOCAL_MACHINE;
 
   try
-    reg.OpenKey(AKeyPath, True);
-    reg.GetKeyNames(List);
+    Reg.OpenKey(AKeyPath, True);
+    Reg.GetKeyNames(List);
 
     for i := 0 to List.Count -1 do
       if (AKeyPath = KEY_DEACT) then
@@ -2228,7 +2238,8 @@ begin
         AddUserItemDisabled(AKeyPath + List[i]);
 
   finally
-    reg.Free;
+    Reg.CloseKey();
+    Reg.Free;
     List.Free;
   end;  //of finally
 end;
@@ -2268,25 +2279,26 @@ end;
 
 procedure TStartupList.LoadEnabled(const ARootKey, AKeyPath: string);
 var
-  reg: TRegistry;
+  Reg: TRegistry;
   List: TStringList;
   i: Integer;
 
 begin
   List := TStringList.Create;
-  reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));
+  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));
 
   try
-    reg.RootKey := TOSUtils.StrToHKey(ARootKey);
-    reg.OpenKey(AKeyPath, True);
-    reg.GetValueNames(List);
+    Reg.RootKey := TOSUtils.StrToHKey(ARootKey);
+    Reg.OpenKey(AKeyPath, True);
+    Reg.GetValueNames(List);
 
     for i := 0 to List.Count - 1 do
       // Read path to .exe and add item to list
-      AddItemEnabled(ARootKey, AKeyPath, List[i], reg.ReadString(List[i]));
+      AddItemEnabled(ARootKey, AKeyPath, List[i], Reg.ReadString(List[i]));
 
   finally
-    reg.Free;
+    Reg.CloseKey();
+    Reg.Free;
     List.Free;
   end;  //of finally
 end;
@@ -2361,26 +2373,27 @@ end;
 
 function TShellItem.ChangeFilePath(const ANewFilePath: string): Boolean;
 var
-  reg: TRegistry;
+  Reg: TRegistry;
 
 begin
   Result := False;
-  reg := TRegistry.Create(TWinWOW64.DenyWOW64Redirection(KEY_ALL_ACCESS));
+  Reg := TRegistry.Create(TWinWOW64.DenyWOW64Redirection(KEY_ALL_ACCESS));
 
   try
     try
-      reg.RootKey := HKEY_CLASSES_ROOT;
+      Reg.RootKey := HKEY_CLASSES_ROOT;
 
       // Invalid key?
-      if not reg.OpenKey(GetKeyPath() +'\command', False) then
+      if not Reg.OpenKey(GetKeyPath() +'\command', False) then
         raise Exception.Create('Key does not exist!');
 
       // Change path
-      reg.WriteString('', ANewFilePath);
+      Reg.WriteString('', ANewFilePath);
       Result := True;
 
     finally
-      reg.Free;
+      Reg.CloseKey();
+      Reg.Free;
     end;  //of try
 
   except
@@ -2398,28 +2411,29 @@ end;
 
 function TShellItem.Disable(): Boolean;
 var
-  reg: TRegistry;
+  Reg: TRegistry;
 
 begin
   Result := False;
-  reg := TRegistry.Create(TRegUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
+  Reg := TRegistry.Create(TRegUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
 
   try
     try
-      reg.RootKey := HKEY_CLASSES_ROOT;
+      Reg.RootKey := HKEY_CLASSES_ROOT;
 
       // Key does not exist?
-      if not reg.OpenKey(GetKeyPath(), False) then
+      if not Reg.OpenKey(GetKeyPath(), False) then
         raise EContextMenuException.Create('Key does not exist!');
 
-      reg.WriteString('LegacyDisable', '');
+      Reg.WriteString('LegacyDisable', '');
 
       // Update status
       FEnabled := False;
       Result := True;
 
     finally
-      reg.Free;
+      Reg.CloseKey();
+      Reg.Free;
     end;  //of try
 
   except
@@ -2495,26 +2509,26 @@ end;
 
 function TShellExItem.Disable(): Boolean;
 var
-  reg: TRegistry;
+  Reg: TRegistry;
   OldValue, NewValue: string;
 
 begin
   Result := False;
-  reg := TRegistry.Create(TRegUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
+  Reg := TRegistry.Create(TRegUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
 
   try
     try
-      reg.RootKey := HKEY_CLASSES_ROOT;
+      Reg.RootKey := HKEY_CLASSES_ROOT;
 
       // Key does not exist?
-      if not reg.OpenKey(GetKeyPath(), False) then
+      if not Reg.OpenKey(GetKeyPath(), False) then
         raise EContextMenuException.Create('Key does not exist!');
 
       // Value does not exist?
-      if not reg.ValueExists('') then
+      if not Reg.ValueExists('') then
         raise EContextMenuException.Create('Value does not exist!');
 
-      OldValue := reg.ReadString('');
+      OldValue := Reg.ReadString('');
 
       if (Trim(OldValue) = '') then
         raise EContextMenuException.Create('Value must not be empty!');
@@ -2524,7 +2538,7 @@ begin
       begin
         // Set up new value and write it
         NewValue := '-'+ OldValue;
-        reg.WriteString('', NewValue);
+        Reg.WriteString('', NewValue);
       end;  //of begin
 
       // Update status
@@ -2532,7 +2546,8 @@ begin
       Result := True;
 
     finally
-      reg.Free;
+      Reg.CloseKey();
+      Reg.Free;
     end;  //of try
 
   except
@@ -2550,26 +2565,26 @@ end;
 
 function TShellExItem.Enable(): Boolean;
 var
-  reg: TRegistry;
+  Reg: TRegistry;
   OldValue, NewValue: string;
 
 begin
   Result := False;
-  reg := TRegistry.Create(TRegUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
+  Reg := TRegistry.Create(TRegUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
 
   try
     try
-      reg.RootKey := HKEY_CLASSES_ROOT;
+      Reg.RootKey := HKEY_CLASSES_ROOT;
 
       // Key does not exist?
-      if not reg.OpenKey(GetKeyPath(), False) then
+      if not Reg.OpenKey(GetKeyPath(), False) then
         raise EContextMenuException.Create('Key does not exist!');
 
       // Value does not exist?
-      if not reg.ValueExists('') then
+      if not Reg.ValueExists('') then
         raise EContextMenuException.Create('Value does not exist!');
 
-      OldValue := reg.ReadString('');
+      OldValue := Reg.ReadString('');
 
       if (Trim(OldValue) = '') then
         raise EContextMenuException.Create('Value must not be empty!');
@@ -2579,7 +2594,7 @@ begin
       begin
         // Set up new value and write it
         NewValue := Copy(OldValue, 2, Length(OldValue));
-        reg.WriteString('', NewValue);
+        Reg.WriteString('', NewValue);
       end;  //of begin
 
       // Update status
@@ -2587,7 +2602,8 @@ begin
       Result := True;
 
     finally
-      reg.Free;
+      Reg.CloseKey();
+      Reg.Free;
     end;  //of try
 
   except
@@ -2756,14 +2772,14 @@ end;
 procedure TContextList.LoadContextmenu(const ALocation: string;
   ASearchForShellItems: Boolean);
 var
-  reg: TRegistry;
+  Reg: TRegistry;
   i: Integer;
   List: TStringList;
   Item, Key, KeyName, FilePath, GUID, Caption: string;
   Enabled: Boolean;
 
 begin
-  reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));
+  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));
   List := TStringList.Create;
 
   if ASearchForShellItems then
@@ -2772,21 +2788,21 @@ begin
     Key := ALocation + CONTEXTMENU_SHELLEX;
 
   try
-    reg.RootKey := HKEY_CLASSES_ROOT;
-    reg.OpenKey(Key, False);
+    Reg.RootKey := HKEY_CLASSES_ROOT;
+    Reg.OpenKey(Key, False);
 
     // Read out all keys
-    reg.GetKeyNames(List);
+    Reg.GetKeyNames(List);
 
     for i := 0 to List.Count -1 do
     begin
-      reg.CloseKey;
+      Reg.CloseKey;
       Item := List[i];
-      reg.OpenKey(Key +'\'+ Item, False);
+      Reg.OpenKey(Key +'\'+ Item, False);
       FilePath := '';
 
       // Default value of key is a GUID for ShellEx items and caption for Shell
-      GUID := reg.ReadString('');
+      GUID := Reg.ReadString('');
       Caption := GUID;
 
       // Filter empty, important and double entries
@@ -2797,11 +2813,11 @@ begin
         if ASearchForShellItems then
         begin
           // Get status and caption
-          Enabled := not reg.ValueExists('LegacyDisable');
+          Enabled := not Reg.ValueExists('LegacyDisable');
 
           // Get file path of command
-          if reg.OpenKey('command', False) then
-            FilePath := reg.ReadString('');
+          if Reg.OpenKey('command', False) then
+            FilePath := Reg.ReadString('');
 
           // Add item to list
           AddShellItem(Item, ALocation, FilePath, Caption, Enabled);
@@ -2818,11 +2834,11 @@ begin
 
             // Set up Registry key
             KeyName := Format(CONTEXTMENU_SHELLEX_FILE, [GUID]);
-            reg.CloseKey();
+            Reg.CloseKey();
 
             // Get file path of command
-            if reg.OpenKey(KeyName, False) then
-              FilePath := reg.ReadString('');
+            if Reg.OpenKey(KeyName, False) then
+              FilePath := Reg.ReadString('');
 
             // Add item to list
             AddShellExItem(Item, ALocation, FilePath, Enabled);
@@ -2832,7 +2848,8 @@ begin
 
   finally
     List.Free;
-    reg.Free;
+    Reg.CloseKey();
+    Reg.Free;
   end;  //of try
 end;
 
