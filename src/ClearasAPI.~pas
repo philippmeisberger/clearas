@@ -110,7 +110,7 @@ type
     function Enable(): Boolean; virtual; abstract;
     procedure ExportItem(const AFileName: string); virtual; abstract;
     function GetStatus(ALangFile: TLanguageFile): string;
-    procedure OpenInExplorer(); virtual;
+    procedure OpenInExplorer();
     { external }
     property Arguments: string read GetArguments;
     property Enabled: Boolean read FEnabled;
@@ -169,7 +169,7 @@ type
   { TStartupListItem }
   TStartupListItem = class(TRootRegItem)
   private
-    FRootKey, FKeyPath, FTime: string;
+    FRootKey, FTime: string;
     function GetTime(): string;
     procedure WriteTime(const AKeyPath: string);
   protected
@@ -178,7 +178,6 @@ type
     function ChangeFilePath(const ANewFilePath: string): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
     { external }
-    property KeyPath: string read FKeyPath write FKeyPath;
     property RootKey: string read FRootKey write FRootKey;
     property Time: string read FTime write FTime;
   end;
@@ -215,7 +214,6 @@ type
     FItem: TStartupListItem;
     FDeleteBackup: Boolean;
     FLock: TCriticalSection;
-    function Add(AItem: TStartupListItem): Word; virtual;
     function DelCircumflex(AName: string): string;
     function ItemAt(AIndex: Word): TStartupListItem;
     procedure GetLnkFileNames(AFileList: TStrings; AAllUsers: Boolean);
@@ -300,7 +298,6 @@ type
   private
     FItem: TContextListItem;
     FLock: TCriticalSection;
-    function Add(AItem: TContextListItem): Word; virtual;
     function FindDouble(AName, ALocationRoot: string): Boolean;
     function ItemAt(AIndex: Word): TContextListItem;
   protected
@@ -1111,7 +1108,7 @@ begin
 
   try
     Reg.RootKey := TRegUtils.StrToHKey(FRootKey);
-    Reg.OpenKey(FKeyPath, False);
+    Reg.OpenKey(FLocation, False);
 
     // At least one valid date entry exists?
     if Reg.ValueExists('YEAR') then
@@ -1192,7 +1189,7 @@ end;
 
 function TStartupListItem.GetFullLocation(): string;
 begin
-  Result := TRegUtils.HKeyToStr(TRegUtils.StrToHKey(FRootKey)) +'\'+ FKeyPath;
+  Result := TRegUtils.HKeyToStr(TRegUtils.StrToHKey(FRootKey)) +'\'+ FLocation;
 end;
 
 { public TStartupListItem.ChangeFilePath
@@ -1213,7 +1210,7 @@ begin
       Reg.RootKey := TOSUtils.StrToHKey(FRootKey);
 
       // Invalid key?
-      if not Reg.OpenKey(FKeyPath, False) then
+      if not Reg.OpenKey(FLocation, False) then
         raise Exception.Create('Key does not exist!');
 
       if FEnabled then
@@ -1257,9 +1254,9 @@ begin
 
   try
     if FEnabled then
-      RegFile.ExportReg(TRegUtils.StrToHKey(FRootKey), FKeyPath, FName)
+      RegFile.ExportReg(TRegUtils.StrToHKey(FRootKey), FLocation, FName)
     else
-      RegFile.ExportReg(TRegUtils.StrToHKey(FRootKey), FKeyPath, False);
+      RegFile.ExportReg(TRegUtils.StrToHKey(FRootKey), FLocation, False);
 
   finally
     RegFile.Free;
@@ -1278,7 +1275,7 @@ begin
   try
     if FEnabled then
     begin
-      if not TRegUtils.DeleteValue(FRootKey, FKeyPath, FName) then
+      if not TRegUtils.DeleteValue(FRootKey, FLocation, FName) then
         raise EStartupException.Create('Could not delete value!');
     end  //of begin
     else
@@ -1313,7 +1310,7 @@ begin
       Reg.RootKey := HKEY_LOCAL_MACHINE;
 
       // Successfully deleted old entry?
-      if not TRegUtils.DeleteValue(FRootKey, FKeyPath, FName) then
+      if not TRegUtils.DeleteValue(FRootKey, FLocation, FName) then
         raise EStartupException.Create('Could not delete value!');
 
       // Successfully created new key?
@@ -1321,7 +1318,7 @@ begin
       begin
         // Write values
         Reg.WriteString('hkey', FRootKey);
-        Reg.WriteString('key', FKeyPath);
+        Reg.WriteString('key', FLocation);
         Reg.WriteString('item', FName);
         Reg.WriteString('command', FFilePath);
         Reg.WriteString('inimapping', '0');
@@ -1333,7 +1330,7 @@ begin
 
         // Update information
         FRootKey := 'HKLM';
-        FKeyPath := KEY_DEACT + FName;
+        FLocation := KEY_DEACT + FName;
         FEnabled := False;
       end  //of begin
       else
@@ -1372,7 +1369,7 @@ begin
     try
       Reg.RootKey := HKEY_LOCAL_MACHINE;
 
-      if not Reg.OpenKey(FKeyPath, False) then
+      if not Reg.OpenKey(FLocation, False) then
         raise EStartupException.Create('Key does not exist!');
 
       // Set new values
@@ -1397,7 +1394,7 @@ begin
 
         // Update information
         FRootKey := NewHKey;
-        FKeyPath := NewKeyPath;
+        FLocation := NewKeyPath;
         FEnabled := True;
         FTime := '';
       end  //of begin
@@ -1447,7 +1444,7 @@ end;
 function TStartupUserItem.GetFullLocation(): string;
 begin
   if FEnabled then
-    Result := FKeyPath
+    Result := FLocation
   else
     Result := inherited GetFullLocation();
 end;
@@ -1470,7 +1467,7 @@ begin
     Arguments := ExtractArguments(ANewFilePath);
 
     // Failed to create new .lnk file?
-    if (FEnabled and not FLnkFile.WriteLnkFile(FKeyPath, NewFilePath, Arguments)) then
+    if (FEnabled and not FLnkFile.WriteLnkFile(FLocation, NewFilePath, Arguments)) then
       raise EStartupException.Create('Could not create .lnk file!');
 
     // Update information
@@ -1510,13 +1507,13 @@ begin
     if FEnabled then
     begin
       // Could not delete .lnk?
-      if not DeleteFile(FKeyPath) then
-        raise EStartupException.Create('Could not delete .lnk "'+ FKeyPath +'"!');
+      if not DeleteFile(FLocation) then
+        raise EStartupException.Create('Could not delete .lnk "'+ FLocation +'"!');
     end  //of begin
     else
       // Could not delete key?
       if not TRegUtils.DeleteKey('HKLM', KEY_DEACT_FOLDER, GetKeyName()) then
-        raise EStartupException.Create('Could not delete key "'+ FKeyPath +'"!');
+        raise EStartupException.Create('Could not delete key "'+ FLocation +'"!');
 
     Result := True;
 
@@ -1545,7 +1542,7 @@ begin
   try
     try
       Reg.RootKey := HKEY_LOCAL_MACHINE;
-      KeyName := AddCircumflex(FKeyPath);
+      KeyName := AddCircumflex(FLocation);
 
       if not FLnkFile.ReadLnkFile() then
         raise EStartupException.Create('Could not read .lnk file!');
@@ -1553,7 +1550,7 @@ begin
       if not Reg.OpenKey(KEY_DEACT_FOLDER + KeyName, True) then
         raise EStartupException.Create('Could not create key "'+ FName +'"!');
 
-      Reg.WriteString('path', FKeyPath);
+      Reg.WriteString('path', FLocation);
       Reg.WriteString('item', TRegUtils.DeleteExt(ExtractFileName(FName)));
       Reg.WriteString('command', FFilePath);
       Reg.WriteString('backup', FLnkFile.BackupLnk);
@@ -1562,7 +1559,7 @@ begin
       if TOSUtils.WindowsVistaOrLater() then
       begin
         Reg.WriteString('backupExtension', FLnkFile.BackupExt);
-        Reg.WriteString('location', ExtractFileDir(FKeyPath));
+        Reg.WriteString('location', ExtractFileDir(FLocation));
         WriteTime(KEY_DEACT_FOLDER + KeyName);
       end  //of begin
       else
@@ -1573,7 +1570,7 @@ begin
         ForceDirectories(TLnkFile.GetBackupDir());
 
       // Create backup by copying original .lnk
-      if not CopyFile(PChar(FKeyPath), PChar(FLnkFile.BackupLnk), False) then
+      if not CopyFile(PChar(FLocation), PChar(FLnkFile.BackupLnk), False) then
         raise EStartupException.Create('Could not create backup file!');
 
       // Delete original .lnk
@@ -1581,7 +1578,7 @@ begin
         raise EStartupException.Create('Could not delete .lnk file!');
 
       // Update information
-      FKeyPath := KEY_DEACT_FOLDER + KeyName;
+      FLocation := KEY_DEACT_FOLDER + KeyName;
       FRootKey := 'HKLM';
       FEnabled := False;
       Result := True;
@@ -1623,10 +1620,10 @@ begin
 
     // Could not delete old key?
     if not TRegUtils.DeleteKey('HKLM', KEY_DEACT_FOLDER, AddCircumflex(FLnkFile.FileName)) then
-      raise EStartupException.Create('Could not delete key "'+ FKeyPath +'"!');
+      raise EStartupException.Create('Could not delete key "'+ FLocation +'"!');
 
     // Update information
-    FKeyPath := FLnkFile.FileName;
+    FLocation := FLnkFile.FileName;
     FRootKey := '';
     FEnabled := True;
     Result := True;
@@ -1675,15 +1672,6 @@ destructor TStartupList.Destroy;
 begin
   FLock.Free;
   inherited Destroy;
-end;
-
-{ private TStartupList.Add
-
-  Adds a TStartupListItem to the list and returns position. }
-
-function TStartupList.Add(AItem: TStartupListItem): Word;
-begin
-  Result := inherited Add(AItem);
 end;
 
 { private TStartupList.DelCircumflex
@@ -1788,7 +1776,7 @@ begin
   with Item do
   begin
     RootKey := 'HKLM';
-    KeyPath := AKeyPath;
+    Location := AKeyPath;
     Name := ExtractFileName(AKeyPath);
     FilePath := TRegUtils.GetKeyValue('HKLM', AKeyPath, 'command');
     Time := GetTime();
@@ -1813,7 +1801,7 @@ begin
   with Item do
   begin
     RootKey := ARootKey;
-    KeyPath := AKeyPath;
+    Location := AKeyPath;
     Name := AName;
     FilePath := AFilePath;
     Time := '';
@@ -1868,7 +1856,7 @@ begin
   with (Item as TStartupUserItem) do
   begin
     RootKey := 'HKLM';
-    KeyPath := AKeyPath;
+    Location := AKeyPath;
     Name := ExtractFileName(DelCircumflex(AKeyPath));
     FilePath := TRegUtils.GetKeyValue('HKLM', AKeyPath, 'command');
     Time := GetTime();
@@ -1904,7 +1892,7 @@ begin
   with (Item as TStartupUserItem) do
   begin
     RootKey := '';
-    KeyPath := ALnkFile.FileName;
+    Location := ALnkFile.FileName;
     FilePath := ALnkFile.FullPath;
     LnkFile := ALnkFile;
     Name := ExtractFileName(ALnkFile.FileName);
@@ -2035,6 +2023,45 @@ begin
     FOnChanged(Self);
 end;
 
+{ public TStartupList.DeleteItem
+
+  Deletes an item from Registry and list. }
+
+function TStartupList.DeleteItem(): Boolean;
+var
+  Deleted: Boolean;
+
+begin
+  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
+    raise EInvalidItem.Create('No item selected!');
+
+  // Delete item from Registry
+  Deleted := FItem.Delete();
+
+  // Successful?
+  if Deleted then
+  begin
+    // Decide to delete backup
+    if (FDeleteBackup and (FItem is TStartupUserItem)) then
+      (FItem as TStartupUserItem).LnkFile.DeleteBackup();
+
+    // Item was enabled
+    if FItem.Enabled then
+      // Update active counter
+      Dec(FActCount);
+
+    // Remove item from list
+    inherited Remove(FItem);
+    FItem := nil;
+  end;  //of begin
+
+  Result := Deleted;
+
+  // Notify changed
+  if Assigned(FOnChanged) then
+    FOnChanged(Self);
+end;
+
 { public TStartupList.DisableItem
 
   Disables the current selected item. }
@@ -2086,45 +2113,6 @@ begin
     FOnChanged(Self);
 end;
 
-{ public TStartupList.DeleteItem
-
-  Deletes an item from Registry and list. }
-
-function TStartupList.DeleteItem(): Boolean;
-var
-  Deleted: Boolean;
-
-begin
-  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
-    raise EInvalidItem.Create('No item selected!');
-
-  // Delete item from Registry
-  Deleted := FItem.Delete();
-
-  // Successful?
-  if Deleted then
-  begin
-    // Decide to delete backup
-    if (FDeleteBackup and (FItem is TStartupUserItem)) then
-      (FItem as TStartupUserItem).LnkFile.DeleteBackup();
-
-    // Item was enabled
-    if FItem.Enabled then
-      // Update active counter
-      Dec(FActCount);
-
-    // Remove item from list
-    inherited Remove(FItem);
-    FItem := nil;
-  end;  //of begin
-
-  Result := Deleted;
-
-  // Notify changed
-  if Assigned(FOnChanged) then
-    FOnChanged(Self);
-end;
-
 { public TStartupList.ExportItem
 
   Exports an item as .reg file. }
@@ -2155,7 +2143,7 @@ begin
     for i := 0 to Count - 1 do
     begin
       Item := ItemAt(i);
-      RegFile.ExportKey(TOSUtils.StrToHKey(Item.RootKey), Item.KeyPath, True);
+      RegFile.ExportKey(TOSUtils.StrToHKey(Item.RootKey), Item.Location, True);
     end;  //of for
 
     // Save file
@@ -2663,15 +2651,6 @@ begin
   inherited Destroy;
 end;
 
-{ private TContextList.Add
-
-  Adds a TContextListItem to the list and returns position. }
-
-function TContextList.Add(AItem: TContextListItem): Word;
-begin
-  Result := inherited Add(AItem);
-end;
-
 { public TContextList.AddEntry
 
   Adds a new contextmenu entry. }
@@ -3032,7 +3011,7 @@ begin
     for i := 0 to Count -1 do
     begin
       Item := ItemAt(i);
-      RegFile.ExportKey(HKEY_CLASSES_ROOT, Item.GetKeyPath(), True);
+      RegFile.ExportKey(HKEY_CLASSES_ROOT, Item.Location, True);
     end;  //of for
 
     // Save file

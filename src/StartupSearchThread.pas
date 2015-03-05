@@ -34,9 +34,9 @@ type
     constructor Create(AStartupList: TStartupList; AWin64, AIncludeRunOnce: Boolean;
       ALock: TCriticalSection);
     { external }
+    property OnFinish: TNotifyEvent read FOnFinish write FOnFinish;
     property OnSearching: TSearchEvent read FOnSearching write FOnSearching;
     property OnStart: TSearchEvent read FOnStart write FOnStart;
-    property OnFinish: TNotifyEvent read FOnFinish write FOnFinish;
   end;
 
 implementation
@@ -86,7 +86,6 @@ end;
 
 procedure TStartupSearchThread.DoNotifyOnSearching();
 begin
-  // Notify searching
   if Assigned(FOnSearching) then
   begin
     Inc(FProgress);
