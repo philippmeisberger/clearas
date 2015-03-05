@@ -12,8 +12,8 @@ interface
 
 uses
   Windows, SysUtils, Classes, Controls, Forms, ComCtrls, StdCtrls, ExtCtrls,
-  Dialogs, Menus, Graphics, ClearasAPI, ClearasInfo, LanguageFile, OSUtils,
-  Updater, AddDialogs, ClipBrd, ImgList, StrUtils;
+  Dialogs, Menus, Graphics, ClipBrd, ImgList, StrUtils, ClearasAPI, ClearasInfo,
+  LanguageFile, OSUtils, Updater, AddDialogs;
 
 type
   { TMain }
@@ -398,7 +398,7 @@ begin
       else
         SubItems.Append(FContext[i].Name);
 
-      SubItems.Append(FContext[i].Location);
+      SubItems.Append(FContext[i].LocationRoot);
       SubItems.Append(FContext[i].TypeOf);
     end; //of with
 
@@ -1332,9 +1332,9 @@ procedure TMain.pmCopyLocationClick(Sender: TObject);
 begin
   try
     if (PageControl.ActivePage = tsStartup) then
-      Clipboard.AsText := FStartup.Selected.GetFullKeyPath()
+      Clipboard.AsText := FStartup.Selected.LocationFull
     else
-      Clipboard.AsText := FContext.Selected.GetFullKeyPath();
+      Clipboard.AsText := FContext.Selected.LocationFull;
 
   except
     FLang.MessageBox(53, mtWarning);

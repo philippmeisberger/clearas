@@ -147,8 +147,8 @@ type
     procedure lwContextKeyPress(Sender: TObject; var Key: Char);
   private
     FColumnToSort: Word;
-    Startup: TStartupList;
-    Context: TContextList;
+    FStartup: TStartupList;
+    FContext: TContextList;
     FLang: TLanguageFile;
     FUpdateCheck: TUpdateCheck;
     procedure AfterUpdate(Sender: TObject; ADownloadedFileName: string);
@@ -194,25 +194,25 @@ begin
   FUpdateCheck.CheckForUpdate(False);
 
   // Init Clearas instances
-  Startup := TStartupList.Create;
+  FStartup := TStartupList.Create;
 
   // Link search events
-  with Startup do
+  with FStartup do
   begin
-    Startup.OnChanged := OnStartupItemChanged;
-    Startup.OnSearchStart := OnStartupSearchStart;
-    Startup.OnSearchFinish := OnStartupSearchEnd;
+    OnChanged := OnStartupItemChanged;
+    OnSearchStart := OnStartupSearchStart;
+    OnSearchFinish := OnStartupSearchEnd;
   end;  //of with
 
-  Context := TContextList.Create;
+  FContext := TContextList.Create;
 
   // Link search events
-  with Context do
+  with FContext do
   begin
-    Context.OnChanged := OnContextItemChanged;
-    Context.OnSearchStart := OnContextSearchStart;
-    Context.OnSearching := OnContextSearchProgress;
-    Context.OnSearchFinish := OnContextSearchEnd;
+    OnChanged := OnContextItemChanged;
+    OnSearchStart := OnContextSearchStart;
+    OnSearching := OnContextSearchProgress;
+    OnSearchFinish := OnContextSearchEnd;
   end;  //of with
 
   // Set title
@@ -225,8 +225,8 @@ end;
 
 procedure TMain.FormDestroy(Sender: TObject);
 begin
-  Context.Free;
-  Startup.Free;
+  FContext.Free;
+  FStartup.Free;
   FUpdateCheck.Free;
   FLang.Free;
 end;
@@ -329,10 +329,10 @@ begin
 
   try
     // Special .lnk file backup only for activated startup user entries!
-    if (Startup.Selected.Enabled and (Startup.Selected is TStartupUserItem)) then
+    if (FStartup.Selected.Enabled and (FStartup.Selected is TStartupUserItem)) then
     begin
-      Startup.Selected.ExportItem('');
-      FLang.MessageBox(Flang.Format(42, [(Startup.Selected as TStartupUserItem).LnkFile.BackupLnk]));
+      FStartup.Selected.ExportItem('');
+      FLang.MessageBox(Flang.Format(42, [(FStartup.Selected as TStartupUserItem).LnkFile.BackupLnk]));
       bExportStartupItem.Enabled := False;
       pmExport.Enabled := False;
       Result := False;
@@ -387,19 +387,19 @@ var
 
 begin
   // Print all information about context menu entires
-  for i := 0 to Context.Count - 1 do
+  for i := 0 to FContext.Count - 1 do
     with lwContext.Items.Add do
     begin
-      Caption := Context[i].GetStatus(FLang);
+      Caption := FContext[i].GetStatus(FLang);
 
       // Show name or caption of item?
-      if (Context[i].Caption <> '') then
-        SubItems.Append(Context[i].Caption)
+      if (FContext[i].Caption <> '') then
+        SubItems.Append(FContext[i].Caption)
       else
-        SubItems.Append(Context[i].Name);
+        SubItems.Append(FContext[i].Name);
 
-      SubItems.Append(Context[i].Location);
-      SubItems.Append(Context[i].TypeOf);
+      SubItems.Append(FContext[i].LocationRoot);
+      SubItems.Append(FContext[i].TypeOf);
     end; //of with
 
   // Refresh counter label
@@ -449,23 +449,23 @@ begin
 
   try
     // Print all information about startup entires
-    for i := 0 to Startup.Count - 1 do
+    for i := 0 to FStartup.Count - 1 do
       with lwStartup.Items.Add do
       begin
-        Caption := Startup[i].GetStatus(FLang);
-        SubItems.Append(Startup[i].Name);
-        SubItems.Append(Startup[i].FilePath);
-        SubItems.Append(Startup[i].TypeOf);
+        Caption := FStartup[i].GetStatus(FLang);
+        SubItems.Append(FStartup[i].Name);
+        SubItems.Append(FStartup[i].FilePath);
+        SubItems.Append(FStartup[i].TypeOf);
 
         // Show deactivation timestamp?
         if mmDate.Checked then
-          SubItems.Append(Startup[i].Time);
+          SubItems.Append(FStartup[i].Time);
 
         // Show icon of program?
         if mmShowIcons.Checked then
         begin
           // Get icon of program
-          Icon.Handle := Startup[i].Icon;
+          Icon.Handle := FStartup[i].Icon;
           ImageIndex := IconList.AddIcon(Icon);
         end;  //of begin
       end;  //of with
@@ -489,7 +489,7 @@ end;
 
 procedure TMain.OnContextItemChanged(Sender: TObject);
 begin
-  lwContext.Columns[1].Caption := FLang.Format(87, [Context.ActCount, Context.Count]);
+  lwContext.Columns[1].Caption := FLang.Format(87, [FContext.ActCount, FContext.Count]);
 end;
 
 { private TMain.OnStartupItemChanged
@@ -498,7 +498,7 @@ end;
 
 procedure TMain.OnStartupItemChanged(Sender: TObject);
 begin
-  lwStartup.Columns[1].Caption := FLang.Format(88, [Startup.ActCount, Startup.Count]);
+  lwStartup.Columns[1].Caption := FLang.Format(88, [FStartup.ActCount, FStartup.Count]);
 end;
 
 { private TMain.SetLanguage
@@ -592,13 +592,13 @@ begin
   end;  //of with
 
   // Update list labels
-  if Assigned(Startup) and Assigned(Context) then
+  if Assigned(FStartup) and Assigned(FContext) then
   begin
-    for i := 0 to Startup.Count - 1 do
-      lwStartup.Items[i].Caption := Startup[i].GetStatus(FLang);
+    for i := 0 to FStartup.Count - 1 do
+      lwStartup.Items[i].Caption := FStartup[i].GetStatus(FLang);
 
-    for i := 0 to Context.Count - 1 do
-      lwContext.Items[i].Caption := Context[i].GetStatus(FLang);
+    for i := 0 to FContext.Count - 1 do
+      lwContext.Items[i].Caption := FContext[i].GetStatus(FLang);
   end;  //of begin
 end;
 
@@ -623,10 +623,10 @@ begin
     // Use expert search mode?
     if cbExpert.Checked then
       // Start the expert search in a thread
-      Context.LoadContextmenu()
+      FContext.LoadContextmenu()
     else
       // Use default search mode
-      Context.LoadContextMenus();
+      FContext.LoadContextMenus();
   end  //of begin
   else
     OnContextSearchEnd(Self);
@@ -651,7 +651,7 @@ begin
     bExportStartupItem.Enabled := False;
 
     // Load autostart with or without special RunOnce entries (threaded)
-    Startup.LoadAutostart(mmRunOnce.Checked);
+    FStartup.LoadAutostart(mmRunOnce.Checked);
   end  //of begin
   else
     OnStartupSearchEnd(Self);
@@ -684,9 +684,9 @@ begin
 
       // Set a default file name
       if (PageControl.ActivePage = tsStartup) then
-        FileName := Startup.Selected.Name + DefaultExt
+        FileName := FStartup.Selected.Name + DefaultExt
       else
-        FileName := Context.Selected.Name +'_'+ Context.Selected.Location + DefaultExt;
+        FileName := FContext.Selected.Name +'_'+ FContext.Selected.Location + DefaultExt;
     end;  //of with
 
     try
@@ -694,9 +694,9 @@ begin
       if SaveDialog.Execute then
       begin
         if (PageControl.ActivePage = tsStartup) then
-          Startup.ExportItem(SaveDialog.FileName)
+          FStartup.ExportItem(SaveDialog.FileName)
         else
-          Context.ExportItem(SaveDialog.FileName);
+          FContext.ExportItem(SaveDialog.FileName);
 
         Result := True;
       end;  //of begin
@@ -730,7 +730,7 @@ end;
 procedure TMain.bExportContextItemClick(Sender: TObject);
 begin
   // Nothing selected?
-  if not Assigned(Context.Selected) then
+  if not Assigned(FContext.Selected) then
   begin
     FLang.MessageBox([95, 18, NEW_LINE, 53], mtWarning);
     Exit;
@@ -754,14 +754,14 @@ begin
   try
     // Confirm deletion of item
     if (FLang.MessageBox(FLang.Format([48, NEW_LINE, 49, 50],
-      [Startup.Selected.Name]), mtConfirm) = IDYES) then
+      [FStartup.Selected.Name]), mtConfirm) = IDYES) then
     begin
       // Save the DeleteBackup flag
-      DelBackup := Startup.DeleteBackup;
-      BackupExists := Startup.BackupExists();
+      DelBackup := FStartup.DeleteBackup;
+      BackupExists := FStartup.BackupExists();
 
       // Skip export dialog for enabled startup user item with exising backup
-      if ((Startup.Selected is TStartupUserItem) and Startup.Selected.Enabled
+      if ((FStartup.Selected is TStartupUserItem) and FStartup.Selected.Enabled
         and BackupExists) then
         Answer := IDCANCEL
       else
@@ -770,17 +770,17 @@ begin
       // Export item and only continue if this has succeeded
       if (Answer = IDYES) then
         if CreateStartupUserBackup() then
-          Startup.DeleteBackup := False
+          FStartup.DeleteBackup := False
         else
           Exit;
 
       // Ask user to delete old existing backup
-      if ((Answer = IDCANCEL) or ((Startup.Selected is TStartupUserItem)
-        and not Startup.Selected.Enabled and BackupExists)) then
-        Startup.DeleteBackup := (FLang.MessageBox(44, mtQuestion) = IDYES);
+      if ((Answer = IDCANCEL) or ((FStartup.Selected is TStartupUserItem)
+        and not FStartup.Selected.Enabled and BackupExists)) then
+        FStartup.DeleteBackup := (FLang.MessageBox(44, mtQuestion) = IDYES);
 
       // Successfully deleted item physically?
-      if Startup.DeleteItem() then
+      if FStartup.DeleteItem() then
       begin
         // Delete item from TListView
         lwStartup.DeleteSelected();
@@ -804,8 +804,8 @@ begin
   end;  //of try
 
   // Restore the DeleteBackup flag
-  if (Startup.DeleteBackup <> DelBackup) then
-    Startup.DeleteBackup := DelBackup;
+  if (FStartup.DeleteBackup <> DelBackup) then
+    FStartup.DeleteBackup := DelBackup;
 end;
 
 { TMain.bDeleteContextClick
@@ -820,7 +820,7 @@ begin
   try
     // Confirm deletion of item
     if (FLang.MessageBox(FLang.Format([85, NEW_LINE, 49, 50],
-      [Context.Selected.Name]), mtConfirm) = IDYES) then
+      [FContext.Selected.Name]), mtConfirm) = IDYES) then
     begin
       // Ask user to export item
       Answer := FLang.MessageBox(52, mtQuestion);
@@ -828,7 +828,7 @@ begin
       // Abort if user clicks cancel!
       if (((Answer = IDYES) and ShowRegistryExportDialog()) or (Answer = IDNO)) then
         // Successfully deleted item physically?
-        if Context.DeleteItem() then
+        if FContext.DeleteItem() then
         begin
           // Delete item from TListView
           lwContext.DeleteSelected();
@@ -860,15 +860,15 @@ procedure TMain.bEnableStartupItemClick(Sender: TObject);
 begin
   try
     // Successfully activated item?
-    if Startup.EnableItem() then
+    if FStartup.EnableItem() then
     begin
       // Change item visual status
-      lwStartup.ItemFocused.Caption := Startup.Selected.GetStatus(FLang);
+      lwStartup.ItemFocused.Caption := FStartup.Selected.GetStatus(FLang);
 
       // Change button states
       bEnableStartupItem.Enabled := False;
       bDisableStartupItem.Enabled := True;
-      bExportStartupItem.Enabled := not Startup.BackupExists;
+      bExportStartupItem.Enabled := not FStartup.BackupExists;
       pmExport.Enabled := bExportStartupItem.Enabled;
       pmChangeStatus.Caption := bDisableStartupItem.Caption;
 
@@ -880,7 +880,7 @@ begin
       lwStartupSelectItem(Self, lwStartup.ItemFocused, True);
 
       // Warn if file does not exist
-      if not FileExists(Startup.Selected.FilePathOnly) then
+      if not FileExists(FStartup.Selected.FilePathOnly) then
         FLang.MessageBox([45, NEW_LINE, 46], mtWarning);
     end  //of begin
     else
@@ -903,10 +903,10 @@ procedure TMain.bEnableContextItemClick(Sender: TObject);
 begin
   try
     // Successfully activated item?
-    if Context.EnableItem() then
+    if FContext.EnableItem() then
     begin
       // Change item visual status
-      lwContext.ItemFocused.Caption := Context.Selected.GetStatus(FLang);
+      lwContext.ItemFocused.Caption := FContext.Selected.GetStatus(FLang);
 
       // Change button states
       bEnableContextItem.Enabled := False;
@@ -917,7 +917,7 @@ begin
       lwContextSelectItem(Self, lwContext.ItemFocused, True);
 
       // Warn if file does not exist
-      if not FileExists(Context.Selected.FilePathOnly) then
+      if not FileExists(FContext.Selected.FilePathOnly) then
         FLang.MessageBox([45, NEW_LINE, 46], mtWarning);
     end  //of begin
     else
@@ -940,10 +940,10 @@ procedure TMain.bDisableStartupItemClick(Sender: TObject);
 begin
   try
     // Successfully deactivated item?
-    if Startup.DisableItem() then
+    if FStartup.DisableItem() then
     begin
       // Change item visual status
-      lwStartup.ItemFocused.Caption := Startup.Selected.GetStatus(FLang);
+      lwStartup.ItemFocused.Caption := FStartup.Selected.GetStatus(FLang);
 
       // Change button states
       bDisableStartupItem.Enabled := False;
@@ -952,7 +952,7 @@ begin
 
       // Show deactivation timestamp?
       if mmDate.Checked then
-        lwStartup.ItemFocused.SubItems[3] := Startup.Selected.Time;
+        lwStartup.ItemFocused.SubItems[3] := FStartup.Selected.Time;
 
       // Update TListView
       lwStartupSelectItem(Self, lwStartup.ItemFocused, True);
@@ -977,10 +977,10 @@ procedure TMain.bDisableContextItemClick(Sender: TObject);
 begin
   try
     // Successfully deactivated item?
-    if Context.DisableItem() then
+    if FContext.DisableItem() then
     begin
       // Change item visual status
-      lwContext.ItemFocused.Caption := Context.Selected.GetStatus(FLang);
+      lwContext.ItemFocused.Caption := FContext.Selected.GetStatus(FLang);
 
       // Change button states
       bDisableStartupItem.Enabled := False;
@@ -1059,17 +1059,17 @@ begin
   if (Selected and Assigned(Item)) then
   begin
     // Find index of currently selected item in backend
-    Index := Context.IndexOf(Item.SubItems[0], Item.SubItems[1]);
+    Index := FContext.IndexOf(Item.SubItems[0], Item.SubItems[1]);
 
     // Item not found?
     if (Index = -1) then
       Exit;
 
     // Load item into cache
-    Context.Selected := Context.Items[Index];
+    FContext.Selected := FContext.Items[Index];
 
     // Change button states
-    bEnableContextItem.Enabled := not Context.Selected.Enabled;
+    bEnableContextItem.Enabled := not FContext.Selected.Enabled;
     bDisableContextItem.Enabled := not bEnableContextItem.Enabled;
 
     // Change text of "change status" button
@@ -1081,7 +1081,7 @@ begin
     pmChangeStatus.Enabled := True;
 
     // Enable "edit path" only if file path is present
-    pmEdit.Enabled := (Context.Selected.FilePath <> '');
+    pmEdit.Enabled := (FContext.Selected.FilePath <> '');
 
     // Enable "open in Explorer" only if file path is present
     pmOpenExplorer.Enabled := pmEdit.Enabled;
@@ -1211,14 +1211,14 @@ begin
   if (Selected and Assigned(Item)) then
   begin
     // Find index of currently selected item in backend
-    Index := Startup.IndexOf(Item.SubItems[0], (Item.Caption = FLang.GetString(31)));
+    Index := FStartup.IndexOf(Item.SubItems[0], (Item.Caption = FLang.GetString(31)));
 
     // Item not found?
     if (Index = -1) then
       Exit;
 
     // Load item into cache
-    Startup.Selected := Startup.Items[Index];
+    FStartup.Selected := FStartup.Items[Index];
 
     // Check for multiple items with the same name
     if (IsDouble(Item.SubItems[0], Item.Index) <> -1) then
@@ -1230,7 +1230,7 @@ begin
     end  //of begin
     else
     begin
-      bEnableStartupItem.Enabled := not Startup.Selected.Enabled;
+      bEnableStartupItem.Enabled := not FStartup.Selected.Enabled;
       bDisableStartupItem.Enabled := not bEnableStartupItem.Enabled;
 
       // Change text of "change status" button
@@ -1243,13 +1243,13 @@ begin
     end;  //of if
 
     // Selected item is enabled and startup user type?
-    if ((Startup.Selected is TStartupUserItem) and Startup.Selected.Enabled) then
+    if ((FStartup.Selected is TStartupUserItem) and FStartup.Selected.Enabled) then
     begin
       // Disable "open in RegEdit" because item is on file system!
       pmOpenRegedit.Enabled := False;
 
       // Disable "export" if backup already exists
-      bExportStartupItem.Enabled := not Startup.BackupExists();
+      bExportStartupItem.Enabled := not FStartup.BackupExists();
     end  //of begin
     else
     begin
@@ -1302,9 +1302,9 @@ procedure TMain.pmOpenExplorerClick(Sender: TObject);
 begin
   try
     if (PageControl.ActivePage = tsStartup) then
-      Startup.Selected.OpenInExplorer()
+      FStartup.Selected.OpenInExplorer()
     else
-      Context.Selected.OpenInExplorer();
+      FContext.Selected.OpenInExplorer();
 
   except
     on E: EAbort do
@@ -1319,9 +1319,9 @@ end;
 procedure TMain.pmOpenRegeditClick(Sender: TObject);
 begin
   if (PageControl.ActivePage = tsStartup) then
-    Startup.Selected.OpenInRegEdit()
+    FStartup.Selected.OpenInRegEdit()
   else
-    Context.Selected.OpenInRegEdit();
+    FContext.Selected.OpenInRegEdit();
 end;
 
 { TMain.pmPropertiesClick
@@ -1332,9 +1332,9 @@ procedure TMain.pmCopyLocationClick(Sender: TObject);
 begin
   try
     if (PageControl.ActivePage = tsStartup) then
-      Clipboard.AsText := Startup.Selected.GetFullKeyPath()
+      Clipboard.AsText := FStartup.Selected.LocationFull
     else
-      Clipboard.AsText := Context.Selected.GetFullKeyPath();
+      Clipboard.AsText := FContext.Selected.LocationFull;
 
   except
     FLang.MessageBox(53, mtWarning);
@@ -1355,13 +1355,13 @@ begin
   try
     if (PageControl.ActivePage = tsStartup) then
     begin
-      SelectedList := Startup;
-      Path := Startup.Selected.FilePath;
+      SelectedList := FStartup;
+      Path := FStartup.Selected.FilePath;
     end  //of begin
     else
     begin
-      SelectedList := Context;
-      Path := Context.Selected.FilePath;
+      SelectedList := FContext;
+      Path := FContext.Selected.FilePath;
     end;  //of if
 
     // Show input box for editing path
@@ -1386,7 +1386,7 @@ begin
         Icon := TIcon.Create;
 
         try
-          Icon.Handle := Startup.Selected.Icon;
+          Icon.Handle := FStartup.Selected.Icon;
           lwStartup.ItemFocused.ImageIndex := IconList.AddIcon(Icon);
 
         finally
@@ -1449,8 +1449,8 @@ begin
         // Add startup item?
         if (PageControl.ActivePage = tsStartup) then
         begin
-          // Startup item already exists?
-          if not Startup.AddProgram(OpenDialog.FileName, Args, Name) then
+          // FStartup item already exists?
+          if not FStartup.AddProgram(OpenDialog.FileName, Args, Name) then
             FLang.MessageBox(FLang.Format(40, [OpenDialog.FileName]), mtWarning)
           else
             // Update TListView
@@ -1470,7 +1470,7 @@ begin
               Exit;
 
             // Contextmenu item already exists?
-            if not Context.AddEntry(OpenDialog.FileName, Args, Location, Name) then
+            if not FContext.AddEntry(OpenDialog.FileName, Args, Location, Name) then
               FLang.MessageBox(FLang.Format(41, [OpenDialog.FileName]), mtWarning)
             else
               // Update TListView
@@ -1616,9 +1616,9 @@ begin
     // User clicked "save"?
     if SaveDialog.Execute then
       if (PageControl.ActivePage = tsStartup) then
-        Startup.ExportList(SaveDialog.FileName)
+        FStartup.ExportList(SaveDialog.FileName)
       else
-        Context.ExportList(SaveDialog.FileName);
+        FContext.ExportList(SaveDialog.FileName);
 
   finally
     SaveDialog.Free;
@@ -1655,7 +1655,7 @@ begin
       // User clicked "open"?
       if OpenDialog.Execute then
         // Item already exists?
-        if not Startup.ImportBackup(OpenDialog.FileName) then
+        if not FStartup.ImportBackup(OpenDialog.FileName) then
           FLang.MessageBox(41, mtWarning)
         else
           // Update TListView
@@ -1676,7 +1676,7 @@ end;
 
 procedure TMain.mmDelBackupClick(Sender: TObject);
 begin
-  Startup.DeleteBackup := mmDelBackup.Checked;
+  FStartup.DeleteBackup := mmDelBackup.Checked;
 end;
 
 { TMain.mmContextClick
@@ -1895,7 +1895,7 @@ begin
     lwContextSelectItem(Sender, lwContext.ItemFocused, True);
 
     // Load context menu entries dynamically
-    if (Context.Count = 0) then
+    if (FContext.Count = 0) then
       LoadContextMenuEntries();
   end  //of begin
   else

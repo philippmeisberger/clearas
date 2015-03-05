@@ -97,8 +97,10 @@ type
     function GetFilePath(): string;
     function GetIcon(): HICON;
   protected
+    FLocation: string;
     function ExtractArguments(const APath: string): string;
     function ExtractPathToFile(const APath: string): string;
+    function GetFullLocation(): string; virtual; abstract;
   public
     constructor Create(AIndex: Word; AEnabled: Boolean);
     function ChangeFilePath(const ANewFilePath: string): Boolean; virtual; abstract;
@@ -107,9 +109,7 @@ type
     function Disable(): Boolean; virtual; abstract;
     function Enable(): Boolean; virtual; abstract;
     procedure ExportItem(const AFileName: string); virtual; abstract;
-    function GetFullKeyPath(): string; virtual; abstract;
     function GetStatus(ALangFile: TLanguageFile): string;
-    procedure OpenInRegEdit(); virtual;
     procedure OpenInExplorer(); virtual;
     { external }
     property Arguments: string read GetArguments;
@@ -118,8 +118,16 @@ type
     property FilePathOnly: string read GetFilePath;
     property Icon: HICON read GetIcon;
     property ItemIndex: Word read FIndex;
+    property Location: string read FLocation write FLocation;
+    property LocationFull: string read GetFullLocation;
     property Name: string read FName write FName;
     property TypeOf: string read FType write FType;
+  end;
+
+  { TRootRegItem }
+  TRootRegItem = class(TRootItem)
+  public
+    procedure OpenInRegEdit(); virtual;
   end;
 
   { Events }
@@ -136,6 +144,7 @@ type
     function RootItemAt(AIndex: Word): TRootItem;
   public
     constructor Create;
+    destructor Destroy; override;
     function ChangeItemFilePath(const ANewFilePath: string): Boolean; virtual; abstract;
     function ChangeItemStatus(): Boolean; virtual; abstract;
     procedure Clear; override;
@@ -143,7 +152,6 @@ type
     function DisableItem(): Boolean; virtual; abstract;
     function EnableItem(): Boolean; virtual; abstract;
     procedure ExportItem(const AFileName: string); virtual; abstract;
-    procedure ExportList(const AFileName: string); virtual; abstract;
     function IndexOf(const AItemName: string): Integer; overload;
     function IndexOf(AItemName: string; AEnabled: Boolean): Integer; overload;
     { external }
@@ -159,15 +167,16 @@ type
   EStartupException = class(Exception);
 
   { TStartupListItem }
-  TStartupListItem = class(TRootItem)
+  TStartupListItem = class(TRootRegItem)
   private
     FRootKey, FKeyPath, FTime: string;
     function GetTime(): string;
     procedure WriteTime(const AKeyPath: string);
+  protected
+    function GetFullLocation(): string; override;
   public
     function ChangeFilePath(const ANewFilePath: string): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
-    function GetFullKeyPath(): string; override;
     { external }
     property KeyPath: string read FKeyPath write FKeyPath;
     property RootKey: string read FRootKey write FRootKey;
@@ -187,6 +196,8 @@ type
   private
     FLnkFile: TLnkFile;
     function AddCircumflex(const AName: string): string;
+  protected
+    function GetFullLocation(): string; override;
   public
     destructor Destroy; override;
     function ChangeFilePath(const ANewFilePath: string): Boolean; override;
@@ -194,7 +205,6 @@ type
     function Disable(): Boolean; override;
     function Enable(): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
-    function GetFullKeyPath(): string; override;
     { external }
     property LnkFile: TLnkFile read FLnkFile write FLnkFile;
   end;
@@ -230,7 +240,7 @@ type
     function DisableItem(): Boolean; override;
     function EnableItem(): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
-    procedure ExportList(const AFileName: string); override;
+    procedure ExportList(const AFileName: string);
     function ImportBackup(const AFilePath: string): Boolean;
     procedure LoadAutostart(AIncludeRunOnce: Boolean);
     procedure LoadDisabled(const AKeyPath: string);
@@ -249,18 +259,19 @@ type
   EContextMenuException = class(Exception);
 
   { TContextListItem }
-  TContextListItem = class(TRootItem)
+  TContextListItem = class(TRootRegItem)
   private
-    FLocation, FCaption: string;
+    FCaption: string;
     function GetKeyPath(): string; virtual; abstract;
+  protected
+    function GetFullLocation(): string; override;
   public
     function Delete(): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
-    function GetFullKeyPath(): string; override;
     { external }
     property Caption: string read FCaption write FCaption;
-    property KeyPath: string read GetKeyPath;
-    property Location: string read FLocation write FLocation;
+    property Location: string read GetKeyPath;
+    property LocationRoot: string read FLocation write FLocation;
   end;
 
   { TShellItem }
@@ -290,12 +301,12 @@ type
     FItem: TContextListItem;
     FLock: TCriticalSection;
     function Add(AItem: TContextListItem): Word; virtual;
-    function FindDouble(AName, ALocation: string): Boolean;
+    function FindDouble(AName, ALocationRoot: string): Boolean;
     function ItemAt(AIndex: Word): TContextListItem;
   protected
-    function AddShellItem(const AName, ALocation, AFilePath, ACaption: string;
+    function AddShellItem(const AName, ALocationRoot, AFilePath, ACaption: string;
       AEnabled: Boolean): Word;
-    function AddShellExItem(const AName, ALocation, AFilePath: string;
+    function AddShellExItem(const AName, ALocationRoot, AFilePath: string;
       AEnabled: Boolean): Word;
     procedure LoadContextmenu(const ALocation: string;
       ASearchForShellItems: Boolean); overload;
@@ -310,11 +321,11 @@ type
     function DisableItem(): Boolean; override;
     function EnableItem(): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
-    procedure ExportList(const AFileName: string); override;
-    function IndexOf(AName, ALocation: string): Integer; overload;
+    procedure ExportList(const AFileName: string);
+    function IndexOf(AName, ALocationRoot: string): Integer; overload;
     procedure LoadContextmenu(); overload;
-    procedure LoadContextmenu(const ALocation: string); overload;
-    procedure LoadContextMenus(ALocations: string = 'Directory, Folder, *, Drive');
+    procedure LoadContextmenu(const ALocationRoot: string); overload;
+    procedure LoadContextMenus(ALocationRoots: string = 'Directory, Folder, *, Drive');
     { external }
     property Items[AIndex: Word]: TContextListItem read ItemAt; default;
     property Selected: TContextListItem read FItem write FItem;
@@ -915,9 +926,9 @@ end;
 function TRootItem.ChangeStatus(): Boolean;
 begin
   if FEnabled then
-    Result := Disable
+    Result := Disable()
   else
-    Result := Enable;
+    Result := Enable();
 end;
 
 { public TRootItem.GetStatus
@@ -967,15 +978,18 @@ begin
     TOSUtils.Wow64FsRedirection(False);
 end;
 
-{ public TRootItem.OpenInRegEdit
 
-  Opens an TRootItem object in RegEdit. }
+{ TRootRegItem }
 
-procedure TRootItem.OpenInRegEdit();
+{ public TRootRegItem.OpenInRegEdit
+
+  Opens a TRootRegItem object in RegEdit. }
+
+procedure TRootRegItem.OpenInRegEdit();
 begin
   // Set the Registry key to show
   TRegUtils.WriteStrValue('HKCU', KEY_REGEDIT, 'LastKey', 'Computer\'
-    + GetFullKeyPath());
+    + GetFullLocation());
 
   // Deny WOW64 redirection only on 64bit Windows
   if TOSUtils.IsWindows64() then
@@ -999,6 +1013,16 @@ constructor TRootList.Create;
 begin
   inherited Create;
   FActCount := 0;
+end;
+
+{ public TRootList.Destroy
+
+  General destructor for destroying a TRootList instance. }
+
+destructor TRootList.Destroy;
+begin
+  Clear();
+  inherited Destroy;
 end;
 
 { protected TRootList.RootItemAt
@@ -1162,6 +1186,15 @@ begin
   end;  //of try
 end;
 
+{ protected TStartupListItem.GetFullLocation
+
+  Returns the full Registry path to a TStartupListItem. }
+
+function TStartupListItem.GetFullLocation(): string;
+begin
+  Result := TRegUtils.HKeyToStr(TRegUtils.StrToHKey(FRootKey)) +'\'+ FKeyPath;
+end;
+
 { public TStartupListItem.ChangeFilePath
 
   Changes the file path of an TStartupListItem item. }
@@ -1198,6 +1231,7 @@ begin
       Result := True;
 
     finally
+      Reg.CloseKey();
       Reg.Free;
     end;  //of try
 
@@ -1230,15 +1264,6 @@ begin
   finally
     RegFile.Free;
   end;  //of try
-end;
-
-{ public TStartupListItem.GetFullKeyPath
-
-  Returns the Registry path to a TStartupListItem. }
-
-function TStartupListItem.GetFullKeyPath(): string;
-begin
-  Result := TRegUtils.HKeyToStr(TRegUtils.StrToHKey(FRootKey)) +'\'+ FKeyPath;
 end;
 
 
@@ -1317,6 +1342,7 @@ begin
       Result := True;
 
     finally
+      Reg.CloseKey();
       Reg.Free;
     end;  //of try
 
@@ -1379,6 +1405,7 @@ begin
         raise EStartupException.Create('Could not create key "'+ NewKeyPath +'"!');
 
     finally
+      Reg.CloseKey();
       Reg.Free;
     end;  //of try
 
@@ -1411,6 +1438,18 @@ end;
 function TStartupUserItem.AddCircumflex(const AName: string): string;
 begin
   Result := StringReplace(AName, '\', '^', [rfReplaceAll]);
+end;
+
+{ protected TStartupUserItem.GetFullLocation
+
+  Returns the file path of a TStartupUserItem. }
+
+function TStartupUserItem.GetFullLocation(): string;
+begin
+  if FEnabled then
+    Result := FKeyPath
+  else
+    Result := inherited GetFullLocation();
 end;
 
 { public TStartupUserItem.ChangeFilePath
@@ -1548,6 +1587,7 @@ begin
       Result := True;
 
     finally
+      Reg.CloseKey();
       Reg.Free;
     end;  //of try
 
@@ -1611,18 +1651,6 @@ begin
   else
     if not FLnkFile.CreateBackup() then
       raise EStartupException.Create('Could not create backup file!');
-end;
-
-{ public TStartupUserItem.GetFullKeyPath
-
-  Returns the file path of a TStartupUserItem. }
-
-function TStartupUserItem.GetFullKeyPath(): string;
-begin
-  if FEnabled then
-    Result := FKeyPath
-  else
-    Result := inherited GetFullKeyPath()
 end;
 
 
@@ -2300,7 +2328,16 @@ begin
 end;
 
 
-{ TContextItem }
+{ TContextListItem }
+
+{ protected TContextListItem.GetFullLocation
+
+  Returns the Registry path to a TStartupListItem. }
+
+function TContextListItem.GetFullLocation(): string;
+begin
+  Result := TRegUtils.HKeyToStr(HKEY_CLASSES_ROOT) +'\'+ GetKeyPath();
+end;
 
 { public TContextListItem.Delete
 
@@ -2309,7 +2346,7 @@ end;
 function TContextListItem.Delete(): Boolean;
 begin
   try
-    if not TRegUtils.DeleteKey('HKCR', ExtractFileDir(KeyPath), FName) then
+    if not TRegUtils.DeleteKey('HKCR', ExtractFileDir(GetKeyPath()), FName) then
       raise EStartupException.Create('Could not delete key!')
     else
       Result := True;
@@ -2342,21 +2379,12 @@ begin
   end;  //of try
 end;
 
-{ public TContextListItem.GetFullKeyPath
-
-  Returns the Registry path to a TStartupListItem. }
-
-function TContextListItem.GetFullKeyPath(): string;
-begin
-  Result := TRegUtils.HKeyToStr(HKEY_CLASSES_ROOT) +'\'+ GetKeyPath();
-end;
-
 
 { TShellItem }
 
 { private TShellItem.GetKeyPath
 
-  Returns the Registry path of a TShellItem. }
+  Returns the Registry path of a TShellItem item. }
 
 function TShellItem.GetKeyPath(): string;
 begin
@@ -2388,6 +2416,7 @@ begin
       Result := True;
 
     finally
+      Reg.CloseKey();
       Reg.Free;
     end;  //of try
 
@@ -2427,6 +2456,7 @@ begin
       Result := True;
 
     finally
+      Reg.CloseKey();
       Reg.Free;
     end;  //of try
 
@@ -2540,6 +2570,7 @@ begin
       Result := True;
 
     finally
+      Reg.CloseKey();
       Reg.Free;
     end;  //of try
 
@@ -2595,6 +2626,7 @@ begin
       Result := True;
 
     finally
+      Reg.CloseKey();
       Reg.Free;
     end;  //of try
 
@@ -2686,12 +2718,12 @@ end;
 
   Checks if an TContextListItem already exists in list. }
 
-function TContextList.FindDouble(AName, ALocation: string): Boolean;
+function TContextList.FindDouble(AName, ALocationRoot: string): Boolean;
 begin
   Result := False;
 
   if ((Count > 0) and (IndexOf(AName) <> -1)) then
-    Result := (ItemAt(IndexOf(AName)).Location = ALocation);
+    Result := (ItemAt(IndexOf(AName)).LocationRoot = ALocationRoot);
 end;
 
 { private TContextList.ItemAt
@@ -2707,7 +2739,7 @@ end;
 
   Adds a shell item to list. }
 
-function TContextList.AddShellItem(const AName, ALocation, AFilePath,
+function TContextList.AddShellItem(const AName, ALocationRoot, AFilePath,
   ACaption: string; AEnabled: Boolean): Word;
 var
   Item: TContextListItem;
@@ -2718,7 +2750,7 @@ begin
   with Item do
   begin
     Name := AName;
-    Location := ALocation;
+    LocationRoot := ALocationRoot;
     FilePath := AFilePath;
     Caption := ACaption;
     TypeOf := 'Shell';
@@ -2734,7 +2766,7 @@ end;
 
   Adds a shellex item to list. }
 
-function TContextList.AddShellExItem(const AName, ALocation, AFilePath: string;
+function TContextList.AddShellExItem(const AName, ALocationRoot, AFilePath: string;
   AEnabled: Boolean): Word;
 var
   Item: TContextListItem;
@@ -2745,7 +2777,7 @@ begin
   with Item do
   begin
     Name := AName;
-    Location := ALocation;
+    LocationRoot := ALocationRoot;
     FilePath := AFilePath;
     TypeOf := 'ShellEx';
 
@@ -3000,7 +3032,7 @@ begin
     for i := 0 to Count -1 do
     begin
       Item := ItemAt(i);
-      RegFile.ExportKey(HKEY_CLASSES_ROOT, Item.KeyPath, True);
+      RegFile.ExportKey(HKEY_CLASSES_ROOT, Item.GetKeyPath(), True);
     end;  //of for
 
     // Save file
@@ -3015,7 +3047,7 @@ end;
 
   Returns the index of an item checking name and location. }
 
-function TContextList.IndexOf(AName, ALocation: string): Integer;
+function TContextList.IndexOf(AName, ALocationRoot: string): Integer;
 var
   i: Integer;
   Item: TContextListItem;
@@ -3028,7 +3060,7 @@ begin
     Item := ItemAt(i);
 
     if (((Item.Name = AName) or (Item.Caption = AName))
-      and (Item.Location = ALocation)) then
+      and (Item.LocationRoot = ALocationRoot)) then
     begin
       Result := i;
       Break;
@@ -3050,17 +3082,17 @@ end;
   Searches for Shell/ShellEx context menu entries in specific Registry key
   and adds them to the list. }
 
-procedure TContextList.LoadContextmenu(const ALocation: string);
+procedure TContextList.LoadContextmenu(const ALocationRoot: string);
 begin
-  LoadContextmenu(ALocation, True);
-  LoadContextmenu(ALocation, False);
+  LoadContextmenu(ALocationRoot, True);
+  LoadContextmenu(ALocationRoot, False);
 end;
 
 { public TContextList.LoadContextMenus
 
   Searches for context menu entries at different locations. }
 
-procedure TContextList.LoadContextMenus(ALocations: string = 'Directory, Folder, *, Drive');
+procedure TContextList.LoadContextMenus(ALocationRoots: string = 'Directory, Folder, *, Drive');
 var
   SearchThread: TContextSearchThread;
 
@@ -3070,7 +3102,7 @@ begin
 
   with SearchThread do
   begin
-    Locations.CommaText := ALocations;
+    Locations.CommaText := ALocationRoots;
     OnStart := FOnSearchStart;
     OnSearching := FOnSearching;
     OnFinish := FOnSearchFinish;
