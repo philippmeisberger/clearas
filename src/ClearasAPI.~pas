@@ -95,12 +95,12 @@ type
   TRootItem = class(TObject)
   private
     FIndex: Word;
-    FEnabled: Boolean;
     FName, FType, FFilePath: string;
     function GetArguments(): string;
     function GetFilePath(): string;
     function GetIcon(): HICON;
   protected
+    FEnabled: Boolean;
     FLocation: string;
     function ExtractArguments(const APath: string): string;
     function ExtractPathToFile(const APath: string): string;
@@ -141,11 +141,11 @@ type
   TRootList = class(TObjectList)
   private
     FItem: TRootItem;
-    FActCount: Word;
     FOnSearchStart, FOnSearching: TSearchEvent;
     FOnSearchFinish: TNotifyEvent;
     FOnChanged: TNotifyEvent;
   protected
+    FActCount: Word;
     function RootItemAt(AIndex: Word): TRootItem;
   public
     constructor Create;
@@ -1836,6 +1836,8 @@ end;
 
 function TStartupList.DeleteBackupFile(): Boolean;
 begin
+  Result := False;
+
   if (FDeleteBackup and (FItem is TStartupUserItem)) then
     Result := (FItem as TStartupUserItem).LnkFile.DeleteBackup();
 end;
