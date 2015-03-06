@@ -26,9 +26,9 @@ const
   KEY_REGEDIT = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Regedit';
 
   { Context menu Registry subkeys }
-  CONTEXTMENU_SHELL = '\shell';
-  CONTEXTMENU_SHELLEX = '\shellex\ContextMenuHandlers';
-  CONTEXTMENU_SHELLEX_FILE = 'CLSID\%s\InProcServer32';
+  CM_SHELL = '\shell';
+  CM_SHELLEX = '\shellex\ContextMenuHandlers';
+  CM_SHELLEX_FILE = 'CLSID\%s\InProcServer32';
 
   { Extensions of backup files }
   EXT_COMMON = '.CommonStartup';
@@ -87,6 +87,10 @@ type
     class procedure WriteStrValue(AMainKey, AKeyName, AName, AValue: string);
   end;
 
+  { Exception classes }
+  EInvalidItem = class(EAccessViolation);
+  EWarning = class(EAbort);
+
   { TRootItem }
   TRootItem = class(TObject)
   private
@@ -136,6 +140,7 @@ type
   { TRootList }
   TRootList = class(TObjectList)
   private
+    FItem: TRootItem;
     FActCount: Word;
     FOnSearchStart, FOnSearching: TSearchEvent;
     FOnSearchFinish: TNotifyEvent;
@@ -145,13 +150,13 @@ type
   public
     constructor Create;
     destructor Destroy; override;
-    function ChangeItemFilePath(const ANewFilePath: string): Boolean; virtual; abstract;
-    function ChangeItemStatus(): Boolean; virtual; abstract;
+    function ChangeItemFilePath(const ANewFilePath: string): Boolean; virtual;
+    function ChangeItemStatus(): Boolean; virtual;
     procedure Clear; override;
-    function DeleteItem(): Boolean; virtual; abstract;
-    function DisableItem(): Boolean; virtual; abstract;
-    function EnableItem(): Boolean; virtual; abstract;
-    procedure ExportItem(const AFileName: string); virtual; abstract;
+    function DeleteItem(): Boolean; virtual;
+    function DisableItem(): Boolean; virtual;
+    function EnableItem(): Boolean; virtual;
+    procedure ExportItem(const AFileName: string); virtual;
     function IndexOf(const AItemName: string): Integer; overload;
     function IndexOf(AItemName: string; AEnabled: Boolean): Integer; overload;
     { external }
@@ -160,10 +165,10 @@ type
     property OnSearching: TSearchEvent read FOnSearching write FOnSearching;
     property OnSearchStart: TSearchEvent read FOnSearchStart write FOnSearchStart;
     property OnSearchFinish: TNotifyEvent read FOnSearchFinish write FOnSearchFinish;
+    property Selected: TRootItem read FItem write FItem;
   end;
 
   { Exception class }
-  EInvalidItem = class(EAccessViolation);
   EStartupException = class(Exception);
 
   { TStartupListItem }
@@ -211,12 +216,13 @@ type
   { TStartupList }
   TStartupList = class(TRootList)
   private
-    FItem: TStartupListItem;
     FDeleteBackup: Boolean;
     FLock: TCriticalSection;
     function DelCircumflex(AName: string): string;
+    function DeleteBackupFile(): Boolean;
     function ItemAt(AIndex: Word): TStartupListItem;
     procedure GetLnkFileNames(AFileList: TStrings; AAllUsers: Boolean);
+    function GetSelectedItem(): TStartupListItem;
     function GetStartupUserType(const AKeyPath: string): string; overload;
     function GetStartupUserType(const AAllUsers: Boolean): string; overload;
   protected
@@ -232,12 +238,9 @@ type
     function AddProgram(AFilePath, AArguments: string;
       ADisplayedName: string = ''): Boolean;
     function BackupExists(): Boolean;
-    function ChangeItemFilePath(const ANewFilePath: string): Boolean; override;
     function ChangeItemStatus(): Boolean; override;
     function DeleteItem(): Boolean; override;
-    function DisableItem(): Boolean; override;
     function EnableItem(): Boolean; override;
-    procedure ExportItem(const AFileName: string); override;
     procedure ExportList(const AFileName: string);
     function ImportBackup(const AFilePath: string): Boolean;
     procedure LoadAutostart(AIncludeRunOnce: Boolean);
@@ -246,8 +249,8 @@ type
     procedure LoadEnabled(const ARootKey, AKeyPath: string); overload;
     { external }
     property DeleteBackup: Boolean read FDeleteBackup write FDeleteBackup;
+    property Item: TStartupListItem read GetSelectedItem;
     property Items[AIndex: Word]: TStartupListItem read ItemAt; default;
-    property Selected: TStartupListItem read FItem write FItem;
   end;
 
   { Alias class }
@@ -296,9 +299,9 @@ type
   { TContextList }
   TContextList = class(TRootList)
   private
-    FItem: TContextListItem;
     FLock: TCriticalSection;
     function FindDouble(AName, ALocationRoot: string): Boolean;
+    function GetSelectedItem(): TContextListItem;
     function ItemAt(AIndex: Word): TContextListItem;
   protected
     function AddShellItem(const AName, ALocationRoot, AFilePath, ACaption: string;
@@ -312,21 +315,16 @@ type
     destructor Destroy; override;
     function AddEntry(const AFilePath, AArguments, ALocation,
       ADisplayedName: string): Boolean;
-    function ChangeItemFilePath(const ANewFilePath: string): Boolean; override;
-    function ChangeItemStatus(): Boolean; override;
-    function DeleteItem(): Boolean; override;
-    function DisableItem(): Boolean; override;
-    function EnableItem(): Boolean; override;
-    procedure ExportItem(const AFileName: string); override;
     procedure ExportList(const AFileName: string);
     function IndexOf(AName, ALocationRoot: string): Integer; overload;
     procedure LoadContextmenu(); overload;
     procedure LoadContextmenu(const ALocationRoot: string); overload;
     procedure LoadContextMenus(ALocationRoots: string = 'Directory, Folder, *, Drive');
     { external }
+    property Item: TContextListItem read GetSelectedItem;
     property Items[AIndex: Word]: TContextListItem read ItemAt; default;
-    property Selected: TContextListItem read FItem write FItem;
   end;
+
 
 implementation
 
@@ -502,7 +500,7 @@ begin
     if Succeeded(CoCreateInstance(CLSID_ShellLink, nil, CLSCTX_INPROC_SERVER,
       IShellLink, ShellLink)) then
     begin
-      PersistFile := ShellLink as IPersistFile;
+      PersistFile := (ShellLink as IPersistFile);
 
       if Succeeded(PersistFile.Load(StringToOleStr(FFileName), STGM_READ)) then
         with ShellLink do
@@ -1039,6 +1037,155 @@ procedure TRootList.Clear;
 begin
   inherited Clear;
   FActCount := 0;
+end;
+
+{ public TRootList.ChangeItemFilePath
+
+  Changes the file path of an item. }
+
+function TRootList.ChangeItemFilePath(const ANewFilePath: string): Boolean;
+begin
+  // Invalid item?
+  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
+    raise EInvalidItem.Create('No item selected!');
+
+  // Change item file path
+  Result := FItem.ChangeFilePath(ANewFilePath);
+
+  // Notify changed
+  if (Result and Assigned(FOnChanged)) then
+    FOnChanged(Self);
+end;
+
+{ public TRootList.ChangeItemStatus
+
+  Changes the item status. }
+
+function TRootList.ChangeItemStatus(): Boolean;
+var
+  Changed: Boolean;
+
+begin
+  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
+    raise EInvalidItem.Create('No item selected!');
+
+  // Change the status
+  Changed := FItem.ChangeStatus();
+
+  // Successful?
+  if Changed then
+  begin
+    // Item has been enabled?
+    if FItem.Enabled then
+      Inc(FActCount)
+    else
+      Dec(FActCount);
+
+    // Notify changed
+    if Assigned(FOnChanged) then
+      FOnChanged(Self);
+  end;  //of begin
+
+  Result := Changed;
+end;
+
+{ public TTaskList.DeleteItem
+
+  Deletes an item from Registry and list. }
+
+function TRootList.DeleteItem(): Boolean;
+var
+  Deleted: Boolean;
+
+begin
+  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
+    raise EInvalidItem.Create('No item selected!');
+
+  // Delete task from filesystem
+  Deleted := FItem.Delete();
+
+  // Successful?
+  if Deleted then
+  begin
+    // Item was enabled
+    if FItem.Enabled then
+      // Update active counter
+      Dec(FActCount);
+
+    // Remove item from list
+    inherited Remove(FItem);
+    FItem := nil;
+
+    // Notify delete
+    if Assigned(FOnChanged) then
+      FOnChanged(Self);
+  end;  //of begin
+
+  Result := Deleted;
+end;
+
+{ public TRootList.DisableItem
+
+  Disables the current selected item. }
+
+function TRootList.DisableItem(): Boolean;
+begin
+  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
+    raise EInvalidItem.Create('No item selected!');
+
+  if not FItem.Enabled then
+    raise EWarning.Create('Item already disabled!');
+
+  // Disable item
+  Result := FItem.Disable();
+
+  if Result then
+  begin
+    // Update active counter
+    Dec(FActCount);
+
+    // Notify disable
+    if Assigned(FOnChanged) then
+      FOnChanged(Self);
+  end;  //of begin
+end;
+
+{ public TRootList.EnableItem
+
+  Enables the current selected item. }
+
+function TRootList.EnableItem(): Boolean;
+begin
+  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
+    raise EInvalidItem.Create('No item selected!');
+
+  if FItem.Enabled then
+    raise EWarning.Create('Item already enabled!');
+
+  // Enable item
+  Result := FItem.Enable();
+
+  if Result then
+  begin
+    // Update active counter
+    Inc(FActCount);
+
+    // Notify enable
+    if Assigned(FOnChanged) then
+      FOnChanged(Self);
+  end;  //of begin
+end;
+
+{ public TTaskList.ExportItem
+
+  Exports an item as .xml file. }
+
+procedure TRootList.ExportItem(const AFileName: string);
+begin
+  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
+    raise EInvalidItem.Create('No item selected!');
+
+  FItem.ExportItem(AFileName);
 end;
 
 { public TRootList.IndexOf
@@ -1683,6 +1830,16 @@ begin
   Result := StringReplace(AName, '^', '\', [rfReplaceAll]);
 end;
 
+{ private TStartupList.DeleteBackupFile
+
+  Deletes the backup file of a TStartupUserItem. }
+
+function TStartupList.DeleteBackupFile(): Boolean;
+begin
+  if (FDeleteBackup and (FItem is TStartupUserItem)) then
+    Result := (FItem as TStartupUserItem).LnkFile.DeleteBackup();
+end;
+
 { private TStartupList.ItemAt
 
   Returns a TStartupListItem object at index. }
@@ -1716,6 +1873,15 @@ begin
     finally
       FindClose(SearchResult);
     end;  //of try
+end;
+
+{ private TStartupList.GetSelectedItem
+
+  Returns the current selected item as TStartupListItem. }
+
+function TStartupList.GetSelectedItem(): TStartupListItem;
+begin
+  Result := TStartupListItem(Selected);
 end;
 
 { private TStartupList.GetStartupUserType
@@ -1969,58 +2135,17 @@ begin
     Result := False;
 end;
 
-{ public TStartupList.ChangeItemFilePath
-
-  Changes the file path of an item. }
-
-function TStartupList.ChangeItemFilePath(const ANewFilePath: string): Boolean;
-begin
-  // Invalid item?
-  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
-    raise EInvalidItem.Create('No item selected!');
-
-  Result := FItem.ChangeFilePath(ANewFilePath);
-
-  // Notify changed
-  if Assigned(FOnChanged) then
-    FOnChanged(Self);
-end;
-
 { public TStartupList.ChangeItemStatus
 
   Changes the item status. }
 
 function TStartupList.ChangeItemStatus(): Boolean;
-var
-  Changed: Boolean;
-
 begin
-  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
-    raise EInvalidItem.Create('No item selected!');
+  Result := inherited ChangeItemStatus();
 
-  // Change the status
-  Changed := FItem.ChangeStatus();
-
-  // Successful?
-  if Changed then
-    // Item has been enabled?
-    if FItem.Enabled then
-    begin
-      // Decide to delete backup
-      if (FDeleteBackup and (FItem is TStartupUserItem)) then
-        (FItem as TStartupUserItem).LnkFile.DeleteBackup();
-
-      // Update active counter
-      Inc(FActCount);
-    end  //of begin
-  else
-    Dec(FActCount);
-
-  Result := Changed;
-
-  // Notify changed
-  if Assigned(FOnChanged) then
-    FOnChanged(Self);
+  // Only delete backup if item has been enabled!
+  if (Result and Selected.Enabled) then
+    DeleteBackupFile();
 end;
 
 { public TStartupList.DeleteItem
@@ -2028,60 +2153,11 @@ end;
   Deletes an item from Registry and list. }
 
 function TStartupList.DeleteItem(): Boolean;
-var
-  Deleted: Boolean;
-
 begin
-  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
-    raise EInvalidItem.Create('No item selected!');
-
-  // Delete item from Registry
-  Deleted := FItem.Delete();
-
-  // Successful?
-  if Deleted then
-  begin
-    // Decide to delete backup
-    if (FDeleteBackup and (FItem is TStartupUserItem)) then
-      (FItem as TStartupUserItem).LnkFile.DeleteBackup();
-
-    // Item was enabled
-    if FItem.Enabled then
-      // Update active counter
-      Dec(FActCount);
-
-    // Remove item from list
-    inherited Remove(FItem);
-    FItem := nil;
-  end;  //of begin
-
-  Result := Deleted;
-
-  // Notify changed
-  if Assigned(FOnChanged) then
-    FOnChanged(Self);
-end;
-
-{ public TStartupList.DisableItem
-
-  Disables the current selected item. }
-
-function TStartupList.DisableItem(): Boolean;
-begin
-  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
-    raise EInvalidItem.Create('No item selected!');
-
-  if not FItem.Enabled then
-    raise EAbort.Create('Item already disabled!');
-
-  Result := FItem.Disable();
+  Result := inherited DeleteItem();
 
   if Result then
-    Dec(FActCount);
-
-  // Notify changed
-  if Assigned(FOnChanged) then
-    FOnChanged(Self);
+    DeleteBackupFile();
 end;
 
 { public TStartupList.EnableItem
@@ -2090,39 +2166,10 @@ end;
 
 function TStartupList.EnableItem(): Boolean;
 begin
-  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
-    raise EInvalidItem.Create('No item selected!');
-
-  if FItem.Enabled then
-    raise EAbort.Create('Item already enabled!');
-
-  Result := FItem.Enable();
+  Result := inherited EnableItem();
 
   if Result then
-  begin
-    // Decide to delete backup
-    if (FDeleteBackup and (FItem is TStartupUserItem)) then
-      (FItem as TStartupUserItem).LnkFile.DeleteBackup();
-
-    // Update active counter
-    Inc(FActCount);
-  end;  //of begin
-
-  // Notify changed
-  if Assigned(FOnChanged) then
-    FOnChanged(Self);
-end;
-
-{ public TStartupList.ExportItem
-
-  Exports an item as .reg file. }
-
-procedure TStartupList.ExportItem(const AFileName: string);
-begin
-  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
-    raise EInvalidItem.Create('No item selected!');
-
-  FItem.ExportItem(AFileName);
+    DeleteBackupFile();
 end;
 
 { public TStartupList.ExportList
@@ -2489,7 +2536,7 @@ end;
 
 function TShellExItem.GetKeyPath(): string;
 begin
-  Result := FLocation + CONTEXTMENU_SHELLEX +'\'+ FName;
+  Result := FLocation + CM_SHELLEX +'\'+ FName;
 end;
 
 { private TShellExItem.GetProgramPathKey
@@ -2502,7 +2549,7 @@ var
 
 begin
   GUID := TRegUtils.GetKeyValue('HKCR', GetKeyPath(), '');
-  Result := Format(CONTEXTMENU_SHELLEX_FILE, [GUID]);
+  Result := Format(CM_SHELLEX_FILE, [GUID]);
 end;
 
 { public TShellExItem.ChangeFilePath
@@ -2682,7 +2729,7 @@ begin
     FullPath := FullPath +' '+ AArguments;
 
   // Build Registry key name
-  KeyName := ALocation + CONTEXTMENU_SHELL +'\'+ Name;
+  KeyName := ALocation + CM_SHELL +'\'+ Name;
 
   // Adds new context item to Registry
   TRegUtils.WriteStrValue('HKCR', KeyName, '', ADisplayedName);
@@ -2703,6 +2750,15 @@ begin
 
   if ((Count > 0) and (IndexOf(AName) <> -1)) then
     Result := (ItemAt(IndexOf(AName)).LocationRoot = ALocationRoot);
+end;
+
+{ private TContextList.GetSelectedItem
+
+  Returns the current selected item as TContextListItem. }
+
+function TContextList.GetSelectedItem(): TContextListItem;
+begin
+  Result := TContextListItem(Selected);
 end;
 
 { private TContextList.ItemAt
@@ -2786,9 +2842,9 @@ begin
   List := TStringList.Create;
 
   if ASearchForShellItems then
-    Key := ALocation + CONTEXTMENU_SHELL
+    Key := ALocation + CM_SHELL
   else
-    Key := ALocation + CONTEXTMENU_SHELLEX;
+    Key := ALocation + CM_SHELLEX;
 
   try
     Reg.RootKey := HKEY_CLASSES_ROOT;
@@ -2836,7 +2892,7 @@ begin
               GUID := Copy(GUID, 2, Length(GUID));
 
             // Set up Registry key
-            KeyName := Format(CONTEXTMENU_SHELLEX_FILE, [GUID]);
+            KeyName := Format(CM_SHELLEX_FILE, [GUID]);
             Reg.CloseKey();
 
             // Get file path of command
@@ -2854,143 +2910,6 @@ begin
     Reg.CloseKey();
     Reg.Free;
   end;  //of try
-end;
-
-{ public TContextList.ChangeItemFilePath
-
-  Changes the file path of an item. }
-
-function TContextList.ChangeItemFilePath(const ANewFilePath: string): Boolean;
-begin
-  // Invalid item?
-  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
-    raise EInvalidItem.Create('No item selected!');
-
-  Result := FItem.ChangeFilePath(ANewFilePath);
-
-  // Notify changed
-  if Assigned(FOnChanged) then
-    FOnChanged(Self);
-end;
-
-{ public TContextList.ChangeItemStatus
-
-  Changes the item status. }
-
-function TContextList.ChangeItemStatus(): Boolean;
-var
-  Changed: Boolean;
-
-begin
-  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
-    raise EInvalidItem.Create('No item selected!');
-
-  // Change status of item
-  Changed := FItem.ChangeStatus;
-
-  // Successful?
-  if Changed then
-    // Item has been enabled?
-    if FItem.Enabled then
-      Inc(FActCount)
-    else
-      Dec(FActCount);
-
-  Result := Changed;
-
-  // Notify changed
-  if Assigned(FOnChanged) then
-    FOnChanged(Self);
-end;
-
-{ public TContextList.DeleteItem
-
-  Deletes an item from Registry and list. }
-
-function TContextList.DeleteItem(): Boolean;
-var
-  Deleted: Boolean;
-
-begin
-  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
-    raise EInvalidItem.Create('No item selected!');
-
-  // Delete item from Registry
-  Deleted := FItem.Delete();
-
-  // Successful?
-  if Deleted then
-  begin
-    // Item was enabled?
-    if FItem.Enabled then
-      Dec(FActCount);
-
-    // Remove item from list
-    inherited Remove(FItem);
-    FItem := nil;
-  end;  //of begin
-
-  Result := Deleted;
-
-  // Notify delete
-  if Assigned(FOnChanged) then
-    FOnChanged(Self);
-end;
-
-{ public TContextList.DisableItem
-
-  Disables the current selected item. }
-
-function TContextList.DisableItem(): Boolean;
-begin
-  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
-    raise EInvalidItem.Create('No item selected!');
-
-  if not FItem.Enabled then
-    raise EAbort.Create('Item already disabled!');
-
-  Result := FItem.Disable();
-
-  if Result then
-    Dec(FActCount);
-
-  // Notify changed
-  if Assigned(FOnChanged) then
-    FOnChanged(Self);
-end;
-
-{ public TContextList.EnableItem
-
-  Enables the current selected item. }
-
-function TContextList.EnableItem(): Boolean;
-begin
-  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
-    raise EInvalidItem.Create('No item selected!');
-
-  if FItem.Enabled then
-    raise EAbort.Create('Item already enabled!');
-
-  Result := FItem.Enable();
-
-  if Result then
-    Inc(FActCount);
-
-  // Notify changed
-  if Assigned(FOnChanged) then
-    FOnChanged(Self);
-end;
-
-{ public TContextList.ExportItem
-
-  Exports an item as .reg file. }
-
-procedure TContextList.ExportItem(const AFileName: string);
-begin
-  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
-    raise EInvalidItem.Create('No item selected!');
-
-  FItem.ExportItem(AFileName);
 end;
 
 { public TContextList.ExportList

@@ -714,7 +714,7 @@ begin
   end;  //of try
 end;
 
-{ TMain.bExportContextClick
+{ TMain.bExportStartupItemClick
 
   Calls the export method of current selected deactivated startup item. }
 
@@ -723,7 +723,7 @@ begin
   CreateStartupUserBackup();
 end;
 
-{ TMain.bExportContextClick
+{ TMain.bExportContextItemClick
 
   Calls the export method of current selected context menu item. }
 
@@ -739,7 +739,7 @@ begin
   ShowRegistryExportDialog();
 end;
 
-{ TMain.bDeleteClick
+{ TMain.bDeleteStartupItemClick
 
   Deletes currently selected startup item. }
 
@@ -808,7 +808,7 @@ begin
     FStartup.DeleteBackup := DelBackup;
 end;
 
-{ TMain.bDeleteContextClick
+{ TMain.bDeleteContextItemClick
 
   Deletes currently selected context menu item. }
 
@@ -820,7 +820,7 @@ begin
   try
     // Confirm deletion of item
     if (FLang.MessageBox(FLang.Format([85, NEW_LINE, 49, 50],
-      [FContext.Selected.Name]), mtConfirm) = IDYES) then
+      [lwContext.ItemFocused.SubItems[0]]), mtConfirm) = IDYES) then
     begin
       // Ask user to export item
       Answer := FLang.MessageBox(52, mtQuestion);
@@ -852,7 +852,7 @@ begin
   end;  //of try
 end;
 
-{ TMain.bActivateClick
+{ TMain.bEnableStartupItemClick
 
   Activates currently selected startup item. }
 
@@ -895,7 +895,7 @@ begin
   end;  //of try
 end;
 
-{ TMain.bActContextClick
+{ TMain.bEnableContextItemClick
 
   Activates currently selected context menu item. }
 
@@ -932,7 +932,7 @@ begin
   end;  //of try
 end;
 
-{ TMain.bDeactivateClick
+{ TMain.bDisableStartupItemClick
 
   Deactivates currently selected startup item. }
 
@@ -952,7 +952,7 @@ begin
 
       // Show deactivation timestamp?
       if mmDate.Checked then
-        lwStartup.ItemFocused.SubItems[3] := FStartup.Selected.Time;
+        lwStartup.ItemFocused.SubItems[3] := FStartup.Item.Time;
 
       // Update TListView
       lwStartupSelectItem(Self, lwStartup.ItemFocused, True);
@@ -969,7 +969,7 @@ begin
   end;  //of try
 end;
 
-{ TMain.bDeactContextClick
+{ TMain.bDisableContextItemClick
 
   Deactivates currently selected context menu item. }
 
@@ -1319,9 +1319,9 @@ end;
 procedure TMain.pmOpenRegeditClick(Sender: TObject);
 begin
   if (PageControl.ActivePage = tsStartup) then
-    FStartup.Selected.OpenInRegEdit()
+    FStartup.Item.OpenInRegEdit()
   else
-    FContext.Selected.OpenInRegEdit();
+    FContext.Item.OpenInRegEdit();
 end;
 
 { TMain.pmPropertiesClick
