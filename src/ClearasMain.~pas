@@ -13,7 +13,7 @@ interface
 uses
   Windows, SysUtils, Classes, Controls, Forms, ComCtrls, StdCtrls, ExtCtrls,
   Dialogs, Menus, Graphics, ClipBrd, ImgList, StrUtils, ClearasAPI, ClearasInfo,
-  LanguageFile, OSUtils, Updater, AddDialogs, Task;
+  LanguageFile, OSUtils, Updater, AddDialogs;
 
 type
   { TMain }
@@ -1063,7 +1063,11 @@ begin
 
     // Item not found?
     if (Index = -1) then
+    begin
+      PopupMenu.AutoPopup := False;
+      FLang.MessageBox(53, mtWarning);
       Exit;
+    end;  //of begin
 
     // Load item into cache
     FContext.Selected := FContext.Items[Index];
@@ -1433,7 +1437,7 @@ begin
       if OpenDialog.Execute then
       begin
         // Set default name
-        Name := TRegUtils.DeleteExt(ExtractFileName(OpenDialog.FileName));
+        Name := ChangeFileExt(ExtractFileName(OpenDialog.FileName), '');
 
         // User can edit the name
         Name := InputBox(FLang.GetString(74), FLang.GetString(97), Name);

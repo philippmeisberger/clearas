@@ -12,7 +12,7 @@ interface
 
 uses
   Windows, Classes, SysUtils, Registry, ShlObj, ActiveX, ComObj, CommCtrl,
-  ShellAPI, Contnrs, OSUtils, LanguageFile, IniFileParser, SyncObjs, StrUtils;
+  ShellAPI, Contnrs, SyncObjs, StrUtils, OSUtils, LanguageFile, IniFileParser;
 
 const
   { Registry keys }
@@ -76,15 +76,14 @@ type
   { TRegUtils }
   TRegUtils = class(TOSUtils)
   protected
-    class function DeleteKey(AMainKey, AKeyPath, AKeyName: string): Boolean;
-    class function DeleteValue(AMainKey, AKeyName, AValueName: string): Boolean;
+    class function DeleteKey(ARootKey, AKeyPath, AKeyName: string): Boolean;
+    class function DeleteValue(ARootKey, AKeyName, AValueName: string): Boolean;
   public
-    class function DeleteExt(AName: string): string;
-    class function GetKeyValue(AMainKey, AKeyPath, AValueName: string): string;
+    class function GetKeyValue(ARootKey, AKeyPath, AValueName: string): string;
     class function RegisterInContextMenu(ACheck: Boolean): Boolean;
     class function UpdateContextPath(): Boolean; overload;
     class function UpdateContextPath(ALangFile: TLanguageFile): Boolean; overload; deprecated;
-    class procedure WriteStrValue(AMainKey, AKeyName, AName, AValue: string);
+    class procedure WriteStrValue(ARootKey, AKeyName, AName, AValue: string);
   end;
 
   { Exception classes }
@@ -226,12 +225,12 @@ type
     function GetStartupUserType(const AKeyPath: string): string; overload;
     function GetStartupUserType(const AAllUsers: Boolean): string; overload;
   protected
-    function AddItemDisabled(const AKeyPath: string): Word;
-    function AddItemEnabled(const ARootKey, AKeyPath, AName, AFilePath: string): Word;
+    function AddItemDisabled(const AKeyPath: string): Integer;
+    function AddItemEnabled(const ARootKey, AKeyPath, AName, AFilePath: string): Integer;
     function AddNewStartupUserItem(AName, AFilePath: string;
       AArguments: string = ''; AAllUsers: Boolean = False): Boolean;
-    function AddUserItemDisabled(const AKeyPath: string): Word;
-    function AddUserItemEnabled(ALnkFile: TLnkFile; AAllUsers: Boolean): Word;
+    function AddUserItemDisabled(const AKeyPath: string): Integer;
+    function AddUserItemEnabled(ALnkFile: TLnkFile; AAllUsers: Boolean): Integer;
   public
     constructor Create;
     destructor Destroy; override;
@@ -305,9 +304,9 @@ type
     function ItemAt(AIndex: Word): TContextListItem;
   protected
     function AddShellItem(const AName, ALocationRoot, AFilePath, ACaption: string;
-      AEnabled: Boolean): Word;
+      AEnabled: Boolean): Integer;
     function AddShellExItem(const AName, ALocationRoot, AFilePath: string;
-      AEnabled: Boolean): Word;
+      AEnabled: Boolean): Integer;
     procedure LoadContextmenu(const ALocation: string;
       ASearchForShellItems: Boolean); overload;
   public
@@ -502,16 +501,19 @@ begin
     begin
       PersistFile := (ShellLink as IPersistFile);
 
+      // Try to .lnk read file
       if Succeeded(PersistFile.Load(StringToOleStr(FFileName), STGM_READ)) then
         with ShellLink do
         begin
           SetLength(Path, MAX_PATH + 1);
 
+          // Try to read path from .lnk
           if Succeeded(GetPath(PChar(Path), MAX_PATH, FileInfo, SLR_ANY_MATCH)) then
           begin
             FExeFileName := PChar(Path);
             SetLength(Arguments, MAX_PATH + 1);
 
+            // Try to read arguments from .lnk file
             if Succeeded(GetArguments(PChar(Arguments), MAX_PATH)) then
               FArguments := PChar(Arguments);
 
@@ -549,7 +551,7 @@ begin
   Result := False;
 
   if (AFileName = '') or (AExeFileName = '') then
-    raise EStartupException.Create('Arguments for .lnk file must not be empty!');
+    raise EStartupException.Create('File name for .lnk file must not be empty!');
 
   try
     CoInitialize(nil);
@@ -596,7 +598,7 @@ end;
 
   Deletes a Registry key. }
 
-class function TRegUtils.DeleteKey(AMainKey, AKeyPath, AKeyName: string): Boolean;
+class function TRegUtils.DeleteKey(ARootKey, AKeyPath, AKeyName: string): Boolean;
 var
   Reg: TRegistry;
 
@@ -605,7 +607,7 @@ begin
   Reg := TRegistry.Create(DenyWOW64Redirection(KEY_READ or KEY_WRITE));
 
   try
-    Reg.RootKey := StrToHKey(AMainKey);
+    Reg.RootKey := StrToHKey(ARootKey);
 
     if not Reg.OpenKey(AKeyPath, False) then
       raise Exception.Create('Key does not exist!');
@@ -621,7 +623,7 @@ end;
 
   Deletes a Registry value. }
 
-class function TRegUtils.DeleteValue(AMainKey, AKeyName, AValueName: string): Boolean;
+class function TRegUtils.DeleteValue(ARootKey, AKeyName, AValueName: string): Boolean;
 var
   Reg: TRegistry;
 
@@ -630,7 +632,7 @@ begin
   Reg := TRegistry.Create(DenyWOW64Redirection(KEY_READ or KEY_WRITE));
 
   try
-    Reg.RootKey := StrToHKey(AMainKey);
+    Reg.RootKey := StrToHKey(ARootKey);
 
     if not Reg.OpenKey(AKeyName, False) then
       raise Exception.Create('Key does not exist!');
@@ -645,53 +647,27 @@ begin
   end;  //of try
 end;
 
-{ public TRegUtils.DeleteExt
-
-  Deletes the file extension of a file name. }
-
-class function TRegUtils.DeleteExt(AName: string): string;
-var
-  Index: Integer;
-  Ext: string;
-
-begin
-  // Extract extension
-  Ext := ExtractFileExt(AName);
-
-  // Search for given extension
-  Index := Pos(Ext, AName);
-
-  // Extension found?
-  if (Index <> 0) then
-    Delete(AName, Index, Index + Length(Ext) - 1);
-
-  Result := AName;
-end;
-
 { public TRegUtils.GetKeyValue
 
   Returns a Registry value as string. }
 
-class function TRegUtils.GetKeyValue(AMainKey, AKeyPath, AValueName: string): string;
+class function TRegUtils.GetKeyValue(ARootKey, AKeyPath, AValueName: string): string;
 var
   Reg: TRegistry;
 
 begin
+  Result := '';
   Reg := TRegistry.Create(DenyWOW64Redirection(KEY_READ));
 
   try
-    Reg.RootKey := StrToHKey(AMainKey);
+    Reg.RootKey := StrToHKey(ARootKey);
 
     if Reg.OpenKey(AKeyPath, False) then
     begin
-      // Only read if value exists
+      // Only read if value exists (to deny exception)
       if (Reg.ValueExists(AValueName)) then
-        Result := Reg.ReadString(AValueName)
-      else
-        Result := '';
-    end  //of begin
-    else
-      Result := '';
+        Result := Reg.ReadString(AValueName);
+    end;  //of begin
 
   finally
     Reg.CloseKey();
@@ -705,16 +681,16 @@ end;
 
 class function TRegUtils.RegisterInContextMenu(ACheck: Boolean): Boolean;
 begin
-  // Checkbox checked?
-  if ACheck then
-    // Remove recycle bin context menu entry
-    Result := DeleteKey('HKCR', KEY_RECYCLEBIN, 'Clearas')
+  // Checkbox not checked?
+  if not ACheck then
+  begin
+    // Add recycle bin context menu entry
+    WriteStrValue('HKCR', KEY_RECYCLEBIN +'\Clearas\command', '', ParamStr(0));
+    Result := True;
+  end  //of begin
   else
-    begin
-      // Add recycle bin context menu entry
-      WriteStrValue('HKCR', KEY_RECYCLEBIN +'\Clearas\command', '', ParamStr(0));
-      Result := True;
-    end;  //of begin
+    // Remove recycle bin context menu entry
+    Result := DeleteKey('HKCR', KEY_RECYCLEBIN, 'Clearas');
 end;
 
 { public TRegUtils.UpdateContextPath
@@ -781,7 +757,7 @@ end;
 
   Writes a string value to Registry }
 
-class procedure TRegUtils.WriteStrValue(AMainKey, AKeyName, AName, AValue: string);
+class procedure TRegUtils.WriteStrValue(ARootKey, AKeyName, AName, AValue: string);
 var
   Reg: TRegistry;
 
@@ -790,7 +766,7 @@ begin
 
   try
     try
-      Reg.RootKey := StrToHKey(AMainKey);
+      Reg.RootKey := StrToHKey(ARootKey);
       Reg.OpenKey(AKeyName, True);
       Reg.WriteString(AName, AValue);
 
@@ -966,7 +942,7 @@ begin
   if ((PreparedFileName <> '') and FileExists(PreparedFileName)) then
     TOSUtils.ExecuteProgram('explorer.exe', '/select, '+ PreparedFileName)
   else
-    raise EAbort.Create('File "'+ PreparedFileName +'" does not exist!');
+    raise EWarning.Create('File "'+ PreparedFileName +'" does not exist!');
 
   // Allow WOW64 redirection only on 64bit Windows
   if Win64 then
@@ -1026,7 +1002,7 @@ end;
 
 function TRootList.RootItemAt(AIndex: Word): TRootItem;
 begin
-  Result := TRootItem(Self.Items[AIndex]);
+  Result := TRootItem(Items[AIndex]);
 end;
 
 { public TRootList.Clear
@@ -1089,9 +1065,9 @@ begin
   Result := Changed;
 end;
 
-{ public TTaskList.DeleteItem
+{ public TRootList.DeleteItem
 
-  Deletes an item from Registry and list. }
+  Deletes an item from location and list. }
 
 function TRootList.DeleteItem(): Boolean;
 var
@@ -1176,9 +1152,9 @@ begin
   end;  //of begin
 end;
 
-{ public TTaskList.ExportItem
+{ public TRootList.ExportItem
 
-  Exports an item as .xml file. }
+  Exports an item as file. }
 
 procedure TRootList.ExportItem(const AFileName: string);
 begin
@@ -1254,26 +1230,32 @@ begin
   Reg := TRegistry.Create(TRegUtils.DenyWOW64Redirection(KEY_READ));
 
   try
-    Reg.RootKey := TRegUtils.StrToHKey(FRootKey);
-    Reg.OpenKey(Location, False);
+    try
+      Reg.RootKey := TRegUtils.StrToHKey(FRootKey);
+      Reg.OpenKey(Location, False);
 
-    // At least one valid date entry exists?
-    if Reg.ValueExists('YEAR') then
-    begin
-      Year := Reg.ReadInteger('YEAR');
-      Month := Reg.ReadInteger('MONTH');
-      Day := Reg.ReadInteger('DAY');
-      Hour := Reg.ReadInteger('HOUR');
-      Min := Reg.ReadInteger('MINUTE');
-      Sec := Reg.ReadInteger('SECOND');
-      Date := FormatDateTime('c', EncodeDate(Year, Month, Day));
-      Time := FormatDateTime('tt', EncodeTime(Hour, Min, Sec, 0));
-      Result := Date +'  '+ Time;
-    end;  //of if
+      // At least one valid date entry exists?
+      if Reg.ValueExists('YEAR') then
+      begin
+        Year := Reg.ReadInteger('YEAR');
+        Month := Reg.ReadInteger('MONTH');
+        Day := Reg.ReadInteger('DAY');
+        Hour := Reg.ReadInteger('HOUR');
+        Min := Reg.ReadInteger('MINUTE');
+        Sec := Reg.ReadInteger('SECOND');
+        Date := FormatDateTime('c', EncodeDate(Year, Month, Day));
+        Time := FormatDateTime('tt', EncodeTime(Hour, Min, Sec, 0));
+        Result := Date +'  '+ Time;
+      end;  //of if
 
-  finally
-    Reg.CloseKey();
-    Reg.Free;
+    finally
+      Reg.CloseKey();
+      Reg.Free;
+    end;  //of try
+
+  except
+    // Do not raise exception: Corrupted date is not fatal!
+    Result := '';
   end;  //of try
 end;
 
@@ -1336,7 +1318,7 @@ end;
 
 function TStartupListItem.GetFullLocation(): string;
 begin
-  Result := TRegUtils.HKeyToStr(TRegUtils.StrToHKey(FRootKey)) +'\'+ Location;
+  Result := TRegUtils.HKeyToStr(TRegUtils.StrToHKey(FRootKey)) +'\'+ FLocation;
 end;
 
 { public TStartupListItem.ChangeFilePath
@@ -1357,7 +1339,7 @@ begin
       Reg.RootKey := TOSUtils.StrToHKey(FRootKey);
 
       // Invalid key?
-      if not Reg.OpenKey(Location, False) then
+      if not Reg.OpenKey(FLocation, False) then
         raise Exception.Create('Key does not exist!');
 
       if FEnabled then
@@ -1401,9 +1383,9 @@ begin
 
   try
     if FEnabled then
-      RegFile.ExportReg(TRegUtils.StrToHKey(FRootKey), Location, Name)
+      RegFile.ExportReg(TRegUtils.StrToHKey(FRootKey), FLocation, Name)
     else
-      RegFile.ExportReg(TRegUtils.StrToHKey(FRootKey), Location, False);
+      RegFile.ExportReg(TRegUtils.StrToHKey(FRootKey), FLocation, False);
 
   finally
     RegFile.Free;
@@ -1422,7 +1404,7 @@ begin
   try
     if FEnabled then
     begin
-      if not TRegUtils.DeleteValue(FRootKey, Location, Name) then
+      if not TRegUtils.DeleteValue(FRootKey, FLocation, Name) then
         raise EStartupException.Create('Could not delete value!');
     end  //of begin
     else
@@ -1457,7 +1439,7 @@ begin
       Reg.RootKey := HKEY_LOCAL_MACHINE;
 
       // Successfully deleted old entry?
-      if not TRegUtils.DeleteValue(FRootKey, Location, Name) then
+      if not TRegUtils.DeleteValue(FRootKey, FLocation, Name) then
         raise EStartupException.Create('Could not delete value!');
 
       // Successfully created new key?
@@ -1465,7 +1447,7 @@ begin
       begin
         // Write values
         Reg.WriteString('hkey', FRootKey);
-        Reg.WriteString('key', Location);
+        Reg.WriteString('key', FLocation);
         Reg.WriteString('item', Name);
         Reg.WriteString('command', FilePath);
         Reg.WriteString('inimapping', '0');
@@ -1477,7 +1459,7 @@ begin
 
         // Update information
         FRootKey := 'HKLM';
-        Location := KEY_DEACT + Name;
+        FLocation := KEY_DEACT + Name;
         FEnabled := False;
       end  //of begin
       else
@@ -1516,7 +1498,7 @@ begin
     try
       Reg.RootKey := HKEY_LOCAL_MACHINE;
 
-      if not Reg.OpenKey(Location, False) then
+      if not Reg.OpenKey(FLocation, False) then
         raise EStartupException.Create('Key does not exist!');
 
       // Set new values
@@ -1541,7 +1523,7 @@ begin
 
         // Update information
         FRootKey := NewHKey;
-        Location := NewKeyPath;
+        FLocation := NewKeyPath;
         FEnabled := True;
         FTime := '';
       end  //of begin
@@ -1591,7 +1573,7 @@ end;
 function TStartupUserItem.GetFullLocation(): string;
 begin
   if FEnabled then
-    Result := Location
+    Result := FLocation
   else
     Result := inherited GetFullLocation();
 end;
@@ -1614,7 +1596,7 @@ begin
     Arguments := ExtractArguments(ANewFilePath);
 
     // Failed to create new .lnk file?
-    if (FEnabled and not FLnkFile.WriteLnkFile(Location, NewFilePath, Arguments)) then
+    if (FEnabled and not FLnkFile.WriteLnkFile(FLocation, NewFilePath, Arguments)) then
       raise EStartupException.Create('Could not create .lnk file!');
 
     // Update information
@@ -1654,13 +1636,13 @@ begin
     if FEnabled then
     begin
       // Could not delete .lnk?
-      if not DeleteFile(Location) then
-        raise EStartupException.Create('Could not delete .lnk "'+ Location +'"!');
+      if not DeleteFile(FLocation) then
+        raise EStartupException.Create('Could not delete .lnk "'+ FLocation +'"!');
     end  //of begin
     else
       // Could not delete key?
       if not TRegUtils.DeleteKey('HKLM', KEY_DEACT_FOLDER, GetKeyName()) then
-        raise EStartupException.Create('Could not delete key "'+ Location +'"!');
+        raise EStartupException.Create('Could not delete key "'+ FLocation +'"!');
 
     Result := True;
 
@@ -1689,7 +1671,7 @@ begin
   try
     try
       Reg.RootKey := HKEY_LOCAL_MACHINE;
-      KeyName := AddCircumflex(Location);
+      KeyName := AddCircumflex(FLocation);
 
       if not FLnkFile.ReadLnkFile() then
         raise EStartupException.Create('Could not read .lnk file!');
@@ -1697,8 +1679,8 @@ begin
       if not Reg.OpenKey(KEY_DEACT_FOLDER + KeyName, True) then
         raise EStartupException.Create('Could not create key "'+ Name +'"!');
 
-      Reg.WriteString('path', Location);
-      Reg.WriteString('item', TRegUtils.DeleteExt(ExtractFileName(Name)));
+      Reg.WriteString('path', FLocation);
+      Reg.WriteString('item', ChangeFileExt(ExtractFileName(Name), ''));
       Reg.WriteString('command', FilePath);
       Reg.WriteString('backup', FLnkFile.BackupLnk);
 
@@ -1706,7 +1688,7 @@ begin
       if TOSUtils.WindowsVistaOrLater() then
       begin
         Reg.WriteString('backupExtension', FLnkFile.BackupExt);
-        Reg.WriteString('location', ExtractFileDir(Location));
+        Reg.WriteString('location', ExtractFileDir(FLocation));
         WriteTime(KEY_DEACT_FOLDER + KeyName);
       end  //of begin
       else
@@ -1717,7 +1699,7 @@ begin
         ForceDirectories(TLnkFile.GetBackupDir());
 
       // Create backup by copying original .lnk
-      if not CopyFile(PChar(Location), PChar(FLnkFile.BackupLnk), False) then
+      if not CopyFile(PChar(FLocation), PChar(FLnkFile.BackupLnk), False) then
         raise EStartupException.Create('Could not create backup file!');
 
       // Delete original .lnk
@@ -1725,7 +1707,7 @@ begin
         raise EStartupException.Create('Could not delete .lnk file!');
 
       // Update information
-      Location := KEY_DEACT_FOLDER + KeyName;
+      FLocation := KEY_DEACT_FOLDER + KeyName;
       FRootKey := 'HKLM';
       FEnabled := False;
       Result := True;
@@ -1767,10 +1749,10 @@ begin
 
     // Could not delete old key?
     if not TRegUtils.DeleteKey('HKLM', KEY_DEACT_FOLDER, AddCircumflex(FLnkFile.FileName)) then
-      raise EStartupException.Create('Could not delete key "'+ Location +'"!');
+      raise EStartupException.Create('Could not delete key "'+ FLocation +'"!');
 
     // Update information
-    Location := FLnkFile.FileName;
+    FLocation := FLnkFile.FileName;
     FRootKey := '';
     FEnabled := True;
     Result := True;
@@ -1934,24 +1916,30 @@ end;
 
   Adds a disabled default startup item to the list. }
 
-function TStartupList.AddItemDisabled(const AKeyPath: string): Word;
+function TStartupList.AddItemDisabled(const AKeyPath: string): Integer;
 var
   Item: TStartupListItem;
 
 begin
   Item := TStartupItem.Create(Count, False);
 
-  with Item do
-  begin
-    RootKey := 'HKLM';
-    Location := AKeyPath;
-    Name := ExtractFileName(AKeyPath);
-    FilePath := TRegUtils.GetKeyValue('HKLM', AKeyPath, 'command');
-    Time := GetTime();
-    TypeOf := TRegUtils.GetKeyValue('HKLM', AKeyPath, 'hkey');
-  end;  //of with
+  try
+    with Item do
+    begin
+      RootKey := 'HKLM';
+      FLocation := AKeyPath;
+      Name := ExtractFileName(AKeyPath);
+      FilePath := TRegUtils.GetKeyValue('HKLM', AKeyPath, 'command');
+      Time := GetTime();
+      TypeOf := TRegUtils.GetKeyValue('HKLM', AKeyPath, 'hkey');
+    end;  //of with
 
-  Result := Add(Item);
+    Result := Add(Item);
+
+  except
+    Item.Free;
+    Result := -1;
+  end;  //of try
 end;
 
 { protected TStartupList.AddItemEnabled
@@ -1959,29 +1947,35 @@ end;
   Adds a enabled default startup item to the list. }
 
 function TStartupList.AddItemEnabled(const ARootKey, AKeyPath, AName,
-  AFilePath: string): Word;
+  AFilePath: string): Integer;
 var
   Item: TStartupListItem;
 
 begin
   Item := TStartupItem.Create(Count, True);
 
-  with Item do
-  begin
-    RootKey := ARootKey;
-    Location := AKeyPath;
-    Name := AName;
-    FilePath := AFilePath;
-    Time := '';
+  try
+    with Item do
+    begin
+      RootKey := ARootKey;
+      FLocation := AKeyPath;
+      Name := AName;
+      FilePath := AFilePath;
+      Time := '';
 
-    if ((AKeyPath = KEY_RUNONCE) or (AKeyPath = KEY_RUNONCE32)) then
-      TypeOf := 'RunOnce'
-    else
-      TypeOf := ARootKey;
-  end;  //of with
+      if ((AKeyPath = KEY_RUNONCE) or (AKeyPath = KEY_RUNONCE32)) then
+        TypeOf := 'RunOnce'
+      else
+        TypeOf := ARootKey;
+    end;  //of with
 
-  Inc(FActCount);
-  Result := Add(Item);
+    Inc(FActCount);
+    Result := Add(Item);
+
+  except
+    Item.Free;
+    Result := -1;
+  end;  //of try
 end;
 
 { protected TStartupList.AddNewStartupUserItem
@@ -2012,34 +2006,41 @@ end;
 
   Adds a disabled startup user item to the list. }
 
-function TStartupList.AddUserItemDisabled(const AKeyPath: string): Word;
+function TStartupList.AddUserItemDisabled(const AKeyPath: string): Integer;
 var
   Item: TStartupListItem;
   Path, Ext: string;
 
 begin
   Item := TStartupUserItem.Create(Count, False);
-  Path := TRegUtils.GetKeyValue('HKLM', AKeyPath, 'path');
 
-  with (Item as TStartupUserItem) do
-  begin
-    RootKey := 'HKLM';
-    Location := AKeyPath;
-    Name := ExtractFileName(DelCircumflex(AKeyPath));
-    FilePath := TRegUtils.GetKeyValue('HKLM', AKeyPath, 'command');
-    Time := GetTime();
-    TypeOf := GetStartupUserType(AKeyPath);
+  try
+    Path := TRegUtils.GetKeyValue('HKLM', AKeyPath, 'path');
 
-    if ((TypeOf = TYPE_USER) or (TypeOf = TYPE_USER_XP)) then
-      Ext := EXT_USER
-    else
-      Ext := EXT_COMMON;
+    with (Item as TStartupUserItem) do
+    begin
+      RootKey := 'HKLM';
+      FLocation := AKeyPath;
+      Name := ExtractFileName(DelCircumflex(AKeyPath));
+      FilePath := TRegUtils.GetKeyValue('HKLM', AKeyPath, 'command');
+      Time := GetTime();
+      TypeOf := GetStartupUserType(AKeyPath);
 
-    LnkFile := TLnkFile.Create(Path, Ext);
-    LnkFile.ReadLnkFile();
-  end;  //of with
+      if ((TypeOf = TYPE_USER) or (TypeOf = TYPE_USER_XP)) then
+        Ext := EXT_USER
+      else
+        Ext := EXT_COMMON;
 
-  Result := Add(Item);
+      LnkFile := TLnkFile.Create(Path, Ext);
+      LnkFile.ReadLnkFile();
+    end;  //of with
+
+    Result := Add(Item);
+
+  except
+    Item.Free;
+    Result := -1;
+  end;  //of try
 end;
 
 { protected TStartupList.AddUserItemEnabled
@@ -2047,29 +2048,35 @@ end;
   Adds a enabled startup user item to the list. }
 
 function TStartupList.AddUserItemEnabled(ALnkFile: TLnkFile;
-  AAllUsers: Boolean): Word;
+  AAllUsers: Boolean): Integer;
 var
   Item: TStartupListItem;
 
 begin
   Item := TStartupUserItem.Create(Count, True);
 
-  // Read .lnk file
-  ALnkFile.ReadLnkFile();
+  try
+    // Read .lnk file
+    ALnkFile.ReadLnkFile();
 
-  with (Item as TStartupUserItem) do
-  begin
-    RootKey := '';
-    Location := ALnkFile.FileName;
-    FilePath := ALnkFile.FullPath;
-    LnkFile := ALnkFile;
-    Name := ExtractFileName(ALnkFile.FileName);
-    Time := '';
-    TypeOf := GetStartupUserType(AAllUsers);
-  end;  //of with
+    with (Item as TStartupUserItem) do
+    begin
+      RootKey := '';
+      FLocation := ALnkFile.FileName;
+      FilePath := ALnkFile.FullPath;
+      LnkFile := ALnkFile;
+      Name := ExtractFileName(ALnkFile.FileName);
+      Time := '';
+      TypeOf := GetStartupUserType(AAllUsers);
+    end;  //of with
 
-  Inc(FActCount);
-  Result := Add(Item);
+    Inc(FActCount);
+    Result := Add(Item);
+
+  except
+    Item.Free;
+    Result := -1;
+  end;  //of try
 end;
 
 { public TStartupList.AddProgram
@@ -2103,7 +2110,7 @@ begin
     if (ADisplayedName <> '') then
       Name := ADisplayedName
     else
-      Name := TRegUtils.DeleteExt(Name);
+      Name := ChangeFileExt(Name, '');
 
     Result := AddNewStartupUserItem(Name, AFilePath, AArguments);
   end  //of begin
@@ -2226,7 +2233,7 @@ begin
   LnkFile := TLnkFile.Create(AFilePath, Ext);
 
   // Set the name of item
-  Name := ExtractFileName(TRegUtils.DeleteExt(AFilePath));
+  Name := ExtractFileName(ChangeFileExt(AFilePath, ''));
 
   // Append extension if not exist
   if (ExtractFileExt(Name) = '') then
@@ -2425,7 +2432,7 @@ end;
 
 function TShellItem.GetKeyPath(): string;
 begin
-  Result := Location +'\'+ TypeOf +'\'+ Name;
+  Result := FLocation +'\'+ TypeOf +'\'+ Name;
 end;
 
 { public TShellItem.ChangeFilePath
@@ -2538,7 +2545,7 @@ end;
 
 function TShellExItem.GetKeyPath(): string;
 begin
-  Result := Location + CM_SHELLEX +'\'+ Name;
+  Result := FLocation + CM_SHELLEX +'\'+ Name;
 end;
 
 { private TShellExItem.GetProgramPathKey
@@ -2712,7 +2719,7 @@ var
 begin
   Result := False;
   Ext := ExtractFileExt(AFilePath);
-  Name := TRegUtils.DeleteExt(ExtractFileName(AFilePath));
+  Name := ChangeFileExt(ExtractFileName(AFilePath), '');
 
   // Check invalid extension
   if ((Ext <> '.exe') and (Ext <> '.bat')) then
@@ -2777,7 +2784,7 @@ end;
   Adds a shell item to list. }
 
 function TContextList.AddShellItem(const AName, ALocationRoot, AFilePath,
-  ACaption: string; AEnabled: Boolean): Word;
+  ACaption: string; AEnabled: Boolean): Integer;
 var
   Item: TContextListItem;
 
@@ -2804,7 +2811,7 @@ end;
   Adds a shellex item to list. }
 
 function TContextList.AddShellExItem(const AName, ALocationRoot, AFilePath: string;
-  AEnabled: Boolean): Word;
+  AEnabled: Boolean): Integer;
 var
   Item: TContextListItem;
 
@@ -2855,7 +2862,7 @@ begin
     // Read out all keys
     Reg.GetKeyNames(List);
 
-    for i := 0 to List.Count -1 do
+    for i := 0 to List.Count - 1 do
     begin
       Reg.CloseKey;
       Item := List[i];
@@ -2929,7 +2936,7 @@ begin
   RegFile := TRegistryFile.Create(AFileName, True);
 
   try
-    for i := 0 to Count -1 do
+    for i := 0 to Count - 1 do
     begin
       Item := ItemAt(i);
       RegFile.ExportKey(HKEY_CLASSES_ROOT, Item.Location, True);
@@ -2949,18 +2956,18 @@ end;
 
 function TContextList.IndexOf(AName, ALocationRoot: string): Integer;
 var
-  i: Integer;
+  i: Word;
   Item: TContextListItem;
 
 begin
   Result := -1;
 
-  for i := 0 to Count -1 do
+  for i := 0 to Count - 1 do
   begin
     Item := ItemAt(i);
 
-    if (((Item.Name = AName) or (Item.Caption = AName))
-      and (Item.LocationRoot = ALocationRoot)) then
+    if (((Item.Name = AName) or (Item.Caption = AName)) and
+      (Item.LocationRoot = ALocationRoot)) then
     begin
       Result := i;
       Break;

@@ -41,8 +41,6 @@ type
 
   { TOSUtils }
   TOSUtils = class(TWinWOW64)
-  protected
-    class function KillProcess(AExeName: string): Boolean;
   public
     class function CreateTempDir(const AFolderName: string): Boolean;
     class function ExecuteProgram(const AProgram: string;
@@ -56,6 +54,7 @@ type
     class function GetWinVersion(AShowServicePack: Boolean = False): string;
     class function HexToInt(AHexValue: string): Integer;
     class function HKeyToStr(AHKey: HKey): string;
+    class function KillProcess(AExeName: string): Boolean;
     class function MakeUACShieldButton(AButtonHandle: HWND): Integer;
     class function OpenUrl(const AUrl: string): Boolean;
     class function PlaySound(AFileName: string; ASynchronized: Boolean = False): Boolean;
@@ -188,43 +187,6 @@ end;
 
 
 { TOSUtils }
-
-{ public TOSUtils.KillProcess
-
-  Terminates a given process. }
-  
-class function TOSUtils.KillProcess(AExeName: string): Boolean;
-var
-  Continue: Boolean;
-  snapshotHandle: THandle;
-  processentry32: TProcessEntry32;
-  ProcessID: string;
-  Ph: THandle;
-
-begin
-  // Read out all running processes
-  snapshotHandle := CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-  processentry32.dwSize := SizeOf(processentry32);
-  Continue := Process32First(snapshotHandle, processentry32);
-
-  // Try to search for given process name
-  try
-    while ((ExtractFileName(processentry32.szExeFile) <> AExeName) and Continue) do
-      Continue := Process32Next(snapshotHandle, processentry32);
-
-    // Save process ID for found process
-    ProcessID := IntToHex(processentry32.th32ProcessID, 4);
-
-    // Get handle of found process 
-    Ph := OpenProcess($0001, BOOL(0), StrToInt('$'+ ProcessID));
-
-    // Terminate found process
-    result := (Integer(TerminateProcess(Ph, 0)) = 1);
-
-  finally
-    CloseHandle(snapshotHandle);
-  end;  //of try
-end;
 
 { public TOSUtils.CreateTempDir
 
@@ -467,6 +429,43 @@ begin
     else
       raise EInvalidArgument.Create('HKeyToStr: Bad format error! Unknown HKEY!');
   end;  //of case
+end;
+
+{ public TOSUtils.KillProcess
+
+  Terminates a given process. }
+
+class function TOSUtils.KillProcess(AExeName: string): Boolean;
+var
+  Continue: Boolean;
+  snapshotHandle: THandle;
+  processentry32: TProcessEntry32;
+  ProcessID: string;
+  Ph: THandle;
+
+begin
+  // Read out all running processes
+  snapshotHandle := CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+  processentry32.dwSize := SizeOf(processentry32);
+  Continue := Process32First(snapshotHandle, processentry32);
+
+  // Try to search for given process name
+  try
+    while ((ExtractFileName(processentry32.szExeFile) <> AExeName) and Continue) do
+      Continue := Process32Next(snapshotHandle, processentry32);
+
+    // Save process ID for found process
+    ProcessID := IntToHex(processentry32.th32ProcessID, 4);
+
+    // Get handle of found process
+    Ph := OpenProcess($0001, BOOL(0), StrToInt('$'+ ProcessID));
+
+    // Terminate found process
+    result := (Integer(TerminateProcess(Ph, 0)) = 1);
+
+  finally
+    CloseHandle(snapshotHandle);
+  end;  //of try
 end;
 
 { public TOSUtils.MakeUACShieldButton
