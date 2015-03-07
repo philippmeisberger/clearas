@@ -1340,7 +1340,7 @@ end;
 
 procedure TRegistryFile.WriteInteger(ASection, AIdent: string; AValue: Integer);
 begin
-  WriteString(ASection, AIdent, REG_INTEGER + IntToHex(AValue, 8));
+  inherited WriteString(ASection, EscapeIdentifier(AIdent), REG_INTEGER + IntToHex(AValue, 8));
 end;
 
 { public TRegistryFile.WriteString
