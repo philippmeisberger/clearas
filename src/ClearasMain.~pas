@@ -335,7 +335,7 @@ begin
       FLang.MessageBox(Flang.Format(42, [(FStartup.Selected as TStartupUserItem).LnkFile.BackupLnk]));
       bExportStartupItem.Enabled := False;
       pmExport.Enabled := False;
-      Result := False;
+      Result := True;
     end  //of begin
     else
       // Default .reg file export
@@ -752,6 +752,10 @@ begin
   DelBackup := True;
 
   try
+    // Nothing selected?
+    if (not Assigned(lwStartup.ItemFocused) or not Assigned(FStartup.Selected)) then
+      raise EInvalidItem.Create('No item selected!');
+
     // Confirm deletion of item
     if (FLang.MessageBox(FLang.Format([48, NEW_LINE, 49, 50],
       [FStartup.Selected.Name]), mtConfirm) = IDYES) then
@@ -796,7 +800,7 @@ begin
     end;  //of begin
 
   except
-    on E: EAccessViolation do
+    on E: EInvalidItem do
       FLang.MessageBox([96, 18, NEW_LINE, 53], mtWarning);
 
     on E: Exception do
@@ -818,6 +822,10 @@ var
 
 begin
   try
+    // Nothing selected?
+    if not Assigned(lwContext.ItemFocused) then
+      raise EInvalidItem.Create('No item selected!');
+
     // Confirm deletion of item
     if (FLang.MessageBox(FLang.Format([85, NEW_LINE, 49, 50],
       [lwContext.ItemFocused.SubItems[0]]), mtConfirm) = IDYES) then
@@ -844,7 +852,7 @@ begin
     end;  //of begin
 
   except
-    on E: EAccessViolation do
+    on E: EInvalidItem do
       FLang.MessageBox([96, 18, NEW_LINE, 53], mtWarning);
 
     on E: Exception do
@@ -859,6 +867,10 @@ end;
 procedure TMain.bEnableStartupItemClick(Sender: TObject);
 begin
   try
+      // Nothing selected?
+    if not Assigned(lwStartup.ItemFocused) then
+      raise EInvalidItem.Create('No item selected!');
+
     // Successfully activated item?
     if FStartup.EnableItem() then
     begin
@@ -902,6 +914,10 @@ end;
 procedure TMain.bEnableContextItemClick(Sender: TObject);
 begin
   try
+    // Nothing selected?
+    if not Assigned(lwContext.ItemFocused) then
+      raise EInvalidItem.Create('No item selected!');
+
     // Successfully activated item?
     if FContext.EnableItem() then
     begin
@@ -939,6 +955,10 @@ end;
 procedure TMain.bDisableStartupItemClick(Sender: TObject);
 begin
   try
+    // Nothing selected?
+    if not Assigned(lwStartup.ItemFocused) then
+      raise EInvalidItem.Create('No item selected!');
+
     // Successfully deactivated item?
     if FStartup.DisableItem() then
     begin
@@ -976,6 +996,10 @@ end;
 procedure TMain.bDisableContextItemClick(Sender: TObject);
 begin
   try
+    // Nothing selected?
+    if not Assigned(lwContext.ItemFocused) then
+      raise EInvalidItem.Create('No item selected!');
+
     // Successfully deactivated item?
     if FContext.DisableItem() then
     begin
@@ -1219,7 +1243,11 @@ begin
 
     // Item not found?
     if (Index = -1) then
+    begin
+      PopupMenu.AutoPopup := False;
+      FLang.MessageBox(53, mtWarning);
       Exit;
+    end;  //of begin
 
     // Load item into cache
     FStartup.Selected := FStartup.Items[Index];
@@ -1932,7 +1960,7 @@ var
   i: Integer;
 
 begin
-  // Fill the listview
+  // Fill the listview from cache
   LoadContextMenuEntries(False);
 
   // Exit on empty key word

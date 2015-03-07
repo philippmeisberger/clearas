@@ -1820,8 +1820,8 @@ function TStartupList.DeleteBackupFile(): Boolean;
 begin
   Result := False;
 
-  if (FDeleteBackup and (FItem is TStartupUserItem)) then
-    Result := (FItem as TStartupUserItem).LnkFile.DeleteBackup();
+  if (FDeleteBackup and (Selected is TStartupUserItem)) then
+    Result := (Selected as TStartupUserItem).LnkFile.DeleteBackup();
 end;
 
 { private TStartupList.ItemAt
@@ -2135,11 +2135,11 @@ end;
 
 function TStartupList.BackupExists(): Boolean;
 begin
-  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
+  if (not Assigned(Selected) or (IndexOf(Selected) = -1)) then
     raise EInvalidItem.Create('No item selected!');
 
-  if (FItem is TStartupUserItem) then
-    Result := (FItem as TStartupUserItem).LnkFile.BackupExists()
+  if (Selected is TStartupUserItem) then
+    Result := (Selected as TStartupUserItem).LnkFile.BackupExists()
   else
     Result := False;
 end;
