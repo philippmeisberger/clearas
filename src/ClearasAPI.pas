@@ -241,10 +241,10 @@ type
     function EnableItem(): Boolean; override;
     procedure ExportList(const AFileName: string);
     function ImportBackup(const AFilePath: string): Boolean;
-    procedure LoadAutostart(AIncludeRunOnce: Boolean);
     procedure LoadDisabled(const AKeyPath: string);
     procedure LoadEnabled(const AAllUsers: Boolean); overload;
     procedure LoadEnabled(const ARootKey, AKeyPath: string); overload;
+    procedure LoadStartup(AIncludeRunOnce: Boolean);
     { external }
     property DeleteBackup: Boolean read FDeleteBackup write FDeleteBackup;
     property Item: TStartupListItem read GetSelectedItem;
@@ -305,17 +305,16 @@ type
       AEnabled: Boolean): Integer;
     function AddShellExItem(const AName, ALocationRoot, AFilePath: string;
       AEnabled: Boolean): Integer;
-    procedure LoadContextmenu(const ALocation: string;
-      ASearchForShellItems: Boolean); overload;
   public
     constructor Create;
     function AddEntry(const AFilePath, AArguments, ALocation,
       ADisplayedName: string): Boolean;
     procedure ExportList(const AFileName: string);
     function IndexOf(AName, ALocationRoot: string): Integer; overload;
-    procedure LoadContextmenu(); overload;
     procedure LoadContextmenu(const ALocationRoot: string); overload;
-    procedure LoadContextMenus(ALocationRoots: string = 'Directory, Folder, *, Drive');
+    procedure LoadContextmenu(const ALocationRoot: string;
+      ASearchForShellItems: Boolean); overload;
+    procedure LoadContextMenus(ALocationRootCommaList: string = '');
     { external }
     property Item: TContextListItem read GetSelectedItem;
     property Items[AIndex: Word]: TContextListItem read ItemAt; default;
@@ -2177,28 +2176,6 @@ begin
   end;  //of try
 end;
 
-{ public TStartupList.LoadAutostart
-
-  Searches for startup items at different locations. }
-
-procedure TStartupList.LoadAutostart(AIncludeRunOnce: Boolean);
-var
-  StartupSearchThread: TStartupSearchThread;
-
-begin
-  // Init search thread
-  StartupSearchThread := TStartupSearchThread.Create(Self,
-    TOSUtils.IsWindows64(), AIncludeRunOnce, FLock);
-
-  with StartupSearchThread do
-  begin
-    OnStart := FOnSearchStart;
-    OnSearching := FOnSearching;
-    OnFinish := FOnSearchFinish;
-    Resume;
-  end;  // of with
-end;
-
 { public TStartupList.LoadDisabled
 
   Searches for disabled items in AKeyPath and adds them to the list. }
@@ -2288,6 +2265,29 @@ begin
     Reg.Free;
     List.Free;
   end;  //of finally
+end;
+
+{ public TStartupList.LoadStartup
+
+  Searches for startup items at different locations. }
+
+procedure TStartupList.LoadStartup(AIncludeRunOnce: Boolean);
+var
+  StartupSearchThread: TStartupSearchThread;
+
+begin
+  // Init search thread
+  StartupSearchThread := TStartupSearchThread.Create(Self, FLock);
+
+  with StartupSearchThread do
+  begin
+    Win64 := TOSUtils.IsWindows64();
+    IncludeRunOnce := AIncludeRunOnce;
+    OnStart := FOnSearchStart;
+    OnSearching := FOnSearching;
+    OnFinish := FOnSearchFinish;
+    Resume;
+  end;  // of with
 end;
 
 
@@ -2707,95 +2707,6 @@ begin
   Result := Add(Item);
 end;
 
-{ protected TContextList.LoadContextmenu
-
-  Searches for either Shell or ShellEx context menu entries in specific
-  Registry key and adds them to the list. }
-
-procedure TContextList.LoadContextmenu(const ALocation: string;
-  ASearchForShellItems: Boolean);
-var
-  Reg: TRegistry;
-  i: Integer;
-  List: TStringList;
-  Item, Key, KeyName, FilePath, GUID, Caption: string;
-  Enabled: Boolean;
-
-begin
-  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));
-  List := TStringList.Create;
-
-  if ASearchForShellItems then
-    Key := ALocation + CM_SHELL
-  else
-    Key := ALocation + CM_SHELLEX;
-
-  try
-    Reg.RootKey := HKEY_CLASSES_ROOT;
-    Reg.OpenKey(Key, False);
-
-    // Read out all keys
-    Reg.GetKeyNames(List);
-
-    for i := 0 to List.Count - 1 do
-    begin
-      Reg.CloseKey;
-      Item := List[i];
-      Reg.OpenKey(Key +'\'+ Item, False);
-      FilePath := '';
-
-      // Default value of key is a GUID for ShellEx items and caption for Shell
-      GUID := Reg.ReadString('');
-      Caption := GUID;
-
-      // Filter empty, important and double entries
-      if ((Caption <> '') and (Item[1] <> '{') and (GUID[1] <> '@')
-        and not FindDouble(Item, ALocation)) then
-      begin
-        // Search for shell entries?
-        if ASearchForShellItems then
-        begin
-          // Get status and caption
-          Enabled := not Reg.ValueExists('LegacyDisable');
-
-          // Get file path of command
-          if Reg.OpenKey('command', False) then
-            FilePath := Reg.ReadString('');
-
-          // Add item to list
-          AddShellItem(Item, ALocation, FilePath, Caption, Enabled);
-        end  //of begin
-        else
-          // Search for shellex entries
-          begin
-            // Get status and GUID
-            Enabled := (GUID[1] = '{');
-
-            // Disabled ShellEx items got "-" before GUID!
-            if not Enabled then
-              GUID := Copy(GUID, 2, Length(GUID));
-
-            // Set up Registry key
-            KeyName := Format(CM_SHELLEX_FILE, [GUID]);
-            Reg.CloseKey();
-
-            // Get file path of command
-            if Reg.OpenKey(KeyName, False) then
-              FilePath := Reg.ReadString('');
-
-            // Add item to list
-            AddShellExItem(Item, ALocation, FilePath, Enabled);
-          end  //of begin
-        end;  //of begin
-    end;  //of for
-
-  finally
-    List.Free;
-    Reg.CloseKey();
-    Reg.Free;
-  end;  //of try
-end;
-
 { public TContextList.ExportList
 
   Exports the complete list as .reg file. }
@@ -2852,16 +2763,7 @@ end;
 
 { public TContextList.LoadContextmenu
 
-  Searches for context menu entries and adds them to the list. }
-
-procedure TContextList.LoadContextmenu();
-begin
-  LoadContextMenus('');
-end;
-
-{ public TContextList.LoadContextmenu
-
-  Searches for Shell/ShellEx context menu entries in specific Registry key
+  Searches for Shell and ShellEx context menu entries in specific Registry key
   and adds them to the list. }
 
 procedure TContextList.LoadContextmenu(const ALocationRoot: string);
@@ -2870,11 +2772,100 @@ begin
   LoadContextmenu(ALocationRoot, False);
 end;
 
+{ public TContextList.LoadContextmenu
+
+  Searches for either Shell or ShellEx context menu entries in specific
+  Registry key and adds them to the list. }
+
+procedure TContextList.LoadContextmenu(const ALocationRoot: string;
+  ASearchForShellItems: Boolean);
+var
+  Reg: TRegistry;
+  i: Integer;
+  List: TStringList;
+  Item, Key, KeyName, FilePath, GUID, Caption: string;
+  Enabled: Boolean;
+
+begin
+  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));
+  List := TStringList.Create;
+
+  if ASearchForShellItems then
+    Key := ALocationRoot + CM_SHELL
+  else
+    Key := ALocationRoot + CM_SHELLEX;
+
+  try
+    Reg.RootKey := HKEY_CLASSES_ROOT;
+    Reg.OpenKey(Key, False);
+
+    // Read out all keys
+    Reg.GetKeyNames(List);
+
+    for i := 0 to List.Count - 1 do
+    begin
+      Reg.CloseKey;
+      Item := List[i];
+      Reg.OpenKey(Key +'\'+ Item, False);
+      FilePath := '';
+
+      // Default value of key is a GUID for ShellEx items and caption for Shell
+      GUID := Reg.ReadString('');
+      Caption := GUID;
+
+      // Filter empty, important and double entries
+      if ((Caption <> '') and (Item[1] <> '{') and (GUID[1] <> '@')
+        and not FindDouble(Item, ALocationRoot)) then
+      begin
+        // Search for shell entries?
+        if ASearchForShellItems then
+        begin
+          // Get status and caption
+          Enabled := not Reg.ValueExists('LegacyDisable');
+
+          // Get file path of command
+          if Reg.OpenKey('command', False) then
+            FilePath := Reg.ReadString('');
+
+          // Add item to list
+          AddShellItem(Item, ALocationRoot, FilePath, Caption, Enabled);
+        end  //of begin
+        else
+          // Search for shellex entries
+          begin
+            // Get status and GUID
+            Enabled := (GUID[1] = '{');
+
+            // Disabled ShellEx items got "-" before GUID!
+            if not Enabled then
+              GUID := Copy(GUID, 2, Length(GUID));
+
+            // Set up Registry key
+            KeyName := Format(CM_SHELLEX_FILE, [GUID]);
+            Reg.CloseKey();
+
+            // Get file path of command
+            if Reg.OpenKey(KeyName, False) then
+              FilePath := Reg.ReadString('');
+
+            // Add item to list
+            AddShellExItem(Item, ALocationRoot, FilePath, Enabled);
+          end  //of begin
+        end;  //of begin
+    end;  //of for
+
+  finally
+    List.Free;
+    Reg.CloseKey();
+    Reg.Free;
+  end;  //of try
+end;
+
 { public TContextList.LoadContextMenus
 
   Searches for context menu entries at different locations. }
 
-procedure TContextList.LoadContextMenus(ALocationRoots: string = 'Directory, Folder, *, Drive');
+procedure TContextList.LoadContextMenus(ALocationRootCommaList: string = '');
 var
   SearchThread: TContextSearchThread;
 
@@ -2884,7 +2875,7 @@ begin
 
   with SearchThread do
   begin
-    Locations.CommaText := ALocationRoots;
+    Locations.CommaText := ALocationRootCommaList;
     OnStart := FOnSearchStart;
     OnSearching := FOnSearching;
     OnFinish := FOnSearchFinish;

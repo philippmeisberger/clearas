@@ -625,10 +625,10 @@ begin
     // Use expert search mode?
     if cbExpert.Checked then
       // Start the expert search in a thread
-      FContext.LoadContextmenu()
+      FContext.LoadContextmenus()
     else
       // Use default search mode
-      FContext.LoadContextMenus();
+      FContext.LoadContextMenus('Directory, Folder, *, Drive');
   end  //of begin
   else
     OnContextSearchEnd(Self);
@@ -653,7 +653,7 @@ begin
     bExportStartupItem.Enabled := False;
 
     // Load autostart with or without special RunOnce entries (threaded)
-    FStartup.LoadAutostart(mmRunOnce.Checked);
+    FStartup.LoadStartup(mmRunOnce.Checked);
   end  //of begin
   else
     OnStartupSearchEnd(Self);

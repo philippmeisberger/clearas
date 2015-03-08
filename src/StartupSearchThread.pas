@@ -31,12 +31,13 @@ type
   protected
     procedure Execute; override;
   public
-    constructor Create(AStartupList: TStartupList; AWin64, AIncludeRunOnce: Boolean;
-      ALock: TCriticalSection);
+    constructor Create(AStartupList: TStartupList; ALock: TCriticalSection);
     { external }
+    property IncludeRunOnce: Boolean read FIncludeRunOnce write FIncludeRunOnce;
     property OnFinish: TNotifyEvent read FOnFinish write FOnFinish;
     property OnSearching: TSearchEvent read FOnSearching write FOnSearching;
     property OnStart: TSearchEvent read FOnStart write FOnStart;
+    property Win64: Boolean read FWin64 write FWin64;
   end;
 
 implementation
@@ -48,26 +49,12 @@ implementation
   Constructor for creating a TStartupSearchThread instance. }
 
 constructor TStartupSearchThread.Create(AStartupList: TStartupList;
-  AWin64, AIncludeRunOnce: Boolean; ALock: TCriticalSection);
-const
-  KEYS_COUNT_MAX = 11;
-
+  ALock: TCriticalSection);
 begin
   inherited Create(True);
   FreeOnTerminate := True;
   FStartupList := AStartupList;
-  FWin64 := AWin64;
-  FIncludeRunOnce := AIncludeRunOnce;
   FLock := ALock;
-
-  // Calculate key count for events
-  if FWin64 then
-    FProgressMax := KEYS_COUNT_MAX
-  else
-    FProgressMax := KEYS_COUNT_MAX - 3;
-
-  if not AIncludeRunOnce then
-    FProgressMax := FProgressMax - 2;
 end;
 
 { private TStartupSearchThread.DoNotifyOnFinish
@@ -138,18 +125,30 @@ end;
   Searches for startup items in Registry. }
 
 procedure TStartupSearchThread.Execute;
+const
+  KEYS_COUNT_MAX = 11;
+
 begin
   FLock.Acquire;
-
-  // Notify start of search
-  Synchronize(DoNotifyOnStart);
-  FProgress := 0;
-
+  
   // Clear selected item
   FStartupList.Selected := nil;
 
   // Clear data
   FStartupList.Clear;
+
+  // Calculate key count for events
+  if FWin64 then
+    FProgressMax := KEYS_COUNT_MAX
+  else
+    FProgressMax := KEYS_COUNT_MAX - 3;
+
+  if not FIncludeRunOnce then
+    FProgressMax := FProgressMax - 2;
+
+  // Notify start of search
+  Synchronize(DoNotifyOnStart);
+  FProgress := 0;
 
   // Start loading...
   LoadEnabled('HKLM', KEY_STARTUP);

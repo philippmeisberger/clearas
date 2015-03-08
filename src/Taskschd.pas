@@ -1,11 +1,10 @@
-unit Taskschd;
+{ *********************************************************************** }
+{                                                                         }
+{ Microsoft Windows TaskScheduler API v2.0 for Delphi                     }
+{                                                                         }
+{ *********************************************************************** }
 
- {***************************************************
-  *                                                 *
-  *    Microsoft Windows TaskScheduler API v.2.0    *
-  *                   for Delphi                    *
-  *                                                 *
-  ***************************************************}
+unit Taskschd;
 
 interface
 
@@ -104,6 +103,22 @@ const
   SCHED_E_TASK_DISABLED = $80041326;   // The task is disabled.
   SCHED_E_TASK_NOT_V1_COMPAT = $80041327;   // The task has properties that are not compatible with earlier versions of Windows.
   SCHED_E_START_ON_DEMAND = $80041328;   // The task settings do not allow the task to start on demand.
+
+  // Authentication level constants for CoInitializeSecurity()
+  RPC_C_AUTHN_LEVEL_DEFAULT = 0;
+  RPC_C_AUTHN_LEVEL_NONE = 1;
+  RPC_C_AUTHN_LEVEL_CONNECT = 2;
+  RPC_C_AUTHN_LEVEL_CALL = 3;
+  RPC_C_AUTHN_LEVEL_PKT = 4;
+  RPC_C_AUTHN_LEVEL_PKT_INTEGRITY = 5;
+  RPC_C_AUTHN_LEVEL_PKT_PRIVACY = 6;
+
+  // Impersonation level constants for CoInitializeSecurity()
+  RPC_C_IMP_LEVEL_DEFAULT = 0;
+  RPC_C_IMP_LEVEL_ANONYMOUS = 1;
+  RPC_C_IMP_LEVEL_IDENTIFY = 2;
+  RPC_C_IMP_LEVEL_IMPERSONATE = 3;
+  RPC_C_IMP_LEVEL_DELEGATE = 4;
 
 type
   LONG = Integer;

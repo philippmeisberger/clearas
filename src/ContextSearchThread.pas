@@ -27,9 +27,9 @@ type
     procedure DoNotifyOnFinish();
     procedure DoNotifyOnStart();
     procedure DoNotifyOnSearching();
-    procedure LoadContextMenu();
+    procedure LoadAllContextMenus();
     procedure LoadContextMenus();
-    procedure SearchSubkey(AKeyName, ASearchPattern: string);
+    procedure SearchSubkey(AKeyName: string);
   protected
     procedure Execute; override;
   public
@@ -44,7 +44,7 @@ type
 
 implementation
 
-uses StrUtils;
+uses StrUtils, SysUtils;
 
 { TContextSearchThread }
 
@@ -112,7 +112,7 @@ end;
 
   Searches for pattern keys in a Registry subkey. }
 
-procedure TContextSearchThread.SearchSubkey(AKeyName, ASearchPattern: string);
+procedure TContextSearchThread.SearchSubkey(AKeyName: string);
 var
   Keys: TStringList;
   i: Integer;
@@ -130,13 +130,15 @@ begin
       FReg.GetKeyNames(Keys);
 
       for i := 0 to Keys.Count - 1 do
-        // Pattern matches?
-        if AnsiContainsText(Keys[i], ASearchPattern) then
-        begin
-          // Load context menu in current key
-          FContextList.LoadContextmenu(AKeyName);
-          Break;
-        end;  //of for
+      begin
+        // Load ShellEx context menu items?
+        if AnsiSameText(Keys[i], 'shellex') then
+          FContextList.LoadContextmenu(AKeyName, False);
+
+        // Load Shell context menu items?
+        if AnsiSameText(Keys[i], 'shell') then
+          FContextList.LoadContextmenu(AKeyName, True);
+      end;  //of for
     end;  //of begin
 
   finally
@@ -144,11 +146,11 @@ begin
   end;  //of try
 end;
 
-{ private TContextSearchThread.LoadContextMenu
+{ private TContextSearchThread.LoadAllContextMenus
 
-  Searches for context menu items in Registry. }
+  Searches for context menu items in entire Registry. }
 
-procedure TContextSearchThread.LoadContextMenu();
+procedure TContextSearchThread.LoadAllContextMenus();
 var
   i: Integer;
   Hkcr: TStringList;
@@ -169,7 +171,7 @@ begin
     for i := 0 to Hkcr.Count - 1 do
     begin
       Synchronize(DoNotifyOnSearching);
-      SearchSubkey(Hkcr[i], 'shell');
+      SearchSubkey(Hkcr[i]);
       Inc(FProgress);
     end;  //of for
 
@@ -220,7 +222,7 @@ begin
   if (FLocations.Count > 0) then
     LoadContextMenus()
   else
-    LoadContextMenu();
+    LoadAllContextMenus();
 
   // Notify end of search
   Synchronize(DoNotifyOnFinish);
