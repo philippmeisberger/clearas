@@ -273,7 +273,6 @@ object Main: TMain
   Visible = True
   OnCreate = FormCreate
   OnDestroy = FormDestroy
-  OnKeyDown = FormKeyDown
   OnShow = FormShow
   DesignSize = (
     541
@@ -680,7 +679,6 @@ object Main: TMain
       end
       object mmExport: TMenuItem
         Caption = 'Eintrag exportieren'
-        ShortCut = 16451
         OnClick = mmExportClick
       end
       object mmExportList: TMenuItem

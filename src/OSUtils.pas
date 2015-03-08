@@ -427,7 +427,7 @@ begin
     HKEY_USERS:          result := 'HKEY_USERS';
     HKEY_CURRENT_CONFIG: result := 'HKEY_CURRENT_CONFIG';
     else
-      raise EInvalidArgument.Create('HKeyToStr: Bad format error! Unknown HKEY!');
+      raise EInvalidArgument.Create('Unknown HKEY!');
   end;  //of case
 end;
 
@@ -689,8 +689,7 @@ begin
           if (AMainKey = 'HKCC') then
             result := HKEY_CURRENT_CONFIG
           else
-            raise EInvalidArgument.Create('StrToHKey: Bad format error! '
-              +'Unknown HKEY: "'+ AMainKey +'"!');
+            raise EInvalidArgument.Create('Unknown HKEY: "'+ AMainKey +'"!');
 end;
 
 { public TOSUtils.WindowsVistaOrLater

@@ -104,8 +104,6 @@ type
     procedure cbExpertClick(Sender: TObject);
     procedure eSearchChange(Sender: TObject);
     procedure eSearchKeyPress(Sender: TObject; var Key: Char);
-    procedure FormKeyDown(Sender: TObject; var Key: Word;
-      Shift: TShiftState);
     procedure lwContextDblClick(Sender: TObject);
     procedure lwContextSelectItem(Sender: TObject; Item: TListItem;
       Selected: Boolean);
@@ -328,6 +326,10 @@ begin
   Result := False;
 
   try
+    // Nothing selected?
+    if not Assigned(FStartup.Selected) then
+      raise EInvalidItem.Create('No item selected!');
+
     // Special .lnk file backup only for activated startup user entries!
     if (FStartup.Selected.Enabled and (FStartup.Selected is TStartupUserItem)) then
     begin
@@ -342,7 +344,7 @@ begin
       Result := ShowRegistryExportDialog();
 
   except
-    on E: EAccessViolation do
+    on E: EInvalidItem do
       FLang.MessageBox([95, 18, NEW_LINE, 53], mtWarning);
 
     on E: EStartupException do
@@ -788,7 +790,8 @@ begin
       begin
         // Delete item from TListView
         lwStartup.DeleteSelected();
-
+        lwStartup.ItemFocused := nil;
+        
         // Disable VCL buttons
         bEnableStartupItem.Enabled := False;
         bDisableStartupItem.Enabled := False;
@@ -823,7 +826,7 @@ var
 begin
   try
     // Nothing selected?
-    if not Assigned(lwContext.ItemFocused) then
+    if (not Assigned(lwContext.ItemFocused) or not Assigned(FContext.Selected)) then
       raise EInvalidItem.Create('No item selected!');
 
     // Confirm deletion of item
@@ -840,7 +843,8 @@ begin
         begin
           // Delete item from TListView
           lwContext.DeleteSelected();
-
+          lwContext.ItemFocused := nil;
+          
           // Disable VCL buttons
           bEnableContextItem.Enabled := False;
           bDisableContextItem.Enabled := False;
@@ -867,7 +871,7 @@ end;
 procedure TMain.bEnableStartupItemClick(Sender: TObject);
 begin
   try
-      // Nothing selected?
+    // Nothing selected?
     if not Assigned(lwStartup.ItemFocused) then
       raise EInvalidItem.Create('No item selected!');
 
@@ -1024,22 +1028,6 @@ begin
     on E: Exception do
       FLang.MessageBox(FLang.GetString([94, 18, NEW_LINE]) + E.Message, mtError);
   end;  //of try
-end;
-
-{ TMain.FormKeyDown
-
-  Event method that is called when user presses a key. }
-
-procedure TMain.FormKeyDown(Sender: TObject; var Key: Word;
-  Shift: TShiftState);
-begin
-  // Bind the "delete" key to delete methods
-  if (Key = VK_DELETE) then
-    if (PageControl.ActivePage = tsStartup) then
-      bDeleteStartupItem.Click
-    else
-      if (PageControl.ActivePage = tsContext) then
-        bDeleteContextItem.Click;
 end;
 
 { TMain.lwContextDblClick
@@ -1356,7 +1344,7 @@ begin
     FContext.Item.OpenInRegEdit();
 end;
 
-{ TMain.pmPropertiesClick
+{ TMain.pmCopyLocationClick
 
   Popup menu entry to show some properties. }
 
@@ -1405,7 +1393,7 @@ begin
 
     // Try to change the file path
     if not SelectedList.ChangeItemFilePath(EnteredPath) then
-      raise Exception.Create('Could not change path!');
+      raise Exception.Create('Error while changing path!');
 
     // Update file path in TListView
     if (PageControl.ActivePage = tsStartup) then

@@ -145,6 +145,7 @@ type
     FOnChanged: TNotifyEvent;
   protected
     FActCount: Word;
+    FLock: TCriticalSection;
     function RootItemAt(AIndex: Word): TRootItem;
   public
     constructor Create;
@@ -216,7 +217,6 @@ type
   TStartupList = class(TRootList)
   private
     FDeleteBackup: Boolean;
-    FLock: TCriticalSection;
     function DelCircumflex(AName: string): string;
     function DeleteBackupFile(): Boolean;
     function ItemAt(AIndex: Word): TStartupListItem;
@@ -233,7 +233,6 @@ type
     function AddUserItemEnabled(ALnkFile: TLnkFile; AAllUsers: Boolean): Integer;
   public
     constructor Create;
-    destructor Destroy; override;
     function AddProgram(AFilePath, AArguments: string;
       ADisplayedName: string = ''): Boolean;
     function BackupExists(): Boolean;
@@ -298,7 +297,6 @@ type
   { TContextList }
   TContextList = class(TRootList)
   private
-    FLock: TCriticalSection;
     function FindDouble(AName, ALocationRoot: string): Boolean;
     function GetSelectedItem(): TContextListItem;
     function ItemAt(AIndex: Word): TContextListItem;
@@ -311,7 +309,6 @@ type
       ASearchForShellItems: Boolean); overload;
   public
     constructor Create;
-    destructor Destroy; override;
     function AddEntry(const AFilePath, AArguments, ALocation,
       ADisplayedName: string): Boolean;
     procedure ExportList(const AFileName: string);
@@ -615,6 +612,7 @@ begin
     Result := Reg.DeleteKey(AKeyName);
 
   finally
+    Reg.CloseKey();
     Reg.Free;
   end;  //of try
 end;
@@ -643,6 +641,7 @@ begin
       Result := True;
 
   finally
+    Reg.CloseKey();
     Reg.Free;
   end;  //of try
 end;
@@ -739,7 +738,7 @@ begin
     ClearasKey := ALangFile.GetString(37);
 
     // Only update if context menu entry exists
-    if (Reg.KeyExists(ClearasKey)) then
+    if Reg.KeyExists(ClearasKey) then
     begin
       // Delete old context menu key
       if not Reg.DeleteKey(ClearasKey) then
@@ -767,7 +766,10 @@ begin
   try
     try
       Reg.RootKey := StrToHKey(ARootKey);
-      Reg.OpenKey(AKeyName, True);
+
+      if not Reg.OpenKey(AKeyName, True) then
+        raise Exception.Create('Could not open key!');
+
       Reg.WriteString(AName, AValue);
 
     finally
@@ -778,7 +780,7 @@ begin
   except
     on E: Exception do
     begin
-      E.Message := 'Could not write "'+ AName +'" with value "'+ AValue +'": '+ E.Message;
+      E.Message := 'Error while writing Registry value "'+ AName +'" : '+ E.Message;
       raise;
     end;  //of begin
   end;  //of try
@@ -984,6 +986,7 @@ constructor TRootList.Create;
 begin
   inherited Create;
   FActCount := 0;
+  FLock := TCriticalSection.Create;
 end;
 
 { public TRootList.Destroy
@@ -992,6 +995,7 @@ end;
 
 destructor TRootList.Destroy;
 begin
+  FLock.Free;
   Clear();
   inherited Destroy;
 end;
@@ -1195,7 +1199,7 @@ var
 begin
   Result := -1;
 
-  for i := 0 to Count -1 do
+  for i := 0 to Count - 1 do
   begin
     Item := RootItemAt(i);
 
@@ -1306,7 +1310,7 @@ begin
   except
     on E: Exception do
     begin
-      E.Message := 'Error while writing deactivation time to "'+ AKeyPath +'": '+ E.Message;
+      E.Message := 'Error while writing deactivation timestamp: '+ E.Message;
       raise;
     end;  //of begin
   end;  //of try
@@ -1332,41 +1336,32 @@ var
 
 begin
   Result := False;
-  Reg := TRegistry.Create(TWinWOW64.DenyWOW64Redirection(KEY_ALL_ACCESS));
+  Reg := TRegistry.Create(TWinWOW64.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
 
   try
-    try
-      Reg.RootKey := TOSUtils.StrToHKey(FRootKey);
+    Reg.RootKey := TOSUtils.StrToHKey(FRootKey);
 
-      // Invalid key?
-      if not Reg.OpenKey(FLocation, False) then
-        raise Exception.Create('Key does not exist!');
+    // Invalid key?
+    if not Reg.OpenKey(FLocation, False) then
+      raise Exception.Create('Key does not exist!');
 
-      if FEnabled then
-        ItemName := Name
-      else
-        ItemName := 'command';
+    if FEnabled then
+      ItemName := Name
+    else
+      ItemName := 'command';
 
-      // Value must exist!
-      if not Reg.ValueExists(ItemName) then
-        raise Exception.Create('Value does not exist!');
+    // Value must exist!
+    if not Reg.ValueExists(ItemName) then
+      raise Exception.Create('Value does not exist!');
 
-      // Change path
-      Reg.WriteString(ItemName, ANewFilePath);
-      FilePath := ANewFilePath;
-      Result := True;
+    // Change path
+    Reg.WriteString(ItemName, ANewFilePath);
+    FilePath := ANewFilePath;
+    Result := True;
 
-    finally
-      Reg.CloseKey();
-      Reg.Free;
-    end;  //of try
-
-  except
-    on E: Exception do
-    begin
-      E.Message := 'Error while changing file path of "'+ Name +'": '+ E.Message;
-      raise;
-    end;  //of begin
+  finally
+    Reg.CloseKey();
+    Reg.Free;
   end;  //of try
 end;
 
@@ -1401,25 +1396,16 @@ end;
 
 function TStartupItem.Delete(): Boolean;
 begin
-  try
-    if FEnabled then
-    begin
-      if not TRegUtils.DeleteValue(FRootKey, FLocation, Name) then
-        raise EStartupException.Create('Could not delete value!');
-    end  //of begin
-    else
-      if not TRegUtils.DeleteKey('HKLM', KEY_DEACT, Name) then
-        raise EStartupException.Create('Could not delete key!');
+  if FEnabled then
+  begin
+    if not TRegUtils.DeleteValue(FRootKey, FLocation, Name) then
+      raise EStartupException.Create('Could not delete value!');
+  end  //of begin
+  else
+    if not TRegUtils.DeleteKey('HKLM', KEY_DEACT, Name) then
+      raise EStartupException.Create('Could not delete key!');
 
-    Result := True;
-
-  except
-    on E: Exception do
-    begin
-      E.Message := 'Error while deleting "'+ Name +'": '+ E.Message;
-      raise;
-    end;  //of begin
-  end;  //of try
+  Result := True;
 end;
 
 { public TStartupItem.Disable
@@ -1435,49 +1421,37 @@ begin
   Reg := TRegistry.Create(TRegUtils.DenyWOW64Redirection(KEY_WRITE));
 
   try
-    try
-      Reg.RootKey := HKEY_LOCAL_MACHINE;
+    Reg.RootKey := HKEY_LOCAL_MACHINE;
 
-      // Successfully deleted old entry?
-      if not TRegUtils.DeleteValue(FRootKey, FLocation, Name) then
-        raise EStartupException.Create('Could not delete value!');
+    // Failed to delete old entry?
+    if not TRegUtils.DeleteValue(FRootKey, FLocation, Name) then
+      raise EStartupException.Create('Could not delete value!');
 
-      // Successfully created new key?
-      if (Reg.OpenKey(KEY_DEACT + Name, True)) then
-      begin
-        // Write values
-        Reg.WriteString('hkey', FRootKey);
-        Reg.WriteString('key', FLocation);
-        Reg.WriteString('item', Name);
-        Reg.WriteString('command', FilePath);
-        Reg.WriteString('inimapping', '0');
+    // Failed to create new key?
+    if not Reg.OpenKey(KEY_DEACT + Name, True) then
+      raise EStartupException.Create('Could not create key!');
 
-        // Windows >= Vista?
-        if TOSUtils.WindowsVistaOrLater() then
-          // Save deactivation time stamp
-          WriteTime(KEY_DEACT + Name);
+    // Write values
+    Reg.WriteString('hkey', FRootKey);
+    Reg.WriteString('key', FLocation);
+    Reg.WriteString('item', Name);
+    Reg.WriteString('command', FilePath);
+    Reg.WriteString('inimapping', '0');
 
-        // Update information
-        FRootKey := 'HKLM';
-        FLocation := KEY_DEACT + Name;
-        FEnabled := False;
-      end  //of begin
-      else
-        raise EStartupException.Create('Could not create "'+ KEY_DEACT + Name +'"!');
+    // Windows >= Vista?
+    if TOSUtils.WindowsVistaOrLater() then
+      // Save deactivation time stamp
+      WriteTime(KEY_DEACT + Name);
 
-      Result := True;
+    // Update information
+    FRootKey := 'HKLM';
+    FLocation := KEY_DEACT + Name;
+    FEnabled := False;
+    Result := True;
 
-    finally
-      Reg.CloseKey();
-      Reg.Free;
-    end;  //of try
-
-  except
-    on E: Exception do
-    begin
-      E.Message := 'Error while disabling "'+ Name +'": '+ E.Message;
-      raise;
-    end;  //of begin
+  finally
+    Reg.CloseKey();
+    Reg.Free;
   end;  //of try
 end;
 
@@ -1492,55 +1466,48 @@ var
 
 begin
   Result := False;
-  Reg := TRegistry.Create(TRegUtils.DenyWOW64Redirection(KEY_ALL_ACCESS));
+  Reg := TRegistry.Create(TRegUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
 
   try
-    try
-      Reg.RootKey := HKEY_LOCAL_MACHINE;
+    Reg.RootKey := HKEY_LOCAL_MACHINE;
 
-      if not Reg.OpenKey(FLocation, False) then
-        raise EStartupException.Create('Key does not exist!');
+    if not Reg.OpenKey(FLocation, False) then
+      raise EStartupException.Create('Key does not exist!');
 
-      // Set new values
-      NewHKey := Reg.ReadString('hkey');
-      NewKeyPath := Reg.ReadString('key');
-      Reg.CloseKey;
+    if (not Reg.ValueExists('hkey') or not Reg.ValueExists('key')) then
+      raise EStartupException.Create('Missing destination Registry values '
+        +'"hkey" or "key"!');
 
-      if ((NewHKey = '') or (NewKeyPath = '')) then
-        raise EStartupException.Create('Missing destination Registry values '
-          +'"hkey" and "key"!');
+    // Set new values
+    NewHKey := Reg.ReadString('hkey');
+    NewKeyPath := Reg.ReadString('key');
+    Reg.CloseKey;
 
-      Reg.RootKey := TRegUtils.StrToHKey(NewHKey);
+    if ((NewHKey = '') or (NewKeyPath = '')) then
+      raise EStartupException.Create('Invalid destination Registry values for '
+        +'"hkey" or "key"!');
 
-      // Successfully created new key?
-      if Reg.OpenKey(NewKeyPath, True) then
-      begin
-        // Write startup entry
-        Reg.WriteString(Name, FilePath);
+    Reg.RootKey := TRegUtils.StrToHKey(NewHKey);
 
-        // Delete old key
-        Result := TRegUtils.DeleteKey('HKLM', KEY_DEACT, Name);
+    // Failed to create new key?
+    if not Reg.OpenKey(NewKeyPath, True) then
+      raise EStartupException.Create('Could not create key "'+ NewKeyPath +'"!');
 
-        // Update information
-        FRootKey := NewHKey;
-        FLocation := NewKeyPath;
-        FEnabled := True;
-        FTime := '';
-      end  //of begin
-      else
-        raise EStartupException.Create('Could not create key "'+ NewKeyPath +'"!');
+    // Write startup entry
+    Reg.WriteString(Name, FilePath);
 
-    finally
-      Reg.CloseKey();
-      Reg.Free;
-    end;  //of try
+    // Delete old key
+    Result := TRegUtils.DeleteKey('HKLM', KEY_DEACT, Name);
 
-  except
-    on E: Exception do
-    begin
-      E.Message := 'Error while enabling "'+ Name +'": '+ E.Message;
-      raise;
-    end;  //of begin
+    // Update information
+    FRootKey := NewHKey;
+    FLocation := NewKeyPath;
+    FEnabled := True;
+    FTime := '';
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
   end;  //of try
 end;
 
@@ -1587,37 +1554,27 @@ var
   NewFilePath, Arguments: string;
 
 begin
-  // Must be outside try-except because inherited call catches exception already
   if not FEnabled then
     inherited ChangeFilePath(ANewFilePath);
 
-  try
-    NewFilePath := StringReplace(ExtractPathToFile(ANewFilePath), '"', '', [rfReplaceAll]);
-    Arguments := ExtractArguments(ANewFilePath);
+  NewFilePath := StringReplace(ExtractPathToFile(ANewFilePath), '"', '', [rfReplaceAll]);
+  Arguments := ExtractArguments(ANewFilePath);
 
-    // Failed to create new .lnk file?
-    if (FEnabled and not FLnkFile.WriteLnkFile(FLocation, NewFilePath, Arguments)) then
-      raise EStartupException.Create('Could not create .lnk file!');
+  // Failed to create new .lnk file?
+  if (FEnabled and not FLnkFile.WriteLnkFile(FLocation, NewFilePath, Arguments)) then
+    raise EStartupException.Create('Could not create .lnk file!');
 
-    // Update information
-    FilePath := ANewFilePath;
-    FLnkFile.ExeFileName := NewFilePath;
-    FLnkFile.Arguments := Arguments;
+  // Update information
+  FilePath := ANewFilePath;
+  FLnkFile.ExeFileName := NewFilePath;
+  FLnkFile.Arguments := Arguments;
 
-    // Rewrite backup
-    if (not FEnabled and FLnkFile.BackupExists()) then
-      if not FLnkFile.CreateBackup() then
-        raise EStartupException.Create('Backup could not be created!');
+  // Rewrite backup
+  if (not FEnabled and FLnkFile.BackupExists()) then
+    if not FLnkFile.CreateBackup() then
+      raise EStartupException.Create('Backup could not be created!');
 
-    Result := True;
-
-  except
-    on E: Exception do
-    begin
-      E.Message := 'Error while changing file path of "'+ Name +'": '+ E.Message;
-      raise;
-    end;  //of begin
-  end;  //of try
+  Result := True;
 end;
 
 { public TStartupUserItem.Delete
@@ -1625,34 +1582,27 @@ end;
   Deletes a TStartupUserItem object and returns True if successful. }
 
 function TStartupUserItem.Delete(): Boolean;
-
-  function GetKeyName(): string;
-  begin
-    Result := AddCircumflex(TLnkFile.GetStartUpDir(AnsiContainsText('Common', TypeOf)) + Name);
-  end;
+var
+  Dir, KeyName: string;
 
 begin
-  try
-    if FEnabled then
-    begin
-      // Could not delete .lnk?
-      if not DeleteFile(FLocation) then
-        raise EStartupException.Create('Could not delete .lnk "'+ FLocation +'"!');
-    end  //of begin
-    else
-      // Could not delete key?
-      if not TRegUtils.DeleteKey('HKLM', KEY_DEACT_FOLDER, GetKeyName()) then
-        raise EStartupException.Create('Could not delete key "'+ FLocation +'"!');
+  if FEnabled then
+  begin
+    // Could not delete .lnk?
+    if not DeleteFile(FLocation) then
+      raise EStartupException.Create('Could not delete .lnk "'+ FLocation +'"!');
+  end  //of begin
+  else
+  begin
+    Dir := TLnkFile.GetStartUpDir(AnsiContainsText('Common', TypeOf));
+    KeyName := AddCircumflex(Dir + Name);
 
-    Result := True;
-
-  except
-    on E: Exception do
-    begin
-      E.Message := 'Error while deleting "'+ Name +'": '+ E.Message;
-      raise;
-    end;  //of begin
-  end;  //of try
+    // Could not delete key?
+    if not TRegUtils.DeleteKey('HKLM', KEY_DEACT_FOLDER, KeyName) then
+      raise EStartupException.Create('Could not delete key!');
+  end;  //of if
+  
+  Result := True;
 end;
 
 { public TStartupUserItem.Disable
@@ -1669,60 +1619,51 @@ begin
   Reg := TRegistry.Create(TRegUtils.DenyWOW64Redirection(KEY_WRITE));
 
   try
-    try
-      Reg.RootKey := HKEY_LOCAL_MACHINE;
-      KeyName := AddCircumflex(FLocation);
+    Reg.RootKey := HKEY_LOCAL_MACHINE;
+    KeyName := AddCircumflex(FLocation);
 
-      if not FLnkFile.ReadLnkFile() then
-        raise EStartupException.Create('Could not read .lnk file!');
+    if not FLnkFile.ReadLnkFile() then
+      raise EStartupException.Create('Could not read .lnk file!');
 
-      if not Reg.OpenKey(KEY_DEACT_FOLDER + KeyName, True) then
-        raise EStartupException.Create('Could not create key "'+ Name +'"!');
+    if not Reg.OpenKey(KEY_DEACT_FOLDER + KeyName, True) then
+      raise EStartupException.Create('Could not create key!');
 
-      Reg.WriteString('path', FLocation);
-      Reg.WriteString('item', ChangeFileExt(ExtractFileName(Name), ''));
-      Reg.WriteString('command', FilePath);
-      Reg.WriteString('backup', FLnkFile.BackupLnk);
+    Reg.WriteString('path', FLocation);
+    Reg.WriteString('item', ChangeFileExt(ExtractFileName(Name), ''));
+    Reg.WriteString('command', FilePath);
+    Reg.WriteString('backup', FLnkFile.BackupLnk);
 
-      // Special Registry entries only for Windows >= Vista
-      if TOSUtils.WindowsVistaOrLater() then
-      begin
-        Reg.WriteString('backupExtension', FLnkFile.BackupExt);
-        Reg.WriteString('location', ExtractFileDir(FLocation));
-        WriteTime(KEY_DEACT_FOLDER + KeyName);
-      end  //of begin
-      else
-        Reg.WriteString('location', TypeOf);
-
-      // Create backup directory if not exist
-      if not DirectoryExists(TLnkFile.GetBackupDir()) then
-        ForceDirectories(TLnkFile.GetBackupDir());
-
-      // Create backup by copying original .lnk
-      if not CopyFile(PChar(FLocation), PChar(FLnkFile.BackupLnk), False) then
-        raise EStartupException.Create('Could not create backup file!');
-
-      // Delete original .lnk
-      if not FLnkFile.Delete() then
-        raise EStartupException.Create('Could not delete .lnk file!');
-
-      // Update information
-      FLocation := KEY_DEACT_FOLDER + KeyName;
-      FRootKey := 'HKLM';
-      FEnabled := False;
-      Result := True;
-
-    finally
-      Reg.CloseKey();
-      Reg.Free;
-    end;  //of try
-
-  except
-    on E: Exception do
+    // Special Registry entries only for Windows >= Vista
+    if TOSUtils.WindowsVistaOrLater() then
     begin
-      E.Message := 'Error while disabling "'+ Name +'": '+ E.Message;
-      raise;
-    end;  //of begin
+      Reg.WriteString('backupExtension', FLnkFile.BackupExt);
+      Reg.WriteString('location', ExtractFileDir(FLocation));
+      WriteTime(KEY_DEACT_FOLDER + KeyName);
+    end  //of begin
+    else
+      Reg.WriteString('location', TypeOf);
+
+    // Create backup directory if not exist
+    if not DirectoryExists(TLnkFile.GetBackupDir()) then
+      ForceDirectories(TLnkFile.GetBackupDir());
+
+    // Create backup by copying original .lnk
+    if not CopyFile(PChar(FLocation), PChar(FLnkFile.BackupLnk), False) then
+      raise EStartupException.Create('Could not create backup file!');
+
+    // Delete original .lnk
+    if not FLnkFile.Delete() then
+      raise EStartupException.Create('Could not delete .lnk file!');
+
+    // Update information
+    FLocation := KEY_DEACT_FOLDER + KeyName;
+    FRootKey := 'HKLM';
+    FEnabled := False;
+    Result := True;
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
   end;  //of try
 end;
 
@@ -1732,38 +1673,29 @@ end;
 
 function TStartupUserItem.Enable(): Boolean;
 begin
-  try
-    // Backup file exists?
-    if FLnkFile.BackupExists() then
+  // Backup file exists?
+  if FLnkFile.BackupExists() then
+  begin
+    // Failed to restore backup file?
+    if not CopyFile(PChar(FLnkFile.BackupLnk), PChar(FLnkFile.FileName), True) then
+      raise EStartupException.Create('Could not restore backup .lnk file!');
+  end  //of begin
+  else
     begin
-      // Failed to restore backup file?
-      if not CopyFile(PChar(FLnkFile.BackupLnk), PChar(FLnkFile.FileName), True) then
+      // Failed to create new .lnk file?
+      if not FLnkFile.WriteLnkFile(FLnkFile.FileName, GetFilePath(), GetArguments()) then
         raise EStartupException.Create('Could not create .lnk file!');
-    end  //of begin
-    else
-      begin
-        // Failed to create new .lnk file?
-        if not FLnkFile.WriteLnkFile(FLnkFile.FileName, GetFilePath(), GetArguments()) then
-          raise EStartupException.Create('Could not create .lnk file!');
-      end;  //of if
+    end;  //of if
 
-    // Could not delete old key?
-    if not TRegUtils.DeleteKey('HKLM', KEY_DEACT_FOLDER, AddCircumflex(FLnkFile.FileName)) then
-      raise EStartupException.Create('Could not delete key "'+ FLocation +'"!');
+  // Could not delete old key?
+  if not TRegUtils.DeleteKey('HKLM', KEY_DEACT_FOLDER, AddCircumflex(FLnkFile.FileName)) then
+    raise EStartupException.Create('Could not delete key!');
 
-    // Update information
-    FLocation := FLnkFile.FileName;
-    FRootKey := '';
-    FEnabled := True;
-    Result := True;
-
-  except
-    on E: Exception do
-    begin
-      E.Message := 'Error while enabling "'+ Name +'": '+ E.Message;
-      raise;
-    end;  //of begin
-  end;  //of try
+  // Update information
+  FLocation := FLnkFile.FileName;
+  FRootKey := '';
+  FEnabled := True;
+  Result := True;
 end;
 
 { public TStartupUserItem.ExportItem
@@ -1790,17 +1722,6 @@ constructor TStartupList.Create;
 begin
   inherited Create;
   FDeleteBackup := True;
-  FLock := TCriticalSection.Create;
-end;
-
-{ public TStartupList.Destroy
-
-  Destructor for destroying a TStartupList instance. }
-
-destructor TStartupList.Destroy;
-begin
-  FLock.Free;
-  inherited Destroy;
 end;
 
 { private TStartupList.DelCircumflex
@@ -2387,19 +2308,10 @@ end;
 
 function TContextListItem.Delete(): Boolean;
 begin
-  try
-    if not TRegUtils.DeleteKey('HKCR', ExtractFileDir(GetKeyPath()), Name) then
-      raise EStartupException.Create('Could not delete key!')
-    else
-      Result := True;
+  if not TRegUtils.DeleteKey('HKCR', ExtractFileDir(GetKeyPath()), Name) then
+    raise EStartupException.Create('Could not delete key!');
 
-  except
-    on E: Exception do
-    begin
-      E.Message := 'Error while deleting "'+ Name +'": '+ E.Message;
-      raise;
-    end;  //of begin
-  end;  //of try
+  Result := True;
 end;
 
 { public TContextListItem.ExportItem
@@ -2446,28 +2358,19 @@ begin
   Reg := TRegistry.Create(TWinWOW64.DenyWOW64Redirection(KEY_ALL_ACCESS));
 
   try
-    try
-      Reg.RootKey := HKEY_CLASSES_ROOT;
+    Reg.RootKey := HKEY_CLASSES_ROOT;
 
-      // Invalid key?
-      if not Reg.OpenKey(GetKeyPath() +'\command', False) then
-        raise Exception.Create('Key does not exist!');
+    // Invalid key?
+    if not Reg.OpenKey(GetKeyPath() +'\command', False) then
+      raise Exception.Create('Key does not exist!');
 
-      // Change path
-      Reg.WriteString('', ANewFilePath);
-      Result := True;
+    // Change path
+    Reg.WriteString('', ANewFilePath);
+    Result := True;
 
-    finally
-      Reg.CloseKey();
-      Reg.Free;
-    end;  //of try
-
-  except
-    on E: Exception do
-    begin
-      E.Message := 'Error while changing file path of "'+ Name +'": '+ E.Message;
-      raise;
-    end;  //of begin
+  finally
+    Reg.CloseKey();
+    Reg.Free;
   end;  //of try
 end;
 
@@ -2484,31 +2387,22 @@ begin
   Reg := TRegistry.Create(TRegUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
 
   try
-    try
-      Reg.RootKey := HKEY_CLASSES_ROOT;
+    Reg.RootKey := HKEY_CLASSES_ROOT;
 
-      // Key does not exist?
-      if not Reg.OpenKey(GetKeyPath(), False) then
-        raise EContextMenuException.Create('Key does not exist!');
+    // Key does not exist?
+    if not Reg.OpenKey(GetKeyPath(), False) then
+      raise EContextMenuException.Create('Key does not exist!');
 
-      Reg.WriteString('LegacyDisable', '');
+    Reg.WriteString('LegacyDisable', '');
 
-      // Update status
-      FEnabled := False;
-      Result := True;
+    // Update status
+    FEnabled := False;
+    Result := True;
 
-    finally
-      Reg.CloseKey();
-      Reg.Free;
-    end;  //of try
-
-  except
-    on E: Exception do
-    begin
-      E.Message := 'Error while disabling "'+ Name +'": '+ E.Message;
-      raise;
-    end;  //of begin
-  end;  //try
+  finally
+    Reg.CloseKey();
+    Reg.Free;
+  end;  //of try
 end;
 
 { public TShellItem.Enable
@@ -2517,21 +2411,12 @@ end;
 
 function TShellItem.Enable(): Boolean;
 begin
-  try
-    if not TRegUtils.DeleteValue('HKCR', GetKeyPath(), 'LegacyDisable') then
-      raise EContextMenuException.Create('Could not delete value!');
+  if not TRegUtils.DeleteValue('HKCR', GetKeyPath(), 'LegacyDisable') then
+    raise EContextMenuException.Create('Could not delete disable value!');
 
-    // Update status
-    FEnabled := True;
-    Result := True;
-
-  except
-    on E: Exception do
-    begin
-      E.Message := 'Error while enabling "'+ Name +'": '+ E.Message;
-      raise;
-    end;  //of begin
-  end;  //try
+  // Update status
+  FEnabled := True;
+  Result := True;
 end;
 
 
@@ -2583,46 +2468,37 @@ begin
   Reg := TRegistry.Create(TRegUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
 
   try
-    try
-      Reg.RootKey := HKEY_CLASSES_ROOT;
+    Reg.RootKey := HKEY_CLASSES_ROOT;
 
-      // Key does not exist?
-      if not Reg.OpenKey(GetKeyPath(), False) then
-        raise EContextMenuException.Create('Key does not exist!');
+    // Key does not exist?
+    if not Reg.OpenKey(GetKeyPath(), False) then
+      raise EContextMenuException.Create('Key does not exist!');
 
-      // Value does not exist?
-      if not Reg.ValueExists('') then
-        raise EContextMenuException.Create('Value does not exist!');
+    // Value does not exist?
+    if not Reg.ValueExists('') then
+      raise EContextMenuException.Create('Value does not exist!');
 
-      OldValue := Reg.ReadString('');
+    OldValue := Reg.ReadString('');
 
-      if (Trim(OldValue) = '') then
-        raise EContextMenuException.Create('Value must not be empty!');
+    if (Trim(OldValue) = '') then
+      raise EContextMenuException.Create('Value must not be empty!');
 
       // Item enabled?
-      if (OldValue[1] = '{') then
-      begin
-        // Set up new value and write it
-        NewValue := '-'+ OldValue;
-        Reg.WriteString('', NewValue);
-      end;  //of begin
-
-      // Update status
-      FEnabled := False;
-      Result := True;
-
-    finally
-      Reg.CloseKey();
-      Reg.Free;
-    end;  //of try
-
-  except
-    on E: Exception do
+    if (OldValue[1] = '{') then
     begin
-      E.Message := 'Error while disabling "'+ Name +'": '+ E.Message;
-      raise;
+      // Set up new value and write it
+      NewValue := '-'+ OldValue;
+      Reg.WriteString('', NewValue);
     end;  //of begin
-  end;  //try
+
+    // Update status
+    FEnabled := False;
+    Result := True;
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
+  end;  //of try
 end;
 
 { public TShellExItem.Enable
@@ -2639,46 +2515,37 @@ begin
   Reg := TRegistry.Create(TRegUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
 
   try
-    try
-      Reg.RootKey := HKEY_CLASSES_ROOT;
+    Reg.RootKey := HKEY_CLASSES_ROOT;
 
-      // Key does not exist?
-      if not Reg.OpenKey(GetKeyPath(), False) then
-        raise EContextMenuException.Create('Key does not exist!');
+    // Key does not exist?
+    if not Reg.OpenKey(GetKeyPath(), False) then
+      raise EContextMenuException.Create('Key does not exist!');
 
-      // Value does not exist?
-      if not Reg.ValueExists('') then
-        raise EContextMenuException.Create('Value does not exist!');
+    // Value does not exist?
+    if not Reg.ValueExists('') then
+      raise EContextMenuException.Create('Value does not exist!');
 
-      OldValue := Reg.ReadString('');
+    OldValue := Reg.ReadString('');
 
-      if (Trim(OldValue) = '') then
-        raise EContextMenuException.Create('Value must not be empty!');
+    if (Trim(OldValue) = '') then
+      raise EContextMenuException.Create('Value must not be empty!');
 
-      // Item disabled?
-      if (OldValue[1] <> '{') then
-      begin
-        // Set up new value and write it
-        NewValue := Copy(OldValue, 2, Length(OldValue));
-        Reg.WriteString('', NewValue);
-      end;  //of begin
-
-      // Update status
-      FEnabled := True;
-      Result := True;
-
-    finally
-      Reg.CloseKey();
-      Reg.Free;
-    end;  //of try
-
-  except
-    on E: Exception do
+    // Item really disabled?
+    if (OldValue[1] <> '{') then
     begin
-      E.Message := 'Error while enabling "'+ Name +'": '+ E.Message;
-      raise;
+      // Set up new value and write it
+      NewValue := Copy(OldValue, 2, Length(OldValue));
+      Reg.WriteString('', NewValue);
     end;  //of begin
-  end;  //try
+
+    // Update status
+    FEnabled := True;
+    Result := True;
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
+  end;  //of try
 end;
 
 
@@ -2692,17 +2559,6 @@ constructor TContextList.Create;
 begin
   inherited Create;
   FActCount := 0;
-  FLock := TCriticalSection.Create;
-end;
-
-{ public TContextList.Destroy
-
-  Destructor for destroying a TContextList instance. }
-
-destructor TContextList.Destroy;
-begin
-  FLock.Free;
-  inherited Destroy;
 end;
 
 { public TContextList.AddEntry
@@ -2713,6 +2569,7 @@ function TContextList.AddEntry(const AFilePath, AArguments, ALocation,
   ADisplayedName: string): Boolean;
 var
   Name, Ext, FullPath, KeyName: string;
+  Reg: TRegistry;
 
 begin
   Result := False;
@@ -2739,12 +2596,32 @@ begin
   KeyName := ALocation + CM_SHELL +'\'+ Name;
 
   // Adds new context item to Registry
-  TRegUtils.WriteStrValue('HKCR', KeyName, '', ADisplayedName);
-  TRegUtils.WriteStrValue('HKCR', KeyName +'\command', '', FullPath);
+  Reg := TRegistry.Create(TRegUtils.DenyWOW64Redirection(KEY_WRITE));
 
-  // Adds this item to list
-  AddShellItem(Name, ALocation, FullPath, ADisplayedName, True);
-  Result := True;
+  try
+    Reg.RootKey := HKEY_CLASSES_ROOT;
+
+    if not Reg.OpenKey(KeyName, True) then
+      raise EContextMenuException.Create('Could not create key!');
+
+    // Write caption of item
+    Reg.WriteString('', ADisplayedName);
+    Reg.CloseKey();
+
+    if not Reg.OpenKey(KeyName +'\command', True) then
+      raise EContextMenuException.Create('Could not create key!');
+
+    // Write command of item
+    Reg.WriteString('', FullPath);
+
+    // Adds item to list
+    AddShellItem(Name, ALocation, FullPath, ADisplayedName, True);
+    Result := True;
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
+  end;  //of try
 end;
 
 { private TContextList.FindDouble
