@@ -31,8 +31,7 @@ type
   protected
     procedure Execute; override;
   public
-    constructor Create(AStartupList: TStartupList; AWin64, AIncludeRunOnce: Boolean;
-      ALock: TCriticalSection);
+    constructor Create(AStartupList: TStartupList; ALock: TCriticalSection);
     { external }
     property IncludeRunOnce: Boolean read FIncludeRunOnce write FIncludeRunOnce;
     property OnFinish: TNotifyEvent read FOnFinish write FOnFinish;

@@ -27,7 +27,7 @@ type
     procedure DoNotifyOnStart();
     procedure LoadEnabled(const AAllUsers: Boolean); overload;
     procedure LoadEnabled(const AHKey, AKeyName: string); overload;
-    procedure LoadDisabled(const AKeyName: string);
+    procedure LoadDisabled(AStartupUser: Boolean);
   protected
     procedure Execute; override;
   public
@@ -114,10 +114,10 @@ end;
 
   Searches for disabled startup user items and adds them to the list. }
 
-procedure TStartupSearchThread.LoadDisabled(const AKeyName: string);
+procedure TStartupSearchThread.LoadDisabled(AStartupUser: Boolean);
 begin
   Synchronize(DoNotifyOnSearching);
-  FStartupList.LoadDisabled(AKeyName);
+  FStartupList.LoadDisabled(AStartupUser);
 end;
 
 { protected TContextMenuSearchThread.Execute
@@ -174,8 +174,8 @@ begin
   LoadEnabled('HKCU', KEY_STARTUP);
   LoadEnabled(True);
   LoadEnabled(False);
-  LoadDisabled(KEY_DEACT);
-  LoadDisabled(KEY_DEACT_FOLDER);
+  LoadDisabled(False);
+  LoadDisabled(True);
 
   // Notify end of search
   Synchronize(DoNotifyOnFinish);
