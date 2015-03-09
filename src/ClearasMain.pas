@@ -13,7 +13,7 @@ interface
 uses
   Windows, SysUtils, Classes, Controls, Forms, ComCtrls, StdCtrls, ExtCtrls,
   Dialogs, Menus, Graphics, ClipBrd, ImgList, StrUtils, ClearasAPI, ClearasInfo,
-  LanguageFile, OSUtils, Updater, AddDialogs;
+  LanguageFile, OSUtils, Updater, AddDialogs, SyncObjs;
 
 type
   { TMain }
@@ -88,7 +88,7 @@ type
     pmOpenExplorer: TMenuItem;
     mmShowIcons: TMenuItem;
     IconList: TImageList;
-    eSearch: TEdit;
+    eContextSearch: TEdit;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -102,9 +102,9 @@ type
     procedure bExportStartupItemClick(Sender: TObject);
     procedure bExportContextItemClick(Sender: TObject);
     procedure cbExpertClick(Sender: TObject);
-    procedure eSearchChange(Sender: TObject);
-    procedure eSearchKeyPress(Sender: TObject; var Key: Char);
+    procedure eContextSearchChange(Sender: TObject);
     procedure lwContextDblClick(Sender: TObject);
+    procedure lwContextKeyPress(Sender: TObject; var Key: Char);
     procedure lwContextSelectItem(Sender: TObject; Item: TListItem;
       Selected: Boolean);
     procedure lwStartupColumnClick(Sender: TObject; Column: TListColumn);
@@ -142,7 +142,6 @@ type
     procedure lCopy1MouseLeave(Sender: TObject);
     procedure lCopy1MouseEnter(Sender: TObject);
     procedure lCopy1Click(Sender: TObject);
-    procedure lwContextKeyPress(Sender: TObject; var Key: Char);
   private
     FColumnToSort: Word;
     FStartup: TStartupList;
@@ -373,7 +372,7 @@ begin
   mmLang.Enabled := False;
   mmAdd.Enabled := False;
   mmExportList.Enabled := False;
-  eSearch.Visible := False;
+  eContextSearch.Visible := False;
   pbLoad.Visible := True;
   pbLoad.Max := AWorkCountMax;
   lwContext.Cursor := crHourGlass;
@@ -386,23 +385,30 @@ end;
 procedure TMain.OnContextSearchEnd(Sender: TObject);
 var
   i: Integer;
+  Text: string;
 
 begin
-  // Print all information about context menu entires
+  // Print all information about context menu entries
   for i := 0 to FContext.Count - 1 do
-    with lwContext.Items.Add do
-    begin
-      Caption := FContext[i].GetStatus(FLang);
+  begin
+    // Show name or caption of item?
+    if (FContext[i].Caption <> '') then
+      Text := FContext[i].Caption
+    else
+      Text := FContext[i].Name;
 
-      // Show name or caption of item?
-      if (FContext[i].Caption <> '') then
-        SubItems.Append(FContext[i].Caption)
-      else
-        SubItems.Append(FContext[i].Name);
-
-      SubItems.Append(FContext[i].LocationRoot);
-      SubItems.Append(FContext[i].TypeOf);
-    end; //of with
+    // Filter items
+    if ((eContextSearch.Text = '') or
+      (AnsiContainsText(Text, eContextSearch.Text) or
+      AnsiContainsText(FContext[i].LocationRoot, eContextSearch.Text))) then
+      with lwContext.Items.Add do
+      begin
+        Caption := FContext[i].GetStatus(FLang);
+        SubItems.Append(Text);
+        SubItems.Append(FContext[i].LocationRoot);
+        SubItems.Append(FContext[i].TypeOf);
+      end; //of with
+  end;  //of for
 
   // Refresh counter label
   OnContextItemChanged(Sender);
@@ -410,7 +416,7 @@ begin
   // Update some VCL
   pbLoad.Visible := False;
   pbLoad.Position := 0;
-  eSearch.Visible := True;
+  eContextSearch.Visible := True;
   lwContext.Cursor := crDefault;
   mmLang.Enabled := True;
   mmAdd.Enabled := True;
@@ -574,7 +580,7 @@ begin
     tsStartup.Caption := GetString(83);
 
     // Set placeholder text for search
-    TOSUtils.SetCueBanner(eSearch.Handle, GetString(63));
+    TOSUtils.SetCueBanner(eContextSearch.Handle, GetString(63));
 
     // Context menu tab TListView labels
     lContext.Caption := GetString(86);
@@ -716,31 +722,6 @@ begin
   end;  //of try
 end;
 
-{ TMain.bExportStartupItemClick
-
-  Calls the export method of current selected deactivated startup item. }
-
-procedure TMain.bExportStartupItemClick(Sender: TObject);
-begin
-  CreateStartupUserBackup();
-end;
-
-{ TMain.bExportContextItemClick
-
-  Calls the export method of current selected context menu item. }
-
-procedure TMain.bExportContextItemClick(Sender: TObject);
-begin
-  // Nothing selected?
-  if not Assigned(FContext.Selected) then
-  begin
-    FLang.MessageBox([95, 18, NEW_LINE, 53], mtWarning);
-    Exit;
-  end;  //of begin
-
-  ShowRegistryExportDialog();
-end;
-
 { TMain.bDeleteStartupItemClick
 
   Deletes currently selected startup item. }
@@ -864,6 +845,84 @@ begin
   end;  //of try
 end;
 
+{ TMain.bDisableStartupItemClick
+
+  Deactivates currently selected startup item. }
+
+procedure TMain.bDisableStartupItemClick(Sender: TObject);
+begin
+  try
+    // Nothing selected?
+    if not Assigned(lwStartup.ItemFocused) then
+      raise EInvalidItem.Create('No item selected!');
+
+    // Successfully deactivated item?
+    if FStartup.DisableItem() then
+    begin
+      // Change item visual status
+      lwStartup.ItemFocused.Caption := FStartup.Selected.GetStatus(FLang);
+
+      // Change button states
+      bDisableStartupItem.Enabled := False;
+      bEnableStartupItem.Enabled := True;
+      pmChangeStatus.Caption := bEnableStartupItem.Caption;
+
+      // Show deactivation timestamp?
+      if mmDate.Checked then
+        lwStartup.ItemFocused.SubItems[3] := FStartup.Item.Time;
+
+      // Update TListView
+      lwStartupSelectItem(Self, lwStartup.ItemFocused, True);
+    end  //of begin
+    else
+      raise Exception.Create('Unknown error!');
+
+  except
+    on E: EInvalidItem do
+      FLang.MessageBox([94, 18, NEW_LINE, 53], mtWarning);
+
+    on E: Exception do
+      FLang.MessageBox(FLang.GetString([94, 18, NEW_LINE]) + E.Message, mtError);
+  end;  //of try
+end;
+
+{ TMain.bDisableContextItemClick
+
+  Deactivates currently selected context menu item. }
+
+procedure TMain.bDisableContextItemClick(Sender: TObject);
+begin
+  try
+    // Nothing selected?
+    if not Assigned(lwContext.ItemFocused) then
+      raise EInvalidItem.Create('No item selected!');
+
+    // Successfully deactivated item?
+    if FContext.DisableItem() then
+    begin
+      // Change item visual status
+      lwContext.ItemFocused.Caption := FContext.Selected.GetStatus(FLang);
+
+      // Change button states
+      bDisableStartupItem.Enabled := False;
+      bEnableContextItem.Enabled := True;
+      pmChangeStatus.Caption := bEnableContextItem.Caption;
+
+      // Update TListView
+      lwContextSelectItem(Self, lwContext.ItemFocused, True);
+    end  //of begin
+    else
+      raise Exception.Create('Unknown error!');
+
+  except
+    on E: EInvalidItem do
+      FLang.MessageBox([94, 18, NEW_LINE, 53], mtWarning);
+
+    on E: Exception do
+      FLang.MessageBox(FLang.GetString([94, 18, NEW_LINE]) + E.Message, mtError);
+  end;  //of try
+end;
+
 { TMain.bEnableStartupItemClick
 
   Activates currently selected startup item. }
@@ -952,82 +1011,47 @@ begin
   end;  //of try
 end;
 
-{ TMain.bDisableStartupItemClick
+{ TMain.bExportStartupItemClick
 
-  Deactivates currently selected startup item. }
+  Calls the export method of current selected deactivated startup item. }
 
-procedure TMain.bDisableStartupItemClick(Sender: TObject);
+procedure TMain.bExportStartupItemClick(Sender: TObject);
 begin
-  try
-    // Nothing selected?
-    if not Assigned(lwStartup.ItemFocused) then
-      raise EInvalidItem.Create('No item selected!');
-
-    // Successfully deactivated item?
-    if FStartup.DisableItem() then
-    begin
-      // Change item visual status
-      lwStartup.ItemFocused.Caption := FStartup.Selected.GetStatus(FLang);
-
-      // Change button states
-      bDisableStartupItem.Enabled := False;
-      bEnableStartupItem.Enabled := True;
-      pmChangeStatus.Caption := bEnableStartupItem.Caption;
-
-      // Show deactivation timestamp?
-      if mmDate.Checked then
-        lwStartup.ItemFocused.SubItems[3] := FStartup.Item.Time;
-
-      // Update TListView
-      lwStartupSelectItem(Self, lwStartup.ItemFocused, True);
-    end  //of begin
-    else
-      raise Exception.Create('Unknown error!');
-
-  except
-    on E: EInvalidItem do
-      FLang.MessageBox([94, 18, NEW_LINE, 53], mtWarning);
-
-    on E: Exception do
-      FLang.MessageBox(FLang.GetString([94, 18, NEW_LINE]) + E.Message, mtError);
-  end;  //of try
+  CreateStartupUserBackup();
 end;
 
-{ TMain.bDisableContextItemClick
+{ TMain.bExportContextItemClick
 
-  Deactivates currently selected context menu item. }
+  Calls the export method of current selected context menu item. }
 
-procedure TMain.bDisableContextItemClick(Sender: TObject);
+procedure TMain.bExportContextItemClick(Sender: TObject);
 begin
-  try
-    // Nothing selected?
-    if not Assigned(lwContext.ItemFocused) then
-      raise EInvalidItem.Create('No item selected!');
+  // Nothing selected?
+  if not Assigned(FContext.Selected) then
+  begin
+    FLang.MessageBox([95, 18, NEW_LINE, 53], mtWarning);
+    Exit;
+  end;  //of begin
 
-    // Successfully deactivated item?
-    if FContext.DisableItem() then
-    begin
-      // Change item visual status
-      lwContext.ItemFocused.Caption := FContext.Selected.GetStatus(FLang);
+  ShowRegistryExportDialog();
+end;
 
-      // Change button states
-      bDisableStartupItem.Enabled := False;
-      bEnableContextItem.Enabled := True;
-      pmChangeStatus.Caption := bEnableContextItem.Caption;
+{ TMain.cbExpertClick
 
-      // Update TListView
-      lwContextSelectItem(Self, lwContext.ItemFocused, True);
-    end  //of begin
-    else
-      raise Exception.Create('Unknown error!');
+  Event method that is called when user clicked on "expert mode". }
 
-  except
-    on E: EInvalidItem do
-      FLang.MessageBox([94, 18, NEW_LINE, 53], mtWarning);
+procedure TMain.cbExpertClick(Sender: TObject);
+begin
+  LoadContextMenuEntries();
+end;
 
-    on E: Exception do
-      FLang.MessageBox(FLang.GetString([94, 18, NEW_LINE]) + E.Message, mtError);
-  end;  //of try
+{ TMain.eContextSearchChange
+
+  Event method that is called when user changes the search string. }
+
+procedure TMain.eContextSearchChange(Sender: TObject);
+begin
+  LoadContextMenuEntries(False);
 end;
 
 { TMain.lwContextDblClick
@@ -1054,7 +1078,7 @@ end;
 
 procedure TMain.lwContextKeyPress(Sender: TObject; var Key: Char);
 begin
-  eSearch.SetFocus;
+  eContextSearch.SetFocus;
 end;
 
 { TMain.lwContextSelectItem
@@ -1907,11 +1931,12 @@ begin
   // Disable some menu items not used on context menu page
   if (PageControl.ActivePage = tsContext) then
   begin
+    mmAdd.Caption := FLang.GetString(34);
     mmImport.Visible := False;
     mmDate.Visible := False;
     mmRunOnce.Visible := False;
     mmShowIcons.Visible := False;
-    mmAdd.Caption := FLang.GetString(34);
+    mmOptimate.Enabled := False;
     lwContextSelectItem(Sender, lwContext.ItemFocused, True);
 
     // Load context menu entries dynamically
@@ -1920,60 +1945,15 @@ begin
   end  //of begin
   else
   begin
+    mmAdd.Caption := FLang.GetString(69);
     mmImport.Visible := True;
     mmDate.Visible := True;
     mmRunOnce.Visible := True;
     mmShowIcons.Visible := True;
-    mmAdd.Caption := FLang.GetString(69);
+    mmOptimate.Enabled := True;
     pmOpenExplorer.Enabled := True;
     lwStartupSelectItem(Sender, lwStartup.ItemFocused, True);
   end;  //of if
-end;
-
-{ TMain.cbExpertClick
-
-  Event method that is called when user clicked on "expert mode". }
-
-procedure TMain.cbExpertClick(Sender: TObject);
-begin
-  LoadContextMenuEntries();
-end;
-
-{ TMain.eSearchChange
-
-  Event method that is called when user changes the search string. }
-
-procedure TMain.eSearchChange(Sender: TObject);
-var
-  i: Integer;
-
-begin
-  // Fill the listview from cache
-  LoadContextMenuEntries(False);
-
-  // Exit on empty key word
-  if (Trim(eSearch.Text) = '') then
-    Exit;
-
-  // Search for items that do not match and delete them from list
-  for i := lwContext.Items.Count -1 downto 0 do
-    if (not AnsiContainsText(lwContext.Items[i].SubItems[0], eSearch.Text) and not
-      AnsiContainsText(lwContext.Items[i].SubItems[1], eSearch.Text)) then
-      lwContext.Items.Delete(i);
-end;
-
-{ TMain.eSearchKeyPress
-
-  Event method that is called when user pushes a button inside TEdit. }
-
-procedure TMain.eSearchKeyPress(Sender: TObject; var Key: Char);
-begin
-  // User hit "enter"
-  if (Key = #13) then
-  begin
-    eSearchChange(Sender);
-    Key := #0;
-  end;  //of begin
 end;
 
 { TMain.bCloseStartupClick

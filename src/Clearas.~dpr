@@ -11,7 +11,7 @@ uses
   ClearasAPI in 'ClearasAPI.pas',
   StartupSearchThread in 'StartupSearchThread.pas',
   ContextSearchThread in 'ContextSearchThread.pas',
-  ContextMenuSearchThread in 'ContextMenuSearchThread.pas';
+  ListViewSearchThread in 'ListViewSearchThread.pas';
 
 {$R *.res}
 

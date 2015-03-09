@@ -605,15 +605,14 @@ object Main: TMain
         TabOrder = 6
         OnClick = cbExpertClick
       end
-      object eSearch: TEdit
+      object eContextSearch: TEdit
         Left = 21
         Top = 256
         Width = 148
         Height = 22
         Anchors = [akLeft, akBottom]
         TabOrder = 8
-        OnChange = eSearchChange
-        OnKeyPress = eSearchKeyPress
+        OnChange = eContextSearchChange
       end
     end
   end
