@@ -346,8 +346,8 @@ begin
     on E: EInvalidItem do
       FLang.MessageBox([95, 18, NEW_LINE, 53], mtWarning);
 
-    on E: EStartupException do
-      Flang.MessageBox(43, mtError);
+    {on E: EStartupException do
+      Flang.MessageBox(43, mtError);}
 
     on E: Exception do
       FLang.MessageBox(FLang.GetString([95, 18, NEW_LINE]) + E.Message, mtError);
@@ -1119,18 +1119,14 @@ begin
       pmChangeStatus.Caption := bEnableContextItem.Caption;
 
     pmChangeStatus.Enabled := True;
-
-    // Enable "edit path" only if file path is present
-    pmEdit.Enabled := (FContext.Selected.FilePath <> '');
-
-    // Enable "open in Explorer" only if file path is present
-    pmOpenExplorer.Enabled := pmEdit.Enabled;
-
     bDeleteContextItem.Enabled := True;
     pmDelete.Enabled := True;
     pmOpenRegedit.Enabled := True;
     bExportContextItem.Enabled := True;
     pmExport.Enabled := True;
+
+    // Enable "edit path" only if file path is present
+    pmEdit.Enabled := (FContext.Selected.FilePath <> '');
 
     // Show popup menu
     PopupMenu.AutoPopup := True;

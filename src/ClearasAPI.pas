@@ -545,8 +545,11 @@ var
 begin
   Result := False;
 
-  if (AFileName = '') or (AExeFileName = '') then
-    raise EStartupException.Create('File name for .lnk file must not be empty!');
+  if (AFileName = '') then
+    raise EInvalidArgument.Create('File name for .lnk file must not be empty!');
+
+  if (AExeFileName = '') then
+    raise EInvalidArgument.Create('File path to .exe must not be empty!');
 
   try
     CoInitialize(nil);
@@ -1606,9 +1609,6 @@ begin
     Reg.RootKey := HKEY_LOCAL_MACHINE;
     KeyName := AddCircumflex(FLocation);
 
-    if not FLnkFile.ReadLnkFile() then
-      raise EStartupException.Create('Could not read .lnk file!');
-
     if not Reg.OpenKey(KEY_DEACT_FOLDER + KeyName, True) then
       raise EStartupException.Create('Could not create key!');
 
@@ -1900,8 +1900,10 @@ begin
       else
         Ext := EXT_COMMON;
 
+      // Setup .lnk
       LnkFile := TLnkFile.Create(Path, Ext);
-      LnkFile.ReadLnkFile();
+      LnkFile.ExeFileName := ExtractPathToFile(FilePath);
+      LnkFile.Arguments := ExtractArguments(FilePath);
     end;  //of with
 
     Result := Add(Item);
