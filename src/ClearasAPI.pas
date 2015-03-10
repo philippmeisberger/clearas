@@ -81,7 +81,6 @@ type
     class function DeleteValue(ARootKey, AKeyName, AValueName: string;
       AFailIfNotExists: Boolean = True): Boolean;
   public
-    class function GetKeyValue(ARootKey, AKeyPath, AValueName: string): string;
     class function RegisterInContextMenu(ACheck: Boolean): Boolean;
     class function UpdateContextPath(): Boolean; overload;
     class function UpdateContextPath(ALangFile: TLanguageFile): Boolean; overload; deprecated;
@@ -228,7 +227,7 @@ type
     function DeleteBackupFile(): Boolean;
     function ItemAt(AIndex: Word): TStartupListItem;
     function GetSelectedItem(): TStartupListItem;
-    function GetStartupUserType(const AKeyPath: string): string; overload;
+    function GetStartupUserType(AReg: TRegistry): string; overload;
     function GetStartupUserType(AAllUsers: Boolean): string; overload;
   protected
     function AddItemDisabled(AReg: TRegistry): Integer;
@@ -294,7 +293,6 @@ type
   TShellExItem = class(TContextListItem)
   private
     function GetKeyPath(): string; override;
-    function GetProgramPathKey(): string;
   public
     function ChangeFilePath(const ANewFilePath: string): Boolean; override;
     function Disable(): Boolean; override;
@@ -659,34 +657,6 @@ begin
         raise EWarning.Create('Value already deleted!')
       else
         Result := True;
-
-  finally
-    Reg.CloseKey();
-    Reg.Free;
-  end;  //of try
-end;
-
-{ public TRegUtils.GetKeyValue
-
-  Returns a Registry value as string. }
-
-class function TRegUtils.GetKeyValue(ARootKey, AKeyPath, AValueName: string): string;
-var
-  Reg: TRegistry;
-
-begin
-  Result := '';
-  Reg := TRegistry.Create(DenyWOW64Redirection(KEY_READ));
-
-  try
-    Reg.RootKey := StrToHKey(ARootKey);
-
-    if Reg.OpenKey(AKeyPath, False) then
-    begin
-      // Only read if value exists (to deny exception)
-      if (Reg.ValueExists(AValueName)) then
-        Result := Reg.ReadString(AValueName);
-    end;  //of begin
 
   finally
     Reg.CloseKey();
@@ -1808,7 +1778,7 @@ end;
 
   Returns the startup item type. }
 
-function TStartupList.GetStartupUserType(const AKeyPath: string): string;
+function TStartupList.GetStartupUserType(AReg: TRegistry): string;
 var
   StartupType: string;
 
@@ -1816,7 +1786,7 @@ begin
   // Windows >= Vista?
   if TOSUtils.WindowsVistaOrLater() then
   begin
-    StartupType := TRegUtils.GetKeyValue('HKLM', AKeyPath, 'backupExtension');
+    StartupType := AReg.ReadString('backupExtension');
 
     if AnsiSameText(StartupType, EXT_COMMON) then
       Result := TYPE_COMMON
@@ -1824,7 +1794,7 @@ begin
       Result := TYPE_USER;
   end  //of begin
   else
-    Result := TRegUtils.GetKeyValue('HKLM', AKeyPath, 'location');
+    Result := AReg.ReadString('location');
 end;
 
 { private TStartupList.GetStartupUserType
@@ -1958,7 +1928,7 @@ begin
       Name := ExtractFileName(StringReplace(FLocation, '^', '\', [rfReplaceAll]));
       FilePath := AReg.ReadString('command');
       Time := GetTimestamp(AReg);
-      TypeOf := GetStartupUserType(FLocation);
+      TypeOf := GetStartupUserType(AReg);
       Path := AReg.ReadString('path');
 
       if ((TypeOf = TYPE_USER) or (TypeOf = TYPE_USER_XP)) then
@@ -2400,7 +2370,7 @@ var
 
 begin
   Result := False;
-  Reg := TRegistry.Create(TWinWOW64.DenyWOW64Redirection(KEY_ALL_ACCESS));
+  Reg := TRegistry.Create(TWinWOW64.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
 
   try
     Reg.RootKey := HKEY_CLASSES_ROOT;
@@ -2411,6 +2381,7 @@ begin
 
     // Change path
     Reg.WriteString('', ANewFilePath);
+    FilePath := ANewFilePath;
     Result := True;
 
   finally
@@ -2456,7 +2427,7 @@ end;
 
 function TShellItem.Enable(): Boolean;
 begin
-  if not TRegUtils.DeleteValue('HKCR', GetKeyPath(), 'LegacyDisable') then
+  if not TRegUtils.DeleteValue('HKCR', GetKeyPath(), 'LegacyDisable', False) then
     raise EContextMenuException.Create('Could not delete disable value!');
 
   // Update status
@@ -2476,27 +2447,43 @@ begin
   Result := FLocation + CM_SHELLEX +'\'+ Name;
 end;
 
-{ private TShellExItem.GetProgramPathKey
-
-  Returns the Registry key of the correspondending program. }
-
-function TShellExItem.GetProgramPathKey(): string;
-var
-  GUID: string;
-
-begin
-  GUID := TRegUtils.GetKeyValue('HKCR', GetKeyPath(), '');
-  Result := Format(CM_SHELLEX_FILE, [GUID]);
-end;
-
 { public TShellExItem.ChangeFilePath
 
   Changes the file path of an TShellExItem item. }
 
 function TShellExItem.ChangeFilePath(const ANewFilePath: string): Boolean;
+var
+  Reg: TRegistry;
+  ProgramKeyPath: string;
+
 begin
-  TRegUtils.WriteStrValue('HKCR', GetProgramPathKey(), '', ANewFilePath);
-  Result := True;
+  Result := False;
+  Reg := TRegistry.Create(TWinWOW64.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
+
+  try
+    Reg.RootKey := HKEY_CLASSES_ROOT;
+
+    // Invalid key?
+    if not Reg.OpenKey(GetKeyPath(), False) then
+      raise Exception.Create('Key does not exist!');
+
+    // Read GUID and setup key of program
+    ProgramKeyPath := Format(CM_SHELLEX_FILE, [Reg.ReadString('')]);
+    Reg.CloseKey;
+
+    // Invalid program key?
+    if not Reg.OpenKey(ProgramKeyPath, False) then
+      raise Exception.Create('Key does not exist!');
+
+    // Change path
+    Reg.WriteString('', ANewFilePath);
+    FilePath := ANewFilePath;
+    Result := True;
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
+  end;  //of try
 end;
 
 { public TShellExItem.Disable

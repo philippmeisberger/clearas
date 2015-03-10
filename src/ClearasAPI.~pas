@@ -228,7 +228,7 @@ type
     function DeleteBackupFile(): Boolean;
     function ItemAt(AIndex: Word): TStartupListItem;
     function GetSelectedItem(): TStartupListItem;
-    function GetStartupUserType(const AKeyPath: string): string; overload;
+    function GetStartupUserType(AReg: TRegistry): string; overload;
     function GetStartupUserType(AAllUsers: Boolean): string; overload;
   protected
     function AddItemDisabled(AReg: TRegistry): Integer;
@@ -294,7 +294,6 @@ type
   TShellExItem = class(TContextListItem)
   private
     function GetKeyPath(): string; override;
-    function GetProgramPathKey(): string;
   public
     function ChangeFilePath(const ANewFilePath: string): Boolean; override;
     function Disable(): Boolean; override;
@@ -1543,7 +1542,7 @@ begin
     Reg.RootKey := HKEY_LOCAL_MACHINE;
     Reg.OpenKey(KEY_DEACT, False);
 
-    // Do not fail if old key does not exist!
+    // Do not abort if old key does not exist!
     if (Reg.KeyExists(Name) and not Reg.DeleteKey(Name)) then
       raise EStartupException.Create('Could not delete key!');
 
@@ -1741,7 +1740,6 @@ begin
   if not TRegUtils.DeleteKey('HKLM', KEY_DEACT_FOLDER, AddCircumflex(FLnkFile.FileName), False) then
     raise EStartupException.Create('Could not delete key!');
 
-
   // Update information
   FLocation := FLnkFile.FileName;
   FRootKey := '';
@@ -1809,7 +1807,7 @@ end;
 
   Returns the startup item type. }
 
-function TStartupList.GetStartupUserType(const AKeyPath: string): string;
+function TStartupList.GetStartupUserType(AReg: TRegistry): string;
 var
   StartupType: string;
 
@@ -1817,7 +1815,7 @@ begin
   // Windows >= Vista?
   if TOSUtils.WindowsVistaOrLater() then
   begin
-    StartupType := TRegUtils.GetKeyValue('HKLM', AKeyPath, 'backupExtension');
+    StartupType := AReg.ReadString('backupExtension');
 
     if AnsiSameText(StartupType, EXT_COMMON) then
       Result := TYPE_COMMON
@@ -1825,7 +1823,7 @@ begin
       Result := TYPE_USER;
   end  //of begin
   else
-    Result := TRegUtils.GetKeyValue('HKLM', AKeyPath, 'location');
+    Result := AReg.ReadString('location');
 end;
 
 { private TStartupList.GetStartupUserType
@@ -1959,7 +1957,7 @@ begin
       Name := ExtractFileName(StringReplace(FLocation, '^', '\', [rfReplaceAll]));
       FilePath := AReg.ReadString('command');
       Time := GetTimestamp(AReg);
-      TypeOf := GetStartupUserType(FLocation);
+      TypeOf := GetStartupUserType(AReg);
       Path := AReg.ReadString('path');
 
       if ((TypeOf = TYPE_USER) or (TypeOf = TYPE_USER_XP)) then
@@ -2401,7 +2399,7 @@ var
 
 begin
   Result := False;
-  Reg := TRegistry.Create(TWinWOW64.DenyWOW64Redirection(KEY_ALL_ACCESS));
+  Reg := TRegistry.Create(TWinWOW64.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
 
   try
     Reg.RootKey := HKEY_CLASSES_ROOT;
@@ -2412,6 +2410,7 @@ begin
 
     // Change path
     Reg.WriteString('', ANewFilePath);
+    FilePath := ANewFilePath;
     Result := True;
 
   finally
@@ -2457,7 +2456,7 @@ end;
 
 function TShellItem.Enable(): Boolean;
 begin
-  if not TRegUtils.DeleteValue('HKCR', GetKeyPath(), 'LegacyDisable') then
+  if not TRegUtils.DeleteValue('HKCR', GetKeyPath(), 'LegacyDisable', False) then
     raise EContextMenuException.Create('Could not delete disable value!');
 
   // Update status
@@ -2477,27 +2476,43 @@ begin
   Result := FLocation + CM_SHELLEX +'\'+ Name;
 end;
 
-{ private TShellExItem.GetProgramPathKey
-
-  Returns the Registry key of the correspondending program. }
-
-function TShellExItem.GetProgramPathKey(): string;
-var
-  GUID: string;
-
-begin
-  GUID := TRegUtils.GetKeyValue('HKCR', GetKeyPath(), '');
-  Result := Format(CM_SHELLEX_FILE, [GUID]);
-end;
-
 { public TShellExItem.ChangeFilePath
 
   Changes the file path of an TShellExItem item. }
 
 function TShellExItem.ChangeFilePath(const ANewFilePath: string): Boolean;
+var
+  Reg: TRegistry;
+  ProgramKeyPath: string;
+
 begin
-  TRegUtils.WriteStrValue('HKCR', GetProgramPathKey(), '', ANewFilePath);
-  Result := True;
+  Result := False;
+  Reg := TRegistry.Create(TWinWOW64.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
+
+  try
+    Reg.RootKey := HKEY_CLASSES_ROOT;
+
+    // Invalid key?
+    if not Reg.OpenKey(GetKeyPath(), False) then
+      raise Exception.Create('Key does not exist!');
+
+    // Read GUID and setup key of program
+    ProgramKeyPath := Format(CM_SHELLEX_FILE, [Reg.ReadString('')]);
+    Reg.CloseKey;
+
+    // Invalid program key?
+    if not Reg.OpenKey(ProgramKeyPath, False) then
+      raise Exception.Create('Key does not exist!');
+
+    // Change path
+    Reg.WriteString('', ANewFilePath);
+    FilePath := ANewFilePath;
+    Result := True;
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
+  end;  //of try
 end;
 
 { public TShellExItem.Disable
