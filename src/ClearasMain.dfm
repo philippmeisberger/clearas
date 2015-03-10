@@ -270,7 +270,6 @@ object Main: TMain
   Menu = MainMenu
   OldCreateOrder = False
   Position = poScreenCenter
-  Visible = True
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnShow = FormShow
@@ -290,6 +289,12 @@ object Main: TMain
     OnChange = PageControlChange
     object tsStartup: TTabSheet
       Caption = 'Autostart'
+      Font.Charset = ANSI_CHARSET
+      Font.Color = clBlack
+      Font.Height = -11
+      Font.Name = 'Arial'
+      Font.Style = []
+      ParentFont = False
       DesignSize = (
         535
         279)

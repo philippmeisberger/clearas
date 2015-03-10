@@ -76,8 +76,10 @@ type
   { TRegUtils }
   TRegUtils = class(TOSUtils)
   protected
-    class function DeleteKey(ARootKey, AKeyPath, AKeyName: string): Boolean;
-    class function DeleteValue(ARootKey, AKeyName, AValueName: string): Boolean;
+    class function DeleteKey(ARootKey, AKeyPath, AKeyName: string;
+      AFailIfNotExists: Boolean = True): Boolean;
+    class function DeleteValue(ARootKey, AKeyName, AValueName: string;
+      AFailIfNotExists: Boolean = True): Boolean;
   public
     class function GetKeyValue(ARootKey, AKeyPath, AValueName: string): string;
     class function RegisterInContextMenu(ACheck: Boolean): Boolean;
@@ -151,6 +153,7 @@ type
   public
     constructor Create;
     destructor Destroy; override;
+    function Add(ARootItem: TRootItem): Integer; virtual;
     function ChangeItemFilePath(const ANewFilePath: string): Boolean; virtual;
     function ChangeItemStatus(): Boolean; virtual;
     procedure Clear; override;
@@ -158,10 +161,14 @@ type
     function DisableItem(): Boolean; virtual;
     function EnableItem(): Boolean; virtual;
     procedure ExportItem(const AFileName: string); virtual;
-    function IndexOf(const AItemName: string): Integer; overload;
+    function First(): TRootItem; virtual;
+    function IndexOf(AItemName: string): Integer; overload;
     function IndexOf(AItemName: string; AEnabled: Boolean): Integer; overload;
+    function Remove(ARootItem: TRootItem): Integer; virtual;
+    function Last(): TRootItem; virtual;
     { external }
-    property ActCount: Word read FActCount;
+    property Enabled: Word read FActCount;
+    property Items[AIndex: Word]: TRootItem read RootItemAt; default;
     property OnChanged: TNotifyEvent read FOnChanged write FOnChanged;
     property OnSearching: TSearchEvent read FOnSearching write FOnSearching;
     property OnSearchStart: TSearchEvent read FOnSearchStart write FOnSearchStart;
@@ -400,7 +407,7 @@ end;
 
 function TLnkFile.CreateBackup(): Boolean;
 begin
-  Result := WriteLnkFile(GetBackupLnk(), FExeFileName, FArguments);
+  Result := CopyFile(PChar(FFileName), PChar(GetBackupLnk()), False);
 end;
 
 { public TLnkFile.Delete
@@ -492,29 +499,28 @@ begin
     CoInitialize(nil);
 
     if Succeeded(CoCreateInstance(CLSID_ShellLink, nil, CLSCTX_INPROC_SERVER,
-      IShellLink, ShellLink)) then
+      IID_IShellLinkA, ShellLink)) then
     begin
       PersistFile := (ShellLink as IPersistFile);
 
       // Try to .lnk read file
-      if Succeeded(PersistFile.Load(StringToOleStr(FFileName), STGM_READ)) then
-        with ShellLink do
-        begin
-          SetLength(Path, MAX_PATH + 1);
+      if Failed(PersistFile.Load(StringToOleStr(FFileName), STGM_READ)) then
+        raise Exception.Create('Lnk file does not exist!');
 
-          // Try to read path from .lnk
-          if Succeeded(GetPath(PChar(Path), MAX_PATH, FileInfo, SLR_ANY_MATCH)) then
-          begin
-            FExeFileName := PChar(Path);
-            SetLength(Arguments, MAX_PATH + 1);
+      SetLength(Path, MAX_PATH + 1);
 
-            // Try to read arguments from .lnk file
-            if Succeeded(GetArguments(PChar(Arguments), MAX_PATH)) then
-              FArguments := PChar(Arguments);
+      // Try to read path from .lnk
+      if Failed(ShellLink.GetPath(PChar(Path), MAX_PATH, FileInfo, SLR_ANY_MATCH)) then
+        raise Exception.Create('Could not read path from .lnk file!');
 
-            Result := True;
-          end;  //of begin
-        end; //of with
+      FExeFileName := PChar(Path);
+      SetLength(Arguments, MAX_PATH + 1);
+
+      // Try to read arguments from .lnk file
+      if Succeeded(ShellLink.GetArguments(PChar(Arguments), MAX_PATH)) then
+        FArguments := PChar(Arguments);
+
+      Result := True;
     end;  //of begin
 
   finally
@@ -554,15 +560,17 @@ begin
   try
     CoInitialize(nil);
 
-    if Succeeded(CoCreateInstance(CLSID_ShellLink, nil, CLSCTX_inPROC_SERVER,
+    if Succeeded(CoCreateInstance(CLSID_ShellLink, nil, CLSCTX_INPROC_SERVER,
       IID_IShellLinkA, ShellLink)) then
     begin
       // Set path to .exe
-      ShellLink.SetPath(PChar(AExeFileName));
+      if Failed(ShellLink.SetPath(PChar(AExeFileName))) then
+        raise Exception.Create('Could not write path to .lnk file!');
 
       // Set arguments if specified
       if (AArguments <> '') then
-        ShellLink.SetArguments(PChar(AArguments));
+        if Failed(ShellLink.SetArguments(PChar(AArguments))) then
+          raise Exception.Create('Could not write arguments to .lnk file!');
 
       // Set working directory
       ShellLink.SetWorkingDirectory(PChar(ExtractFilePath(AExeFileName)));
@@ -596,7 +604,8 @@ end;
 
   Deletes a Registry key. }
 
-class function TRegUtils.DeleteKey(ARootKey, AKeyPath, AKeyName: string): Boolean;
+class function TRegUtils.DeleteKey(ARootKey, AKeyPath, AKeyName: string;
+  AFailIfNotExists: Boolean = True): Boolean;
 var
   Reg: TRegistry;
 
@@ -610,7 +619,13 @@ begin
     if not Reg.OpenKey(AKeyPath, False) then
       raise Exception.Create('Key does not exist!');
 
-    Result := Reg.DeleteKey(AKeyName);
+    if Reg.KeyExists(AKeyName) then
+      Result := Reg.DeleteKey(AKeyName)
+    else
+      if AFailIfNotExists then
+        raise EWarning.Create('Key already deleted!')
+      else
+        Result := True;
 
   finally
     Reg.CloseKey();
@@ -622,7 +637,8 @@ end;
 
   Deletes a Registry value. }
 
-class function TRegUtils.DeleteValue(ARootKey, AKeyName, AValueName: string): Boolean;
+class function TRegUtils.DeleteValue(ARootKey, AKeyName, AValueName: string;
+  AFailIfNotExists: Boolean = True): Boolean;
 var
   Reg: TRegistry;
 
@@ -639,7 +655,10 @@ begin
     if Reg.ValueExists(AValueName) then
       Result := Reg.DeleteValue(AValueName)
     else
-      Result := True;
+      if AFailIfNotExists then
+        raise EWarning.Create('Value already deleted!')
+      else
+        Result := True;
 
   finally
     Reg.CloseKey();
@@ -1016,7 +1035,7 @@ end;
 
 function TRootList.RootItemAt(AIndex: Word): TRootItem;
 begin
-  Result := TRootItem(Items[AIndex]);
+  Result := TRootItem(inherited Items[AIndex]);
 end;
 
 { public TRootList.Clear
@@ -1027,6 +1046,15 @@ procedure TRootList.Clear;
 begin
   inherited Clear;
   FActCount := 0;
+end;
+
+{ public TRootList.Add
+
+  Adds a TRootItem to the list. }
+
+function TRootList.Add(ARootItem: TRootItem): Integer;
+begin
+  Result := inherited Add(ARootItem);
 end;
 
 { public TRootList.ChangeItemFilePath
@@ -1103,7 +1131,7 @@ begin
       Dec(FActCount);
 
     // Remove item from list
-    inherited Remove(FItem);
+    Remove(FItem);
     FItem := nil;
 
     // Notify delete
@@ -1178,11 +1206,20 @@ begin
   FItem.ExportItem(AFileName);
 end;
 
+{ public TRootList.First
+
+  Returns the first TRootItem object in list. }
+
+function TRootList.First(): TRootItem;
+begin
+  Result := TRootItem(inherited First());
+end;
+
 { public TRootList.IndexOf
 
   Returns the index of an item checking name only. }
 
-function TRootList.IndexOf(const AItemName: string): Integer;
+function TRootList.IndexOf(AItemName: string): Integer;
 var
   i: Integer;
 
@@ -1219,6 +1256,24 @@ begin
       Break;
     end;  //of begin
   end;  //of for
+end;
+
+{ public TRootList.Last
+
+  Returns the last item of list. }
+
+function TRootList.Last(): TRootItem;
+begin
+  Result := TRootItem(inherited Last());
+end;
+
+{ public TRootList.Remove
+
+  Removes a TRootItem object from the list. }
+
+function TRootList.Remove(ARootItem: TRootItem): Integer;
+begin
+  Result := inherited Remove(ARootItem);
 end;
 
 
@@ -1410,10 +1465,6 @@ begin
   try
     Reg.RootKey := HKEY_LOCAL_MACHINE;
 
-    // Failed to delete old entry?
-    if not TRegUtils.DeleteValue(FRootKey, FLocation, Name) then
-      raise EStartupException.Create('Could not delete value!');
-
     // Failed to create new key?
     if not Reg.OpenKey(KEY_DEACT + Name, True) then
       raise EStartupException.Create('Could not create key!');
@@ -1429,6 +1480,10 @@ begin
     if TOSUtils.WindowsVistaOrLater() then
       // Save deactivation timestamp
       WriteTimestamp(Reg);
+
+    // Do not abort if old value does not exist!
+    if not TRegUtils.DeleteValue(FRootKey, FLocation, Name, False) then
+      raise EStartupException.Create('Could not delete value!');
 
     // Update information
     FRootKey := 'HKLM';
@@ -1478,20 +1533,27 @@ begin
 
     // Failed to create new key?
     if not Reg.OpenKey(NewKeyPath, True) then
-      raise EStartupException.Create('Could not create key "'+ NewKeyPath +'"!');
+      raise EStartupException.Create('Could not open key!');
 
     // Write startup entry
     Reg.WriteString(Name, FilePath);
 
     // Delete old key
-    Result := TRegUtils.DeleteKey('HKLM', KEY_DEACT, Name);
+    Reg.CloseKey();
+    Reg.RootKey := HKEY_LOCAL_MACHINE;
+    Reg.OpenKey(KEY_DEACT, False);
+
+    // Do not fail if old key does not exist!
+    if (Reg.KeyExists(Name) and not Reg.DeleteKey(Name)) then
+      raise EStartupException.Create('Could not delete key!');
 
     // Update information
     FRootKey := NewHKey;
     FLocation := NewKeyPath;
     FEnabled := True;
     FTime := '';
-
+    Result := True;
+    
   finally
     Reg.CloseKey();
     Reg.Free;
@@ -1570,19 +1632,18 @@ end;
 
 function TStartupUserItem.Delete(): Boolean;
 var
-  Dir, KeyName: string;
+  KeyName: string;
 
 begin
   if FEnabled then
   begin
     // Could not delete .lnk?
-    if not DeleteFile(FLocation) then
-      raise EStartupException.Create('Could not delete .lnk "'+ FLocation +'"!');
+    if not FLnkFile.Delete() then
+      raise EStartupException.Create('Could not delete .lnk file!');
   end  //of begin
   else
   begin
-    Dir := TLnkFile.GetStartUpDir(AnsiContainsText('Common', TypeOf));
-    KeyName := AddCircumflex(Dir + Name);
+    KeyName := AddCircumflex(FLnkFile.FileName);
 
     // Could not delete key?
     if not TRegUtils.DeleteKey('HKLM', KEY_DEACT_FOLDER, KeyName) then
@@ -1603,6 +1664,19 @@ var
 
 begin
   Result := False;
+
+  // Create backup directory if not exist
+  if not DirectoryExists(TLnkFile.GetBackupDir()) then
+    ForceDirectories(TLnkFile.GetBackupDir());
+
+  // .lnk does not exist
+  if not FLnkFile.Exists() then
+    raise EStartupException.Create('Lnk file does not exist!');
+
+  // Create backup by copying original .lnk
+  if not FLnkFile.CreateBackup() then
+    raise EStartupException.Create('Could not create backup file!');
+
   Reg := TRegistry.Create(TRegUtils.DenyWOW64Redirection(KEY_WRITE));
 
   try
@@ -1626,14 +1700,6 @@ begin
     end  //of begin
     else
       Reg.WriteString('location', TypeOf);
-
-    // Create backup directory if not exist
-    if not DirectoryExists(TLnkFile.GetBackupDir()) then
-      ForceDirectories(TLnkFile.GetBackupDir());
-
-    // Create backup by copying original .lnk
-    if not CopyFile(PChar(FLocation), PChar(FLnkFile.BackupLnk), False) then
-      raise EStartupException.Create('Could not create backup file!');
 
     // Delete original .lnk
     if not FLnkFile.Delete() then
@@ -1671,9 +1737,10 @@ begin
         raise EStartupException.Create('Could not create .lnk file!');
     end;  //of if
 
-  // Could not delete old key?
-  if not TRegUtils.DeleteKey('HKLM', KEY_DEACT_FOLDER, AddCircumflex(FLnkFile.FileName)) then
+  // Do not abort if old key could not be deleted
+  if not TRegUtils.DeleteKey('HKLM', KEY_DEACT_FOLDER, AddCircumflex(FLnkFile.FileName), False) then
     raise EStartupException.Create('Could not delete key!');
+
 
   // Update information
   FLocation := FLnkFile.FileName;
@@ -2288,7 +2355,7 @@ end;
 function TContextListItem.Delete(): Boolean;
 begin
   if not TRegUtils.DeleteKey('HKCR', ExtractFileDir(GetKeyPath()), Name) then
-    raise EStartupException.Create('Could not delete key!');
+    raise EContextMenuException.Create('Could not delete key!');
 
   Result := True;
 end;

@@ -13,7 +13,7 @@ interface
 uses
   Windows, SysUtils, Classes, Controls, Forms, ComCtrls, StdCtrls, ExtCtrls,
   Dialogs, Menus, Graphics, ClipBrd, ImgList, StrUtils, ClearasAPI, ClearasInfo,
-  LanguageFile, OSUtils, Updater, AddDialogs, SyncObjs;
+  LanguageFile, OSUtils, Updater, AddDialogs;
 
 type
   { TMain }
@@ -346,8 +346,8 @@ begin
     on E: EInvalidItem do
       FLang.MessageBox([95, 18, NEW_LINE, 53], mtWarning);
 
-    {on E: EStartupException do
-      Flang.MessageBox(43, mtError);}
+    on E: EStartupException do
+      Flang.MessageBox(43, mtError);
 
     on E: Exception do
       FLang.MessageBox(FLang.GetString([95, 18, NEW_LINE]) + E.Message, mtError);
@@ -497,7 +497,7 @@ end;
 
 procedure TMain.OnContextItemChanged(Sender: TObject);
 begin
-  lwContext.Columns[1].Caption := FLang.Format(87, [FContext.ActCount, FContext.Count]);
+  lwContext.Columns[1].Caption := FLang.Format(87, [FContext.Enabled, FContext.Count]);
 end;
 
 { private TMain.OnStartupItemChanged
@@ -506,7 +506,7 @@ end;
 
 procedure TMain.OnStartupItemChanged(Sender: TObject);
 begin
-  lwStartup.Columns[1].Caption := FLang.Format(88, [FStartup.ActCount, FStartup.Count]);
+  lwStartup.Columns[1].Caption := FLang.Format(88, [FStartup.Enabled, FStartup.Count]);
 end;
 
 { private TMain.SetLanguage
@@ -682,6 +682,7 @@ begin
     with SaveDialog do
     begin
       Title := StripHotkey(bExportStartupItem.Caption);
+      InitialDir := '%HOMEPATH%';
 
       // Confirm overwrite
       Options := Options + [ofOverwritePrompt];
@@ -787,6 +788,9 @@ begin
     on E: EInvalidItem do
       FLang.MessageBox([96, 18, NEW_LINE, 53], mtWarning);
 
+    on E: EWarning do
+      FLang.MessageBox(E.Message, mtWarning);
+
     on E: Exception do
       FLang.MessageBox(FLang.GetString([96, 18, NEW_LINE]) + E.Message, mtError);
   end;  //of try
@@ -840,6 +844,9 @@ begin
     on E: EInvalidItem do
       FLang.MessageBox([96, 18, NEW_LINE, 53], mtWarning);
 
+    on E: EWarning do
+      FLang.MessageBox(E.Message, mtWarning);
+
     on E: Exception do
       FLang.MessageBox(FLang.GetString([96, 18, NEW_LINE]) + E.Message, mtError);
   end;  //of try
@@ -881,6 +888,9 @@ begin
     on E: EInvalidItem do
       FLang.MessageBox([94, 18, NEW_LINE, 53], mtWarning);
 
+    on E: EWarning do
+      FLang.MessageBox(E.Message, mtWarning);
+
     on E: Exception do
       FLang.MessageBox(FLang.GetString([94, 18, NEW_LINE]) + E.Message, mtError);
   end;  //of try
@@ -917,6 +927,9 @@ begin
   except
     on E: EInvalidItem do
       FLang.MessageBox([94, 18, NEW_LINE, 53], mtWarning);
+
+    on E: EWarning do
+      FLang.MessageBox(E.Message, mtWarning);
 
     on E: Exception do
       FLang.MessageBox(FLang.GetString([94, 18, NEW_LINE]) + E.Message, mtError);
@@ -956,7 +969,7 @@ begin
 
       // Warn if file does not exist
       if not FileExists(FStartup.Selected.FilePathOnly) then
-        FLang.MessageBox([45, NEW_LINE, 46], mtWarning);
+        raise EWarning.Create(FLang.GetString([45, NEW_LINE, 46]));
     end  //of begin
     else
       raise Exception.Create('Unknown error!');
@@ -964,6 +977,9 @@ begin
   except
     on E: EInvalidItem do
       FLang.MessageBox([93, 18, NEW_LINE, 53], mtWarning);
+
+    on E: EWarning do
+      FLang.MessageBox(E.Message, mtWarning);
 
     on E: Exception do
       FLang.MessageBox(FLang.GetString([93, 18, NEW_LINE]) + E.Message, mtError);
@@ -997,7 +1013,7 @@ begin
 
       // Warn if file does not exist
       if not FileExists(FContext.Selected.FilePathOnly) then
-        FLang.MessageBox([45, NEW_LINE, 46], mtWarning);
+        raise EWarning.Create(FLang.GetString([45, NEW_LINE, 46]));
     end  //of begin
     else
       raise Exception.Create('Unknown error!');
@@ -1006,6 +1022,9 @@ begin
     on E: EInvalidItem do
       FLang.MessageBox([93, 18, NEW_LINE, 53], mtWarning);
 
+    on E: EWarning do
+      FLang.MessageBox(E.Message, mtWarning);
+      
     on E: Exception do
       FLang.MessageBox(FLang.GetString([93, 18, NEW_LINE]) + E.Message, mtError);
   end;  //of try
@@ -1482,7 +1501,7 @@ begin
         if (Name = '') then
           Exit;
 
-        // optional parameters
+        // Append optional parameters
         if not InputQuery(FLang.GetString(99), FLang.GetString(98), Args) then
           Exit;
 
@@ -1641,7 +1660,8 @@ begin
     with SaveDialog do
     begin
       Title := StripHotkey(mmExportList.Caption);
-
+      InitialDir := '%HOMEPATH%';
+      
       // Confirm overwrite
       Options := Options + [ofOverwritePrompt];
 

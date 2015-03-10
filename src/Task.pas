@@ -378,11 +378,10 @@ end;
 
 function TTaskList.ImportBackup(const AFileName: string): Boolean;
 var
-  Path: WideString;
+  Path, XmlText: WideString;
   Win64: Boolean;
   TaskFolder: ITaskFolder;
   NewTask: IRegisteredTask;
-  XmlText: WideString;
 
 begin
   Path := '\'+ ChangeFileExt(ExtractFileName(AFileName), '');
@@ -407,11 +406,11 @@ begin
     raise ETaskException.Create('Could not open task folder!');
 
   // Task exists?
-  if Succeeded(TaskFolder.GetTask(Addr(Path[1]), NewTask)) then
+  if Succeeded(TaskFolder.GetTask(PWideChar(Path), NewTask)) then
     raise EWarning.Create('Task already exists!');
 
   // Register new task
-  if Failed(TaskFolder.RegisterTask(Addr(Path[1]), Addr(XmlText[1]),
+  if Failed(TaskFolder.RegisterTask(PWideChar(Path), PWideChar(XmlText),
     Ord(TASK_CREATE), Null, Null, TASK_LOGON_INTERACTIVE_TOKEN, Null,
     NewTask)) then
     raise ETaskException.Create('Could not register task!');
