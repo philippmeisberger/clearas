@@ -634,7 +634,7 @@ begin
       FContext.LoadContextmenus()
     else
       // Use default search mode (threaded!)
-      FContext.LoadContextMenus('Directory, Folder, *, Drive');
+      FContext.LoadContextMenus(CM_LOCATIONS_DEFAULT);
   end  //of begin
   else
     OnContextSearchEnd(Self);
@@ -1521,7 +1521,7 @@ begin
 
           try
             // Init location ComboBox
-            List.CommaText := 'Directory, Folder, *, Drive';
+            List.CommaText := CM_LOCATIONS_DEFAULT;
 
             // Show dialog for location selection
             if not InputCombo(FLang.GetString(34), FLang.GetString(90) +':',

@@ -788,6 +788,9 @@ begin
     on E: EInvalidItem do
       FLang.MessageBox([96, 18, NEW_LINE, 53], mtWarning);
 
+    on E: EWarning do
+      FLang.MessageBox(E.Message, mtWarning);
+
     on E: Exception do
       FLang.MessageBox(FLang.GetString([96, 18, NEW_LINE]) + E.Message, mtError);
   end;  //of try
@@ -841,6 +844,9 @@ begin
     on E: EInvalidItem do
       FLang.MessageBox([96, 18, NEW_LINE, 53], mtWarning);
 
+    on E: EWarning do
+      FLang.MessageBox(E.Message, mtWarning);
+
     on E: Exception do
       FLang.MessageBox(FLang.GetString([96, 18, NEW_LINE]) + E.Message, mtError);
   end;  //of try
@@ -882,6 +888,9 @@ begin
     on E: EInvalidItem do
       FLang.MessageBox([94, 18, NEW_LINE, 53], mtWarning);
 
+    on E: EWarning do
+      FLang.MessageBox(E.Message, mtWarning);
+
     on E: Exception do
       FLang.MessageBox(FLang.GetString([94, 18, NEW_LINE]) + E.Message, mtError);
   end;  //of try
@@ -918,6 +927,9 @@ begin
   except
     on E: EInvalidItem do
       FLang.MessageBox([94, 18, NEW_LINE, 53], mtWarning);
+
+    on E: EWarning do
+      FLang.MessageBox(E.Message, mtWarning);
 
     on E: Exception do
       FLang.MessageBox(FLang.GetString([94, 18, NEW_LINE]) + E.Message, mtError);
@@ -957,7 +969,7 @@ begin
 
       // Warn if file does not exist
       if not FileExists(FStartup.Selected.FilePathOnly) then
-        FLang.MessageBox([45, NEW_LINE, 46], mtWarning);
+        raise EWarning.Create(FLang.GetString([45, NEW_LINE, 46]));
     end  //of begin
     else
       raise Exception.Create('Unknown error!');
@@ -965,6 +977,9 @@ begin
   except
     on E: EInvalidItem do
       FLang.MessageBox([93, 18, NEW_LINE, 53], mtWarning);
+
+    on E: EWarning do
+      FLang.MessageBox(E.Message, mtWarning);
 
     on E: Exception do
       FLang.MessageBox(FLang.GetString([93, 18, NEW_LINE]) + E.Message, mtError);
@@ -998,7 +1013,7 @@ begin
 
       // Warn if file does not exist
       if not FileExists(FContext.Selected.FilePathOnly) then
-        FLang.MessageBox([45, NEW_LINE, 46], mtWarning);
+        raise EWarning.Create(FLang.GetString([45, NEW_LINE, 46]));
     end  //of begin
     else
       raise Exception.Create('Unknown error!');
@@ -1007,6 +1022,9 @@ begin
     on E: EInvalidItem do
       FLang.MessageBox([93, 18, NEW_LINE, 53], mtWarning);
 
+    on E: EWarning do
+      FLang.MessageBox(E.Message, mtWarning);
+      
     on E: Exception do
       FLang.MessageBox(FLang.GetString([93, 18, NEW_LINE]) + E.Message, mtError);
   end;  //of try

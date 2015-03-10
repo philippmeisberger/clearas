@@ -30,6 +30,9 @@ const
   CM_SHELLEX = '\shellex\ContextMenuHandlers';
   CM_SHELLEX_FILE = 'CLSID\%s\InProcServer32';
 
+  { Context menu default locations }
+  CM_LOCATIONS_DEFAULT = 'Directory, Folder, *, Drive';
+
   { Extensions of backup files }
   EXT_COMMON = '.CommonStartup';
   EXT_USER = '.Startup';

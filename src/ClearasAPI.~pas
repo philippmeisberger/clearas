@@ -29,6 +29,7 @@ const
   CM_SHELL = '\shell';
   CM_SHELLEX = '\shellex\ContextMenuHandlers';
   CM_SHELLEX_FILE = 'CLSID\%s\InProcServer32';
+  CM_LOCATIONS_DEFAULT = 'Directory, Folder, *, Drive';
 
   { Extensions of backup files }
   EXT_COMMON = '.CommonStartup';
@@ -81,7 +82,6 @@ type
     class function DeleteValue(ARootKey, AKeyName, AValueName: string;
       AFailIfNotExists: Boolean = True): Boolean;
   public
-    class function GetKeyValue(ARootKey, AKeyPath, AValueName: string): string;
     class function RegisterInContextMenu(ACheck: Boolean): Boolean;
     class function UpdateContextPath(): Boolean; overload;
     class function UpdateContextPath(ALangFile: TLanguageFile): Boolean; overload; deprecated;
@@ -658,34 +658,6 @@ begin
         raise EWarning.Create('Value already deleted!')
       else
         Result := True;
-
-  finally
-    Reg.CloseKey();
-    Reg.Free;
-  end;  //of try
-end;
-
-{ public TRegUtils.GetKeyValue
-
-  Returns a Registry value as string. }
-
-class function TRegUtils.GetKeyValue(ARootKey, AKeyPath, AValueName: string): string;
-var
-  Reg: TRegistry;
-
-begin
-  Result := '';
-  Reg := TRegistry.Create(DenyWOW64Redirection(KEY_READ));
-
-  try
-    Reg.RootKey := StrToHKey(ARootKey);
-
-    if Reg.OpenKey(AKeyPath, False) then
-    begin
-      // Only read if value exists (to deny exception)
-      if (Reg.ValueExists(AValueName)) then
-        Result := Reg.ReadString(AValueName);
-    end;  //of begin
 
   finally
     Reg.CloseKey();
