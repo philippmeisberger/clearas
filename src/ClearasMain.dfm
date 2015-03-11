@@ -635,6 +635,7 @@ object Main: TMain
     end
     object pmCopyLocation: TMenuItem
       Caption = 'Ort kopieren'
+      ShortCut = 16451
       OnClick = pmCopyLocationClick
     end
     object pmEdit: TMenuItem
@@ -645,7 +646,6 @@ object Main: TMain
     object pmExport: TMenuItem
       Caption = 'exportieren'
       Enabled = False
-      ShortCut = 16451
       OnClick = mmExportClick
     end
     object pmDelete: TMenuItem
@@ -686,7 +686,7 @@ object Main: TMain
         OnClick = mmExportClick
       end
       object mmExportList: TMenuItem
-        Caption = 'Liste exportieren'
+        Caption = 'Eintr'#228'ge exportieren'
         OnClick = mmExportListClick
       end
       object N3: TMenuItem

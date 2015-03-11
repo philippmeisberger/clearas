@@ -626,7 +626,7 @@ begin
     // Startup tab TListView labels
     lStartup.Caption := GetString(82);
     lwStartup.Columns[0].Caption := GetString(91);
-    lwStartup.Columns[2].Caption := GetString(68);
+    lwStartup.Columns[2].Caption := mmFile.Caption;
     lwStartup.Columns[3].Caption := GetString(92);
     lCopy1.Hint := GetString(29);
 
@@ -1454,12 +1454,23 @@ end;
   Popup menu entry to show some properties. }
 
 procedure TMain.pmCopyLocationClick(Sender: TObject);
+var
+  SelectedList: TRootList;
+
 begin
   try
-    if (PageControl.ActivePage = tsStartup) then
-      Clipboard.AsText := FStartup.Selected.LocationFull
-    else
-      Clipboard.AsText := FContext.Selected.LocationFull;
+    case PageControl.ActivePageIndex of
+      0: SelectedList := FStartup;
+      1: SelectedList := FContext;
+      else
+         raise EWarning.Create('Invalid tab page!');
+    end;  //of case
+
+    // Item selected?
+    if not Assigned(SelectedList.Selected) then
+      raise EWarning.Create('No item selected!');
+
+    Clipboard.AsText := SelectedList.Selected.LocationFull;
 
   except
     FLang.MessageBox(53, mtWarning);
@@ -1735,8 +1746,8 @@ begin
       Filter := FLang.GetString(36);
       DefaultExt := '.reg';
 
-      // Sets a default file name
-      FileName := FLang.GetString(68) + DefaultExt;
+      // Sets default file name
+      FileName := PageControl.ActivePage.Caption + DefaultExt;
     end;  //of with
 
     // User clicked "save"?

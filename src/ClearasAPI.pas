@@ -2009,6 +2009,11 @@ begin
     for i := 0 to Count - 1 do
     begin
       Item := ItemAt(i);
+
+      // Skip enabled startup user items (not in Registry)!
+      if ((Item is TStartupUserItem) and Item.Enabled) then
+        Continue;
+
       RegFile.ExportKey(TOSUtils.StrToHKey(Item.RootKey), Item.Location, True);
     end;  //of for
 
@@ -2732,7 +2737,7 @@ var
   Reg: TRegistry;
   i: Integer;
   List: TStringList;
-  Item, Key, KeyName, FilePath, GUID, Caption: string;
+  Item, Key, FilePath, GUID, Caption: string;
   Enabled: Boolean;
 
 begin
@@ -2758,29 +2763,44 @@ begin
       Reg.OpenKey(Key +'\'+ Item, False);
       FilePath := '';
 
-      // Default value of key is a GUID for ShellEx items and caption for Shell
-      GUID := Reg.ReadString('');
-      Caption := GUID;
-
-      // Filter empty and important entries
-      if ((Caption = '') or (Item[1] = '{') or (GUID[1] = '@')) then
+      // Filter items with GUID in name
+      if (Item[1] = '{') then
         Continue;
 
       // Search for shell entries?
       if ASearchForShellItems then
       begin
+        Caption := Reg.ReadString('');
+
+        // Filter unreadable Shell items
+        if ((Caption <> '') and (Caption[1] = '@')) then
+          Continue;
+
         // Get status and caption of Shell item
         Enabled := not Reg.ValueExists(CM_SHELL_DISABLE);
 
+        // Filter Shell items without command
+        if not Reg.OpenKey('command', False) then
+          Continue;
+
+        // Filter important Shell items
+        if Reg.ValueExists('DelegateExecute') then
+          Continue;
+
         // Get file path of command
-        if Reg.OpenKey('command', False) then
-          FilePath := Reg.ReadString('');
+        FilePath := Reg.ReadString('');
 
         // Add item to list
         AddShellItem(Item, ALocationRoot, FilePath, Caption, Enabled);
       end  //of begin
       else
       begin
+        GUID := Reg.ReadString('');
+
+        // Filter empty and unreadable ShellEx items
+        if ((GUID = '') or (GUID[1] = '@')) then
+          Continue;
+
         // Get status and GUID of ShellEx item
         Enabled := (GUID[1] = '{');
 
@@ -2788,12 +2808,10 @@ begin
         if not Enabled then
           GUID := Copy(GUID, 2, Length(GUID));
 
-        // Set up Registry key
-        KeyName := Format(CM_SHELLEX_FILE, [GUID]);
         Reg.CloseKey();
 
         // Get file path of command
-        if Reg.OpenKey(KeyName, False) then
+        if Reg.OpenKey(Format(CM_SHELLEX_FILE, [GUID]), False) then
           FilePath := Reg.ReadString('');
 
         // Add item to list
