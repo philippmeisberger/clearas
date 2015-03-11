@@ -15,22 +15,19 @@ uses
   ShellAPI, Contnrs, SyncObjs, StrUtils, OSUtils, LanguageFile, IniFileParser;
 
 const
-  { Registry keys }
+  { Startup Registry keys }
   KEY_DEACT = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\startupreg\';
   KEY_DEACT_FOLDER = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\startupfolder\';
-  KEY_RECYCLEBIN = 'CLSID\{645FF040-5081-101B-9F08-00AA002F954E}\shell';
   KEY_RUNONCE = 'SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce';
   KEY_RUNONCE32 = 'SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnce';
   KEY_STARTUP = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Run';
   KEY_STARTUP32 = 'SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Run';
-  KEY_REGEDIT = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Regedit';
 
-  { Context menu Registry subkeys }
+  { Context menu Registry subkeys + values}
   CM_SHELL = '\shell';
+  CM_SHELL_DISABLE = 'LegacyDisable';
   CM_SHELLEX = '\shellex\ContextMenuHandlers';
   CM_SHELLEX_FILE = 'CLSID\%s\InProcServer32';
-
-  { Context menu default locations }
   CM_LOCATIONS_DEFAULT = 'Directory, Folder, *, Drive';
 
   { Extensions of backup files }
@@ -74,20 +71,6 @@ type
     property FileName: string read FFileName write FFileName;
     property FullPath: string read GetFullPath;
     property FullPathEscaped: string read GetFullPathEscaped;
-  end;
-
-  { TRegUtils }
-  TRegUtils = class(TOSUtils)
-  protected
-    class function DeleteKey(ARootKey, AKeyPath, AKeyName: string;
-      AFailIfNotExists: Boolean = True): Boolean;
-    class function DeleteValue(ARootKey, AKeyName, AValueName: string;
-      AFailIfNotExists: Boolean = True): Boolean;
-  public
-    class function RegisterInContextMenu(ACheck: Boolean): Boolean;
-    class function UpdateContextPath(): Boolean; overload;
-    class function UpdateContextPath(ALangFile: TLanguageFile): Boolean; overload; deprecated;
-    class procedure WriteStrValue(ARootKey, AKeyName, AName, AValue: string);
   end;
 
   { Exception classes }
@@ -134,11 +117,15 @@ type
 
   { TRootRegItem }
   TRootRegItem = class(TRootItem)
+  protected
+    function DeleteKey(ARootKey, AKeyPath, AKeyName: string;
+      AFailIfNotExists: Boolean = True): Boolean;
+    procedure WriteValue(ARootKey, AKeyName, AName, AValue: string);
   public
     procedure OpenInRegEdit(); virtual;
   end;
 
-  { Events }
+  { Search event }
   TSearchEvent = procedure(Sender: TObject; const ACount: Cardinal) of object;
 
   { TRootList }
@@ -242,7 +229,7 @@ type
     function AddUserItemEnabled(ALnkFile: TLnkFile; AAllUsers: Boolean): Integer;
   public
     constructor Create;
-    function AddProgram(AFileName, AArguments: string;
+    function AddItem(AFileName, AArguments: string;
       ADisplayedName: string = ''): Boolean;
     function BackupExists(): Boolean;
     function ChangeItemStatus(): Boolean; override;
@@ -314,7 +301,7 @@ type
       AEnabled: Boolean): Integer;
   public
     constructor Create;
-    function AddEntry(const AFilePath, AArguments, ALocationRoot,
+    function AddItem(AFilePath, AArguments, ALocationRoot,
       ADisplayedName: string): Boolean;
     procedure ExportList(const AFileName: string);
     function IndexOf(AName, ALocationRoot: string): Integer; overload;
@@ -599,187 +586,6 @@ begin
 end;
 
 
-{ TRegUtils }
-
-{ public TRegUtils.DeleteKey
-
-  Deletes a Registry key. }
-
-class function TRegUtils.DeleteKey(ARootKey, AKeyPath, AKeyName: string;
-  AFailIfNotExists: Boolean = True): Boolean;
-var
-  Reg: TRegistry;
-
-begin
-  Result := False;
-  Reg := TRegistry.Create(DenyWOW64Redirection(KEY_READ or KEY_WRITE));
-
-  try
-    Reg.RootKey := StrToHKey(ARootKey);
-
-    if not Reg.OpenKey(AKeyPath, False) then
-      raise Exception.Create('Key does not exist!');
-
-    if Reg.KeyExists(AKeyName) then
-      Result := Reg.DeleteKey(AKeyName)
-    else
-      if AFailIfNotExists then
-        raise EWarning.Create('Key already deleted!')
-      else
-        Result := True;
-
-  finally
-    Reg.CloseKey();
-    Reg.Free;
-  end;  //of try
-end;
-
-{ public TRegUtils.DeleteValue
-
-  Deletes a Registry value. }
-
-class function TRegUtils.DeleteValue(ARootKey, AKeyName, AValueName: string;
-  AFailIfNotExists: Boolean = True): Boolean;
-var
-  Reg: TRegistry;
-
-begin
-  Result := False;
-  Reg := TRegistry.Create(DenyWOW64Redirection(KEY_READ or KEY_WRITE));
-
-  try
-    Reg.RootKey := StrToHKey(ARootKey);
-
-    if not Reg.OpenKey(AKeyName, False) then
-      raise Exception.Create('Key does not exist!');
-
-    if Reg.ValueExists(AValueName) then
-      Result := Reg.DeleteValue(AValueName)
-    else
-      if AFailIfNotExists then
-        raise EWarning.Create('Value already deleted!')
-      else
-        Result := True;
-
-  finally
-    Reg.CloseKey();
-    Reg.Free;
-  end;  //of try
-end;
-
-{ public TRegUtils.RegisterInContextMenu
-
-  Adds or deletes "Clearas" in recycle bin context menu. }
-
-class function TRegUtils.RegisterInContextMenu(ACheck: Boolean): Boolean;
-begin
-  // Checkbox not checked?
-  if not ACheck then
-  begin
-    // Add recycle bin context menu entry
-    WriteStrValue('HKCR', KEY_RECYCLEBIN +'\Clearas\command', '', ParamStr(0));
-    Result := True;
-  end  //of begin
-  else
-    // Remove recycle bin context menu entry
-    Result := DeleteKey('HKCR', KEY_RECYCLEBIN, 'Clearas');
-end;
-
-{ public TRegUtils.UpdateContextPath
-
-  Updates "Open Clearas" in recycle bin context menu. }
-
-class function TRegUtils.UpdateContextPath(): Boolean;
-var
-  Reg: TRegistry;
-
-begin
-  Reg := TRegistry.Create(DenyWOW64Redirection(KEY_WRITE));
-  Reg.RootKey := HKEY_CLASSES_ROOT;
-
-  try
-    // Only update if context menu entry exists
-    if Reg.OpenKey(KEY_RECYCLEBIN +'\Clearas\command', False) then
-    begin
-      Reg.WriteString('', ParamStr(0));
-      Result := True;
-    end  //of begin
-    else
-      Result := False;
-
-  finally
-    Reg.CloseKey();
-    Reg.Free;
-  end;  //of try
-end;
-
-{ public TRegUtils.UpdateContextPath
-
-  Updates "Open Clearas" in recycle bin context menu. }
-
-class function TRegUtils.UpdateContextPath(ALangFile: TLanguageFile): Boolean;
-var
-  Reg: TRegistry;
-  ClearasKey: string;
-
-begin
-  Reg := TRegistry.Create(DenyWOW64Redirection(KEY_ALL_ACCESS));
-  Reg.RootKey := HKEY_CLASSES_ROOT;
-
-  try
-    Reg.OpenKey(KEY_RECYCLEBIN, False);
-    ClearasKey := ALangFile.GetString(37);
-
-    // Only update if context menu entry exists
-    if Reg.KeyExists(ClearasKey) then
-    begin
-      // Delete old context menu key
-      if not Reg.DeleteKey(ClearasKey) then
-        raise Exception.Create('Could not delete key: '+ ClearasKey);
-    end;  //of begin
-
-  finally
-    Reg.CloseKey();
-    Reg.Free;
-    Result := UpdateContextPath();
-  end;  //of try
-end;
-
-{ public TRegUtils.WriteStrValue
-
-  Writes a string value to Registry }
-
-class procedure TRegUtils.WriteStrValue(ARootKey, AKeyName, AName, AValue: string);
-var
-  Reg: TRegistry;
-
-begin
-  Reg := TRegistry.Create(DenyWOW64Redirection(KEY_WRITE));
-
-  try
-    try
-      Reg.RootKey := StrToHKey(ARootKey);
-
-      if not Reg.OpenKey(AKeyName, True) then
-        raise Exception.Create('Could not open key!');
-
-      Reg.WriteString(AName, AValue);
-
-    finally
-      Reg.CloseKey();
-      Reg.Free;
-    end;  //of try
-
-  except
-    on E: Exception do
-    begin
-      E.Message := 'Error while writing Registry value "'+ AName +'" : '+ E.Message;
-      raise;
-    end;  //of begin
-  end;  //of try
-end;
-
-
 { TRootItem }
 
 { public TRootItem.Create
@@ -956,15 +762,75 @@ end;
 
 { TRootRegItem }
 
+{ protected TRootRegItem.DeleteKey
+
+  Deletes a Registry key. }
+
+function TRootRegItem.DeleteKey(ARootKey, AKeyPath, AKeyName: string;
+  AFailIfNotExists: Boolean = True): Boolean;
+var
+  Reg: TRegistry;
+
+begin
+  Result := False;
+  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
+
+  try
+    Reg.RootKey := TOSUtils.StrToHKey(ARootKey);
+
+    if not Reg.OpenKey(AKeyPath, False) then
+      raise Exception.Create('Key does not exist!');
+
+    if Reg.KeyExists(AKeyName) then
+      Result := Reg.DeleteKey(AKeyName)
+    else
+      if AFailIfNotExists then
+        raise EWarning.Create('Key already deleted!')
+      else
+        Result := True;
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
+  end;  //of try
+end;
+
+{ public TRootRegItem.WriteValue
+
+  Writes a string value to Registry }
+
+procedure TRootRegItem.WriteValue(ARootKey, AKeyName, AName, AValue: string);
+var
+  Reg: TRegistry;
+
+begin
+  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_WRITE));
+
+  try
+    Reg.RootKey := TOSUtils.StrToHKey(ARootKey);
+
+    if not Reg.OpenKey(AKeyName, True) then
+      raise Exception.Create('Could not open key!');
+
+    Reg.WriteString(AName, AValue);
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
+  end;  //of try
+end;
+
 { public TRootRegItem.OpenInRegEdit
 
   Opens a TRootRegItem object in RegEdit. }
 
 procedure TRootRegItem.OpenInRegEdit();
+const
+  KEY_REGEDIT = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Regedit';
+
 begin
   // Set the Registry key to show
-  TRegUtils.WriteStrValue('HKCU', KEY_REGEDIT, 'LastKey', 'Computer\'
-    + GetFullLocation());
+  WriteValue('HKCU', KEY_REGEDIT, 'LastKey', 'Computer\'+ GetFullLocation());
 
   // Deny WOW64 redirection only on 64bit Windows
   if TOSUtils.IsWindows64() then
@@ -1337,7 +1203,7 @@ end;
 
 function TStartupListItem.GetFullLocation(): string;
 begin
-  Result := TRegUtils.HKeyToStr(TRegUtils.StrToHKey(FRootKey)) +'\'+ FLocation;
+  Result := TOSUtils.HKeyToStr(TOSUtils.StrToHKey(FRootKey)) +'\'+ FLocation;
 end;
 
 { public TStartupListItem.ChangeFilePath
@@ -1393,9 +1259,9 @@ begin
 
   try
     if FEnabled then
-      RegFile.ExportReg(TRegUtils.StrToHKey(FRootKey), FLocation, Name)
+      RegFile.ExportReg(TOSUtils.StrToHKey(FRootKey), FLocation, Name)
     else
-      RegFile.ExportReg(TRegUtils.StrToHKey(FRootKey), FLocation, False);
+      RegFile.ExportReg(TOSUtils.StrToHKey(FRootKey), FLocation, False);
 
   finally
     RegFile.Free;
@@ -1410,17 +1276,45 @@ end;
   Deletes a TStartupItem object and returns True if successful. }
 
 function TStartupItem.Delete(): Boolean;
-begin
-  if FEnabled then
-  begin
-    if not TRegUtils.DeleteValue(FRootKey, FLocation, Name) then
-      raise EStartupException.Create('Could not delete value!');
-  end  //of begin
-  else
-    if not TRegUtils.DeleteKey('HKLM', KEY_DEACT, Name) then
-      raise EStartupException.Create('Could not delete key!');
+var
+  Reg: TRegistry;
 
-  Result := True;
+begin
+  Result := False;
+  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
+
+  try
+    if FEnabled then
+    begin
+      Reg.RootKey := TOSUtils.StrToHKey(FRootKey);
+
+      // Key invalid?
+      if not Reg.OpenKey(FLocation, False) then
+        raise EStartupException.Create('Key does not exist!');
+
+      // Delete value
+      if not Reg.DeleteValue(Name) then
+        raise EStartupException.Create('Could not delete value!');
+    end  //of begin
+    else
+    begin
+      Reg.RootKey := HKEY_LOCAL_MACHINE;
+
+      // Key invalid?
+      if not Reg.OpenKey(KEY_DEACT, False) then
+        raise EStartupException.Create('Key does not exist!');
+
+      // Delete key
+      if not Reg.DeleteKey(Name) then
+        raise EStartupException.Create('Could not delete key!');
+    end;  //of if
+
+    Result := True;
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
+  end;  //of try
 end;
 
 { public TStartupItem.Disable
@@ -1433,7 +1327,7 @@ var
 
 begin
   Result := False;
-  Reg := TRegistry.Create(TRegUtils.DenyWOW64Redirection(KEY_WRITE));
+  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
 
   try
     Reg.RootKey := HKEY_LOCAL_MACHINE;
@@ -1454,8 +1348,13 @@ begin
       // Save deactivation timestamp
       WriteTimestamp(Reg);
 
-    // Do not abort if old value does not exist!
-    if not TRegUtils.DeleteValue(FRootKey, FLocation, Name, False) then
+    // Open startup location
+    Reg.CloseKey();
+    Reg.RootKey := TOSUtils.StrToHKey(FRootKey);
+    Reg.OpenKey(FLocation, False);
+
+    // Delete old value, but do not fail if old value does not exist!
+    if (Reg.ValueExists(Name) and not Reg.DeleteValue(Name)) then
       raise EStartupException.Create('Could not delete value!');
 
     // Update information
@@ -1481,7 +1380,7 @@ var
 
 begin
   Result := False;
-  Reg := TRegistry.Create(TRegUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
+  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
 
   try
     Reg.RootKey := HKEY_LOCAL_MACHINE;
@@ -1502,7 +1401,7 @@ begin
       raise EStartupException.Create('Invalid destination Registry values for '
         +'"hkey" or "key"!');
 
-    Reg.RootKey := TRegUtils.StrToHKey(NewHKey);
+    Reg.RootKey := TOSUtils.StrToHKey(NewHKey);
 
     // Failed to create new key?
     if not Reg.OpenKey(NewKeyPath, True) then
@@ -1604,26 +1503,17 @@ end;
   Deletes a TStartupUserItem object and returns True if successful. }
 
 function TStartupUserItem.Delete(): Boolean;
-var
-  KeyName: string;
-
 begin
   if FEnabled then
   begin
     // Could not delete .lnk?
     if not FLnkFile.Delete() then
       raise EStartupException.Create('Could not delete .lnk file!');
+
+    Result := True;
   end  //of begin
   else
-  begin
-    KeyName := AddCircumflex(FLnkFile.FileName);
-
-    // Could not delete key?
-    if not TRegUtils.DeleteKey('HKLM', KEY_DEACT_FOLDER, KeyName) then
-      raise EStartupException.Create('Could not delete key!');
-  end;  //of if
-  
-  Result := True;
+    Result := DeleteKey('HKLM', KEY_DEACT_FOLDER, AddCircumflex(FLnkFile.FileName));
 end;
 
 { public TStartupUserItem.Disable
@@ -1650,7 +1540,7 @@ begin
   if not FLnkFile.CreateBackup() then
     raise EStartupException.Create('Could not create backup file!');
 
-  Reg := TRegistry.Create(TRegUtils.DenyWOW64Redirection(KEY_WRITE));
+  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_WRITE));
 
   try
     Reg.RootKey := HKEY_LOCAL_MACHINE;
@@ -1711,7 +1601,7 @@ begin
     end;  //of if
 
   // Do not abort if old key could not be deleted
-  if not TRegUtils.DeleteKey('HKLM', KEY_DEACT_FOLDER, AddCircumflex(FLnkFile.FileName), False) then
+  if not DeleteKey('HKLM', KEY_DEACT_FOLDER, AddCircumflex(FLnkFile.FileName), False) then
     raise EStartupException.Create('Could not delete key!');
 
   // Update information
@@ -1989,15 +1879,16 @@ begin
   end;  //of try
 end;
 
-{ public TStartupList.AddProgram
+{ public TStartupList.AddItem
 
   Adds a new startup item to autostart. }
 
-function TStartupList.AddProgram(AFileName, AArguments: string;
+function TStartupList.AddItem(AFileName, AArguments: string;
   ADisplayedName: string = ''): Boolean;
 var
-  Name, Ext: string;
+  Name, Ext, FullPath: string;
   i: Word;
+  Reg: TRegistry;
 
 begin
   Result := False;
@@ -2026,15 +1917,27 @@ begin
   end  //of begin
   else
     begin
-      // Append arguments if used
-      if (AArguments <> '') then
-        AFileName := AFileName +' '+ AArguments;
+      Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_WRITE));
 
-      // Adds new startup item to Registry
-      TRegUtils.WriteStrValue('HKCU', KEY_STARTUP, ADisplayedName, AFileName);
+      // Try to add new startup item to Registry
+      try
+        Reg.RootKey := HKEY_CURRENT_USER;
+        Reg.OpenKey(KEY_STARTUP, True);
+        FullPath := AFileName;
 
-      // Adds item to list
-      Result := (AddItemEnabled('HKCU', KEY_STARTUP, ADisplayedName, AFileName) <> -1);
+        // Append arguments if used
+        if (AArguments <> '') then
+          FullPath := FullPath +' '+ AArguments;
+
+        Reg.WriteString(ADisplayedName, FullPath);
+
+        // Adds item to list
+        Result := (AddItemEnabled('HKCU', KEY_STARTUP, ADisplayedName, FullPath) <> -1);
+
+      finally
+        Reg.CloseKey();
+        Reg.Free;
+      end;  //of try
     end;  //of begin
 end;
 
@@ -2317,7 +2220,7 @@ end;
 
 function TContextListItem.GetFullLocation(): string;
 begin
-  Result := TRegUtils.HKeyToStr(HKEY_CLASSES_ROOT) +'\'+ GetKeyPath();
+  Result := TOSUtils.HKeyToStr(HKEY_CLASSES_ROOT) +'\'+ GetKeyPath();
 end;
 
 { public TContextListItem.Delete
@@ -2326,7 +2229,7 @@ end;
 
 function TContextListItem.Delete(): Boolean;
 begin
-  if not TRegUtils.DeleteKey('HKCR', ExtractFileDir(GetKeyPath()), Name) then
+  if not DeleteKey('HKCR', ExtractFileDir(GetKeyPath()), Name) then
     raise EContextMenuException.Create('Could not delete key!');
 
   Result := True;
@@ -2403,7 +2306,7 @@ var
 
 begin
   Result := False;
-  Reg := TRegistry.Create(TRegUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
+  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
 
   try
     Reg.RootKey := HKEY_CLASSES_ROOT;
@@ -2412,7 +2315,7 @@ begin
     if not Reg.OpenKey(GetKeyPath(), False) then
       raise EContextMenuException.Create('Key does not exist!');
 
-    Reg.WriteString('LegacyDisable', '');
+    Reg.WriteString(CM_SHELL_DISABLE, '');
 
     // Update status
     FEnabled := False;
@@ -2429,13 +2332,32 @@ end;
   Enables a TShellItem object and returns True if successful. }
 
 function TShellItem.Enable(): Boolean;
-begin
-  if not TRegUtils.DeleteValue('HKCR', GetKeyPath(), 'LegacyDisable', False) then
-    raise EContextMenuException.Create('Could not delete disable value!');
+var
+  Reg: TRegistry;
 
-  // Update status
-  FEnabled := True;
-  Result := True;
+begin
+  Result := False;
+  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
+
+  try
+    Reg.RootKey := HKEY_CLASSES_ROOT;
+
+    // Key invalid?
+    if not Reg.OpenKey(GetKeyPath(), False) then
+      raise EContextMenuException.Create('Key does not exist!');
+
+    // Delete disable value, but do not fail if value does not exist!
+    if (Reg.ValueExists(CM_SHELL_DISABLE) and not Reg.DeleteValue(CM_SHELL_DISABLE)) then
+      raise EStartupException.Create('Could not delete value!');
+
+    // Update status
+    FEnabled := True;
+    Result := True;
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
+  end;  //of try
 end;
 
 
@@ -2461,7 +2383,7 @@ var
 
 begin
   Result := False;
-  Reg := TRegistry.Create(TWinWOW64.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
+  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
 
   try
     Reg.RootKey := HKEY_CLASSES_ROOT;
@@ -2500,7 +2422,7 @@ var
 
 begin
   Result := False;
-  Reg := TRegistry.Create(TRegUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
+  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
 
   try
     Reg.RootKey := HKEY_CLASSES_ROOT;
@@ -2547,7 +2469,7 @@ var
 
 begin
   Result := False;
-  Reg := TRegistry.Create(TRegUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
+  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
 
   try
     Reg.RootKey := HKEY_CLASSES_ROOT;
@@ -2596,11 +2518,11 @@ begin
   FActCount := 0;
 end;
 
-{ public TContextList.AddEntry
+{ public TContextList.AddItem
 
   Adds a new contextmenu entry. }
 
-function TContextList.AddEntry(const AFilePath, AArguments, ALocationRoot,
+function TContextList.AddItem(AFilePath, AArguments, ALocationRoot,
   ADisplayedName: string): Boolean;
 var
   Name, Ext, FullPath, KeyName: string;
@@ -2608,6 +2530,10 @@ var
 
 begin
   Result := False;
+
+  if ((Trim(ALocationRoot) = '') or (Trim(ADisplayedName) = '')) then
+    raise EInvalidArgument.Create('Missing argument!');
+
   Ext := ExtractFileExt(AFilePath);
   Name := ChangeFileExt(ExtractFileName(AFilePath), '');
 
@@ -2631,7 +2557,7 @@ begin
   KeyName := ALocationRoot + CM_SHELL +'\'+ Name;
 
   // Adds new context item to Registry
-  Reg := TRegistry.Create(TRegUtils.DenyWOW64Redirection(KEY_WRITE));
+  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_WRITE));
 
   try
     Reg.RootKey := HKEY_CLASSES_ROOT;
@@ -2843,7 +2769,7 @@ begin
         if ASearchForShellItems then
         begin
           // Get status and caption
-          Enabled := not Reg.ValueExists('LegacyDisable');
+          Enabled := not Reg.ValueExists(CM_SHELL_DISABLE);
 
           // Get file path of command
           if Reg.OpenKey('command', False) then

@@ -700,7 +700,6 @@ object Main: TMain
     object mmEdit: TMenuItem
       Caption = 'Bearbeiten'
       object mmContext: TMenuItem
-        AutoCheck = True
         Caption = 'Papierkorb Kontextmen'#252'-Eintrag'
         OnClick = mmContextClick
       end

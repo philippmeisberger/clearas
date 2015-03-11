@@ -12,8 +12,11 @@ interface
 
 uses
   Windows, SysUtils, Classes, Controls, Forms, ComCtrls, StdCtrls, ExtCtrls,
-  Dialogs, Menus, Graphics, ClipBrd, ImgList, StrUtils, ClearasAPI, ClearasInfo,
-  LanguageFile, OSUtils, Updater, AddDialogs;
+  Dialogs, Menus, Graphics, ClipBrd, ImgList, Registry, StrUtils, ClearasAPI,
+  ClearasInfo, LanguageFile, OSUtils, Updater, AddDialogs;
+
+const
+  KEY_RECYCLEBIN = 'CLSID\{645FF040-5081-101B-9F08-00AA002F954E}\shell';
 
 type
   { TMain }
@@ -151,6 +154,8 @@ type
     procedure AfterUpdate(Sender: TObject; ADownloadedFileName: string);
     procedure BeforeUpdate(Sender: TObject; const ANewBuild: Cardinal);
     function CreateStartupUserBackup(): Boolean;
+    procedure LoadContextMenuEntries(ATotalRefresh: Boolean = True);
+    procedure LoadStartupEntries(ATotalRefresh: Boolean = True);
     procedure OnContextSearchProgress(Sender: TObject; const AWorkCount: Cardinal);
     procedure OnContextSearchStart(Sender: TObject; const AWorkCountMax: Cardinal);
     procedure OnContextSearchEnd(Sender: TObject);
@@ -160,8 +165,8 @@ type
     procedure OnStartupItemChanged(Sender: TObject);
     procedure SetLanguage(Sender: TObject);
     function ShowRegistryExportDialog(): Boolean;
-    procedure LoadContextMenuEntries(ATotalRefresh: Boolean = True);
-    procedure LoadStartupEntries(ATotalRefresh: Boolean = True);
+    function UpdateContextPath(): Boolean; overload;
+    function UpdateContextPath(ALangFile: TLanguageFile): Boolean; overload; deprecated;
   end;
 
 var
@@ -263,7 +268,7 @@ begin
   mmDate.Enabled := newWindows;
 
   // Update Clearas recycle bin context menu entry
-  mmContext.Checked := TRegUtils.UpdateContextPath(FLang);
+  mmContext.Checked := UpdateContextPath();
 
   // Load autostart
   LoadStartupEntries();
@@ -352,6 +357,61 @@ begin
     on E: Exception do
       FLang.MessageBox(FLang.GetString([95, 18, NEW_LINE]) + E.Message, mtError);
   end;  //of try
+end;
+
+{ private TMain.LoadContextMenuEntries
+
+  Loads context menu entries and brings them into a TListView. }
+
+procedure TMain.LoadContextMenuEntries(ATotalRefresh: Boolean = True);
+begin
+  // Clear all visual data
+  lwContext.Clear;
+
+  // Make a total refresh or just use cached items
+  if ATotalRefresh then
+  begin
+    // Disable VCL buttons
+    bDisableContextItem.Enabled := False;
+    bEnableContextItem.Enabled := False;
+    bDeleteContextItem.Enabled := False;
+    bExportContextItem.Enabled := False;
+
+    // Use expert search mode?
+    if cbExpert.Checked then
+      // Start the expert search (threaded!)
+      FContext.LoadContextmenus()
+    else
+      // Use default search mode (threaded!)
+      FContext.LoadContextMenus(CM_LOCATIONS_DEFAULT);
+  end  //of begin
+  else
+    OnContextSearchEnd(Self);
+end;
+
+{ private TMain.LoadStartupEntries
+
+  Loads startup entries and brings them into a TListView. }
+
+procedure TMain.LoadStartupEntries(ATotalRefresh: Boolean = True);
+begin
+  // Clear all visual data
+  lwStartup.Clear;
+
+  // Make a total refresh or just use cached items
+  if ATotalRefresh then
+  begin
+    // Disable VCL buttons
+    bDisableStartupItem.Enabled := False;
+    bEnableStartupItem.Enabled := False;
+    bDeleteStartupItem.Enabled := False;
+    bExportStartupItem.Enabled := False;
+
+    // Load autostart with or without special RunOnce entries (threaded!)
+    FStartup.LoadStartup(mmRunOnce.Checked);
+  end  //of begin
+  else
+    OnStartupSearchEnd(Self);
 end;
 
 { private TMain.OnContextSearchProgress
@@ -610,61 +670,6 @@ begin
   end;  //of begin
 end;
 
-{ private TMain.LoadContextMenuEntries
-
-  Loads context menu entries and brings them into a TListView. }
-
-procedure TMain.LoadContextMenuEntries(ATotalRefresh: Boolean = True);
-begin
-  // Clear all visual data
-  lwContext.Clear;
-
-  // Make a total refresh or just use cached items
-  if ATotalRefresh then
-  begin
-    // Disable VCL buttons
-    bDisableContextItem.Enabled := False;
-    bEnableContextItem.Enabled := False;
-    bDeleteContextItem.Enabled := False;
-    bExportContextItem.Enabled := False;
-
-    // Use expert search mode?
-    if cbExpert.Checked then
-      // Start the expert search (threaded!)
-      FContext.LoadContextmenus()
-    else
-      // Use default search mode (threaded!)
-      FContext.LoadContextMenus('Directory, Folder, *, Drive');
-  end  //of begin
-  else
-    OnContextSearchEnd(Self);
-end;
-
-{ private TMain.LoadStartupEntries
-
-  Loads startup entries and brings them into a TListView. }
-
-procedure TMain.LoadStartupEntries(ATotalRefresh: Boolean = True);
-begin
-  // Clear all visual data
-  lwStartup.Clear;
-
-  // Make a total refresh or just use cached items
-  if ATotalRefresh then
-  begin
-    // Disable VCL buttons
-    bDisableStartupItem.Enabled := False;
-    bEnableStartupItem.Enabled := False;
-    bDeleteStartupItem.Enabled := False;
-    bExportStartupItem.Enabled := False;
-
-    // Load autostart with or without special RunOnce entries (threaded!)
-    FStartup.LoadStartup(mmRunOnce.Checked);
-  end  //of begin
-  else
-    OnStartupSearchEnd(Self);
-end;
-
 { private TMain.ShowRegistryExportDialog
 
   Shows a .reg file export dialog. }
@@ -720,6 +725,67 @@ begin
 
     on E: Exception do
       FLang.MessageBox(FLang.GetString([95, 18, NEW_LINE]) + E.Message, mtError);
+  end;  //of try
+end;
+
+{ public TMain.UpdateContextPath
+
+  Updates "Open Clearas" in recycle bin context menu. }
+
+function TMain.UpdateContextPath(): Boolean;
+var
+  Reg: TRegistry;
+
+begin
+  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_WRITE));
+
+  try
+    Reg.RootKey := HKEY_CLASSES_ROOT;
+    
+    // Only update if context menu entry exists
+    if Reg.OpenKey(KEY_RECYCLEBIN +'\Clearas\command', False) then
+    begin
+      Reg.WriteString('', ParamStr(0));
+      Result := True;
+    end  //of begin
+    else
+      Result := False;
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
+  end;  //of try
+end;
+
+{ public TMain.UpdateContextPath
+
+  Updates "Open Clearas" in recycle bin context menu. }
+
+function TMain.UpdateContextPath(ALangFile: TLanguageFile): Boolean;
+var
+  Reg: TRegistry;
+  ClearasKey: string;
+
+begin
+  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
+
+  try
+    Reg.RootKey := HKEY_CLASSES_ROOT;
+    Reg.OpenKey(KEY_RECYCLEBIN, False);
+    ClearasKey := ALangFile.GetString(37);
+
+    // Only update if context menu entry exists
+    if Reg.KeyExists(ClearasKey) then
+    begin
+      // Delete old context menu key
+      if not Reg.DeleteKey(ClearasKey) then
+        raise Exception.Create('Could not delete key: '+ ClearasKey);
+    end;  //of begin
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
+    Result := UpdateContextPath();
   end;  //of try
 end;
 
@@ -1509,7 +1575,7 @@ begin
         if (PageControl.ActivePage = tsStartup) then
         begin
           // FStartup item already exists?
-          if not FStartup.AddProgram(OpenDialog.FileName, Args, Name) then
+          if not FStartup.AddItem(OpenDialog.FileName, Args, Name) then
             FLang.MessageBox(FLang.Format(40, [OpenDialog.FileName]), mtWarning)
           else
             // Update TListView
@@ -1521,7 +1587,7 @@ begin
 
           try
             // Init location ComboBox
-            List.CommaText := 'Directory, Folder, *, Drive';
+            List.CommaText := CM_LOCATIONS_DEFAULT;
 
             // Show dialog for location selection
             if not InputCombo(FLang.GetString(34), FLang.GetString(90) +':',
@@ -1529,7 +1595,7 @@ begin
               Exit;
 
             // Contextmenu item already exists?
-            if not FContext.AddEntry(OpenDialog.FileName, Args, Location, Name) then
+            if not FContext.AddItem(OpenDialog.FileName, Args, Location, Name) then
               FLang.MessageBox(FLang.Format(41, [OpenDialog.FileName]), mtWarning)
             else
               // Update TListView
@@ -1744,8 +1810,35 @@ end;
   MainMenu entry to add or removes "Clearas" in the recycle bin context menu. }
 
 procedure TMain.mmContextClick(Sender: TObject);
+var
+  Reg: TRegistry;
+
 begin
-  TRegUtils.RegisterInContextMenu(not mmContext.Checked);
+  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_WRITE));
+
+  try
+    Reg.RootKey := HKEY_CLASSES_ROOT;
+
+    // Checkbox checked?
+    if mmContext.Checked then
+    begin
+      // Remove recycle bin context menu entry
+      Reg.OpenKey(KEY_RECYCLEBIN, False);
+      Reg.DeleteKey('Clearas');
+      mmContext.Checked := False;
+    end  //of begin
+    else
+    begin
+      // Add recycle bin context menu entry
+      Reg.OpenKey(KEY_RECYCLEBIN +'\Clearas\command', True);
+      Reg.WriteString('', ParamStr(0));
+      mmContext.Checked := True;
+    end;  //of if
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
+  end;  //of try
 end;
 
 { TMain.mmRefreshClick
