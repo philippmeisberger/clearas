@@ -154,6 +154,8 @@ type
     procedure AfterUpdate(Sender: TObject; ADownloadedFileName: string);
     procedure BeforeUpdate(Sender: TObject; const ANewBuild: Cardinal);
     function CreateStartupUserBackup(): Boolean;
+    function GetSelectedItem(): TRootItem;
+    function GetSelectedList(): TRootList;
     procedure LoadContextMenuEntries(ATotalRefresh: Boolean = True);
     procedure LoadStartupEntries(ATotalRefresh: Boolean = True);
     procedure OnContextSearchProgress(Sender: TObject; const AWorkCount: Cardinal);
@@ -357,6 +359,47 @@ begin
     on E: Exception do
       FLang.MessageBox(FLang.GetString([95, 18, NEW_LINE]) + E.Message, mtError);
   end;  //of try
+end;
+
+{ private TMain.GetSelectedItem
+
+  Returns the current selected TRootItem. }
+
+function TMain.GetSelectedItem(): TRootItem;
+var
+  Item: TRootItem;
+  List: TRootList;
+
+begin
+  List := GetSelectedList();
+  Item := List.Selected;
+
+  if not Assigned(Item) then
+    EAbort.Create('No item selected!');
+
+  Result := Item;
+end;
+
+{ private TMain.GetSelectedList
+
+  Returns the current selected TRootList. }
+
+function TMain.GetSelectedList(): TRootList;
+var
+  List: TRootList;
+
+begin
+  List := nil;
+
+  case PageControl.ActivePageIndex of
+    0: List := FStartup;
+    1: List := FContext;
+  end;  //of case
+
+  if not Assigned(List) then
+    EAbort.Create('No list selected!');
+
+  Result := List;
 end;
 
 { private TMain.LoadContextMenuEntries
@@ -583,10 +626,10 @@ begin
     // File menu labels
     mmFile.Caption := GetString(68);
 
-    if (PageControl.ActivePage = tsStartup) then
-      mmAdd.Caption := GetString(69)
-    else
-      mmAdd.Caption := GetString(34);
+    case PageControl.ActivePageIndex of
+      0: mmAdd.Caption := GetString(69);
+      1: mmAdd.Caption := GetString(34);
+    end;  //of case
 
     mmImport.Caption := GetString(70);
     mmExport.Caption := GetString(71);
@@ -697,21 +740,17 @@ begin
       DefaultExt := '.reg';
 
       // Set a default file name
-      if (PageControl.ActivePage = tsStartup) then
-        FileName := FStartup.Selected.Name + DefaultExt
-      else
-        FileName := FContext.Selected.Name +'_'+ FContext.Selected.Location + DefaultExt;
+      case PageControl.ActivePageIndex of
+        0: FileName := FStartup.Selected.Name + DefaultExt;
+        1: FileName := FContext.Selected.Name +'_'+ FContext.Selected.Location + DefaultExt;
+      end;  //of case
     end;  //of with
 
     try
       // User clicked "save"?
       if SaveDialog.Execute then
       begin
-        if (PageControl.ActivePage = tsStartup) then
-          FStartup.ExportItem(SaveDialog.FileName)
-        else
-          FContext.ExportItem(SaveDialog.FileName);
-
+        GetSelectedList().ExportItem(SaveDialog.FileName);
         Result := True;
       end;  //of begin
 
@@ -1401,10 +1440,10 @@ end;
 
 procedure TMain.pmChangeStatusClick(Sender: TObject);
 begin
-  if (PageControl.ActivePage = tsStartup) then
-    lwStartupDblClick(Sender)
-  else
-    lwContextDblClick(Sender);
+  case PageControl.ActivePageIndex of
+    0: lwStartupDblClick(Sender);
+    1: lwContextDblClick(Sender);
+  end;  //of case
 end;
 
 { TMain.pmDeleteClick
@@ -1413,10 +1452,10 @@ end;
 
 procedure TMain.pmDeleteClick(Sender: TObject);
 begin
-  if (PageControl.ActivePage = tsStartup) then
-    bDeleteStartupItem.Click
-  else
-    bDeleteContextItem.Click;
+  case PageControl.ActivePageIndex of
+    0: bDeleteStartupItem.Click;
+    1: bDeleteContextItem.Click;
+  end;  //of case
 end;
 
 { TMain.pmOpenRegeditClick
@@ -1426,14 +1465,14 @@ end;
 procedure TMain.pmOpenExplorerClick(Sender: TObject);
 begin
   try
-    if (PageControl.ActivePage = tsStartup) then
-      FStartup.Selected.OpenInExplorer()
-    else
-      FContext.Selected.OpenInExplorer();
+    GetSelectedItem().OpenInExplorer();
 
   except
-    on E: EAbort do
+    on E: EWarning do
       FLang.MessageBox([45, NEW_LINE, 46], mtWarning);
+
+    on E: EAbort do
+      FLang.MessageBox(53, mtWarning);
   end;  //of try
 end;
 
@@ -1442,11 +1481,20 @@ end;
   Opens the current selected item in RegEdit. }
 
 procedure TMain.pmOpenRegeditClick(Sender: TObject);
+var
+  Item: TRootItem;
+
 begin
-  if (PageControl.ActivePage = tsStartup) then
-    FStartup.Item.OpenInRegEdit()
-  else
-    FContext.Item.OpenInRegEdit();
+  try
+    Item := GetSelectedItem();
+
+    if (Item is TRootRegItem) then
+      (Item as TRootRegItem).OpenInRegEdit();
+
+  except
+    on E: EAbort do
+      FLang.MessageBox(53, mtWarning);
+  end;  //of try
 end;
 
 { TMain.pmCopyLocationClick
@@ -1454,27 +1502,14 @@ end;
   Popup menu entry to show some properties. }
 
 procedure TMain.pmCopyLocationClick(Sender: TObject);
-var
-  SelectedList: TRootList;
-
 begin
   try
-    case PageControl.ActivePageIndex of
-      0: SelectedList := FStartup;
-      1: SelectedList := FContext;
-      else
-         raise EWarning.Create('Invalid tab page!');
-    end;  //of case
-
-    // Item selected?
-    if not Assigned(SelectedList.Selected) then
-      raise EWarning.Create('No item selected!');
-
-    Clipboard.AsText := SelectedList.Selected.LocationFull;
+    Clipboard.AsText := GetSelectedItem().LocationFull;
 
   except
-    FLang.MessageBox(53, mtWarning);
-  end;  //of begin
+    on E: EAbort do
+      FLang.MessageBox(53, mtWarning);
+  end;  //of try
 end;
 
 { TMain.pmEditClick
@@ -1484,21 +1519,11 @@ end;
 procedure TMain.pmEditClick(Sender: TObject);
 var
   Path, EnteredPath: string;
-  SelectedList: TRootList;
   Icon: TIcon;
 
 begin
   try
-    if (PageControl.ActivePage = tsStartup) then
-    begin
-      SelectedList := FStartup;
-      Path := FStartup.Selected.FilePath;
-    end  //of begin
-    else
-    begin
-      SelectedList := FContext;
-      Path := FContext.Selected.FilePath;
-    end;  //of if
+    Path := GetSelectedItem().FilePath;
 
     // Show input box for editing path
     EnteredPath := InputBox(FLang.GetString(33), FLang.GetString(54), Path);
@@ -1508,7 +1533,7 @@ begin
       Exit;
 
     // Try to change the file path
-    if not SelectedList.ChangeItemFilePath(EnteredPath) then
+    if not GetSelectedList().ChangeItemFilePath(EnteredPath) then
       raise Exception.Create('Error while changing path!');
 
     // Update file path in TListView
@@ -1532,9 +1557,12 @@ begin
     end;  //of begin
 
   except
-    on E: EAccessViolation do
+    on E: EAbort do
       FLang.MessageBox(53, mtWarning);
 
+    on E: EAccessViolation do
+      FLang.MessageBox(53, mtWarning);
+    
     on E: Exception do
       FLang.MessageBox(FLang.GetString([33, 18, NEW_LINE]) + E.Message, mtError);
   end;  //of try
@@ -1566,64 +1594,69 @@ begin
   try
     try
       // User clicked "open"?
-      if OpenDialog.Execute then
-      begin
-        // Set default name
-        Name := ChangeFileExt(ExtractFileName(OpenDialog.FileName), '');
+      if not OpenDialog.Execute then
+        Exit;
 
-        // User can edit the name
-        Name := InputBox(FLang.GetString(74), FLang.GetString(97), Name);
+      // Set default name
+      Name := ChangeFileExt(ExtractFileName(OpenDialog.FileName), '');
 
-        // Name must not be empty!
-        if (Name = '') then
-          Exit;
+      // User can edit the name
+      Name := InputBox(FLang.GetString(74), FLang.GetString(97), Name);
 
-        // Append optional parameters
-        if not InputQuery(FLang.GetString(99), FLang.GetString(98), Args) then
-          Exit;
+      // Name must not be empty!
+      if (Name = '') then
+        Exit;
 
-        // Add startup item?
-        if (PageControl.ActivePage = tsStartup) then
-        begin
-          // FStartup item already exists?
-          if not FStartup.AddItem(OpenDialog.FileName, Args, Name) then
-            FLang.MessageBox(FLang.Format(40, [OpenDialog.FileName]), mtWarning)
-          else
-            // Update TListView
-            LoadStartupEntries(False);
-        end  //of begin
-        else
-        begin
-          List := TStringList.Create;
+      // Append optional parameters
+      if not InputQuery(FLang.GetString(99), FLang.GetString(98), Args) then
+        Exit;
 
-          try
-            // Init location ComboBox
-            List.CommaText := CM_LOCATIONS_DEFAULT;
+      // Add startup item?
+      case PageControl.ActivePageIndex of
+        0: begin
+             // FStartup item already exists?
+             if not FStartup.AddItem(OpenDialog.FileName, Args, Name) then
+               raise EWarning.Create(FLang.Format(40, [OpenDialog.FileName]));
+             
+             // Update TListView
+             LoadStartupEntries(False);
+           end;
 
-            // Show dialog for location selection
-            if not InputCombo(FLang.GetString(34), FLang.GetString(90) +':',
-              List, Location) then
-              Exit;
+        1: begin
+             List := TStringList.Create;
 
-            // Contextmenu item already exists?
-            if not FContext.AddItem(OpenDialog.FileName, Args, Location, Name) then
-              FLang.MessageBox(FLang.Format(41, [OpenDialog.FileName]), mtWarning)
-            else
-              // Update TListView
-              LoadContextMenuEntries(False);
+             try
+               // Init location ComboBox
+               List.CommaText := CM_LOCATIONS_DEFAULT;
 
-          finally
-            List.Free;
-          end;  //of try
-        end;  //of if
-      end;  //of begin
+               // Show dialog for location selection
+               if not InputCombo(FLang.GetString(34), FLang.GetString(90) +':',
+                 List, Location) then
+                 Exit;
+
+               // Contextmenu item already exists?
+               if not FContext.AddItem(OpenDialog.FileName, Args, Location, Name) then
+                 raise EWarning.Create(FLang.Format(41, [OpenDialog.FileName]));
+
+               // Update TListView
+               LoadContextMenuEntries(False);
+
+             finally
+               List.Free;
+             end;  //of try
+           end;  //of if
+      end;  //of case
 
     finally
       OpenDialog.Free;
     end;  //of try
 
   except
-    FLang.MessageBox(55, mtError);
+    on E: EWarning do
+      FLang.MessageBox(E.Message, mtWarning);
+
+    on E: Exception do
+      FLang.MessageBox(FLang.GetString([55, NEW_LINE]) + E.Message, mtError);
   end;  //of try
 end;
 
@@ -1633,8 +1666,11 @@ end;
   an animation. }
 
 procedure TMain.mmDateClick(Sender: TObject);
+const
+  COLUMN_DATE_WIDTH = 120;
+
 var
-  endOf: integer;
+  EndOf: Integer;
 
 begin
   if not (WindowState = wsMaximized) then
@@ -1649,21 +1685,21 @@ begin
     begin
       Constraints.MinWidth := Constraints.MinWidth - lwStartup.Column[4].Width;
       lwStartup.Column[4].MinWidth := 0;
-      endOf := Width - 120;
+      EndOf := Width - COLUMN_DATE_WIDTH;
 
       // Animation to remove column smoothly
       repeat
         Width := Width - 1;
 
         if (WindowState = wsMaximized) then
-          endOf := Width;
+          EndOf := Width;
 
-        if (lwStartup.Column[4].Width <= 120) then
+        if (lwStartup.Column[4].Width <= COLUMN_DATE_WIDTH) then
           lwStartup.Column[4].Width := lwStartup.Column[4].Width - 1;
 
         Update;
         Sleep(0);
-      until ((lwStartup.Column[4].Width <= 0) and (Width = endOf));
+      until ((lwStartup.Column[4].Width <= 0) and (Width = EndOf));
 
       // Delete column
       lwStartup.Columns.Delete(4);
@@ -1675,7 +1711,7 @@ begin
   else
   begin
     mmDate.Checked := True;
-    endOf := Width + 120;
+    EndOf := Width + COLUMN_DATE_WIDTH;
 
     // Add column
     lwStartup.Columns.Add.Caption := FLang.GetString(80);
@@ -1688,14 +1724,14 @@ begin
       Width := Width + 1;
 
       if (WindowState = wsMaximized) then
-        endOf := Width;
+        EndOf := Width;
 
-      if (lwStartup.Column[4].Width < 120) then
+      if (lwStartup.Column[4].Width < COLUMN_DATE_WIDTH) then
         lwStartup.Column[4].Width := lwStartup.Column[4].Width + 1;
 
       Update;
       Sleep(0);
-    until ((lwStartup.Column[4].Width >= 120) and (Width = endOf));
+    until ((lwStartup.Column[4].Width >= COLUMN_DATE_WIDTH) and (Width = EndOf));
 
     lwStartup.Column[4].MinWidth := lwStartup.Column[4].Width;
     lwStartup.Column[4].MaxWidth := lwStartup.Column[4].Width;
@@ -1712,13 +1748,10 @@ end;
 
 procedure TMain.mmExportClick(Sender: TObject);
 begin
-  if (PageControl.ActivePage = tsStartup) then
-    bExportStartupItem.Click()
-  else
-    if (PageControl.ActivePage = tsContext) then
-      bExportContextItem.Click()
-    else
-      FLang.MessageBox([95, 18, NEW_LINE, 53], mtWarning);
+  case PageControl.ActivePageIndex of
+    0: bExportStartupItem.Click();
+    1: bExportContextItem.Click();
+  end;  //of case
 end;
 
 { TMain.mmExportListClick
@@ -1752,10 +1785,10 @@ begin
 
     // User clicked "save"?
     if SaveDialog.Execute then
-      if (PageControl.ActivePage = tsStartup) then
-        FStartup.ExportList(SaveDialog.FileName)
-      else
-        FContext.ExportList(SaveDialog.FileName);
+      case PageControl.ActivePageIndex of
+        0: FStartup.ExportList(SaveDialog.FileName);
+        1: FContext.ExportList(SaveDialog.FileName);
+      end;  //of case
 
   finally
     SaveDialog.Free;
@@ -1862,10 +1895,10 @@ end;
 
 procedure TMain.mmRefreshClick(Sender: TObject);
 begin
-  if (PageControl.ActivePage = tsStartup) then
-    LoadStartupEntries()
-  else
-    LoadContextMenuEntries();
+  case PageControl.ActivePageIndex of
+    0: LoadStartupEntries();
+    1: LoadContextMenuEntries();
+  end;  //of case
 end;
 
 { TMain.mmShowIconsClick
@@ -1874,10 +1907,10 @@ end;
 
 procedure TMain.mmShowIconsClick(Sender: TObject);
 begin
-  if (PageControl.ActivePage = tsStartup) then
-    LoadStartupEntries(False)
-  else
-    LoadContextMenuEntries(False);
+  case PageControl.ActivePageIndex of
+    0: LoadStartupEntries(False);
+    1: LoadContextMenuEntries(False);
+  end;  //of case
 end;
 
 { TMain.mmStandardClick
@@ -1886,18 +1919,19 @@ end;
 
 procedure TMain.mmDefaultClick(Sender: TObject);
 begin
-  if (PageControl.ActivePage = tsStartup) then
-  begin
-    lwStartup.Columns[1].Width := 125;
-    lwStartup.Columns[2].Width := 122;
-    lwStartup.Columns[3].Width := 75;
-  end  //of begin
-  else
-  begin
-    lwContext.Columns[1].Width := 150;
-    lwContext.Columns[2].Width := 107;
-    lwContext.Columns[3].Width := 65;
-  end;  //of if
+  case PageControl.ActivePageIndex of
+    0: begin
+         lwStartup.Columns[1].Width := 125;
+         lwStartup.Columns[2].Width := 122;
+         lwStartup.Columns[3].Width := 75;
+       end;
+
+    1: begin
+         lwContext.Columns[1].Width := 150;
+         lwContext.Columns[2].Width := 107;
+         lwContext.Columns[3].Width := 65;
+       end;
+  end;  //of case
 end;
 
 { TMain.mmOptimateClick
@@ -1911,12 +1945,7 @@ begin
     lwStartup.Columns[1].Width := ColumnTextWidth;
     lwStartup.Columns[2].Width := ColumnTextWidth;
     lwStartup.Columns[3].Width := ColumnTextWidth;
-  end  //of begin
-  else
-  begin
-    lwContext.Columns[1].Width := ColumnTextWidth;
-    lwContext.Columns[2].Width := ColumnTextWidth;
-  end;  //of if
+  end;  //of begin
 end;
 
 { TMain.mmGerClick
@@ -2053,31 +2082,32 @@ end;
 procedure TMain.PageControlChange(Sender: TObject);
 begin
   // Disable some menu items not used on context menu page
-  if (PageControl.ActivePage = tsContext) then
-  begin
-    mmAdd.Caption := FLang.GetString(34);
-    mmImport.Visible := False;
-    mmDate.Visible := False;
-    mmRunOnce.Visible := False;
-    mmShowIcons.Visible := False;
-    mmOptimate.Enabled := False;
-    lwContextSelectItem(Sender, lwContext.ItemFocused, True);
+  case PageControl.ActivePageIndex of
+    0: begin
+         mmAdd.Caption := FLang.GetString(69);
+         mmImport.Visible := True;
+         mmDate.Visible := True;
+         mmRunOnce.Visible := True;
+         mmShowIcons.Visible := True;
+         mmOptimate.Enabled := True;
+         pmOpenExplorer.Enabled := True;
+         lwStartupSelectItem(Sender, lwStartup.ItemFocused, True);
+       end;
 
-    // Load context menu entries dynamically
-    if (FContext.Count = 0) then
-      LoadContextMenuEntries();
-  end  //of begin
-  else
-  begin
-    mmAdd.Caption := FLang.GetString(69);
-    mmImport.Visible := True;
-    mmDate.Visible := True;
-    mmRunOnce.Visible := True;
-    mmShowIcons.Visible := True;
-    mmOptimate.Enabled := True;
-    pmOpenExplorer.Enabled := True;
-    lwStartupSelectItem(Sender, lwStartup.ItemFocused, True);
-  end;  //of if
+    1: begin
+         mmAdd.Caption := FLang.GetString(34);
+         mmImport.Visible := False;
+         mmDate.Visible := False;
+         mmRunOnce.Visible := False;
+         mmShowIcons.Visible := False;
+         mmOptimate.Enabled := False;
+         lwContextSelectItem(Sender, lwContext.ItemFocused, True);
+
+         // Load context menu entries dynamically
+         if (FContext.Count = 0) then
+           LoadContextMenuEntries();
+       end;
+  end;  //of case
 end;
 
 { TMain.bCloseStartupClick

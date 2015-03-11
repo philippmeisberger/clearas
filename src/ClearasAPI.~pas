@@ -262,7 +262,6 @@ type
     function GetFullLocation(): string; override;
   public
     function Delete(): Boolean; override;
-    procedure ExportItem(const AFileName: string); override;
     { external }
     property Caption: string read FCaption write FCaption;
     property Location: string read GetKeyPath;
@@ -277,6 +276,7 @@ type
     function ChangeFilePath(const ANewFilePath: string): Boolean; override;
     function Disable(): Boolean; override;
     function Enable(): Boolean; override;
+    procedure ExportItem(const AFileName: string); override;
   end;
 
   { TShellExItem }
@@ -287,6 +287,7 @@ type
     function ChangeFilePath(const ANewFilePath: string): Boolean; override;
     function Disable(): Boolean; override;
     function Enable(): Boolean; override;
+    procedure ExportItem(const AFileName: string); override;
   end;
 
   { TContextList }
@@ -1916,29 +1917,29 @@ begin
     Result := AddNewStartupUserItem(Name, AFileName, AArguments);
   end  //of begin
   else
-    begin
-      Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_WRITE));
+  begin
+    Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_WRITE));
 
-      // Try to add new startup item to Registry
-      try
-        Reg.RootKey := HKEY_CURRENT_USER;
-        Reg.OpenKey(KEY_STARTUP, True);
-        FullPath := AFileName;
+    // Try to add new startup item to Registry
+    try
+      Reg.RootKey := HKEY_CURRENT_USER;
+      Reg.OpenKey(KEY_STARTUP, True);
+      FullPath := AFileName;
 
-        // Append arguments if used
-        if (AArguments <> '') then
-          FullPath := FullPath +' '+ AArguments;
+      // Append arguments if used
+      if (AArguments <> '') then
+        FullPath := FullPath +' '+ AArguments;
 
-        Reg.WriteString(ADisplayedName, FullPath);
+      Reg.WriteString(ADisplayedName, FullPath);
 
-        // Adds item to list
-        Result := (AddItemEnabled('HKCU', KEY_STARTUP, ADisplayedName, FullPath) <> -1);
+      // Adds item to list
+      Result := (AddItemEnabled('HKCU', KEY_STARTUP, ADisplayedName, FullPath) <> -1);
 
-      finally
-        Reg.CloseKey();
-        Reg.Free;
-      end;  //of try
-    end;  //of begin
+    finally
+      Reg.CloseKey();
+      Reg.Free;
+    end;  //of try
+  end;  //of begin
 end;
 
 { public TStartupList.BackupExists
@@ -2240,25 +2241,6 @@ begin
   Result := True;
 end;
 
-{ public TContextListItem.ExportItem
-
-  Exports an list item as .reg file. }
-
-procedure TContextListItem.ExportItem(const AFileName: string);
-var
-  RegFile: TRegistryFile;
-
-begin
-  RegFile := TRegistryFile.Create(AFileName, True);
-
-  try
-    RegFile.ExportReg(HKEY_CLASSES_ROOT, GetKeyPath(), True);
-
-  finally
-    RegFile.Free;
-  end;  //of try
-end;
-
 
 { TShellItem }
 
@@ -2362,6 +2344,25 @@ begin
   finally
     Reg.CloseKey();
     Reg.Free;
+  end;  //of try
+end;
+
+{ public TShellItem.ExportItem
+
+  Exports a TShellItem object as .reg file. }
+
+procedure TShellItem.ExportItem(const AFileName: string);
+var
+  RegFile: TRegistryFile;
+
+begin
+  RegFile := TRegistryFile.Create(AFileName, True);
+
+  try
+    RegFile.ExportReg(HKEY_CLASSES_ROOT, GetKeyPath(), True);
+
+  finally
+    RegFile.Free;
   end;  //of try
 end;
 
@@ -2510,6 +2511,44 @@ begin
   end;  //of try
 end;
 
+{ public TShellExItem.ExportItem
+
+  Exports a TShellExItem object as .reg file. }
+
+procedure TShellExItem.ExportItem(const AFileName: string);
+var
+  RegFile: TRegistryFile;
+  Reg: TRegistry;
+  GUID, Key: string;
+
+begin
+  RegFile := TRegistryFile.Create(AFileName, True);
+  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));
+
+  try
+    Reg.RootKey := HKEY_CLASSES_ROOT;
+
+    if Reg.OpenKey(GetKeyPath(), False) then
+    begin
+      GUID := Reg.ReadString('');
+      Key := Format(CM_SHELLEX_FILE, [GUID]);
+      Reg.CloseKey();
+
+      // Key exists?
+      if Reg.OpenKey(Key, False) then
+        RegFile.ExportKey(HKEY_CLASSES_ROOT, Key, True);
+    end;  //of begin
+
+    RegFile.ExportKey(HKEY_CLASSES_ROOT, GetKeyPath(), True);
+    RegFile.Save();
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
+    RegFile.Free;
+  end;  //of try
+end;
+
 
 { TContextList }
 
@@ -2575,7 +2614,7 @@ begin
     Reg.CloseKey();
 
     if not Reg.OpenKey(KeyName +'\command', True) then
-      raise EContextMenuException.Create('Could not create key!');
+      raise EContextMenuException.Create('Could not create "command" key!');
 
     // Write command of item
     Reg.WriteString('', FullPath);
@@ -2737,7 +2776,7 @@ var
   Reg: TRegistry;
   i: Integer;
   List: TStringList;
-  Item, Key, KeyName, FilePath, GUID, Caption: string;
+  Item, Key, FilePath, GUID, Caption: string;
   Enabled: Boolean;
 
 begin
@@ -2808,12 +2847,10 @@ begin
         if not Enabled then
           GUID := Copy(GUID, 2, Length(GUID));
 
-        // Set up Registry key
-        KeyName := Format(CM_SHELLEX_FILE, [GUID]);
         Reg.CloseKey();
 
         // Get file path of command
-        if Reg.OpenKey(KeyName, False) then
+        if Reg.OpenKey(Format(CM_SHELLEX_FILE, [GUID]), False) then
           FilePath := Reg.ReadString('');
 
         // Add item to list
