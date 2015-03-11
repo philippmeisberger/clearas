@@ -412,7 +412,7 @@ object Info: TInfo
           'History'
           '--------'
           ''
-          'Version 4.0  [11.03.15]'
+          'Version 4.0  [13.03.15]'
           ''
           '- API Version 4.1'
           '- Multi-Threaded'
@@ -422,7 +422,7 @@ object Info: TInfo
           
             '    - Dateipfade sowie Parameter k'#246'nnen nach eigenem Ermessen be' +
             'arbeitet '
-          'werden'
+          '      werden'
           
             '  - Funktion "Nach Programm suchen" entfernt (durch "Pfad bearbe' +
             'iten" ersetzt)'
@@ -463,9 +463,9 @@ object Info: TInfo
             '  - Gel'#246'schte Autostart Elemente werden nun korrekt aus Liste ge' +
             'l'#246'scht'
           
-            '  - RunOnce Eintr'#228'ge werden nun auch in 32 Bit Schl'#252'sseln ausgel' +
-            'esen (64 Bit '
-          '    Windows)'
+            '  - RunOnce Eintr'#228'ge werden nun auch in 32 Bit Registry Schl'#252'sse' +
+            'ln ausgelesen '
+          '    (nur 64 Bit Windows)'
           '- Neues Manifest'
           '- Updater v2.2'
           '- OSUtils v2.0.1'

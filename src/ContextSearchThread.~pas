@@ -44,7 +44,7 @@ type
 
 implementation
 
-uses StrUtils;
+uses StrUtils, SysUtils;
 
 { TContextSearchThread }
 
@@ -131,12 +131,13 @@ begin
 
       for i := 0 to Keys.Count - 1 do
       begin
-        // Load ShellEx or Shell context menu items?
-        if AnsiStartsText(Keys[i], 'shellex') then
-          FContextList.LoadContextmenu(AKeyName, False)
-        else
-          if AnsiStartsText(Keys[i], 'shell') then
-            FContextList.LoadContextmenu(AKeyName, True);
+        // Load ShellEx context menu items?
+        if AnsiSameText(Keys[i], 'shellex') then
+          FContextList.LoadContextmenu(AKeyName, False);
+
+        // Load Shell context menu items?
+        if AnsiSameText(Keys[i], 'shell') then
+          FContextList.LoadContextmenu(AKeyName, True);
       end;  //of for
     end;  //of begin
 

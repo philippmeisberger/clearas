@@ -412,7 +412,7 @@ object Info: TInfo
           'History'
           '--------'
           ''
-          'Version 4.0  [10.03.15]'
+          'Version 4.0  [11.03.15]'
           ''
           '- API Version 4.1'
           '- Multi-Threaded'
@@ -464,7 +464,8 @@ object Info: TInfo
             'l'#246'scht'
           
             '  - RunOnce Eintr'#228'ge werden nun auch in 32 Bit Schl'#252'sseln ausgel' +
-            'esen'
+            'esen (64 Bit '
+          '    Windows)'
           '- Neues Manifest'
           '- Updater v2.2'
           '- OSUtils v2.0.1'

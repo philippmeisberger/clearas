@@ -1831,6 +1831,9 @@ begin
     else
     begin
       // Add recycle bin context menu entry
+      Reg.OpenKey(KEY_RECYCLEBIN +'\Clearas', True);
+      Reg.WriteString('', FLang.GetString(37));
+      Reg.CloseKey();
       Reg.OpenKey(KEY_RECYCLEBIN +'\Clearas\command', True);
       Reg.WriteString('', ParamStr(0));
       mmContext.Checked := True;

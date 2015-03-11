@@ -1814,7 +1814,7 @@ var
   Reg: TRegistry;
 
 begin
-  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_WRITE));
+  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
 
   try
     Reg.RootKey := HKEY_CLASSES_ROOT;
@@ -1824,8 +1824,9 @@ begin
     begin
       // Remove recycle bin context menu entry
       Reg.OpenKey(KEY_RECYCLEBIN, False);
-      Reg.DeleteKey('Clearas');
-      mmContext.Checked := False;
+
+      if Reg.DeleteKey('Clearas') then
+        mmContext.Checked := False;
     end  //of begin
     else
     begin

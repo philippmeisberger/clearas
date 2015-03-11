@@ -2763,43 +2763,42 @@ begin
       Caption := GUID;
 
       // Filter empty and important entries
-      if ((Caption <> '') and (Item[1] <> '{') and (GUID[1] <> '@')) then
+      if ((Caption = '') or (Item[1] = '{') or (GUID[1] = '@')) then
+        Continue;
+
+      // Search for shell entries?
+      if ASearchForShellItems then
       begin
-        // Search for shell entries?
-        if ASearchForShellItems then
-        begin
-          // Get status and caption
-          Enabled := not Reg.ValueExists(CM_SHELL_DISABLE);
+        // Get status and caption of Shell item
+        Enabled := not Reg.ValueExists(CM_SHELL_DISABLE);
 
-          // Get file path of command
-          if Reg.OpenKey('command', False) then
-            FilePath := Reg.ReadString('');
+        // Get file path of command
+        if Reg.OpenKey('command', False) then
+          FilePath := Reg.ReadString('');
 
-          // Add item to list
-          AddShellItem(Item, ALocationRoot, FilePath, Caption, Enabled);
-        end  //of begin
-        else
-          // Search for shellex entries
-          begin
-            // Get status and GUID
-            Enabled := (GUID[1] = '{');
+        // Add item to list
+        AddShellItem(Item, ALocationRoot, FilePath, Caption, Enabled);
+      end  //of begin
+      else
+      begin
+        // Get status and GUID of ShellEx item
+        Enabled := (GUID[1] = '{');
 
-            // Disabled ShellEx items got "-" before GUID!
-            if not Enabled then
-              GUID := Copy(GUID, 2, Length(GUID));
+        // Disabled ShellEx items got "-" before GUID!
+        if not Enabled then
+          GUID := Copy(GUID, 2, Length(GUID));
 
-            // Set up Registry key
-            KeyName := Format(CM_SHELLEX_FILE, [GUID]);
-            Reg.CloseKey();
+        // Set up Registry key
+        KeyName := Format(CM_SHELLEX_FILE, [GUID]);
+        Reg.CloseKey();
 
-            // Get file path of command
-            if Reg.OpenKey(KeyName, False) then
-              FilePath := Reg.ReadString('');
+        // Get file path of command
+        if Reg.OpenKey(KeyName, False) then
+          FilePath := Reg.ReadString('');
 
-            // Add item to list
-            AddShellExItem(Item, ALocationRoot, FilePath, Enabled);
-          end  //of begin
-        end;  //of begin
+        // Add item to list
+        AddShellExItem(Item, ALocationRoot, FilePath, Enabled);
+      end;  //of if
     end;  //of for
 
   finally
