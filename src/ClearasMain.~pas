@@ -13,7 +13,7 @@ interface
 uses
   Windows, SysUtils, Classes, Controls, Forms, ComCtrls, StdCtrls, ExtCtrls,
   Dialogs, Menus, Graphics, ClipBrd, ImgList, Registry, StrUtils, ClearasAPI,
-  ClearasInfo, LanguageFile, OSUtils, Updater, AddDialogs;
+  ClearasInfo, LanguageFile, OSUtils, Updater, AddDialogs, ExportListThread;
 
 const
   KEY_RECYCLEBIN = 'CLSID\{645FF040-5081-101B-9F08-00AA002F954E}\shell';
@@ -161,6 +161,7 @@ type
     procedure OnContextSearchProgress(Sender: TObject; const AWorkCount: Cardinal);
     procedure OnContextSearchStart(Sender: TObject; const AWorkCountMax: Cardinal);
     procedure OnContextSearchEnd(Sender: TObject);
+    procedure OnFinishExportList(Sender: TObject);
     procedure OnStartupSearchStart(Sender: TObject; const AWorkCountMax: Cardinal);
     procedure OnStartupSearchEnd(Sender: TObject);
     procedure OnContextItemChanged(Sender: TObject);
@@ -523,6 +524,15 @@ begin
   lwContext.Cursor := crDefault;
   mmLang.Enabled := True;
   mmAdd.Enabled := True;
+  mmExportList.Enabled := True;
+end;
+
+{ private TMain.OnFinishExportList
+
+  Event that is called when export list ends. }
+
+procedure TMain.OnFinishExportList(Sender: TObject);
+begin
   mmExportList.Enabled := True;
 end;
 
@@ -1751,8 +1761,6 @@ begin
   case PageControl.ActivePageIndex of
     0: bExportStartupItem.Click();
     1: bExportContextItem.Click();
-    else
-       FLang.MessageBox([95, 18, NEW_LINE, 53], mtWarning);
   end;  //of case
 end;
 
@@ -1763,6 +1771,7 @@ end;
 procedure TMain.mmExportListClick(Sender: TObject);
 var
   SaveDialog: TSaveDialog;
+  SelectedList: TRootRegList;
 
 begin
   SaveDialog := TSaveDialog.Create(Self);
@@ -1787,10 +1796,22 @@ begin
 
     // User clicked "save"?
     if SaveDialog.Execute then
+    begin
+      // Disable button
+      mmExportList.Enabled := False;
+
       case PageControl.ActivePageIndex of
-        0: FStartup.ExportList(SaveDialog.FileName);
-        1: FContext.ExportList(SaveDialog.FileName);
+        0: SelectedList := FStartup;
+        1: SelectedList := FContext;
       end;  //of case
+
+      // Export list (threaded!)
+      with TExportListThread.Create(SelectedList, SaveDialog.FileName) do
+      begin
+        OnFinish := OnFinishExportList;
+        Resume;
+      end;  //of with
+    end;  //of begin
 
   finally
     SaveDialog.Free;

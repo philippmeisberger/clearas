@@ -165,6 +165,12 @@ type
     property Selected: TRootItem read FItem write FItem;
   end;
 
+  { TRootRegList }
+  TRootRegList = class(TRootList)
+  public
+    procedure ExportList(const AFileName: string); virtual; abstract;
+  end;
+
   { Exception class }
   EStartupException = class(Exception);
 
@@ -211,7 +217,7 @@ type
   end;
 
   { TStartupList }
-  TStartupList = class(TRootList)
+  TStartupList = class(TRootRegList)
   private
     FDeleteBackup: Boolean;
     function DeleteBackupFile(): Boolean;
@@ -235,7 +241,7 @@ type
     function ChangeItemStatus(): Boolean; override;
     function DeleteItem(): Boolean; override;
     function EnableItem(): Boolean; override;
-    procedure ExportList(const AFileName: string);
+    procedure ExportList(const AFileName: string); override;
     function ImportBackup(const AFileName: string): Boolean;
     procedure LoadDisabled(AStartupUser: Boolean);
     procedure LoadEnabled(AAllUsers: Boolean); overload;
@@ -291,7 +297,7 @@ type
   end;
 
   { TContextList }
-  TContextList = class(TRootList)
+  TContextList = class(TRootRegList)
   private
     function GetSelectedItem(): TContextListItem;
     function ItemAt(AIndex: Word): TContextListItem;
@@ -304,7 +310,7 @@ type
     constructor Create;
     function AddItem(AFilePath, AArguments, ALocationRoot,
       ADisplayedName: string): Boolean;
-    procedure ExportList(const AFileName: string);
+    procedure ExportList(const AFileName: string); override;
     function IndexOf(AName, ALocationRoot: string): Integer; overload;
     procedure LoadContextmenu(const ALocationRoot: string); overload;
     procedure LoadContextmenu(const ALocationRoot: string;
@@ -1115,6 +1121,22 @@ function TRootList.Remove(ARootItem: TRootItem): Integer;
 begin
   Result := inherited Remove(ARootItem);
 end;
+
+
+{ TRootRegList }
+
+{ public TRootRegList.ExportList
+
+  Exports a list as .reg file. }
+{
+procedure TRootRegList.ExportList(const AFileName: string);
+var
+  ExportThread: TExportListThread;
+
+begin
+  ExportThread := TExportListThread.Create(Self, AFileName);
+  ExportThread.Resume;
+end;}
 
 
 { TStartupListItem }
@@ -2561,73 +2583,6 @@ begin
   FActCount := 0;
 end;
 
-{ public TContextList.AddItem
-
-  Adds a new contextmenu entry. }
-
-function TContextList.AddItem(AFilePath, AArguments, ALocationRoot,
-  ADisplayedName: string): Boolean;
-var
-  Name, Ext, FullPath, KeyName: string;
-  Reg: TRegistry;
-
-begin
-  Result := False;
-
-  if ((Trim(ALocationRoot) = '') or (Trim(ADisplayedName) = '')) then
-    raise EInvalidArgument.Create('Missing argument!');
-
-  Ext := ExtractFileExt(AFilePath);
-  Name := ChangeFileExt(ExtractFileName(AFilePath), '');
-
-  // Check invalid extension
-  if ((Ext <> '.exe') and (Ext <> '.bat')) then
-    raise EInvalidArgument.Create('Invalid program extension! Must be ".exe"'
-      +' or ".bat"!');
-
-  // File path already exists in another item?
-  if (IndexOf(Name, ALocationRoot) <> -1) then
-    Exit;
-
-  // Escape space char using quotes
-  FullPath := '"'+ AFilePath +'"';
-
-  // Append arguments if used
-  if (AArguments <> '') then
-    FullPath := FullPath +' '+ AArguments;
-
-  // Build Registry key name
-  KeyName := ALocationRoot + CM_SHELL +'\'+ Name;
-
-  // Adds new context item to Registry
-  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_WRITE));
-
-  try
-    Reg.RootKey := HKEY_CLASSES_ROOT;
-
-    if not Reg.OpenKey(KeyName, True) then
-      raise EContextMenuException.Create('Could not create key!');
-
-    // Write caption of item
-    Reg.WriteString('', ADisplayedName);
-    Reg.CloseKey();
-
-    if not Reg.OpenKey(KeyName +'\command', True) then
-      raise EContextMenuException.Create('Could not create "command" key!');
-
-    // Write command of item
-    Reg.WriteString('', FullPath);
-
-    // Adds item to list
-    AddShellItem(Name, ALocationRoot, FullPath, ADisplayedName, True);
-    Result := True;
-
-  finally
-    Reg.CloseKey();
-    Reg.Free;
-  end;  //of try
-end;
-
 { private TContextList.GetSelectedItem
 
   Returns the current selected item as TContextListItem. }
@@ -2697,6 +2652,73 @@ begin
   end;  //of with
 
   Result := Add(Item);
+end;
+
+{ public TContextList.AddItem
+
+  Adds a new contextmenu entry. }
+
+function TContextList.AddItem(AFilePath, AArguments, ALocationRoot,
+  ADisplayedName: string): Boolean;
+var
+  Name, Ext, FullPath, KeyName: string;
+  Reg: TRegistry;
+
+begin
+  Result := False;
+
+  if ((Trim(ALocationRoot) = '') or (Trim(ADisplayedName) = '')) then
+    raise EInvalidArgument.Create('Missing argument!');
+
+  Ext := ExtractFileExt(AFilePath);
+  Name := ChangeFileExt(ExtractFileName(AFilePath), '');
+
+  // Check invalid extension
+  if ((Ext <> '.exe') and (Ext <> '.bat')) then
+    raise EInvalidArgument.Create('Invalid program extension! Must be ".exe"'
+      +' or ".bat"!');
+
+  // File path already exists in another item?
+  if (IndexOf(Name, ALocationRoot) <> -1) then
+    Exit;
+
+  // Escape space char using quotes
+  FullPath := '"'+ AFilePath +'"';
+
+  // Append arguments if used
+  if (AArguments <> '') then
+    FullPath := FullPath +' '+ AArguments;
+
+  // Build Registry key name
+  KeyName := ALocationRoot + CM_SHELL +'\'+ Name;
+
+  // Adds new context item to Registry
+  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_WRITE));
+
+  try
+    Reg.RootKey := HKEY_CLASSES_ROOT;
+
+    if not Reg.OpenKey(KeyName, True) then
+      raise EContextMenuException.Create('Could not create key!');
+
+    // Write caption of item
+    Reg.WriteString('', ADisplayedName);
+    Reg.CloseKey();
+
+    if not Reg.OpenKey(KeyName +'\command', True) then
+      raise EContextMenuException.Create('Could not create "command" key!');
+
+    // Write command of item
+    Reg.WriteString('', FullPath);
+
+    // Adds item to list
+    AddShellItem(Name, ALocationRoot, FullPath, ADisplayedName, True);
+    Result := True;
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
+  end;  //of try
 end;
 
 { public TContextList.ExportList
