@@ -94,6 +94,8 @@ type
     function ExtractArguments(const APath: string): string;
     function ExtractPathToFile(const APath: string): string;
     function GetFullLocation(): string; virtual; abstract;
+    function GetLocation(): string;
+    procedure SetLocation(ALocation: string);
   public
     constructor Create(AIndex: Word; AEnabled, AWow64: Boolean);
     function ChangeFilePath(const ANewFilePath: string): Boolean; virtual; abstract;
@@ -111,7 +113,7 @@ type
     property FilePathOnly: string read GetFilePath;
     property Icon: HICON read GetIcon;
     property ItemIndex: Word read FIndex;
-    property Location: string read FLocation write FLocation;
+    property Location: string read GetLocation write SetLocation;
     property LocationFull: string read GetFullLocation;
     property Name: string read FName write FName;
     property TypeOf: string read FType write FType;
@@ -721,6 +723,40 @@ begin
     Result := Result +'"';
 end;
 
+{ protected TRootItem.GetLocation
+
+  Returns the possible virtualised (by WOW64) location of item in Registry. }
+
+function TRootItem.GetLocation(): string;
+begin
+  if FWow64 then
+  begin
+    if (FLocation = KEY_RUNONCE) then
+      Result := KEY_RUNONCE32
+    else
+      Result := KEY_STARTUP32;
+  end  //of begin
+  else
+    Result := FLocation;
+end;
+
+{ protected TRootItem.SetLocation
+
+  Sets the possible virtualised (by WOW64) location of item in Registry. }
+
+procedure TRootItem.SetLocation(ALocation: string);
+begin
+  if FWow64 then
+  begin
+    if (FLocation = KEY_RUNONCE) then
+      FLocation := KEY_RUNONCE32
+    else
+      FLocation := KEY_STARTUP32;
+  end  //of begin
+  else
+    FLocation := ALocation;
+end;
+
 { public TRootItem.ChangeStatus
 
   Changes the item status. }
@@ -1223,7 +1259,7 @@ end;
 
 function TStartupListItem.GetFullLocation(): string;
 begin
-  Result := TOSUtils.HKeyToStr(TOSUtils.StrToHKey(FRootKey)) +'\'+ FLocation;
+  Result := TOSUtils.HKeyToStr(TOSUtils.StrToHKey(FRootKey)) +'\'+ GetLocation();
 end;
 
 { public TStartupListItem.ChangeFilePath
@@ -1277,26 +1313,13 @@ end;
 procedure TStartupListItem.ExportItem(const AFileName: string);
 var
   RegFile: TRegistryFile;
-  WowLocation: string;
 
 begin
   RegFile := TRegistryFile.Create(AFileName, True);
 
   try
     if FEnabled then
-    begin
-      if FWow64 then
-      begin
-        if (FLocation = KEY_RUNONCE) then
-          WowLocation := KEY_RUNONCE32
-        else
-          WowLocation := KEY_STARTUP32;
-      end  //of begin
-      else
-        WowLocation := FLocation;
-
-      RegFile.ExportReg(TOSUtils.StrToHKey(FRootKey), WowLocation, Name);
-    end  //of begin
+      RegFile.ExportReg(TOSUtils.StrToHKey(FRootKey), GetLocation(), Name)
     else
       RegFile.ExportReg(TOSUtils.StrToHKey(FRootKey), FLocation, False);
 
@@ -1378,13 +1401,7 @@ begin
       raise EStartupException.Create('Could not create key!');
 
     // Write redirected key
-    if FWow64 then
-    begin
-      if (FLocation = KEY_RUNONCE) then
-        FLocation := KEY_RUNONCE32
-      else
-        FLocation := KEY_STARTUP32;
-    end;  //of begin
+    SetLocation(FLocation);
 
     // Write values
     Reg.WriteString('hkey', FRootKey);
