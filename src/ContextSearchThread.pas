@@ -24,6 +24,7 @@ type
     FOnStart, FOnSearching: TSearchEvent;
     FOnFinish: TNotifyEvent;
     FLock: TCriticalSection;
+    FWin64: Boolean;
     procedure DoNotifyOnFinish();
     procedure DoNotifyOnStart();
     procedure DoNotifyOnSearching();
@@ -40,6 +41,7 @@ type
     property OnSearching: TSearchEvent read FOnSearching write FOnSearching;
     property OnStart: TSearchEvent read FOnStart write FOnStart;
     property OnFinish: TNotifyEvent read FOnFinish write FOnFinish;
+    property Win64: Boolean read FWin64 write FWin64;
   end;
 
 implementation
@@ -133,11 +135,11 @@ begin
       begin
         // Load ShellEx context menu items?
         if AnsiSameText(Keys[i], 'shellex') then
-          FContextList.LoadContextmenu(AKeyName, False);
+          FContextList.LoadContextmenu(AKeyName, False, FWin64);
 
         // Load Shell context menu items?
         if AnsiSameText(Keys[i], 'shell') then
-          FContextList.LoadContextmenu(AKeyName, True);
+          FContextList.LoadContextmenu(AKeyName, True, FWin64);
       end;  //of for
     end;  //of begin
 
@@ -201,7 +203,7 @@ begin
   for i := 0 to FLocations.Count - 1 do
   begin
     Synchronize(DoNotifyOnSearching);
-    FContextList.LoadContextmenu(FLocations[i]);
+    FContextList.LoadContextmenu(FLocations[i], FWin64);
     Inc(FProgress);
   end;  //of for
 end;

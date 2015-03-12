@@ -72,7 +72,7 @@ end;
 
 destructor TContextSearchThread.Destroy();
 begin
-  FReg.CloseKey;
+  FReg.CloseKey();
   FReg.Free;
   FLocations.Free;
   inherited Destroy;
@@ -121,8 +121,8 @@ begin
   Keys := TStringList.Create();
 
   try
-    FReg.CloseKey;
-    FReg.OpenKey(AKeyName, False);
+    if not FReg.OpenKey(AKeyName, False) then
+      Exit;
 
     if FReg.HasSubKeys then
     begin
@@ -142,6 +142,7 @@ begin
     end;  //of begin
 
   finally
+    FReg.CloseKey();
     Keys.Free;
   end;  //of try
 end;
@@ -161,6 +162,7 @@ begin
   try
     FReg.OpenKey('', False);
     FReg.GetKeyNames(Hkcr);
+    FReg.CloseKey();
 
     FProgressMax := Hkcr.Count;
     FProgress := 0;

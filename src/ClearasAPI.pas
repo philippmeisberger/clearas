@@ -309,18 +309,19 @@ type
     function ItemAt(AIndex: Word): TContextListItem;
   protected
     function AddShellItem(const AName, ALocationRoot, AFilePath, ACaption: string;
-      AEnabled: Boolean): Integer;
+      AEnabled, AWow64: Boolean): Integer;
     function AddShellExItem(const AName, ALocationRoot, AFilePath: string;
-      AEnabled: Boolean): Integer;
+      AEnabled, AWow64: Boolean): Integer;
   public
     constructor Create;
     function AddItem(AFilePath, AArguments, ALocationRoot,
       ADisplayedName: string): Boolean;
     procedure ExportList(const AFileName: string); override;
     function IndexOf(AName, ALocationRoot: string): Integer; overload;
-    procedure LoadContextmenu(const ALocationRoot: string); overload;
     procedure LoadContextmenu(const ALocationRoot: string;
-      ASearchForShellItems: Boolean); overload;
+      AWow64: Boolean); overload;
+    procedure LoadContextmenu(const ALocationRoot: string;
+      ASearchForShellItems: Boolean; AWow64: Boolean); overload;
     procedure LoadContextMenus(ALocationRootCommaList: string = '');
     { external }
     property Item: TContextListItem read GetSelectedItem;
@@ -2498,7 +2499,11 @@ var
 
 begin
   Result := False;
-  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
+
+  if FWow64 then
+    Reg := TRegistry.Create(KEY_READ or KEY_WRITE)
+  else
+    Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
 
   try
     Reg.RootKey := HKEY_CLASSES_ROOT;
@@ -2639,7 +2644,11 @@ var
 
 begin
   RegFile := TRegistryFile.Create(AFileName, True);
-  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));
+
+  if FWow64 then
+    Reg := TRegistry.Create(KEY_READ)
+  else
+    Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));
 
   try
     Reg.RootKey := HKEY_CLASSES_ROOT;
@@ -2700,12 +2709,12 @@ end;
   Adds a shell item to list. }
 
 function TContextList.AddShellItem(const AName, ALocationRoot, AFilePath,
-  ACaption: string; AEnabled: Boolean): Integer;
+  ACaption: string; AEnabled, AWow64: Boolean): Integer;
 var
   Item: TContextListItem;
 
 begin
-  Item := TShellItem.Create(Count, AEnabled, False);
+  Item := TShellItem.Create(Count, AEnabled, AWow64);
 
   with Item do
   begin
@@ -2727,12 +2736,12 @@ end;
   Adds a shellex item to list. }
 
 function TContextList.AddShellExItem(const AName, ALocationRoot, AFilePath: string;
-  AEnabled: Boolean): Integer;
+  AEnabled, AWow64: Boolean): Integer;
 var
   Item: TContextListItem;
 
 begin
-  Item := TShellExItem.Create(Count, AEnabled, False);
+  Item := TShellExItem.Create(Count, AEnabled, AWow64);
 
   with Item do
   begin
@@ -2806,7 +2815,7 @@ begin
     Reg.WriteString('', FullPath);
 
     // Adds item to list
-    AddShellItem(Name, ALocationRoot, FullPath, ADisplayedName, True);
+    AddShellItem(Name, ALocationRoot, FullPath, ADisplayedName, True, False);
     Result := True;
 
   finally
@@ -2874,10 +2883,11 @@ end;
   Searches for Shell and ShellEx context menu entries in specific Registry key
   and adds them to the list. }
 
-procedure TContextList.LoadContextmenu(const ALocationRoot: string);
+procedure TContextList.LoadContextmenu(const ALocationRoot: string;
+  AWow64: Boolean);
 begin
-  LoadContextmenu(ALocationRoot, True);
-  LoadContextmenu(ALocationRoot, False);
+  LoadContextmenu(ALocationRoot, True, AWow64);
+  LoadContextmenu(ALocationRoot, False, AWow64);
 end;
 
 { public TContextList.LoadContextmenu
@@ -2886,16 +2896,18 @@ end;
   Registry key and adds them to the list. }
 
 procedure TContextList.LoadContextmenu(const ALocationRoot: string;
-  ASearchForShellItems: Boolean);
+  ASearchForShellItems: Boolean; AWow64: Boolean);
 var
   Reg: TRegistry;
   i: Integer;
   List: TStringList;
   Item, Key, FilePath, GuID, Caption: string;
-  Enabled: Boolean;
+  Enabled, Wow64: Boolean;
+  Access64: Cardinal;
 
 begin
-  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));
+  Access64 := TOSUtils.DenyWOW64Redirection(KEY_READ);
+  Reg := TRegistry.Create(Access64);
   List := TStringList.Create;
 
   if ASearchForShellItems then
@@ -2945,7 +2957,7 @@ begin
         FilePath := Reg.ReadString('');
 
         // Add item to list
-        AddShellItem(Item, ALocationRoot, FilePath, Caption, Enabled);
+        AddShellItem(Item, ALocationRoot, FilePath, Caption, Enabled, False);
       end  //of begin
       else
       begin
@@ -2963,13 +2975,25 @@ begin
           GUID := Copy(GuID, 2, Length(GUID));
 
         Reg.CloseKey();
+        Wow64 := False;
 
         // Get file path of command
         if Reg.OpenKey(Format(CM_SHELLEX_FILE, [GuID]), False) then
-          FilePath := Reg.ReadString('');
+          FilePath := Reg.ReadString('')
+        else
+          if AWow64 then
+          begin
+            Reg.Access := KEY_READ;
+            Wow64 := True;
+
+            if Reg.OpenKey(Format(CM_SHELLEX_FILE, [GuID]), False) then
+              FilePath := Reg.ReadString('');
+
+            Reg.Access := Access64;
+          end;  //of if
 
         // Add item to list
-        AddShellExItem(Item, ALocationRoot, FilePath, Enabled);
+        AddShellExItem(Item, ALocationRoot, FilePath, Enabled, Wow64);
       end;  //of if
     end;  //of for
 
@@ -2995,6 +3019,7 @@ begin
   with SearchThread do
   begin
     Locations.CommaText := ALocationRootCommaList;
+    Win64 := TOSUtils.IsWindows64();
     OnStart := FOnSearchStart;
     OnSearching := FOnSearching;
     OnFinish := FOnSearchFinish;
