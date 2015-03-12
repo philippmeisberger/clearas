@@ -168,7 +168,7 @@ type
   { TRootRegList }
   TRootRegList = class(TRootList)
   public
-    procedure ExportList(const AFileName: string); virtual;
+    procedure ExportList(const AFileName: string); virtual; abstract;
   end;
 
   { Exception class }
@@ -324,7 +324,7 @@ type
 
 implementation
 
-uses StartupSearchThread, ContextSearchThread, ExportListThread;
+uses StartupSearchThread, ContextSearchThread;
 
 { TLnkFile }
 
@@ -620,8 +620,17 @@ end;
   Returns only the file path (without arguments) of the item. }
 
 function TRootItem.GetFilePath(): string;
+var
+  Path: string;
+
 begin
-  Result := DeleteQuoteChars(ExtractPathToFile(FFilePath));
+  Path := DeleteQuoteChars(ExtractPathToFile(FFilePath));
+
+  // Path has to be expanded?
+  if ((Path <> '') and (Path[1] = '%')) then
+    Path := TOSUtils.ExpandEnvironmentVar(Path);
+
+  Result := Path;
 end;
 
 { private TRootItem.GetIcon
@@ -743,10 +752,6 @@ var
 begin
   // Extract the file path only (without arguments and quote chars)
   PreparedFileName := GetFilePath();
-
-  // Variable has to be expanded?
-  if ((PreparedFileName <> '') and (PreparedFileName[1] = '%')) then
-    PreparedFileName := TOSUtils.ExpandEnvironmentVar(PreparedFileName);
 
   // 64bit Windows?
   Win64 := TOSUtils.IsWindows64();
@@ -1128,7 +1133,7 @@ end;
 { public TRootRegList.ExportList
 
   Exports a list as .reg file. }
-
+{
 procedure TRootRegList.ExportList(const AFileName: string);
 var
   ExportThread: TExportListThread;
@@ -1136,7 +1141,7 @@ var
 begin
   ExportThread := TExportListThread.Create(Self, AFileName);
   ExportThread.Resume;
-end;
+end;}
 
 
 { TStartupListItem }
@@ -2292,10 +2297,16 @@ begin
 
     // Invalid key?
     if not Reg.OpenKey(GetKeyPath() +'\command', False) then
-      raise Exception.Create('Key does not exist!');
+      raise EContextMenuException.Create('Key does not exist!');
 
     // Change path
-    Reg.WriteString('', ANewFilePath);
+    case Reg.GetDataType('') of
+      rdExpandString: Reg.WriteExpandString('', ANewFilePath);
+      rdString:       Reg.WriteString('', ANewFilePath);
+      else
+                      raise EContextMenuException.Create('Invalid data type!');
+    end;  //of case
+
     FilePath := ANewFilePath;
     Result := True;
 
@@ -2418,7 +2429,7 @@ begin
 
     // Invalid key?
     if not Reg.OpenKey(GetKeyPath(), False) then
-      raise Exception.Create('Key does not exist!');
+      raise EContextMenuException.Create('Key does not exist!');
 
     // Read GUID and setup key of program
     ProgramKeyPath := Format(CM_SHELLEX_FILE, [Reg.ReadString('')]);
@@ -2426,10 +2437,17 @@ begin
 
     // Invalid program key?
     if not Reg.OpenKey(ProgramKeyPath, False) then
-      raise Exception.Create('Key does not exist!');
+      raise EContextMenuException.Create('Program key does not exist!');
 
     // Change path
-    Reg.WriteString('', ANewFilePath);
+    case Reg.GetDataType('') of
+      rdExpandString: Reg.WriteExpandString('', ANewFilePath);
+      rdString:       Reg.WriteString('', ANewFilePath);
+      else
+                      raise EContextMenuException.Create('Invalid data type!');
+    end;  //of case
+
+    // Update path
     FilePath := ANewFilePath;
     Result := True;
 

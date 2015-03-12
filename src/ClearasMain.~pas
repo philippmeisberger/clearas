@@ -1803,6 +1803,8 @@ begin
       case PageControl.ActivePageIndex of
         0: SelectedList := FStartup;
         1: SelectedList := FContext;
+        else
+           Exit;
       end;  //of case
 
       // Export list (threaded!)

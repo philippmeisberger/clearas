@@ -4,7 +4,7 @@ Ein Open-Source Projekt von PM Code Works
 History
 --------
 
-Version 4.0  [10.03.15]
+Version 4.0  [13.03.15]
 
 - API Version 4.1
 - Multi-Threaded
@@ -25,7 +25,7 @@ Version 4.0  [10.03.15]
     - Neue Funktion "Kontextmenü hinzufügen"
     - Neue Funktion "Einträge exportieren"
   - Beschriftungen von Shell-Eintägen werden nun direkt angezeigt
-  - Suchfeld hinzugefügt
+  - "Quick-Search" hinzugefügt
   - "Expertenmodus" verbessert:
     - Suche beschleunigt
     - Mehr Ergebnisse

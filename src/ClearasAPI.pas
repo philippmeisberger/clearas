@@ -620,8 +620,17 @@ end;
   Returns only the file path (without arguments) of the item. }
 
 function TRootItem.GetFilePath(): string;
+var
+  Path: string;
+
 begin
-  Result := DeleteQuoteChars(ExtractPathToFile(FFilePath));
+  Path := DeleteQuoteChars(ExtractPathToFile(FFilePath));
+
+  // Path has to be expanded?
+  if ((Path <> '') and (Path[1] = '%')) then
+    Path := TOSUtils.ExpandEnvironmentVar(Path);
+
+  Result := Path;
 end;
 
 { private TRootItem.GetIcon
@@ -743,10 +752,6 @@ var
 begin
   // Extract the file path only (without arguments and quote chars)
   PreparedFileName := GetFilePath();
-
-  // Variable has to be expanded?
-  if ((PreparedFileName <> '') and (PreparedFileName[1] = '%')) then
-    PreparedFileName := TOSUtils.ExpandEnvironmentVar(PreparedFileName);
 
   // 64bit Windows?
   Win64 := TOSUtils.IsWindows64();
@@ -2292,10 +2297,16 @@ begin
 
     // Invalid key?
     if not Reg.OpenKey(GetKeyPath() +'\command', False) then
-      raise Exception.Create('Key does not exist!');
+      raise EContextMenuException.Create('Key does not exist!');
 
     // Change path
-    Reg.WriteString('', ANewFilePath);
+    case Reg.GetDataType('') of
+      rdExpandString: Reg.WriteExpandString('', ANewFilePath);
+      rdString:       Reg.WriteString('', ANewFilePath);
+      else
+                      raise EContextMenuException.Create('Invalid data type!');
+    end;  //of case
+
     FilePath := ANewFilePath;
     Result := True;
 
@@ -2418,7 +2429,7 @@ begin
 
     // Invalid key?
     if not Reg.OpenKey(GetKeyPath(), False) then
-      raise Exception.Create('Key does not exist!');
+      raise EContextMenuException.Create('Key does not exist!');
 
     // Read GUID and setup key of program
     ProgramKeyPath := Format(CM_SHELLEX_FILE, [Reg.ReadString('')]);
@@ -2426,10 +2437,17 @@ begin
 
     // Invalid program key?
     if not Reg.OpenKey(ProgramKeyPath, False) then
-      raise Exception.Create('Key does not exist!');
+      raise EContextMenuException.Create('Program key does not exist!');
 
     // Change path
-    Reg.WriteString('', ANewFilePath);
+    case Reg.GetDataType('') of
+      rdExpandString: Reg.WriteExpandString('', ANewFilePath);
+      rdString:       Reg.WriteString('', ANewFilePath);
+      else
+                      raise EContextMenuException.Create('Invalid data type!');
+    end;  //of case
+
+    // Update path
     FilePath := ANewFilePath;
     Result := True;
 
@@ -2797,7 +2815,7 @@ var
   Reg: TRegistry;
   i: Integer;
   List: TStringList;
-  Item, Key, FilePath, GUID, Caption: string;
+  Item, Key, FilePath, GuID, Caption: string;
   Enabled: Boolean;
 
 begin
@@ -2855,23 +2873,23 @@ begin
       end  //of begin
       else
       begin
-        GUID := Reg.ReadString('');
+        GuID := Reg.ReadString('');
 
         // Filter empty and unreadable ShellEx items
-        if ((GUID = '') or (GUID[1] = '@')) then
+        if ((GuID = '') or (GuID[1] = '@')) then
           Continue;
 
         // Get status and GUID of ShellEx item
-        Enabled := (GUID[1] = '{');
+        Enabled := (GuID[1] = '{');
 
         // Disabled ShellEx items got "-" before GUID!
         if not Enabled then
-          GUID := Copy(GUID, 2, Length(GUID));
+          GUID := Copy(GuID, 2, Length(GUID));
 
         Reg.CloseKey();
 
         // Get file path of command
-        if Reg.OpenKey(Format(CM_SHELLEX_FILE, [GUID]), False) then
+        if Reg.OpenKey(Format(CM_SHELLEX_FILE, [GuID]), False) then
           FilePath := Reg.ReadString('');
 
         // Add item to list

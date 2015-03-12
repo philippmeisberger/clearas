@@ -444,7 +444,7 @@ object Info: TInfo
           
             '  - Beschriftungen von Shell-Eint'#228'gen werden nun direkt angezeig' +
             't'
-          '  - Suchfeld hinzugef'#252'gt'
+          '  - "Quick-Search" hinzugef'#252'gt'
           '  - "Expertenmodus" verbessert:'
           '    - Suche beschleunigt'
           '    - Mehr Ergebnisse'
