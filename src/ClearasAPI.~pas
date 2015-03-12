@@ -19,9 +19,11 @@ const
   KEY_DEACT = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\startupreg\';
   KEY_DEACT_FOLDER = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\startupfolder\';
   KEY_RUNONCE = 'SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce';
-  KEY_RUNONCE32 = 'SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnce';
   KEY_STARTUP = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Run';
+
+  { Virtual WOW64 keys }
   KEY_STARTUP32 = 'SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Run';
+  KEY_RUNONCE32 = 'SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnce';
 
   { Context menu Registry subkeys + values}
   CM_SHELL = '\shell';
@@ -86,14 +88,14 @@ type
     function GetFilePath(): string;
     function GetIcon(): HICON;
   protected
-    FEnabled: Boolean;
+    FEnabled, FWow64: Boolean;
     FLocation: string;
     function DeleteQuoteChars(const APath: string): string;
     function ExtractArguments(const APath: string): string;
     function ExtractPathToFile(const APath: string): string;
     function GetFullLocation(): string; virtual; abstract;
   public
-    constructor Create(AIndex: Word; AEnabled: Boolean);
+    constructor Create(AIndex: Word; AEnabled, AWow64: Boolean);
     function ChangeFilePath(const ANewFilePath: string): Boolean; virtual; abstract;
     function ChangeStatus(): Boolean; virtual;
     function Delete(): Boolean; virtual; abstract;
@@ -113,6 +115,7 @@ type
     property LocationFull: string read GetFullLocation;
     property Name: string read FName write FName;
     property TypeOf: string read FType write FType;
+    property Wow64: Boolean read FWow64;
   end;
 
   { TRootRegItem }
@@ -226,9 +229,9 @@ type
     function GetStartupUserType(AReg: TRegistry): string; overload;
     function GetStartupUserType(AAllUsers: Boolean): string; overload;
   protected
-    function AddItemDisabled(AReg: TRegistry): Integer;
+    function AddItemDisabled(AReg: TRegistry; AWow64: Boolean): Integer;
     function AddItemEnabled(const ARootKey, AKeyPath, AName,
-      AFileName: string): Integer;
+      AFileName: string; AWow64: Boolean): Integer;
     function AddNewStartupUserItem(AName, AFilePath: string;
       AArguments: string = ''; AAllUsers: Boolean = False): Boolean;
     function AddUserItemDisabled(AReg: TRegistry): Integer;
@@ -243,9 +246,10 @@ type
     function EnableItem(): Boolean; override;
     procedure ExportList(const AFileName: string); override;
     function ImportBackup(const AFileName: string): Boolean;
-    procedure LoadDisabled(AStartupUser: Boolean);
+    procedure LoadDisabled(AStartupUser: Boolean; AWow64: Boolean = False);
     procedure LoadEnabled(AAllUsers: Boolean); overload;
-    procedure LoadEnabled(const ARootKey, AKeyPath: string); overload;
+    procedure LoadEnabled(const ARootKey, AKeyPath: string;
+      AWow64: Boolean = False); overload;
     procedure LoadStartup(AIncludeRunOnce: Boolean);
     { external }
     property DeleteBackup: Boolean read FDeleteBackup write FDeleteBackup;
@@ -599,11 +603,12 @@ end;
 
   General constructor for creating a TRootItem instance. }
 
-constructor TRootItem.Create(AIndex: Word; AEnabled: Boolean);
+constructor TRootItem.Create(AIndex: Word; AEnabled, AWow64: Boolean);
 begin
   inherited Create;
   FIndex := AIndex;
   FEnabled := AEnabled;
+  FWow64 := AWow64;
 end;
 
 { private TRootItem.GetArguments
@@ -816,7 +821,10 @@ var
   Reg: TRegistry;
 
 begin
-  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_WRITE));
+  if FWow64 then
+    Reg := TRegistry.Create(KEY_WRITE)
+  else
+    Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_WRITE);
 
   try
     Reg.RootKey := TOSUtils.StrToHKey(ARootKey);
@@ -844,8 +852,8 @@ begin
   // Set the Registry key to show
   WriteValue('HKCU', KEY_REGEDIT, 'LastKey', 'Computer\'+ GetFullLocation());
 
-  // Deny WOW64 redirection only on 64bit Windows
-  if TOSUtils.IsWindows64() then
+  // Deny WOW64 redirection only on 64 Bit Windows for 64 Bit items
+  if (TOSUtils.IsWindows64() xor (FEnabled and FWow64)) then
   begin
     TOSUtils.Wow64FsRedirection(True);
     TOSUtils.ExecuteProgram('regedit.exe');
@@ -1128,22 +1136,6 @@ begin
 end;
 
 
-{ TRootRegList }
-
-{ public TRootRegList.ExportList
-
-  Exports a list as .reg file. }
-{
-procedure TRootRegList.ExportList(const AFileName: string);
-var
-  ExportThread: TExportListThread;
-
-begin
-  ExportThread := TExportListThread.Create(Self, AFileName);
-  ExportThread.Resume;
-end;}
-
-
 { TStartupListItem }
 
 { private TStartupListItem.GetTimestamp
@@ -1245,7 +1237,11 @@ var
 
 begin
   Result := False;
-  Reg := TRegistry.Create(TWinWOW64.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
+
+  if (FEnabled and FWow64) then
+    Reg := TRegistry.Create(KEY_READ or KEY_WRITE)
+  else
+    Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
 
   try
     Reg.RootKey := TOSUtils.StrToHKey(FRootKey);
@@ -1281,13 +1277,26 @@ end;
 procedure TStartupListItem.ExportItem(const AFileName: string);
 var
   RegFile: TRegistryFile;
+  WowLocation: string;
 
 begin
   RegFile := TRegistryFile.Create(AFileName, True);
 
   try
     if FEnabled then
-      RegFile.ExportReg(TOSUtils.StrToHKey(FRootKey), FLocation, Name)
+    begin
+      if FWow64 then
+      begin
+        if (FLocation = KEY_RUNONCE) then
+          WowLocation := KEY_RUNONCE32
+        else
+          WowLocation := KEY_STARTUP32;
+      end  //of begin
+      else
+        WowLocation := FLocation;
+
+      RegFile.ExportReg(TOSUtils.StrToHKey(FRootKey), WowLocation, Name);
+    end  //of begin
     else
       RegFile.ExportReg(TOSUtils.StrToHKey(FRootKey), FLocation, False);
 
@@ -1309,7 +1318,11 @@ var
 
 begin
   Result := False;
-  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
+
+  if (FEnabled and FWow64) then
+    Reg := TRegistry.Create(KEY_READ or KEY_WRITE)
+  else
+    Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
 
   try
     if FEnabled then
@@ -1364,6 +1377,15 @@ begin
     if not Reg.OpenKey(KEY_DEACT + Name, True) then
       raise EStartupException.Create('Could not create key!');
 
+    // Write redirected key
+    if FWow64 then
+    begin
+      if (FLocation = KEY_RUNONCE) then
+        FLocation := KEY_RUNONCE32
+      else
+        FLocation := KEY_STARTUP32;
+    end;  //of begin
+
     // Write values
     Reg.WriteString('hkey', FRootKey);
     Reg.WriteString('key', FLocation);
@@ -1378,6 +1400,11 @@ begin
 
     // Open startup location
     Reg.CloseKey();
+
+    // Allow redirection to 32 Bit key
+    if FWow64 then
+      Reg.Access := KEY_READ or KEY_WRITE;
+
     Reg.RootKey := TOSUtils.StrToHKey(FRootKey);
     Reg.OpenKey(FLocation, False);
 
@@ -1405,10 +1432,12 @@ function TStartupItem.Enable(): Boolean;
 var
   Reg: TRegistry;
   NewHKey, NewKeyPath: string;
+  Access64: Cardinal;
 
 begin
   Result := False;
-  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
+  Access64 := TOSUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE);
+  Reg := TRegistry.Create(Access64);
 
   try
     Reg.RootKey := HKEY_LOCAL_MACHINE;
@@ -1423,11 +1452,25 @@ begin
     // Set new values
     NewHKey := Reg.ReadString('hkey');
     NewKeyPath := Reg.ReadString('key');
+
+    // Allow redirection to 32 Bit key
+    if FWow64 then
+    begin
+      if (NewKeyPath = KEY_RUNONCE32) then
+        NewKeyPath := KEY_RUNONCE
+      else
+        NewKeyPath := KEY_STARTUP;
+    end;  //of begin
+
     Reg.CloseKey;
 
     if ((NewHKey = '') or (NewKeyPath = '')) then
       raise EStartupException.Create('Invalid destination Registry values for '
         +'"hkey" or "key"!');
+
+    // Allow redirection to 32 Bit key
+    if FWow64 then
+      Reg.Access := KEY_READ or KEY_WRITE;
 
     Reg.RootKey := TOSUtils.StrToHKey(NewHKey);
 
@@ -1440,6 +1483,7 @@ begin
 
     // Delete old key
     Reg.CloseKey();
+    Reg.Access := Access64;
     Reg.RootKey := HKEY_LOCAL_MACHINE;
     Reg.OpenKey(KEY_DEACT, False);
 
@@ -1743,12 +1787,12 @@ end;
 
   Adds a disabled default startup item to the list. }
 
-function TStartupList.AddItemDisabled(AReg: TRegistry): Integer;
+function TStartupList.AddItemDisabled(AReg: TRegistry; AWow64: Boolean): Integer;
 var
   Item: TStartupListItem;
 
 begin
-  Item := TStartupItem.Create(Count, False);
+  Item := TStartupItem.Create(Count, False, AWow64);
 
   try
     with Item do
@@ -1774,12 +1818,12 @@ end;
   Adds a enabled default startup item to the list. }
 
 function TStartupList.AddItemEnabled(const ARootKey, AKeyPath, AName,
-  AFileName: string): Integer;
+  AFileName: string; AWow64: Boolean): Integer;
 var
   Item: TStartupListItem;
 
 begin
-  Item := TStartupItem.Create(Count, True);
+  Item := TStartupItem.Create(Count, True, AWow64);
 
   try
     with Item do
@@ -1839,7 +1883,7 @@ var
   Path, Ext: string;
 
 begin
-  Item := TStartupUserItem.Create(Count, False);
+  Item := TStartupUserItem.Create(Count, False, False);
 
   try
     with (Item as TStartupUserItem) do
@@ -1881,7 +1925,7 @@ var
   Item: TStartupListItem;
 
 begin
-  Item := TStartupUserItem.Create(Count, True);
+  Item := TStartupUserItem.Create(Count, True, False);
 
   try
     // Read .lnk file
@@ -1960,7 +2004,8 @@ begin
       Reg.WriteString(ADisplayedName, FullPath);
 
       // Adds item to list
-      Result := (AddItemEnabled('HKCU', KEY_STARTUP, ADisplayedName, FullPath) <> -1);
+      Result := (AddItemEnabled('HKCU', KEY_STARTUP, ADisplayedName, FullPath,
+        False) <> -1);
 
     finally
       Reg.CloseKey();
@@ -2105,12 +2150,13 @@ end;
 
   Searches for disabled items in AKeyPath and adds them to the list. }
 
-procedure TStartupList.LoadDisabled(AStartupUser: Boolean);
+procedure TStartupList.LoadDisabled(AStartupUser: Boolean; AWow64: Boolean = False);
 var
   Reg: TRegistry;
   Items: TStringList;
   KeyPath: string;
   i: Integer;
+  Wow64: Boolean;
 
 begin
   Items := TStringList.Create;
@@ -2131,10 +2177,15 @@ begin
       Reg.CloseKey();
       Reg.OpenKey(KeyPath + Items[i], False);
 
-      if AStartupUser then
-        AddUserItemDisabled(Reg)
+      if not AStartupUser then
+      begin
+        if AWow64 then
+          Wow64 := AnsiContainsText(Reg.ReadString('key'), 'Wow64');
+
+        AddItemDisabled(Reg, Wow64);
+      end  //of begin
       else
-        AddItemDisabled(Reg);
+        AddUserItemDisabled(Reg);
     end;  //of for
 
   finally
@@ -2192,7 +2243,8 @@ end;
 
   Searches for enabled items in ARootKey and AKeyPath and adds them to the list. }
 
-procedure TStartupList.LoadEnabled(const ARootKey, AKeyPath: string);
+procedure TStartupList.LoadEnabled(const ARootKey, AKeyPath: string;
+  AWow64: Boolean = False);
 var
   Reg: TRegistry;
   Items: TStringList;
@@ -2203,7 +2255,12 @@ begin
     raise EStartupException.Create('Invalid startup key!');
   
   Items := TStringList.Create;
-  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));
+
+  // Allow WOW64 redirection?
+  if AWow64 then
+    Reg := TRegistry.Create(KEY_READ)
+  else
+    Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));
 
   try
     Reg.RootKey := TOSUtils.StrToHKey(ARootKey);
@@ -2212,7 +2269,7 @@ begin
 
     for i := 0 to Items.Count - 1 do
       // Read path to .exe and add item to list
-      AddItemEnabled(ARootKey, AKeyPath, Items[i], Reg.ReadString(Items[i]));
+      AddItemEnabled(ARootKey, AKeyPath, Items[i], Reg.ReadString(Items[i]), AWOW64);
 
   finally
     Reg.CloseKey();
@@ -2629,7 +2686,7 @@ var
   Item: TContextListItem;
 
 begin
-  Item := TShellItem.Create(Count, AEnabled);
+  Item := TShellItem.Create(Count, AEnabled, False);
 
   with Item do
   begin
@@ -2656,7 +2713,7 @@ var
   Item: TContextListItem;
 
 begin
-  Item := TShellExItem.Create(Count, AEnabled);
+  Item := TShellExItem.Create(Count, AEnabled, False);
 
   with Item do
   begin
@@ -2815,7 +2872,7 @@ var
   Reg: TRegistry;
   i: Integer;
   List: TStringList;
-  Item, Key, FilePath, GUID, Caption: string;
+  Item, Key, FilePath, GuID, Caption: string;
   Enabled: Boolean;
 
 begin
@@ -2873,23 +2930,23 @@ begin
       end  //of begin
       else
       begin
-        GUID := Reg.ReadString('');
+        GuID := Reg.ReadString('');
 
         // Filter empty and unreadable ShellEx items
-        if ((GUID = '') or (GUID[1] = '@')) then
+        if ((GuID = '') or (GuID[1] = '@')) then
           Continue;
 
         // Get status and GUID of ShellEx item
-        Enabled := (GUID[1] = '{');
+        Enabled := (GuID[1] = '{');
 
         // Disabled ShellEx items got "-" before GUID!
         if not Enabled then
-          GUID := Copy(GUID, 2, Length(GUID));
+          GUID := Copy(GuID, 2, Length(GUID));
 
         Reg.CloseKey();
 
         // Get file path of command
-        if Reg.OpenKey(Format(CM_SHELLEX_FILE, [GUID]), False) then
+        if Reg.OpenKey(Format(CM_SHELLEX_FILE, [GuID]), False) then
           FilePath := Reg.ReadString('');
 
         // Add item to list

@@ -26,8 +26,9 @@ type
     procedure DoNotifyOnSearching();
     procedure DoNotifyOnStart();
     procedure LoadEnabled(const AAllUsers: Boolean); overload;
-    procedure LoadEnabled(const AHKey, AKeyName: string); overload;
-    procedure LoadDisabled(const AKeyName: string);
+    procedure LoadEnabled(const AHKey, AKeyName: string;
+      AWow64: Boolean = False); overload;
+    procedure LoadDisabled(AStartupUser: Boolean; AWow64: Boolean = False);
   protected
     procedure Execute; override;
   public
@@ -104,20 +105,22 @@ end;
 
   Searches for enabled startup items and adds them to the list. }
 
-procedure TStartupSearchThread.LoadEnabled(const AHKey, AKeyName: string);
+procedure TStartupSearchThread.LoadEnabled(const AHKey, AKeyName: string;
+  AWow64: Boolean = False);
 begin
   Synchronize(DoNotifyOnSearching);
-  FStartupList.LoadEnabled(AHKey, AKeyName);
+  FStartupList.LoadEnabled(AHKey, AKeyName, AWow64);
 end;
 
 { private TStartupSearchThread.LoadEnabled
 
   Searches for disabled startup user items and adds them to the list. }
 
-procedure TStartupSearchThread.LoadDisabled(const AKeyName: string);
+procedure TStartupSearchThread.LoadDisabled(AStartupUser: Boolean;
+  AWow64: Boolean = False);
 begin
   Synchronize(DoNotifyOnSearching);
-  FStartupList.LoadDisabled(AKeyName);
+  FStartupList.LoadDisabled(AStartupUser);
 end;
 
 { protected TContextMenuSearchThread.Execute
@@ -155,7 +158,7 @@ begin
 
   // Load WOW6432 Registry key only on 64bit Windows
   if FWin64 then
-    LoadEnabled('HKLM', KEY_STARTUP32);
+    LoadEnabled('HKLM', KEY_STARTUP, True);
 
   // Read RunOnce entries?
   if FIncludeRunOnce then
@@ -166,16 +169,16 @@ begin
     // Load WOW6432 Registry keys only on 64bit Windows
     if FWin64 then
     begin
-      LoadEnabled('HKLM', KEY_RUNONCE32);
-      LoadEnabled('HKCU', KEY_RUNONCE32);
+      LoadEnabled('HKLM', KEY_RUNONCE, True);
+      LoadEnabled('HKCU', KEY_RUNONCE, True);
     end;  //of begin
   end;  //of begin
 
   LoadEnabled('HKCU', KEY_STARTUP);
   LoadEnabled(True);
   LoadEnabled(False);
-  LoadDisabled(KEY_DEACT);
-  LoadDisabled(KEY_DEACT_FOLDER);
+  LoadDisabled(False, True);
+  LoadDisabled(True, True);
 
   // Notify end of search
   Synchronize(DoNotifyOnFinish);

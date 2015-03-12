@@ -26,8 +26,9 @@ type
     procedure DoNotifyOnSearching();
     procedure DoNotifyOnStart();
     procedure LoadEnabled(const AAllUsers: Boolean); overload;
-    procedure LoadEnabled(const AHKey, AKeyName: string); overload;
-    procedure LoadDisabled(AStartupUser: Boolean);
+    procedure LoadEnabled(const AHKey, AKeyName: string;
+      AWow64: Boolean = False); overload;
+    procedure LoadDisabled(AStartupUser: Boolean; AWow64: Boolean = False);
   protected
     procedure Execute; override;
   public
@@ -104,17 +105,19 @@ end;
 
   Searches for enabled startup items and adds them to the list. }
 
-procedure TStartupSearchThread.LoadEnabled(const AHKey, AKeyName: string);
+procedure TStartupSearchThread.LoadEnabled(const AHKey, AKeyName: string;
+  AWow64: Boolean = False);
 begin
   Synchronize(DoNotifyOnSearching);
-  FStartupList.LoadEnabled(AHKey, AKeyName);
+  FStartupList.LoadEnabled(AHKey, AKeyName, AWow64);
 end;
 
 { private TStartupSearchThread.LoadEnabled
 
   Searches for disabled startup user items and adds them to the list. }
 
-procedure TStartupSearchThread.LoadDisabled(AStartupUser: Boolean);
+procedure TStartupSearchThread.LoadDisabled(AStartupUser: Boolean;
+  AWow64: Boolean = False);
 begin
   Synchronize(DoNotifyOnSearching);
   FStartupList.LoadDisabled(AStartupUser);
