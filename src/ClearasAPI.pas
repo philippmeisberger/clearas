@@ -18,12 +18,12 @@ const
   { Startup Registry keys }
   KEY_DEACT = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\startupreg\';
   KEY_DEACT_FOLDER = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\startupfolder\';
-  KEY_RUNONCE = 'SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce';
-  KEY_STARTUP = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Run';
+  KEY_STARTUP_RUN = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Run';
+  KEY_STARTUP_RUNONCE = 'SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce';
 
-  { Virtual WOW64 keys }
-  KEY_STARTUP32 = 'SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Run';
-  KEY_RUNONCE32 = 'SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnce';
+  { Virtualized WOW64 keys }
+  KEY_STARTUP_RUN32 = 'SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Run';
+  KEY_STARTUP_RUNONCE32 = 'SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnce';
 
   { Context menu Registry subkeys + values}
   CM_SHELL = '\shell';
@@ -94,8 +94,6 @@ type
     function ExtractArguments(const APath: string): string;
     function ExtractPathToFile(const APath: string): string;
     function GetFullLocation(): string; virtual; abstract;
-    function GetLocation(): string;
-    procedure SetLocation(ALocation: string);
   public
     constructor Create(AIndex: Word; AEnabled, AWow64: Boolean);
     function ChangeFilePath(const ANewFilePath: string): Boolean; virtual; abstract;
@@ -113,7 +111,7 @@ type
     property FilePathOnly: string read GetFilePath;
     property Icon: HICON read GetIcon;
     property ItemIndex: Word read FIndex;
-    property Location: string read GetLocation write SetLocation;
+    property Location: string read FLocation write FLocation;
     property LocationFull: string read GetFullLocation;
     property Name: string read FName write FName;
     property TypeOf: string read FType write FType;
@@ -125,9 +123,11 @@ type
   protected
     function DeleteKey(ARootKey, AKeyPath, AKeyName: string;
       AFailIfNotExists: Boolean = True): Boolean;
-    procedure WriteValue(ARootKey, AKeyName, AName, AValue: string);
+    function GetWow64Key(): string;
   public
     procedure OpenInRegEdit(); virtual;
+    { external }
+    property Wow64Location: string read GetWow64Key;
   end;
 
   { Search event }
@@ -179,10 +179,13 @@ type
   { Exception class }
   EStartupException = class(Exception);
 
+  TRootKey = string[4];
+
   { TStartupListItem }
   TStartupListItem = class(TRootRegItem)
   private
-    FRootKey, FTime: string;
+    FRootKey: TRootKey;
+    FTime: string;
     function GetTimestamp(AReg: TRegistry): string;
     procedure WriteTimestamp(AReg: TRegistry);
   protected
@@ -191,7 +194,7 @@ type
     function ChangeFilePath(const ANewFilePath: string): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
     { external }
-    property RootKey: string read FRootKey write FRootKey;
+    property RootKey: TRootKey read FRootKey write FRootKey;
     property Time: string read FTime write FTime;
   end;
 
@@ -232,7 +235,7 @@ type
     function GetStartupUserType(AAllUsers: Boolean): string; overload;
   protected
     function AddItemDisabled(AReg: TRegistry; AWow64: Boolean): Integer;
-    function AddItemEnabled(const ARootKey, AKeyPath, AName,
+    function AddItemEnabled(AHKey: HKEY; AKeyPath, AName,
       AFileName: string; AWow64: Boolean): Integer;
     function AddNewStartupUserItem(AName, AFilePath: string;
       AArguments: string = ''; AAllUsers: Boolean = False): Boolean;
@@ -250,7 +253,7 @@ type
     function ImportBackup(const AFileName: string): Boolean;
     procedure LoadDisabled(AStartupUser: Boolean; AWow64: Boolean = False);
     procedure LoadEnabled(AAllUsers: Boolean); overload;
-    procedure LoadEnabled(const ARootKey, AKeyPath: string;
+    procedure LoadEnabled(AHKey: HKEY; ARunOnce: Boolean = False;
       AWow64: Boolean = False); overload;
     procedure LoadStartup(AIncludeRunOnce: Boolean);
     { external }
@@ -724,40 +727,6 @@ begin
     Result := Result +'"';
 end;
 
-{ protected TRootItem.GetLocation
-
-  Returns the possible virtualised (by WOW64) location of item in Registry. }
-
-function TRootItem.GetLocation(): string;
-begin
-  if FWow64 then
-  begin
-    if (FLocation = KEY_RUNONCE) then
-      Result := KEY_RUNONCE32
-    else
-      Result := KEY_STARTUP32;
-  end  //of begin
-  else
-    Result := FLocation;
-end;
-
-{ protected TRootItem.SetLocation
-
-  Sets the possible virtualised (by WOW64) location of item in Registry. }
-
-procedure TRootItem.SetLocation(ALocation: string);
-begin
-  if FWow64 then
-  begin
-    if (FLocation = KEY_RUNONCE) then
-      FLocation := KEY_RUNONCE32
-    else
-      FLocation := KEY_STARTUP32;
-  end  //of begin
-  else
-    FLocation := ALocation;
-end;
-
 { public TRootItem.ChangeStatus
 
   Changes the item status. }
@@ -849,32 +818,21 @@ begin
   end;  //of try
 end;
 
-{ public TRootRegItem.WriteValue
+{ protected TRootRegItem.GetWow64Key
 
-  Writes a string value to Registry }
+  Returns the virtualized Registry key by WOW64. }
 
-procedure TRootRegItem.WriteValue(ARootKey, AKeyName, AName, AValue: string);
-var
-  Reg: TRegistry;
-
+function TRootRegItem.GetWow64Key(): string;
 begin
-  if FWow64 then
-    Reg := TRegistry.Create(KEY_WRITE)
+  if (FEnabled and FWow64) then
+  begin
+    if (FLocation = KEY_STARTUP_RUNONCE) then
+      Result := KEY_STARTUP_RUNONCE32
+    else
+      Result := KEY_STARTUP_RUN32;
+  end  //of begin
   else
-    Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_WRITE);
-
-  try
-    Reg.RootKey := TOSUtils.StrToHKey(ARootKey);
-
-    if not Reg.OpenKey(AKeyName, True) then
-      raise Exception.Create('Could not open key!');
-
-    Reg.WriteString(AName, AValue);
-
-  finally
-    Reg.CloseKey();
-    Reg.Free;
-  end;  //of try
+    Result := FLocation;
 end;
 
 { public TRootRegItem.OpenInRegEdit
@@ -885,19 +843,38 @@ procedure TRootRegItem.OpenInRegEdit();
 const
   KEY_REGEDIT = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Regedit';
 
-begin
-  // Set the Registry key to show
-  WriteValue('HKCU', KEY_REGEDIT, 'LastKey', 'Computer\'+ GetFullLocation());
+var
+  Reg: TRegistry;
 
-  // Deny WOW64 redirection only on 64 Bit Windows for 64 Bit items
-  if (TOSUtils.IsWindows64() xor (FEnabled and FWow64)) then
-  begin
-    TOSUtils.Wow64FsRedirection(True);
-    TOSUtils.ExecuteProgram('regedit.exe');
-    TOSUtils.Wow64FsRedirection(False);
-  end  //of begin
+begin
+  if FWow64 then
+    Reg := TRegistry.Create(KEY_WRITE)
   else
-    TOSUtils.ExecuteProgram('regedit.exe');
+    Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_WRITE);
+
+  try
+    Reg.RootKey := HKEY_CURRENT_USER;
+
+    if not Reg.OpenKey(KEY_REGEDIT, True) then
+      raise Exception.Create('Could not open key!');
+
+    // Set the Registry key to show
+    Reg.WriteString('LastKey', 'Computer\'+ GetFullLocation());
+
+    // Deny WOW64 redirection only on 64 Bit Windows for 64 Bit items
+    if (TOSUtils.IsWindows64() xor (FEnabled and FWow64)) then
+    begin
+      TOSUtils.Wow64FsRedirection(True);
+      TOSUtils.ExecuteProgram('regedit.exe');
+      TOSUtils.Wow64FsRedirection(False);
+    end  //of begin
+    else
+      TOSUtils.ExecuteProgram('regedit.exe');
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
+  end;  //of try
 end;
 
 
@@ -1260,7 +1237,7 @@ end;
 
 function TStartupListItem.GetFullLocation(): string;
 begin
-  Result := TOSUtils.HKeyToStr(TOSUtils.StrToHKey(FRootKey)) +'\'+ GetLocation();
+  Result := TOSUtils.HKeyToStr(TOSUtils.StrToHKey(FRootKey)) +'\'+ FLocation;
 end;
 
 { public TStartupListItem.ChangeFilePath
@@ -1320,7 +1297,7 @@ begin
 
   try
     if FEnabled then
-      RegFile.ExportReg(TOSUtils.StrToHKey(FRootKey), GetLocation(), Name)
+      RegFile.ExportReg(TOSUtils.StrToHKey(FRootKey), GetWow64Key(), Name)
     else
       RegFile.ExportReg(TOSUtils.StrToHKey(FRootKey), FLocation, False);
 
@@ -1402,7 +1379,13 @@ begin
       raise EStartupException.Create('Could not create key!');
 
     // Write redirected key
-    SetLocation(FLocation);
+    if FWow64 then
+    begin
+      if (FLocation = KEY_STARTUP_RUNONCE) then
+        FLocation := KEY_STARTUP_RUNONCE32
+      else
+        FLocation := KEY_STARTUP_RUN32;
+    end;  //of begin
 
     // Write values
     Reg.WriteString('hkey', FRootKey);
@@ -1454,7 +1437,7 @@ var
 
 begin
   Result := False;
-  Access64 := TOSUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE);
+  Access64 := TOSUtils.DenyWOW64Redirection(KEY_READ);
   Reg := TRegistry.Create(Access64);
 
   try
@@ -1471,43 +1454,41 @@ begin
     NewHKey := Reg.ReadString('hkey');
     NewKeyPath := Reg.ReadString('key');
 
-    // Allow redirection to 32 Bit key
-    if FWow64 then
-    begin
-      if (NewKeyPath = KEY_RUNONCE32) then
-        NewKeyPath := KEY_RUNONCE
-      else
-        NewKeyPath := KEY_STARTUP;
-    end;  //of begin
-
-    Reg.CloseKey;
-
     if ((NewHKey = '') or (NewKeyPath = '')) then
       raise EStartupException.Create('Invalid destination Registry values for '
         +'"hkey" or "key"!');
 
+    Reg.CloseKey;
+
     // Allow redirection to 32 Bit key
     if FWow64 then
+    begin
+      if (ExtractFileName(NewKeyPath) = 'RunOnce') then
+        NewKeyPath := KEY_STARTUP_RUNONCE
+      else
+        NewKeyPath := KEY_STARTUP_RUN;
+
       Reg.Access := KEY_READ or KEY_WRITE;
+    end;  //of begin
 
     Reg.RootKey := TOSUtils.StrToHKey(NewHKey);
 
     // Failed to create new key?
     if not Reg.OpenKey(NewKeyPath, True) then
-      raise EStartupException.Create('Could not open key!');
+      raise EStartupException.Create('Could not open startup key!');
 
     // Write startup entry
     Reg.WriteString(Name, FilePath);
 
     // Delete old key
     Reg.CloseKey();
-    Reg.Access := Access64;
+    Reg.Access := Access64 or KEY_WRITE;
     Reg.RootKey := HKEY_LOCAL_MACHINE;
     Reg.OpenKey(KEY_DEACT, False);
 
     // Do not abort if old key does not exist!
     if (Reg.KeyExists(Name) and not Reg.DeleteKey(Name)) then
-      raise EStartupException.Create('Could not delete key!');
+      raise EStartupException.Create('Could not delete old key!');
 
     // Update information
     FRootKey := NewHKey;
@@ -1835,27 +1816,35 @@ end;
 
   Adds a enabled default startup item to the list. }
 
-function TStartupList.AddItemEnabled(const ARootKey, AKeyPath, AName,
+function TStartupList.AddItemEnabled(AHKey: HKEY; AKeyPath, AName,
   AFileName: string; AWow64: Boolean): Integer;
 var
   Item: TStartupListItem;
+  HKey: string;
 
 begin
   Item := TStartupItem.Create(Count, True, AWow64);
 
   try
+    case AHKey of
+      HKEY_LOCAL_MACHINE: HKey := 'HKLM';
+      HKEY_CURRENT_USER:  HKey := 'HKCU';
+      else
+        raise EStartupException.Create('Invalid startup key!');
+    end;  //of case
+
     with Item do
     begin
-      RootKey := ARootKey;
+      RootKey := HKey;
       FLocation := AKeyPath;
       Name := AName;
       FilePath := AFileName;
       Time := '';
 
-      if ((AKeyPath = KEY_RUNONCE) or (AKeyPath = KEY_RUNONCE32)) then
+      if (AKeyPath = KEY_STARTUP_RUNONCE) then
         TypeOf := 'RunOnce'
       else
-        TypeOf := ARootKey;
+        TypeOf := HKey;
     end;  //of with
 
     Inc(FActCount);
@@ -2012,7 +2001,7 @@ begin
     // Try to add new startup item to Registry
     try
       Reg.RootKey := HKEY_CURRENT_USER;
-      Reg.OpenKey(KEY_STARTUP, True);
+      Reg.OpenKey(KEY_STARTUP_RUN, True);
       FullPath := AFileName;
 
       // Append arguments if used
@@ -2022,8 +2011,8 @@ begin
       Reg.WriteString(ADisplayedName, FullPath);
 
       // Adds item to list
-      Result := (AddItemEnabled('HKCU', KEY_STARTUP, ADisplayedName, FullPath,
-        False) <> -1);
+      Result := (AddItemEnabled(HKEY_CURRENT_USER, KEY_STARTUP_RUN, ADisplayedName,
+        FullPath, False) <> -1);
 
     finally
       Reg.CloseKey();
@@ -2198,7 +2187,7 @@ begin
       if not AStartupUser then
       begin
         if AWow64 then
-          Wow64 := AnsiContainsText(Reg.ReadString('key'), 'Wow64')
+          Wow64 := AnsiContainsText(Reg.ReadString('key'), 'Wow6432Node')
         else
           Wow64 := False;
 
@@ -2263,17 +2252,15 @@ end;
 
   Searches for enabled items in ARootKey and AKeyPath and adds them to the list. }
 
-procedure TStartupList.LoadEnabled(const ARootKey, AKeyPath: string;
+procedure TStartupList.LoadEnabled(AHKey: HKEY; ARunOnce: Boolean = False;
   AWow64: Boolean = False);
 var
   Reg: TRegistry;
   Items: TStringList;
   i: Integer;
+  KeyPath: string;
 
 begin
-  if not AnsiStartsText('Run', ExtractFileName(AKeyPath)) then
-    raise EStartupException.Create('Invalid startup key!');
-  
   Items := TStringList.Create;
 
   // Allow WOW64 redirection?
@@ -2282,14 +2269,20 @@ begin
   else
     Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));
 
+  // Set startup location
+  if ARunOnce then
+    KeyPath := KEY_STARTUP_RUNONCE
+  else
+    KeyPath := KEY_STARTUP_RUN;
+
   try
-    Reg.RootKey := TOSUtils.StrToHKey(ARootKey);
-    Reg.OpenKey(AKeyPath, False);
+    Reg.RootKey := AHKey;
+    Reg.OpenKey(KeyPath, False);
     Reg.GetValueNames(Items);
 
     for i := 0 to Items.Count - 1 do
       // Read path to .exe and add item to list
-      AddItemEnabled(ARootKey, AKeyPath, Items[i], Reg.ReadString(Items[i]), AWOW64);
+      AddItemEnabled(AHKey, KeyPath, Items[i], Reg.ReadString(Items[i]), AWow64);
 
   finally
     Reg.CloseKey();

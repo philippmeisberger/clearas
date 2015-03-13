@@ -11,7 +11,7 @@ unit StartupSearchThread;
 interface
 
 uses
-  Classes, SyncObjs, ClearasAPI;
+  Windows, Classes, SyncObjs, ClearasAPI;
 
 type
   TStartupSearchThread = class(TThread)
@@ -25,10 +25,10 @@ type
     procedure DoNotifyOnFinish();
     procedure DoNotifyOnSearching();
     procedure DoNotifyOnStart();
-    procedure LoadEnabled(const AAllUsers: Boolean); overload;
-    procedure LoadEnabled(const AHKey, AKeyName: string;
+    procedure LoadEnabled(AAllUsers: Boolean); overload;
+    procedure LoadEnabled(AHKey: HKEY; ARunOnce: Boolean = False;
       AWow64: Boolean = False); overload;
-    procedure LoadDisabled(AStartupUser: Boolean; AWow64: Boolean = False);
+    procedure LoadDisabled(AStartupUser: Boolean; AIncludeWow64: Boolean = False);
   protected
     procedure Execute; override;
   public
@@ -95,7 +95,7 @@ end;
 
   Searches for enabled startup user items and adds them to the list. }
 
-procedure TStartupSearchThread.LoadEnabled(const AAllUsers: Boolean);
+procedure TStartupSearchThread.LoadEnabled(AAllUsers: Boolean);
 begin
   Synchronize(DoNotifyOnSearching);
   FStartupList.LoadEnabled(AAllUsers);
@@ -105,11 +105,11 @@ end;
 
   Searches for enabled startup items and adds them to the list. }
 
-procedure TStartupSearchThread.LoadEnabled(const AHKey, AKeyName: string;
-  AWow64: Boolean = False);
+procedure TStartupSearchThread.LoadEnabled(AHKey: HKEY;
+  ARunOnce: Boolean = False; AWow64: Boolean = False);
 begin
   Synchronize(DoNotifyOnSearching);
-  FStartupList.LoadEnabled(AHKey, AKeyName, AWow64);
+  FStartupList.LoadEnabled(AHKey, ARunOnce, AWow64);
 end;
 
 { private TStartupSearchThread.LoadEnabled
@@ -117,10 +117,10 @@ end;
   Searches for disabled startup user items and adds them to the list. }
 
 procedure TStartupSearchThread.LoadDisabled(AStartupUser: Boolean;
-  AWow64: Boolean = False);
+  AIncludeWow64: Boolean = False);
 begin
   Synchronize(DoNotifyOnSearching);
-  FStartupList.LoadDisabled(AStartupUser);
+  FStartupList.LoadDisabled(AStartupUser, AWow64);
 end;
 
 { protected TContextMenuSearchThread.Execute
@@ -154,31 +154,38 @@ begin
   FProgress := 0;
 
   // Start loading...
-  LoadEnabled('HKLM', KEY_STARTUP);
+  LoadEnabled(HKEY_LOCAL_MACHINE);
 
   // Load WOW6432 Registry key only on 64bit Windows
   if FWin64 then
-    LoadEnabled('HKLM', KEY_STARTUP, True);
+  begin
+    LoadEnabled(HKEY_LOCAL_MACHINE, False, True);
+    LoadEnabled(HKEY_CURRENT_USER, False, True);
+  end;  //of begin
+
+  LoadEnabled(HKEY_CURRENT_USER);
 
   // Read RunOnce entries?
   if FIncludeRunOnce then
   begin
-    LoadEnabled('HKLM', KEY_RUNONCE);
-    LoadEnabled('HKCU', KEY_RUNONCE);
+    LoadEnabled(HKEY_LOCAL_MACHINE, True);
+    LoadEnabled(HKEY_CURRENT_USER, True);
 
     // Load WOW6432 Registry keys only on 64bit Windows
     if FWin64 then
     begin
-      LoadEnabled('HKLM', KEY_RUNONCE, True);
-      LoadEnabled('HKCU', KEY_RUNONCE, True);
+      LoadEnabled(HKEY_LOCAL_MACHINE, True, True);
+      LoadEnabled(HKEY_CURRENT_USER, True, True);
     end;  //of begin
   end;  //of begin
 
-  LoadEnabled('HKCU', KEY_STARTUP);
+  // Load WOW6432 Registry key only on 64bit Windows
+  LoadDisabled(False, FWin64);
+  LoadDisabled(True, FWin64);
+
+  // Load startup user items
   LoadEnabled(True);
   LoadEnabled(False);
-  LoadDisabled(False, True);
-  LoadDisabled(True, True);
 
   // Notify end of search
   Synchronize(DoNotifyOnFinish);

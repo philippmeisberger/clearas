@@ -1512,9 +1512,21 @@ end;
   Popup menu entry to show some properties. }
 
 procedure TMain.pmCopyLocationClick(Sender: TObject);
+var
+  Item: TRootItem;
+  RootKey: string;
+
 begin
   try
-    Clipboard.AsText := GetSelectedItem().LocationFull;
+    Item := GetSelectedItem();
+
+    if (Item is TStartupItem) then
+    begin
+      RootKey := TOSUtils.HKeyToStr(TOSUtils.StrToHKey((Item as TStartupItem).RootKey));
+      Clipboard.AsText := RootKey +'\'+ (Item as TStartupItem).Wow64Location;
+    end  //of begin
+    else
+      Clipboard.AsText := Item.LocationFull;
 
   except
     on E: EAbort do
