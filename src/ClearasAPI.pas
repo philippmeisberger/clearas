@@ -826,7 +826,7 @@ function TRootRegItem.GetWow64Key(): string;
 begin
   if (FEnabled and FWow64) then
   begin
-    if (FLocation = KEY_STARTUP_RUNONCE) then
+    if (ExtractFileName(FLocation) = 'RunOnce') then
       Result := KEY_STARTUP_RUNONCE32
     else
       Result := KEY_STARTUP_RUN32;
@@ -2102,7 +2102,7 @@ begin
       if ((Item is TStartupUserItem) and Item.Enabled) then
         Continue;
 
-      RegFile.ExportKey(TOSUtils.StrToHKey(Item.RootKey), Item.Location, True);
+      RegFile.ExportKey(TOSUtils.StrToHKey(Item.RootKey), Item.GetWow64Key(), True);
     end;  //of for
 
     // Save file

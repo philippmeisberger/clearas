@@ -1463,6 +1463,7 @@ begin
     // Allow redirection to 32 Bit key
     if FWow64 then
     begin
+      // RunOnce item?
       if (ExtractFileName(NewKeyPath) = 'RunOnce') then
         NewKeyPath := KEY_STARTUP_RUNONCE
       else
