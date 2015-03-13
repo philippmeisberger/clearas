@@ -123,9 +123,11 @@ type
   protected
     function DeleteKey(ARootKey, AKeyPath, AKeyName: string;
       AFailIfNotExists: Boolean = True): Boolean;
-  public
     function GetWow64Key(): string;
+  public
     procedure OpenInRegEdit(); virtual;
+    { external }
+    property Wow64Location: string read GetWow64Key;
   end;
 
   { Search event }
@@ -816,7 +818,7 @@ begin
   end;  //of try
 end;
 
-{ public TRootRegItem.GetWow64Key
+{ protected TRootRegItem.GetWow64Key
 
   Returns the virtualized Registry key by WOW64. }
 
@@ -1467,7 +1469,9 @@ begin
         NewKeyPath := KEY_STARTUP_RUN;
 
       Reg.Access := KEY_READ or KEY_WRITE;
-    end;  //of begin
+    end  //of begin
+    else
+      Reg.Access := Access64 or KEY_WRITE;
 
     Reg.RootKey := TOSUtils.StrToHKey(NewHKey);
 
@@ -1480,7 +1484,6 @@ begin
 
     // Delete old key
     Reg.CloseKey();
-    Reg.Access := Access64 or KEY_WRITE;
     Reg.RootKey := HKEY_LOCAL_MACHINE;
     Reg.OpenKey(KEY_DEACT, False);
 
@@ -1799,7 +1802,12 @@ begin
       Name := ExtractFileName(FLocation);
       FilePath := AReg.ReadString('command');
       Time := GetTimestamp(AReg);
-      TypeOf := AReg.ReadString('hkey');
+
+      // RunOnce item?
+      if (ExtractFileName(AReg.ReadString('key')) = 'RunOnce') then
+        TypeOf := 'RunOnce'
+      else
+        TypeOf := AReg.ReadString('hkey');
     end;  //of with
 
     Result := Add(Item);
@@ -1839,7 +1847,8 @@ begin
       FilePath := AFileName;
       Time := '';
 
-      if (AKeyPath = KEY_STARTUP_RUNONCE) then
+      // RunOnce item?
+      if (ExtractFileName(AKeyPath) = 'RunOnce') then
         TypeOf := 'RunOnce'
       else
         TypeOf := HKey;

@@ -158,10 +158,7 @@ begin
 
   // Load WOW6432 Registry key only on 64bit Windows
   if FWin64 then
-  begin
     LoadEnabled(HKEY_LOCAL_MACHINE, False, True);
-    LoadEnabled(HKEY_CURRENT_USER, False, True);
-  end;  //of begin
 
   LoadEnabled(HKEY_CURRENT_USER);
 

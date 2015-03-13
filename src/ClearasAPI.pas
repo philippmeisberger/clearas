@@ -1463,13 +1463,16 @@ begin
     // Allow redirection to 32 Bit key
     if FWow64 then
     begin
+      // RunOnce item?
       if (ExtractFileName(NewKeyPath) = 'RunOnce') then
         NewKeyPath := KEY_STARTUP_RUNONCE
       else
         NewKeyPath := KEY_STARTUP_RUN;
 
       Reg.Access := KEY_READ or KEY_WRITE;
-    end;  //of begin
+    end  //of begin
+    else
+      Reg.Access := Access64 or KEY_WRITE;
 
     Reg.RootKey := TOSUtils.StrToHKey(NewHKey);
 
@@ -1482,7 +1485,6 @@ begin
 
     // Delete old key
     Reg.CloseKey();
-    Reg.Access := Access64 or KEY_WRITE;
     Reg.RootKey := HKEY_LOCAL_MACHINE;
     Reg.OpenKey(KEY_DEACT, False);
 
@@ -1801,7 +1803,12 @@ begin
       Name := ExtractFileName(FLocation);
       FilePath := AReg.ReadString('command');
       Time := GetTimestamp(AReg);
-      TypeOf := AReg.ReadString('hkey');
+
+      // RunOnce item?
+      if (ExtractFileName(AReg.ReadString('key')) = 'RunOnce') then
+        TypeOf := 'RunOnce'
+      else
+        TypeOf := AReg.ReadString('hkey');
     end;  //of with
 
     Result := Add(Item);
@@ -1841,7 +1848,8 @@ begin
       FilePath := AFileName;
       Time := '';
 
-      if (AKeyPath = KEY_STARTUP_RUNONCE) then
+      // RunOnce item?
+      if (ExtractFileName(AKeyPath) = 'RunOnce') then
         TypeOf := 'RunOnce'
       else
         TypeOf := HKey;

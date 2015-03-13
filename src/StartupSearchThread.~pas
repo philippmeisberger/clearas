@@ -120,7 +120,7 @@ procedure TStartupSearchThread.LoadDisabled(AStartupUser: Boolean;
   AIncludeWow64: Boolean = False);
 begin
   Synchronize(DoNotifyOnSearching);
-  FStartupList.LoadDisabled(AStartupUser, AWow64);
+  FStartupList.LoadDisabled(AStartupUser, AIncludeWow64);
 end;
 
 { protected TContextMenuSearchThread.Execute
