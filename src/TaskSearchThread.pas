@@ -38,7 +38,7 @@ type
     property OnFinish: TNotifyEvent read FOnFinish write FOnFinish;
     property OnSearching: TSearchEvent read FOnSearching write FOnSearching;
     property OnStart: TSearchEvent read FOnStart write FOnStart;
-    property Path: WideString read FPath write FPath;
+    property Path: WideString read FPath write FPath default '\';
     property Win64: Boolean read FWin64 write FWin64;
   end;
 

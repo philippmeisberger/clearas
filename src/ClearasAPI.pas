@@ -94,6 +94,8 @@ type
     function ExtractArguments(const APath: string): string;
     function ExtractPathToFile(const APath: string): string;
     function GetFullLocation(): string; virtual; abstract;
+    function GetTimestamp(AReg: TRegistry): string;
+    function WriteTimestamp(AReg: TRegistry): string;
   public
     constructor Create(AIndex: Word; AEnabled, AWow64: Boolean);
     function ChangeFilePath(const ANewFilePath: string): Boolean; virtual; abstract;
@@ -186,8 +188,6 @@ type
   private
     FRootKey: TRootKey;
     FTime: string;
-    function GetTimestamp(AReg: TRegistry): string;
-    procedure WriteTimestamp(AReg: TRegistry);
   protected
     function GetFullLocation(): string; override;
   public
@@ -727,6 +727,85 @@ begin
     Result := Result +'"';
 end;
 
+{ protected TRootItem.GetTimestamp
+
+  Returns the deactivation timestamp. }
+
+function TRootItem.GetTimestamp(AReg: TRegistry): string;
+var
+  Year, Month, Day, Hour, Min, Sec: Word;
+  Date, Time: string;
+
+begin
+  // Deactivation timestamp only available for disabled items
+  if FEnabled then
+  begin
+    Result := '';
+    Exit;
+  end;  //of begin
+
+  try
+    // At least one valid date entry exists?
+    if AReg.ValueExists('YEAR') then
+    begin
+      Year := AReg.ReadInteger('YEAR');
+      Month := AReg.ReadInteger('MONTH');
+      Day := AReg.ReadInteger('DAY');
+      Hour := AReg.ReadInteger('HOUR');
+      Min := AReg.ReadInteger('MINUTE');
+      Sec := AReg.ReadInteger('SECOND');
+      Date := FormatDateTime('c', EncodeDate(Year, Month, Day));
+      Time := FormatDateTime('tt', EncodeTime(Hour, Min, Sec, 0));
+      Result := Date +'  '+ Time;
+    end;  //of if
+
+  except
+    // Do not raise exception: Corrupted date is not fatal!
+    Result := '';
+  end;  //of try
+end;
+
+{ protected TRootItem.WriteTimestamp
+
+  Writes the deactivation timestamp. }
+
+function TRootItem.WriteTimestamp(AReg: TRegistry): string;
+var
+  Year, Month, Day, Hour, Min, Sec, MSec: Word;
+  TimeNow: TDateTime;
+
+begin
+  try
+    // Read current time and update current deactivation timestamp
+    TimeNow := Now();
+    Result := FormatDateTime('c', TimeNow);
+
+    // Split current date
+    DecodeDate(TimeNow, Year, Month, Day);
+
+    // Split current time
+    DecodeTime(TimeNow, Hour, Min, Sec, MSec);
+
+    // Write time stamp
+    with AReg do
+    begin
+      WriteInteger('YEAR', Year);
+      WriteInteger('MONTH', Month);
+      WriteInteger('DAY', Day);
+      WriteInteger('HOUR', Hour);
+      WriteInteger('MINUTE', Min);
+      WriteInteger('SECOND', Sec);
+    end;  //of with
+
+  except
+    on E: Exception do
+    begin
+      E.Message := 'Error while writing deactivation timestamp: '+ E.Message;
+      raise;
+    end;  //of begin
+  end;  //of try
+end;
+
 { public TRootItem.ChangeStatus
 
   Changes the item status. }
@@ -1152,85 +1231,6 @@ end;
 
 { TStartupListItem }
 
-{ private TStartupListItem.GetTimestamp
-
-  Returns the deactivation timestamp. }
-
-function TStartupListItem.GetTimestamp(AReg: TRegistry): string;
-var
-  Year, Month, Day, Hour, Min, Sec: Word;
-  Date, Time: string;
-
-begin
-  // Deactivation timestamp only available for disabled items
-  if FEnabled then
-  begin
-    Result := '';
-    Exit;
-  end;  //of begin
-
-  try
-    // At least one valid date entry exists?
-    if AReg.ValueExists('YEAR') then
-    begin
-      Year := AReg.ReadInteger('YEAR');
-      Month := AReg.ReadInteger('MONTH');
-      Day := AReg.ReadInteger('DAY');
-      Hour := AReg.ReadInteger('HOUR');
-      Min := AReg.ReadInteger('MINUTE');
-      Sec := AReg.ReadInteger('SECOND');
-      Date := FormatDateTime('c', EncodeDate(Year, Month, Day));
-      Time := FormatDateTime('tt', EncodeTime(Hour, Min, Sec, 0));
-      Result := Date +'  '+ Time;
-    end;  //of if
-
-  except
-    // Do not raise exception: Corrupted date is not fatal!
-    Result := '';
-  end;  //of try
-end;
-
-{ private TStartupListItem.WriteTimestamp
-
-  Writes the deactivation timestamp. }
-
-procedure TStartupListItem.WriteTimestamp(AReg: TRegistry);
-var
-  Year, Month, Day, Hour, Min, Sec, MSec: Word;
-  TimeNow: TDateTime;
-
-begin
-  try
-    // Read current time and update current deactivation timestamp
-    TimeNow := Now();
-    FTime := FormatDateTime('c', TimeNow);
-
-    // Split current date
-    DecodeDate(TimeNow, Year, Month, Day);
-
-    // Split current time
-    DecodeTime(TimeNow, Hour, Min, Sec, MSec);
-
-    // Write time stamp
-    with AReg do
-    begin
-      WriteInteger('YEAR', Year);
-      WriteInteger('MONTH', Month);
-      WriteInteger('DAY', Day);
-      WriteInteger('HOUR', Hour);
-      WriteInteger('MINUTE', Min);
-      WriteInteger('SECOND', Sec);
-    end;  //of with
-
-  except
-    on E: Exception do
-    begin
-      E.Message := 'Error while writing deactivation timestamp: '+ E.Message;
-      raise;
-    end;  //of begin
-  end;  //of try
-end;
-
 { protected TStartupListItem.GetFullLocation
 
   Returns the full Registry path to a TStartupListItem. }
@@ -1397,7 +1397,7 @@ begin
     // Windows >= Vista?
     if TOSUtils.WindowsVistaOrLater() then
       // Save deactivation timestamp
-      WriteTimestamp(Reg);
+      FTime := WriteTimestamp(Reg);
 
     // Open startup location
     Reg.CloseKey();
@@ -1632,7 +1632,7 @@ begin
     begin
       Reg.WriteString('backupExtension', FLnkFile.BackupExt);
       Reg.WriteString('location', ExtractFileDir(FLocation));
-      WriteTimestamp(Reg);
+      FTime := WriteTimestamp(Reg);
     end  //of begin
     else
       Reg.WriteString('location', TypeOf);

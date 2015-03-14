@@ -14,6 +14,7 @@ uses
   Windows, Classes, SyncObjs, ClearasAPI;
 
 type
+  { TStartupSearchThread }
   TStartupSearchThread = class(TThread)
   private
     FStartupList: TStartupList;
