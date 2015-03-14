@@ -42,6 +42,9 @@ type
     class function IsWindows64(): Boolean;
   end;
 
+  { TRootKey }
+  TRootKey = string[4];
+
   { TOSUtils }
   TOSUtils = class(TWinWOW64)
   public
@@ -65,7 +68,7 @@ type
     class function SetCueBanner(AHandle: THandle; AText: WideString): Integer;
     class function ShowAddRegistryDialog(ARegFilePath: string): Boolean;
     class function Shutdown(): Boolean;
-    class function StrToHKey(const AMainKey: string): HKEY;
+    class function StrToHKey(ARootKey: TRootKey): HKEY;
     class function WindowsVistaOrLater(): Boolean;
   end;
 {$ELSE}
@@ -672,24 +675,24 @@ end;
 
   Converts short HKEY string into real HKEY type. } 
 
-class function TOSUtils.StrToHKey(const AMainKey: string): HKEY;
+class function TOSUtils.StrToHKey(ARootKey: TRootKey): HKEY;
 begin
-  if (AMainKey = 'HKCR') then
+  if (ARootKey = 'HKCR') then
     Result := HKEY_CLASSES_ROOT
   else
-    if (AMainKey = 'HKCU') then
+    if (ARootKey = 'HKCU') then
       Result := HKEY_CURRENT_USER
     else
-      if (AMainKey = 'HKLM') then
+      if (ARootKey = 'HKLM') then
         Result := HKEY_LOCAL_MACHINE
       else
-        if (AMainKey = 'HKU') then
+        if (ARootKey = 'HKU') then
           Result := HKEY_USERS
         else
-          if (AMainKey = 'HKCC') then
+          if (ARootKey = 'HKCC') then
             Result := HKEY_CURRENT_CONFIG
           else
-            raise EInvalidArgument.Create('Unknown HKEY: "'+ AMainKey +'"!');
+            raise EInvalidArgument.Create('Unknown HKEY: "'+ ARootKey +'"!');
 end;
 
 { public TOSUtils.WindowsVistaOrLater

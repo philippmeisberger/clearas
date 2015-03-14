@@ -181,8 +181,6 @@ type
   { Exception class }
   EStartupException = class(Exception);
 
-  TRootKey = string[4];
-
   { TStartupListItem }
   TStartupListItem = class(TRootRegItem)
   private

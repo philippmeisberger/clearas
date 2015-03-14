@@ -95,7 +95,7 @@ type
     function ExtractPathToFile(const APath: string): string;
     function GetFullLocation(): string; virtual; abstract;
     function GetTimestamp(AReg: TRegistry): string;
-    procedure WriteTimestamp(AReg: TRegistry);
+    function WriteTimestamp(AReg: TRegistry): string;
   public
     constructor Create(AIndex: Word; AEnabled, AWow64: Boolean);
     function ChangeFilePath(const ANewFilePath: string): Boolean; virtual; abstract;
@@ -765,11 +765,11 @@ begin
   end;  //of try
 end;
 
-{ protected TStartupListItem.WriteTimestamp
+{ protected TRootItem.WriteTimestamp
 
   Writes the deactivation timestamp. }
 
-procedure TRootItem.WriteTimestamp(AReg: TRegistry);
+function TRootItem.WriteTimestamp(AReg: TRegistry): string;
 var
   Year, Month, Day, Hour, Min, Sec, MSec: Word;
   TimeNow: TDateTime;
@@ -778,7 +778,7 @@ begin
   try
     // Read current time and update current deactivation timestamp
     TimeNow := Now();
-    FTime := FormatDateTime('c', TimeNow);
+    Result := FormatDateTime('c', TimeNow);
 
     // Split current date
     DecodeDate(TimeNow, Year, Month, Day);
@@ -1397,7 +1397,7 @@ begin
     // Windows >= Vista?
     if TOSUtils.WindowsVistaOrLater() then
       // Save deactivation timestamp
-      WriteTimestamp(Reg);
+      FTime := WriteTimestamp(Reg);
 
     // Open startup location
     Reg.CloseKey();
@@ -1632,7 +1632,7 @@ begin
     begin
       Reg.WriteString('backupExtension', FLnkFile.BackupExt);
       Reg.WriteString('location', ExtractFileDir(FLocation));
-      WriteTimestamp(Reg);
+      FTime := WriteTimestamp(Reg);
     end  //of begin
     else
       Reg.WriteString('location', TypeOf);

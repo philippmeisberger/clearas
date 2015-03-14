@@ -679,7 +679,7 @@ begin
     // Startup tab TListView labels
     lStartup.Caption := GetString(82);
     lwStartup.Columns[0].Caption := GetString(91);
-    lwStartup.Columns[2].Caption := mmFile.Caption;
+    lwStartup.Columns[2].Caption := StripHotkey(mmFile.Caption);
     lwStartup.Columns[3].Caption := GetString(92);
     lCopy1.Hint := GetString(29);
 
