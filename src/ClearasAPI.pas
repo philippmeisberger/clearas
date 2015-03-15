@@ -16,14 +16,18 @@ uses
 
 const
   { Startup Registry keys }
-  KEY_DEACT = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\startupreg\';
-  KEY_DEACT_FOLDER = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\startupfolder\';
+  KEY_STARTUP_DISABLED = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\startupreg\';
+  KEY_USER_DISABLED = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\startupfolder\';
   KEY_STARTUP_RUN = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Run';
   KEY_STARTUP_RUNONCE = 'SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce';
 
   { Virtualized WOW64 keys }
   KEY_STARTUP_RUN32 = 'SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Run';
   KEY_STARTUP_RUNONCE32 = 'SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnce';
+
+  { Service Registry keys }
+  KEY_SERVICE_DISABLED = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\services\';
+  KEY_SERVICE_ENABLED = 'SYSTEM\CurrentControlSet\services\';
 
   { Context menu Registry subkeys + values}
   CM_SHELL = '\shell';
@@ -88,7 +92,7 @@ type
     function GetFilePath(): string;
     function GetIcon(): HICON;
   protected
-    FEnabled, FWow64: Boolean;
+    FEnabled: Boolean;
     FLocation: string;
     function DeleteQuoteChars(const APath: string): string;
     function ExtractArguments(const APath: string): string;
@@ -97,7 +101,7 @@ type
     function GetTimestamp(AReg: TRegistry): string;
     function WriteTimestamp(AReg: TRegistry): string;
   public
-    constructor Create(AIndex: Word; AEnabled, AWow64: Boolean);
+    constructor Create(AIndex: Word; AEnabled: Boolean);
     function ChangeFilePath(const ANewFilePath: string): Boolean; virtual; abstract;
     function ChangeStatus(): Boolean; virtual;
     function Delete(): Boolean; virtual; abstract;
@@ -117,18 +121,20 @@ type
     property LocationFull: string read GetFullLocation;
     property Name: string read FName write FName;
     property TypeOf: string read FType write FType;
-    property Wow64: Boolean read FWow64;
   end;
 
   { TRootRegItem }
   TRootRegItem = class(TRootItem)
   protected
+    FWow64: Boolean;
     function DeleteKey(ARootKey, AKeyPath, AKeyName: string;
       AFailIfNotExists: Boolean = True): Boolean;
     function GetWow64Key(): string;
   public
+    constructor Create(AIndex: Word; AEnabled, AWow64: Boolean);
     procedure OpenInRegEdit(); virtual;
     { external }
+    property Wow64: Boolean read FWow64;
     property Wow64Location: string read GetWow64Key;
   end;
 
@@ -329,10 +335,50 @@ type
     property Items[AIndex: Word]: TContextListItem read ItemAt; default;
   end;
 
+    { TServiceStart enum }
+  TServiceStart = (ssBoot, ssSystem, ssAutomatic, ssManual, ssDisabled);
+
+  { TServiceListItem }
+  TServiceListItem = class(TRootRegItem)
+  private
+    FCaption, FTime: string;
+    FServiceStart: TServiceStart;
+  protected
+    function GetFullLocation(): string; override;
+  public
+    function ChangeFilePath(const ANewFilePath: string): Boolean; override;
+    function Delete(): Boolean; override;
+    function Disable(): Boolean; override;
+    function Enable(): Boolean; override;
+    procedure ExportItem(const AFileName: string); override;
+    { external }
+    property Caption: string read FCaption write FCaption;
+    property Start: TServiceStart read FServiceStart write FServiceStart;
+    property Time: string read FTime write FTime;
+  end;
+
+  { TServiceList }
+  TServiceList = class(TRootRegList)
+  private
+    function ItemAt(AIndex: Word): TServiceListItem;
+    function GetSelectedItem(): TServiceListItem;
+  protected
+    function AddService(AName, ACaption: string; AStart: TServiceStart;
+      AReg: TRegistry; AWow64: Boolean = False): Integer;
+  public
+    procedure ExportList(const AFileName: string); override;
+    function IndexOf(const ACaption: string): Integer;
+    procedure LoadService(AName: string; AReg: TRegistry);
+    procedure LoadServices();
+    { external }
+    property Item: TServiceListItem read GetSelectedItem;
+    property Items[AIndex: Word]: TServiceListItem read ItemAt; default;
+  end;
+
 
 implementation
 
-uses StartupSearchThread, ContextSearchThread;
+uses StartupSearchThread, ContextSearchThread, ServiceSearchThread;
 
 { TLnkFile }
 
@@ -607,12 +653,11 @@ end;
 
   General constructor for creating a TRootItem instance. }
 
-constructor TRootItem.Create(AIndex: Word; AEnabled, AWow64: Boolean);
+constructor TRootItem.Create(AIndex: Word; AEnabled: Boolean);
 begin
   inherited Create;
   FIndex := AIndex;
   FEnabled := AEnabled;
-  FWow64 := AWow64;
 end;
 
 { private TRootItem.GetArguments
@@ -861,6 +906,16 @@ end;
 
 
 { TRootRegItem }
+
+{ public TRootRegItem.Create
+
+  General constructor for creating a TRootRegItem instance. }
+
+constructor TRootRegItem.Create(AIndex: Word; AEnabled, AWow64: Boolean);
+begin
+  inherited Create(AIndex, AEnabled);
+  FWow64 := AWow64;
+end;
 
 { protected TRootRegItem.DeleteKey
 
@@ -1341,7 +1396,7 @@ begin
       Reg.RootKey := HKEY_LOCAL_MACHINE;
 
       // Key invalid?
-      if not Reg.OpenKey(KEY_DEACT, False) then
+      if not Reg.OpenKey(KEY_STARTUP_DISABLED, False) then
         raise EStartupException.Create('Key does not exist!');
 
       // Delete key
@@ -1373,7 +1428,7 @@ begin
     Reg.RootKey := HKEY_LOCAL_MACHINE;
 
     // Failed to create new key?
-    if not Reg.OpenKey(KEY_DEACT + Name, True) then
+    if not Reg.OpenKey(KEY_STARTUP_DISABLED + Name, True) then
       raise EStartupException.Create('Could not create key!');
 
     // Write redirected key
@@ -1413,7 +1468,7 @@ begin
 
     // Update information
     FRootKey := 'HKLM';
-    FLocation := KEY_DEACT + Name;
+    FLocation := KEY_STARTUP_DISABLED + Name;
     FEnabled := False;
     Result := True;
 
@@ -1484,7 +1539,7 @@ begin
     // Delete old key
     Reg.CloseKey();
     Reg.RootKey := HKEY_LOCAL_MACHINE;
-    Reg.OpenKey(KEY_DEACT, False);
+    Reg.OpenKey(KEY_STARTUP_DISABLED, False);
 
     // Do not abort if old key does not exist!
     if (Reg.KeyExists(Name) and not Reg.DeleteKey(Name)) then
@@ -1584,7 +1639,7 @@ begin
     Result := True;
   end  //of begin
   else
-    Result := DeleteKey('HKLM', KEY_DEACT_FOLDER, AddCircumflex(FLnkFile.FileName));
+    Result := DeleteKey('HKLM', KEY_USER_DISABLED, AddCircumflex(FLnkFile.FileName));
 end;
 
 { public TStartupUserItem.Disable
@@ -1617,7 +1672,7 @@ begin
     Reg.RootKey := HKEY_LOCAL_MACHINE;
     KeyName := AddCircumflex(FLocation);
 
-    if not Reg.OpenKey(KEY_DEACT_FOLDER + KeyName, True) then
+    if not Reg.OpenKey(KEY_USER_DISABLED + KeyName, True) then
       raise EStartupException.Create('Could not create key!');
 
     Reg.WriteString('path', FLocation);
@@ -1640,7 +1695,7 @@ begin
       raise EStartupException.Create('Could not delete .lnk file!');
 
     // Update information
-    FLocation := KEY_DEACT_FOLDER + KeyName;
+    FLocation := KEY_USER_DISABLED + KeyName;
     FRootKey := 'HKLM';
     FEnabled := False;
     Result := True;
@@ -1672,7 +1727,7 @@ begin
     end;  //of if
 
   // Do not abort if old key could not be deleted
-  if not DeleteKey('HKLM', KEY_DEACT_FOLDER, AddCircumflex(FLnkFile.FileName), False) then
+  if not DeleteKey('HKLM', KEY_USER_DISABLED, AddCircumflex(FLnkFile.FileName), False) then
     raise EStartupException.Create('Could not delete key!');
 
   // Update information
@@ -2177,9 +2232,9 @@ begin
   Reg.RootKey := HKEY_LOCAL_MACHINE;
 
   if AStartupUser then
-    KeyPath := KEY_DEACT_FOLDER
+    KeyPath := KEY_USER_DISABLED
   else
-    KeyPath := KEY_DEACT;
+    KeyPath := KEY_STARTUP_DISABLED;
 
   try
     Reg.OpenKey(KeyPath, False);
@@ -3024,6 +3079,353 @@ begin
     OnFinish := FOnSearchFinish;
     Resume;
   end;  // of with
+end;
+
+
+{ TServiceListItem }
+
+{ protected TServiceListItem.GetFullLocation
+
+  Returns the full Registry path to a TServiceListItem. }
+
+function TServiceListItem.GetFullLocation(): string;
+begin
+  Result := TOSUtils.HKeyToStr(HKEY_LOCAL_MACHINE) +'\'+ FLocation;
+end;
+
+{ public TServiceListItem.ChangeFilePath
+
+  Changes the file path of an TServiceListItem item. }
+
+function TServiceListItem.ChangeFilePath(const ANewFilePath: string): Boolean;
+var
+  Reg: TRegistry;
+
+begin
+  Result := False;
+  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));
+
+  try
+    Reg.RootKey := HKEY_LOCAL_MACHINE;
+
+    if not Reg.OpenKey(FLocation, False) then
+      raise Exception.Create('Key does not exist!');
+
+    Reg.WriteExpandString('ImagePath', ANewFilePath);
+    FilePath := ANewFilePath;
+    Result := True;
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
+  end;  //of try
+end;
+
+{ public TServiceListItem.Delete
+
+  Deletes a TServiceListItem object and returns True if successful. }
+
+function TServiceListItem.Delete(): Boolean;
+begin
+  Result := DeleteKey('HKLM', ExtractFileDir(FLocation), Name);
+
+  // Delete key of deactivated item
+  if not FEnabled then
+    DeleteKey('HKLM', KEY_SERVICE_DISABLED, Name, False);
+end;
+
+{ public TServiceListItem.Disable
+
+  Disables an TServiceListItem object and returns True if successful. }
+
+function TServiceListItem.Disable(): Boolean;
+var
+  Reg: TRegistry;
+
+begin
+  Result := False;
+  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));
+
+  try
+    Reg.RootKey := HKEY_LOCAL_MACHINE;
+
+    if not Reg.OpenKey(FLocation, False) then
+      raise Exception.Create('Key does not exist!');
+
+    // Disable service
+    Reg.WriteInteger('Start', Ord(ssDisabled));
+    Reg.CloseKey();
+
+    // Write disable key
+    if not Reg.OpenKey(KEY_SERVICE_DISABLED + Name, True) then
+      raise Exception.Create('Could not create disable key!');
+
+    // Save service start
+    Reg.WriteInteger(Name, Ord(Start));
+
+    // Update information
+    FTime := WriteTimestamp(Reg);
+    FEnabled := False;
+    Result := True;
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
+  end;  //of try
+end;
+
+{ public TServiceListItem.Enable
+
+  Enables an TServiceListItem object and returns True if successful. }
+
+function TServiceListItem.Enable(): Boolean;
+var
+  Reg: TRegistry;
+
+begin
+  Result := False;
+  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));
+
+  try
+    Reg.RootKey := HKEY_LOCAL_MACHINE;
+
+    if not Reg.OpenKey(FLocation, False) then
+      raise Exception.Create('Key does not exist!');
+
+    // Enable service
+    Reg.WriteInteger('Start', Ord(Start));
+    Reg.CloseKey();
+
+    // Open disable key
+    if not Reg.OpenKey(KEY_SERVICE_DISABLED, False) then
+      raise Exception.Create('Key does not exist!');
+
+    // Delete disable key
+    if (Reg.KeyExists(Name) and not Reg.DeleteKey(Name)) then
+      raise Exception.Create('Could not delete disabled key!');
+
+    // Update information
+    FEnabled := True;
+    FTime := '';
+    Result := True;
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
+  end;  //of try
+end;
+
+{ public TServiceListItem.ExportItem
+
+  Exports a list item as .reg file. }
+
+procedure TServiceListItem.ExportItem(const AFileName: string);
+var
+  RegFile: TRegistryFile;
+
+begin
+  RegFile := TRegistryFile.Create(AFileName, True);
+
+  try
+    if not FEnabled then
+    begin
+      RegFile.ExportKey(HKEY_LOCAL_MACHINE, KEY_SERVICE_DISABLED + Name, False);
+      RegFile.ExportKey(HKEY_LOCAL_MACHINE, FLocation, False);
+      RegFile.Save();
+    end  //of begin
+    else
+      RegFile.ExportReg(HKEY_LOCAL_MACHINE, FLocation, False);
+
+  finally
+    RegFile.Free;
+  end;  //of try
+end;
+
+
+{ TServiceList }
+
+{ private TServiceList.ItemAt
+
+  Returns a TServiceListItem object at index. }
+
+function TServiceList.ItemAt(AIndex: Word): TServiceListItem;
+begin
+  Result := TServiceListItem(RootItemAt(AIndex));
+end;
+
+{ private TServiceList.GetSelectedItem
+
+  Returns the current selected item as TServiceListItem. }
+
+function TServiceList.GetSelectedItem(): TServiceListItem;
+begin
+  Result := TServiceListItem(Selected);
+end;
+
+{ protected TServiceList.AddService
+
+  Adds a service item to the list. }
+
+function TServiceList.AddService(AName, ACaption: string; AStart: TServiceStart;
+  AReg: TRegistry; AWow64: Boolean = False): Integer;
+var
+  Item: TServiceListItem;
+
+begin
+  Item := TServiceListItem.Create(Count, (AStart <> ssDisabled), AWow64);
+
+  try
+    with Item do
+    begin
+      Name := AName;
+      Caption := ACaption;
+      FLocation := AReg.CurrentPath;
+      FilePath := AReg.ReadString('ImagePath');
+      TypeOf := 'Service';
+    end;  //of with
+
+    if not Item.Enabled then
+    begin
+      AReg.CloseKey();
+
+      if not AReg.OpenKey(KEY_SERVICE_DISABLED + AName, False) then
+        raise ERegistryException.Create('Key does not exist!');
+
+      // Try to read deactivation timestamp
+      Item.Time := Item.GetTimestamp(AReg);
+
+      // Read status
+      Item.Start := TServiceStart(AReg.ReadInteger(AName));
+    end  //of begin
+    else
+    begin
+      Item.Start := AStart;
+      Inc(FActCount);
+    end;  //of if
+
+    Result := Add(Item);
+
+  except
+    Item.Free;
+    Result := -1;
+  end;  //of try
+end;
+
+{ public TServiceList.ExportList
+
+  Exports the complete list as .reg file. }
+
+procedure TServiceList.ExportList(const AFileName: string);
+var
+  RegFile: TRegistryFile;
+  i: Integer;
+  Item: TServiceListItem;
+
+begin
+  RegFile := TRegistryFile.Create(AFileName, True);
+
+  try
+    for i := 0 to Count - 1 do
+    begin
+      Item := ItemAt(i);
+      RegFile.ExportKey(HKEY_LOCAL_MACHINE, Item.Location, False);
+
+      if not Item.Enabled then
+        RegFile.ExportKey(HKEY_LOCAL_MACHINE, KEY_SERVICE_DISABLED + Item.Name, False);
+    end;  //of for
+
+    // Save .reg file
+    RegFile.Save();
+
+  finally
+    RegFile.Free;
+  end;  //of try
+end;
+
+{ public TServiceList.IndexOf
+
+  Returns the index of an item checking caption only. }
+
+function TServiceList.IndexOf(const ACaption: string): Integer;
+var
+  i: Integer;
+
+begin
+  Result := -1;
+
+  for i := 0 to Count - 1 do
+    if (ItemAt(i).Caption = ACaption) then
+    begin
+      Result := i;
+      Break;
+    end;  //of begin
+end;
+
+{ public TServiceList.LoadService
+
+  Searches for service items. }
+
+procedure TServiceList.LoadService(AName: string; AReg: TRegistry);
+var
+  Caption: string;
+  Start: TServiceStart;
+  Wow64: Boolean;
+
+begin
+  try
+    if not AReg.OpenKey(KEY_SERVICE_ENABLED + AName, False) then
+      Exit;
+
+    // Skip items without file path
+    if (not AReg.ValueExists('ImagePath') or not AReg.ValueExists('Type')) then
+      Exit;
+
+    // Read status
+    Start := TServiceStart(AReg.ReadInteger('Start'));
+
+    // Skip driver services
+    if ((AReg.ReadInteger('Type') < 16) or (Start <= ssSystem)) then
+      Exit;
+
+    // Display name must be string
+    if (AReg.GetDataType('DisplayName') <> rdString) then
+      Exit;
+
+    // Read caption
+    Caption := AReg.ReadString('DisplayName');
+
+    // Filter only non-Windows services
+    if (Caption <> '') and (Caption[1] = '@') then
+      Exit;
+
+    Wow64 := (AReg.ValueExists('WOW64') and AReg.ReadBool('WOW64'));
+
+    // Add service to list
+    AddService(AName, Caption, Start, AReg, Wow64);
+
+  finally
+    AReg.CloseKey();
+  end;  //of try
+end;
+
+{ public TServiceList.LoadServices
+
+  Searches for service items. }
+
+procedure TServiceList.LoadServices();
+var
+  SearchThread: TServiceSearchThread;
+
+begin
+  SearchThread := TServiceSearchThread.Create(Self, FLock);
+
+  with SearchThread do
+  begin
+    OnStart := OnSearchStart;
+    OnSearching := OnSearching;
+    OnFinish := OnSearchFinish;
+    Resume;
+  end;  //of with
 end;
 
 end.

@@ -16,14 +16,18 @@ uses
 
 const
   { Startup Registry keys }
-  KEY_DEACT = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\startupreg\';
-  KEY_DEACT_FOLDER = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\startupfolder\';
+  KEY_STARTUP_DISABLED = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\startupreg\';
+  KEY_USER_DISABLED = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\startupfolder\';
   KEY_STARTUP_RUN = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Run';
   KEY_STARTUP_RUNONCE = 'SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce';
 
   { Virtualized WOW64 keys }
   KEY_STARTUP_RUN32 = 'SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Run';
   KEY_STARTUP_RUNONCE32 = 'SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnce';
+
+  { Service Registry keys }
+  KEY_SERVICE_DISABLED = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\services\';
+  KEY_SERVICE_ENABLED = 'SYSTEM\CurrentControlSet\services\';
 
   { Context menu Registry subkeys + values}
   CM_SHELL = '\shell';
@@ -88,7 +92,7 @@ type
     function GetFilePath(): string;
     function GetIcon(): HICON;
   protected
-    FEnabled, FWow64: Boolean;
+    FEnabled: Boolean;
     FLocation: string;
     function DeleteQuoteChars(const APath: string): string;
     function ExtractArguments(const APath: string): string;
@@ -97,7 +101,7 @@ type
     function GetTimestamp(AReg: TRegistry): string;
     function WriteTimestamp(AReg: TRegistry): string;
   public
-    constructor Create(AIndex: Word; AEnabled, AWow64: Boolean);
+    constructor Create(AIndex: Word; AEnabled: Boolean);
     function ChangeFilePath(const ANewFilePath: string): Boolean; virtual; abstract;
     function ChangeStatus(): Boolean; virtual;
     function Delete(): Boolean; virtual; abstract;
@@ -117,18 +121,20 @@ type
     property LocationFull: string read GetFullLocation;
     property Name: string read FName write FName;
     property TypeOf: string read FType write FType;
-    property Wow64: Boolean read FWow64;
   end;
 
   { TRootRegItem }
   TRootRegItem = class(TRootItem)
   protected
+    FWow64: Boolean;
     function DeleteKey(ARootKey, AKeyPath, AKeyName: string;
       AFailIfNotExists: Boolean = True): Boolean;
     function GetWow64Key(): string;
   public
+    constructor Create(AIndex: Word; AEnabled, AWow64: Boolean);
     procedure OpenInRegEdit(); virtual;
     { external }
+    property Wow64: Boolean read FWow64;
     property Wow64Location: string read GetWow64Key;
   end;
 
@@ -180,8 +186,6 @@ type
 
   { Exception class }
   EStartupException = class(Exception);
-
-  TRootKey = string[4];
 
   { TStartupListItem }
   TStartupListItem = class(TRootRegItem)
@@ -609,12 +613,11 @@ end;
 
   General constructor for creating a TRootItem instance. }
 
-constructor TRootItem.Create(AIndex: Word; AEnabled, AWow64: Boolean);
+constructor TRootItem.Create(AIndex: Word; AEnabled: Boolean);
 begin
   inherited Create;
   FIndex := AIndex;
   FEnabled := AEnabled;
-  FWow64 := AWow64;
 end;
 
 { private TRootItem.GetArguments
@@ -863,6 +866,16 @@ end;
 
 
 { TRootRegItem }
+
+{ public TRootRegItem.Create
+
+  General constructor for creating a TRootRegItem instance. }
+
+constructor TRootRegItem.Create(AIndex: Word; AEnabled, AWow64: Boolean);
+begin
+  inherited Create(AIndex, AEnabled);
+  FWow64 := AWow64;
+end;
 
 { protected TRootRegItem.DeleteKey
 
@@ -1343,7 +1356,7 @@ begin
       Reg.RootKey := HKEY_LOCAL_MACHINE;
 
       // Key invalid?
-      if not Reg.OpenKey(KEY_DEACT, False) then
+      if not Reg.OpenKey(KEY_STARTUP_DISABLED, False) then
         raise EStartupException.Create('Key does not exist!');
 
       // Delete key
@@ -1375,7 +1388,7 @@ begin
     Reg.RootKey := HKEY_LOCAL_MACHINE;
 
     // Failed to create new key?
-    if not Reg.OpenKey(KEY_DEACT + Name, True) then
+    if not Reg.OpenKey(KEY_STARTUP_DISABLED + Name, True) then
       raise EStartupException.Create('Could not create key!');
 
     // Write redirected key
@@ -1415,7 +1428,7 @@ begin
 
     // Update information
     FRootKey := 'HKLM';
-    FLocation := KEY_DEACT + Name;
+    FLocation := KEY_STARTUP_DISABLED + Name;
     FEnabled := False;
     Result := True;
 
@@ -1486,7 +1499,7 @@ begin
     // Delete old key
     Reg.CloseKey();
     Reg.RootKey := HKEY_LOCAL_MACHINE;
-    Reg.OpenKey(KEY_DEACT, False);
+    Reg.OpenKey(KEY_STARTUP_DISABLED, False);
 
     // Do not abort if old key does not exist!
     if (Reg.KeyExists(Name) and not Reg.DeleteKey(Name)) then
@@ -1586,7 +1599,7 @@ begin
     Result := True;
   end  //of begin
   else
-    Result := DeleteKey('HKLM', KEY_DEACT_FOLDER, AddCircumflex(FLnkFile.FileName));
+    Result := DeleteKey('HKLM', KEY_USER_DISABLED, AddCircumflex(FLnkFile.FileName));
 end;
 
 { public TStartupUserItem.Disable
@@ -1619,7 +1632,7 @@ begin
     Reg.RootKey := HKEY_LOCAL_MACHINE;
     KeyName := AddCircumflex(FLocation);
 
-    if not Reg.OpenKey(KEY_DEACT_FOLDER + KeyName, True) then
+    if not Reg.OpenKey(KEY_USER_DISABLED + KeyName, True) then
       raise EStartupException.Create('Could not create key!');
 
     Reg.WriteString('path', FLocation);
@@ -1642,7 +1655,7 @@ begin
       raise EStartupException.Create('Could not delete .lnk file!');
 
     // Update information
-    FLocation := KEY_DEACT_FOLDER + KeyName;
+    FLocation := KEY_USER_DISABLED + KeyName;
     FRootKey := 'HKLM';
     FEnabled := False;
     Result := True;
@@ -1674,7 +1687,7 @@ begin
     end;  //of if
 
   // Do not abort if old key could not be deleted
-  if not DeleteKey('HKLM', KEY_DEACT_FOLDER, AddCircumflex(FLnkFile.FileName), False) then
+  if not DeleteKey('HKLM', KEY_USER_DISABLED, AddCircumflex(FLnkFile.FileName), False) then
     raise EStartupException.Create('Could not delete key!');
 
   // Update information
@@ -2179,9 +2192,9 @@ begin
   Reg.RootKey := HKEY_LOCAL_MACHINE;
 
   if AStartupUser then
-    KeyPath := KEY_DEACT_FOLDER
+    KeyPath := KEY_USER_DISABLED
   else
-    KeyPath := KEY_DEACT;
+    KeyPath := KEY_STARTUP_DISABLED;
 
   try
     Reg.OpenKey(KeyPath, False);

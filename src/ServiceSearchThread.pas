@@ -11,7 +11,7 @@ unit ServiceSearchThread;
 interface
 
 uses
-  Windows, Classes, Registry, SyncObjs, ClearasAPI, Service, OSUtils;
+  Windows, Classes, Registry, SyncObjs, ClearasAPI, OSUtils;
 
 type
   { TServiceSearchThread }
