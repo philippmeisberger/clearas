@@ -1,6 +1,6 @@
 object Main: TMain
-  Left = 444
-  Top = 227
+  Left = 317
+  Top = 266
   Width = 557
   Height = 365
   HorzScrollBar.Visible = False
@@ -388,17 +388,6 @@ object Main: TMain
         OnKeyPress = lwStartupKeyPress
         OnSelectItem = lwStartupSelectItem
       end
-      object bEnableStartupItem: TButton
-        Left = 428
-        Top = 56
-        Width = 91
-        Height = 33
-        Anchors = [akTop, akRight]
-        Caption = 'aktivieren'
-        Enabled = False
-        TabOrder = 1
-        OnClick = bEnableStartupItemClick
-      end
       object bCloseStartup: TButton
         Left = 428
         Top = 216
@@ -406,7 +395,7 @@ object Main: TMain
         Height = 33
         Anchors = [akTop, akRight]
         Caption = 'Beenden'
-        TabOrder = 5
+        TabOrder = 4
         OnClick = bCloseStartupClick
       end
       object bDisableStartupItem: TButton
@@ -417,7 +406,7 @@ object Main: TMain
         Anchors = [akTop, akRight]
         Caption = 'deaktivieren'
         Enabled = False
-        TabOrder = 2
+        TabOrder = 1
         OnClick = bDisableStartupItemClick
       end
       object bDeleteStartupItem: TButton
@@ -428,7 +417,7 @@ object Main: TMain
         Anchors = [akTop, akRight]
         Caption = 'l'#246'schen'
         Enabled = False
-        TabOrder = 4
+        TabOrder = 3
         OnClick = bDeleteStartupItemClick
       end
       object bExportStartupItem: TButton
@@ -439,8 +428,19 @@ object Main: TMain
         Anchors = [akTop, akRight]
         Caption = 'exportieren'
         Enabled = False
-        TabOrder = 3
+        TabOrder = 2
         OnClick = bExportStartupItemClick
+      end
+      object bEnableStartupItem: TButton
+        Left = 428
+        Top = 56
+        Width = 91
+        Height = 33
+        Anchors = [akTop, akRight]
+        Caption = 'aktivieren'
+        Enabled = False
+        TabOrder = 5
+        OnClick = bEnableStartupItemClick
       end
     end
     object tsContext: TTabSheet
@@ -683,17 +683,17 @@ object Main: TMain
           end
           item
             Caption = 'Programm (0/0)'
-            Width = 150
+            Width = 125
           end
           item
             Caption = 'Datei'
-            Width = 107
+            Width = 122
           end
           item
             Caption = 'Typ'
-            MaxWidth = 65
-            MinWidth = 65
-            Width = 65
+            MaxWidth = 75
+            MinWidth = 75
+            Width = 75
           end>
         Font.Charset = ANSI_CHARSET
         Font.Color = clBlack
@@ -722,7 +722,7 @@ object Main: TMain
         Caption = 'exportieren'
         Enabled = False
         TabOrder = 1
-        OnClick = bExportContextItemClick
+        OnClick = bExportServiceItemClick
       end
       object bDeleteServiceItem: TButton
         Left = 428
@@ -733,6 +733,7 @@ object Main: TMain
         Caption = 'l'#246'schen'
         Enabled = False
         TabOrder = 2
+        OnClick = bDeleteServiceItemClick
       end
       object bCloseService: TButton
         Left = 428
@@ -753,6 +754,7 @@ object Main: TMain
         Caption = 'deaktivieren'
         Enabled = False
         TabOrder = 4
+        OnClick = bDisableServiceItemClick
       end
       object bEnableServiceItem: TButton
         Left = 428
@@ -763,6 +765,7 @@ object Main: TMain
         Caption = 'aktivieren'
         Enabled = False
         TabOrder = 5
+        OnClick = bEnableServiceItemClick
       end
     end
   end
@@ -882,6 +885,7 @@ object Main: TMain
         Caption = '-'
       end
       object mmDate: TMenuItem
+        AutoCheck = True
         Caption = 'Deaktivierungsdatum anzeigen'
         OnClick = mmDateClick
       end

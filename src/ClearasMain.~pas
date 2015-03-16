@@ -59,7 +59,6 @@ type
     tsContext: TTabSheet;
     lwStartup: TListView;
     lStartup: TLabel;
-    bEnableStartupItem: TButton;
     bCloseStartup: TButton;
     bDisableStartupItem: TButton;
     bDeleteStartupItem: TButton;
@@ -103,18 +102,23 @@ type
     bEnableServiceItem: TButton;
     lCopy3: TLabel;
     lVersion3: TLabel;
+    bEnableStartupItem: TButton;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure bCloseStartupClick(Sender: TObject);
     procedure bDeleteStartupItemClick(Sender: TObject);
     procedure bDeleteContextItemClick(Sender: TObject);
+    procedure bDeleteServiceItemClick(Sender: TObject);
     procedure bEnableStartupItemClick(Sender: TObject);
     procedure bEnableContextItemClick(Sender: TObject);
+    procedure bEnableServiceItemClick(Sender: TObject);
     procedure bDisableStartupItemClick(Sender: TObject);
     procedure bDisableContextItemClick(Sender: TObject);
+    procedure bDisableServiceItemClick(Sender: TObject);
     procedure bExportStartupItemClick(Sender: TObject);
     procedure bExportContextItemClick(Sender: TObject);
+    procedure bExportServiceItemClick(Sender: TObject);
     procedure cbExpertClick(Sender: TObject);
     procedure eContextSearchChange(Sender: TObject);
     procedure lwContextDblClick(Sender: TObject);
@@ -186,6 +190,7 @@ type
     procedure OnServiceSearchEnd(Sender: TObject);
     procedure OnServiceItemChanged(Sender: TObject);
     procedure SetLanguage(Sender: TObject);
+    procedure ShowColumnDate(AListView: TListView; AShow: Boolean = True);
     function ShowRegistryExportDialog(): Boolean;
     function UpdateContextPath(): Boolean; overload;
     function UpdateContextPath(ALangFile: TLanguageFile): Boolean; overload; deprecated;
@@ -970,9 +975,63 @@ begin
   end;  //of try
 end;
 
+
+
+{ TMain.bDeleteServiceItemClick
+
+  Deletes currently selected service item. }
+
+procedure TMain.bDeleteServiceItemClick(Sender: TObject);
+var
+  Answer: Integer;
+
+begin
+  try
+    // Nothing selected?
+    if (not Assigned(lwService.ItemFocused) or not Assigned(FService.Selected)) then
+      raise EInvalidItem.Create('No item selected!');
+
+    // Confirm deletion of item
+    if (FLang.MessageBox(FLang.Format([85, NEW_LINE, 49, 50],
+      [lwService.ItemFocused.SubItems[0]]), mtConfirm) = IDYES) then
+    begin
+      // Ask user to export item
+      Answer := FLang.MessageBox(52, mtQuestion);
+
+      // Abort if user clicks cancel!
+      if (((Answer = IDYES) and ShowRegistryExportDialog()) or (Answer = IDNO)) then
+        // Successfully deleted item physically?
+        if FService.DeleteItem() then
+        begin
+          // Delete item from TListView
+          lwService.DeleteSelected();
+          lwService.ItemFocused := nil;
+
+          // Disable VCL buttons
+          bEnableServiceItem.Enabled := False;
+          bDisableServiceItem.Enabled := False;
+          bDeleteServiceItem.Enabled := False;
+          bExportServiceItem.Enabled := False;
+        end  //of begin
+        else
+          raise Exception.Create('Unknown error!');
+    end;  //of begin
+
+  except
+    on E: EInvalidItem do
+      FLang.MessageBox([96, 18, NEW_LINE, 53], mtWarning);
+
+    on E: EWarning do
+      FLang.MessageBox(E.Message, mtWarning);
+
+    on E: Exception do
+      FLang.MessageBox(FLang.GetString([96, 18, NEW_LINE]) + E.Message, mtError);
+  end;  //of try
+end;
+
 { TMain.bDeleteStartupItemClick
 
-  Deletes currently selected startup item. }
+  Deletes currently selected service item. }
 
 procedure TMain.bDeleteStartupItemClick(Sender: TObject);
 var
@@ -1020,7 +1079,7 @@ begin
         // Delete item from TListView
         lwStartup.DeleteSelected();
         lwStartup.ItemFocused := nil;
-        
+
         // Disable VCL buttons
         bEnableStartupItem.Enabled := False;
         bDisableStartupItem.Enabled := False;
@@ -1076,7 +1135,7 @@ begin
           // Delete item from TListView
           lwContext.DeleteSelected();
           lwContext.ItemFocused := nil;
-          
+
           // Disable VCL buttons
           bEnableContextItem.Enabled := False;
           bDisableContextItem.Enabled := False;
@@ -1101,7 +1160,7 @@ end;
 
 { TMain.bDisableStartupItemClick
 
-  Deactivates currently selected startup item. }
+  Disables currently selected startup item. }
 
 procedure TMain.bDisableStartupItemClick(Sender: TObject);
 begin
@@ -1145,7 +1204,7 @@ end;
 
 { TMain.bDisableContextItemClick
 
-  Deactivates currently selected context menu item. }
+  Disables currently selected context menu item. }
 
 procedure TMain.bDisableContextItemClick(Sender: TObject);
 begin
@@ -1183,9 +1242,53 @@ begin
   end;  //of try
 end;
 
+{ TMain.bDisableServiceItemClick
+
+  Disables currently selected service item. }
+
+procedure TMain.bDisableServiceItemClick(Sender: TObject);
+begin
+  try
+    // Nothing selected?
+    if not Assigned(lwService.ItemFocused) then
+      raise EInvalidItem.Create('No item selected!');
+
+    // Successfully deactivated item?
+    if FService.DisableItem() then
+    begin
+      // Change item visual status
+      lwService.ItemFocused.Caption := FService.Selected.GetStatus(FLang);
+
+      // Change button states
+      bDisableServiceItem.Enabled := False;
+      bEnableServiceItem.Enabled := True;
+      pmChangeStatus.Caption := bEnableServiceItem.Caption;
+
+      // Show deactivation timestamp?
+      if mmDate.Checked then
+        lwService.ItemFocused.SubItems[3] := FService.Item.Time;
+
+      // Update TListView
+      lwServiceSelectItem(Self, lwService.ItemFocused, True);
+    end  //of begin
+    else
+      raise Exception.Create('Unknown error!');
+
+  except
+    on E: EInvalidItem do
+      FLang.MessageBox([94, 18, NEW_LINE, 53], mtWarning);
+
+    on E: EWarning do
+      FLang.MessageBox(E.Message, mtWarning);
+
+    on E: Exception do
+      FLang.MessageBox(FLang.GetString([94, 18, NEW_LINE]) + E.Message, mtError);
+  end;  //of try
+end;
+
 { TMain.bEnableStartupItemClick
 
-  Activates currently selected startup item. }
+  Enables currently selected startup item. }
 
 procedure TMain.bEnableStartupItemClick(Sender: TObject);
 begin
@@ -1235,7 +1338,7 @@ end;
 
 { TMain.bEnableContextItemClick
 
-  Activates currently selected context menu item. }
+  Enables currently selected context menu item. }
 
 procedure TMain.bEnableContextItemClick(Sender: TObject);
 begin
@@ -1271,7 +1374,55 @@ begin
 
     on E: EWarning do
       FLang.MessageBox(E.Message, mtWarning);
-      
+
+    on E: Exception do
+      FLang.MessageBox(FLang.GetString([93, 18, NEW_LINE]) + E.Message, mtError);
+  end;  //of try
+end;
+
+{ TMain.bEnableServiceItemClick
+
+  Enables currently selected service item. }
+
+procedure TMain.bEnableServiceItemClick(Sender: TObject);
+begin
+  try
+    // Nothing selected?
+    if not Assigned(lwService.ItemFocused) then
+      raise EInvalidItem.Create('No item selected!');
+
+    // Successfully activated item?
+    if FService.EnableItem() then
+    begin
+      // Change item visual status
+      lwService.ItemFocused.Caption := FService.Selected.GetStatus(FLang);
+
+      // Change button states
+      bEnableServiceItem.Enabled := False;
+      bDisableServiceItem.Enabled := True;
+      pmChangeStatus.Caption := bDisableServiceItem.Caption;
+
+      // Delete deactivation timestamp if necassary
+      if mmDate.Checked then
+        lwService.ItemFocused.SubItems[3] := '';
+
+      // Update TListView
+      lwServiceSelectItem(Self, lwService.ItemFocused, True);
+
+      // Warn if file does not exist
+      if not FileExists(FService.Selected.FilePathOnly) then
+        raise EWarning.Create(FLang.GetString([45, NEW_LINE, 46]));
+    end  //of begin
+    else
+      raise Exception.Create('Unknown error!');
+
+  except
+    on E: EInvalidItem do
+      FLang.MessageBox([93, 18, NEW_LINE, 53], mtWarning);
+
+    on E: EWarning do
+      FLang.MessageBox(E.Message, mtWarning);
+
     on E: Exception do
       FLang.MessageBox(FLang.GetString([93, 18, NEW_LINE]) + E.Message, mtError);
   end;  //of try
@@ -1294,6 +1445,22 @@ procedure TMain.bExportContextItemClick(Sender: TObject);
 begin
   // Nothing selected?
   if not Assigned(FContext.Selected) then
+  begin
+    FLang.MessageBox([95, 18, NEW_LINE, 53], mtWarning);
+    Exit;
+  end;  //of begin
+
+  ShowRegistryExportDialog();
+end;
+
+{ TMain.bExportServiceItemClick
+
+  Calls the export method of current selected service item. }
+
+procedure TMain.bExportServiceItemClick(Sender: TObject);
+begin
+  // Nothing selected?
+  if not Assigned(FService.Selected) then
   begin
     FLang.MessageBox([95, 18, NEW_LINE, 53], mtWarning);
     Exit;
@@ -1411,10 +1578,10 @@ begin
   if bEnableServiceItem.Enabled then
     bEnableServiceItem.Click
   else
-    if bDisableStartupItem.Enabled then
+    if bDisableServiceItem.Enabled then
       bDisableServiceItem.Click
     else
-      if bDeleteStartupItem.Enabled then
+      if bDeleteServiceItem.Enabled then
         bDeleteServiceItem.Click
       else
         FLang.MessageBox(53, mtWarning);
@@ -1846,7 +2013,7 @@ begin
              // FStartup item already exists?
              if not FStartup.AddItem(OpenDialog.FileName, Args, Name) then
                raise EWarning.Create(FLang.Format(40, [OpenDialog.FileName]));
-             
+
              // Update TListView
              LoadStartupItems(False);
            end;
@@ -1895,11 +2062,7 @@ end;
   an animation. }
 
 procedure TMain.mmDateClick(Sender: TObject);
-const
-  COLUMN_DATE_WIDTH = 120;
-
 var
-  EndOf: Integer;
   ListView: TListView;
 
 begin
@@ -1908,76 +2071,114 @@ begin
     2: ListView := lwService;
     else
        Exit;
-  end;
+  end;  //of case
+
+  ShowColumnDate(ListView, mmDate.Checked);
+end;
+
+procedure TMain.ShowColumnDate(AListView: TListView; AShow: Boolean = True);
+begin
+  // Timestamp already shown?
+  if not AShow then
+  begin
+    if (AListView.Columns.Count = 5) then
+      AListView.Columns.Delete(4);
+  end  //of begin
+  else
+    if (AListView.Columns.Count = 4) then
+      with AListView.Columns.Add do
+      begin
+        Caption := FLang.GetString(80);
+        Width := 120;
+        mmShowIcons.Click();
+      end;  //of with
+end;
+{
+const
+  COLUMN_DATE_WIDTH = 120;
+  ANIMATION_INTERVAL = 2;
+
+var
+  Index, EndOf: Integer;
+  ListView: TListView;
+
+begin
+  case PageControl.ActivePageIndex of
+    0: ListView := lwStartup;
+    2: ListView := lwService;
+    else
+       Exit;
+  end;  //of case
 
   if not (WindowState = wsMaximized) then
     ListView.Clear;
 
+  Index := ListView.Columns.Count - 1;
+
   // Timestamp already shown?
-  if mmDate.Checked then
+  if not mmDate.Checked then
   begin
-    mmDate.Checked := False;
+    Constraints.MinWidth := Constraints.MinWidth - ListView.Column[Index].Width;
+    ListView.Column[Index].MinWidth := 0;
+    EndOf := Width - COLUMN_DATE_WIDTH;
 
-    if (ListView.Columns.Count > 4) then
-    begin
-      Constraints.MinWidth := Constraints.MinWidth - ListView.Column[4].Width;
-      ListView.Column[4].MinWidth := 0;
-      EndOf := Width - COLUMN_DATE_WIDTH;
+    // Animation to remove column smoothly
+    //while ((AListView.Column[Index].Width > 0) or (Width > EndOf)) do
+    //begin
+    repeat
+      Width := Width - ANIMATION_INTERVAL;
 
-      // Animation to remove column smoothly
-      repeat
-        Width := Width - 1;
+      if (WindowState = wsMaximized) then
+        EndOf := Width;
 
-        if (WindowState = wsMaximized) then
-          EndOf := Width;
+      if (ListView.Column[Index].Width <= COLUMN_DATE_WIDTH) then
+        ListView.Column[Index].Width := ListView.Column[Index].Width - ANIMATION_INTERVAL;
 
-        if (ListView.Column[4].Width <= COLUMN_DATE_WIDTH) then
-          ListView.Column[4].Width := ListView.Column[4].Width - 1;
+      Update;
+    //end;  //of while
+    until ((ListView.Column[4].Width <= 0) and (Width = EndOf));
 
-        Update;
-        Sleep(0);
-      until ((ListView.Column[4].Width <= 0) and (Width = EndOf));
+    // Delete column
+    ListView.Columns.Delete(Index);
 
-      // Delete column
-      ListView.Columns.Delete(4);
-
-      // Refresh counter label
-      mmShowIcons.Click;
-    end;  //of if
+    // Refresh counter label
+    mmShowIcons.Click;
   end  //of begin
   else
   begin
-    mmDate.Checked := True;
     EndOf := Width + COLUMN_DATE_WIDTH;
 
     // Add column
     ListView.Columns.Add.Caption := FLang.GetString(80);
+    Inc(Index);
 
     if (WindowState = wsMaximized) then
       mmShowIcons.Click;
 
     // Animation to add column smoothly
+    //while ((AListView.Columns[Index].Width < AWidth) or (Width < EndOf)) do
+    //begin
     repeat
-      Width := Width + 1;
+      Width := Width + ANIMATION_INTERVAL;
 
       if (WindowState = wsMaximized) then
         EndOf := Width;
 
-      if (ListView.Column[4].Width < COLUMN_DATE_WIDTH) then
-        ListView.Column[4].Width := ListView.Column[4].Width + 1;
+      if (ListView.Column[Index].Width < COLUMN_DATE_WIDTH) then
+        ListView.Column[Index].Width := ListView.Column[Index].Width + ANIMATION_INTERVAL;
 
       Update;
-      Sleep(0);
-    until ((ListView.Column[4].Width >= COLUMN_DATE_WIDTH) and (Width = EndOf));
+    //end;  //of while
+    until ((ListView.Column[Index].Width >= COLUMN_DATE_WIDTH) and (Width = EndOf));
 
-    ListView.Column[4].MinWidth := lwStartup.Column[4].Width;
-    ListView.Column[4].MaxWidth := lwStartup.Column[4].Width;
-    Constraints.MinWidth := Constraints.MinWidth + ListView.Column[4].Width;
+    ListView.Column[Index].MinWidth := ListView.Column[Index].Width;
+    ListView.Column[Index].MaxWidth := ListView.Column[Index].Width;
+    Constraints.MinWidth := Constraints.MinWidth + ListView.Column[Index].Width;
 
     if not (WindowState = wsMaximized) then
       mmShowIcons.Click;
   end;  //of if
-end;
+end;}
 
 { TMain.mmExportClick
 
@@ -1988,6 +2189,7 @@ begin
   case PageControl.ActivePageIndex of
     0: bExportStartupItem.Click();
     1: bExportContextItem.Click();
+    2: bExportServiceItem.Click();
   end;  //of case
 end;
 
@@ -2026,13 +2228,7 @@ begin
     begin
       // Disable button
       mmExportList.Enabled := False;
-
-      case PageControl.ActivePageIndex of
-        0: SelectedList := FStartup;
-        1: SelectedList := FContext;
-        else
-           Exit;
-      end;  //of case
+      SelectedList := (GetSelectedList() as TRootRegList);
 
       // Export list (threaded!)
       with TExportListThread.Create(SelectedList, SaveDialog.FileName) do
@@ -2163,6 +2359,7 @@ begin
   case PageControl.ActivePageIndex of
     0: LoadStartupItems(False);
     1: LoadContextMenuItems(False);
+    2: LoadServiceItems(False);
   end;  //of case
 end;
 
@@ -2184,6 +2381,12 @@ begin
          lwContext.Columns[2].Width := 107;
          lwContext.Columns[3].Width := 65;
        end;
+
+    2: begin
+         lwService.Columns[1].Width := 125;
+         lwService.Columns[2].Width := 122;
+         lwService.Columns[3].Width := 75;
+       end;
   end;  //of case
 end;
 
@@ -2193,11 +2396,18 @@ end;
 
 procedure TMain.mmOptimateClick(Sender: TObject);
 begin
-  if (PageControl.ActivePage = tsStartup) then
-  begin
-    lwStartup.Columns[1].Width := ColumnTextWidth;
-    lwStartup.Columns[2].Width := ColumnTextWidth;
-    lwStartup.Columns[3].Width := ColumnTextWidth;
+  case PageControl.ActivePageIndex of
+    0: begin
+         lwStartup.Columns[1].Width := ColumnTextWidth;
+         lwStartup.Columns[2].Width := ColumnTextWidth;
+         lwStartup.Columns[3].Width := ColumnTextWidth;
+       end;
+
+    2: begin
+         lwService.Columns[1].Width := ColumnTextWidth;
+         lwService.Columns[2].Width := ColumnTextWidth;
+         lwService.Columns[3].Width := ColumnTextWidth;
+       end;
   end;  //of begin
 end;
 
@@ -2345,6 +2555,7 @@ begin
          mmOptimate.Enabled := True;
          pmOpenExplorer.Enabled := True;
          lwStartupSelectItem(Sender, lwStartup.ItemFocused, True);
+         ShowColumnDate(lwStartup, mmDate.Checked);
        end;
 
     1: begin
@@ -2370,6 +2581,7 @@ begin
          mmOptimate.Enabled := True;
          pmOpenExplorer.Enabled := True;
          lwServiceSelectItem(Sender, lwService.ItemFocused, True);
+         ShowColumnDate(lwService, mmDate.Checked);
 
          // Load context menu entries dynamically
          if (FService.Count = 0) then

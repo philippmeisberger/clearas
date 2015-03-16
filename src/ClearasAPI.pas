@@ -247,8 +247,7 @@ type
     function AddUserItemEnabled(ALnkFile: TLnkFile; AAllUsers: Boolean): Integer;
   public
     constructor Create;
-    function AddItem(AFileName, AArguments: string;
-      ADisplayedName: string = ''): Boolean;
+    function AddItem(AFileName, AArguments: string; ACaption: string = ''): Boolean;
     function BackupExists(): Boolean;
     function ChangeItemStatus(): Boolean; override;
     function DeleteItem(): Boolean; override;
@@ -322,7 +321,7 @@ type
   public
     constructor Create;
     function AddItem(AFilePath, AArguments, ALocationRoot,
-      ADisplayedName: string): Boolean;
+      ACaption: string): Boolean;
     procedure ExportList(const AFileName: string); override;
     function IndexOf(AName, ALocationRoot: string): Integer; overload;
     procedure LoadContextmenu(const ALocationRoot: string;
@@ -1538,8 +1537,11 @@ begin
 
     // Delete old key
     Reg.CloseKey();
+    Reg.Access := Access64 or KEY_WRITE;
     Reg.RootKey := HKEY_LOCAL_MACHINE;
-    Reg.OpenKey(KEY_STARTUP_DISABLED, False);
+
+    if not Reg.OpenKey(KEY_STARTUP_DISABLED, False) then
+      raise EStartupException.Create('Key "startupreg" does not exist!');
 
     // Do not abort if old key does not exist!
     if (Reg.KeyExists(Name) and not Reg.DeleteKey(Name)) then
@@ -2024,7 +2026,7 @@ end;
   Adds a new startup item to autostart. }
 
 function TStartupList.AddItem(AFileName, AArguments: string;
-  ADisplayedName: string = ''): Boolean;
+  ACaption: string = ''): Boolean;
 var
   Name, Ext, FullPath: string;
   i: Word;
@@ -2048,8 +2050,8 @@ begin
   // Add new startup user item?
   if (Ext = '.exe') then
   begin
-    if (ADisplayedName <> '') then
-      Name := ADisplayedName
+    if (ACaption <> '') then
+      Name := ACaption
     else
       Name := ChangeFileExt(Name, '');
 
@@ -2069,10 +2071,10 @@ begin
       if (AArguments <> '') then
         FullPath := FullPath +' '+ AArguments;
 
-      Reg.WriteString(ADisplayedName, FullPath);
+      Reg.WriteString(ACaption, FullPath);
 
       // Adds item to list
-      Result := (AddItemEnabled(HKEY_CURRENT_USER, KEY_STARTUP_RUN, ADisplayedName,
+      Result := (AddItemEnabled(HKEY_CURRENT_USER, KEY_STARTUP_RUN, ACaption,
         FullPath, False) <> -1);
 
     finally
@@ -2816,7 +2818,7 @@ end;
   Adds a new contextmenu entry. }
 
 function TContextList.AddItem(AFilePath, AArguments, ALocationRoot,
-  ADisplayedName: string): Boolean;
+  ACaption: string): Boolean;
 var
   Name, Ext, FullPath, KeyName: string;
   Reg: TRegistry;
@@ -2824,7 +2826,7 @@ var
 begin
   Result := False;
 
-  if ((Trim(ALocationRoot) = '') or (Trim(ADisplayedName) = '')) then
+  if ((Trim(ALocationRoot) = '') or (Trim(ACaption) = '')) then
     raise EInvalidArgument.Create('Missing argument!');
 
   Ext := ExtractFileExt(AFilePath);
@@ -2859,7 +2861,7 @@ begin
       raise EContextMenuException.Create('Could not create key!');
 
     // Write caption of item
-    Reg.WriteString('', ADisplayedName);
+    Reg.WriteString('', ACaption);
     Reg.CloseKey();
 
     if not Reg.OpenKey(KeyName +'\command', True) then
@@ -2869,7 +2871,7 @@ begin
     Reg.WriteString('', FullPath);
 
     // Adds item to list
-    AddShellItem(Name, ALocationRoot, FullPath, ADisplayedName, True, False);
+    AddShellItem(Name, ALocationRoot, FullPath, ACaption, True, False);
     Result := True;
 
   finally
@@ -3144,7 +3146,7 @@ var
 
 begin
   Result := False;
-  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));
+  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
 
   try
     Reg.RootKey := HKEY_LOCAL_MACHINE;
@@ -3184,7 +3186,7 @@ var
 
 begin
   Result := False;
-  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));
+  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
 
   try
     Reg.RootKey := HKEY_LOCAL_MACHINE;
