@@ -366,7 +366,7 @@ type
       AReg: TRegistry; AWow64: Boolean = False): Integer;
   public
     procedure ExportList(const AFileName: string); override;
-    function IndexOf(const ACaption: string): Integer;
+    function IndexOf(const ACaptionOrName: string): Integer;
     procedure LoadService(AName: string; AReg: TRegistry);
     procedure LoadServices();
     { external }
@@ -3232,11 +3232,11 @@ begin
     if not FEnabled then
     begin
       RegFile.ExportKey(HKEY_LOCAL_MACHINE, KEY_SERVICE_DISABLED + Name, False);
-      RegFile.ExportKey(HKEY_LOCAL_MACHINE, FLocation, False);
+      RegFile.ExportKey(HKEY_LOCAL_MACHINE, FLocation, True);
       RegFile.Save();
     end  //of begin
     else
-      RegFile.ExportReg(HKEY_LOCAL_MACHINE, FLocation, False);
+      RegFile.ExportReg(HKEY_LOCAL_MACHINE, FLocation, True);
 
   finally
     RegFile.Free;
@@ -3348,19 +3348,25 @@ end;
 
   Returns the index of an item checking caption only. }
 
-function TServiceList.IndexOf(const ACaption: string): Integer;
+function TServiceList.IndexOf(const ACaptionOrName: string): Integer;
 var
   i: Integer;
+  Item: TServiceListItem;
 
 begin
   Result := -1;
 
   for i := 0 to Count - 1 do
-    if (ItemAt(i).Caption = ACaption) then
+  begin
+    Item := ItemAt(i);
+
+    // Item name or caption matches?
+    if ((Item.Caption = ACaptionOrName) or (Item.Name = ACaptionOrName)) then
     begin
       Result := i;
       Break;
     end;  //of begin
+  end;  //of for
 end;
 
 { public TServiceList.LoadService
@@ -3390,12 +3396,10 @@ begin
       Exit;
 
     // Display name must be string
-    if (AReg.GetDataType('DisplayName') <> rdString) then
-      Exit;
-
-    // Read caption
-    Caption := AReg.ReadString('DisplayName');
-
+    if (AReg.ValueExists('DisplayName') and
+      (AReg.GetDataType('DisplayName') = rdString)) then
+      Caption := AReg.ReadString('DisplayName');
+    
     // Filter only non-Windows services
     if (Caption <> '') and (Caption[1] = '@') then
       Exit;

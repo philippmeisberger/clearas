@@ -91,7 +91,7 @@ type
     mmShowIcons: TMenuItem;
     IconList: TImageList;
     eContextSearch: TEdit;
-    TabSheet1: TTabSheet;
+    tsService: TTabSheet;
     lwService: TListView;
     lWindows3: TLabel;
     lService: TLabel;
@@ -823,6 +823,8 @@ begin
     lCopy2.Hint := lCopy1.Hint;
 
     // "Service" tab TButton labels
+    tsService.Caption := GetString(61);
+    lService.Caption := GetString(62);
     bEnableServiceItem.Caption := bEnableStartupItem.Caption;
     bDisableServiceItem.Caption := bDisableStartupItem.Caption;
     bExportServiceItem.Caption := bExportStartupItem.Caption;
@@ -2093,92 +2095,6 @@ begin
         mmShowIcons.Click();
       end;  //of with
 end;
-{
-const
-  COLUMN_DATE_WIDTH = 120;
-  ANIMATION_INTERVAL = 2;
-
-var
-  Index, EndOf: Integer;
-  ListView: TListView;
-
-begin
-  case PageControl.ActivePageIndex of
-    0: ListView := lwStartup;
-    2: ListView := lwService;
-    else
-       Exit;
-  end;  //of case
-
-  if not (WindowState = wsMaximized) then
-    ListView.Clear;
-
-  Index := ListView.Columns.Count - 1;
-
-  // Timestamp already shown?
-  if not mmDate.Checked then
-  begin
-    Constraints.MinWidth := Constraints.MinWidth - ListView.Column[Index].Width;
-    ListView.Column[Index].MinWidth := 0;
-    EndOf := Width - COLUMN_DATE_WIDTH;
-
-    // Animation to remove column smoothly
-    //while ((AListView.Column[Index].Width > 0) or (Width > EndOf)) do
-    //begin
-    repeat
-      Width := Width - ANIMATION_INTERVAL;
-
-      if (WindowState = wsMaximized) then
-        EndOf := Width;
-
-      if (ListView.Column[Index].Width <= COLUMN_DATE_WIDTH) then
-        ListView.Column[Index].Width := ListView.Column[Index].Width - ANIMATION_INTERVAL;
-
-      Update;
-    //end;  //of while
-    until ((ListView.Column[4].Width <= 0) and (Width = EndOf));
-
-    // Delete column
-    ListView.Columns.Delete(Index);
-
-    // Refresh counter label
-    mmShowIcons.Click;
-  end  //of begin
-  else
-  begin
-    EndOf := Width + COLUMN_DATE_WIDTH;
-
-    // Add column
-    ListView.Columns.Add.Caption := FLang.GetString(80);
-    Inc(Index);
-
-    if (WindowState = wsMaximized) then
-      mmShowIcons.Click;
-
-    // Animation to add column smoothly
-    //while ((AListView.Columns[Index].Width < AWidth) or (Width < EndOf)) do
-    //begin
-    repeat
-      Width := Width + ANIMATION_INTERVAL;
-
-      if (WindowState = wsMaximized) then
-        EndOf := Width;
-
-      if (ListView.Column[Index].Width < COLUMN_DATE_WIDTH) then
-        ListView.Column[Index].Width := ListView.Column[Index].Width + ANIMATION_INTERVAL;
-
-      Update;
-    //end;  //of while
-    until ((ListView.Column[Index].Width >= COLUMN_DATE_WIDTH) and (Width = EndOf));
-
-    ListView.Column[Index].MinWidth := ListView.Column[Index].Width;
-    ListView.Column[Index].MaxWidth := ListView.Column[Index].Width;
-    Constraints.MinWidth := Constraints.MinWidth + ListView.Column[Index].Width;
-
-    if not (WindowState = wsMaximized) then
-      mmShowIcons.Click;
-  end;  //of if
-end;}
 
 { TMain.mmExportClick
 
@@ -2544,7 +2460,6 @@ end;
 
 procedure TMain.PageControlChange(Sender: TObject);
 begin
-  // Disable some menu items not used on context menu page
   case PageControl.ActivePageIndex of
     0: begin
          mmAdd.Caption := FLang.GetString(69);
@@ -2574,10 +2489,10 @@ begin
 
     2: begin
          mmAdd.Caption := FLang.GetString(69);
-         mmImport.Visible := True;
+         mmImport.Visible := False;
          mmDate.Visible := True;
          mmRunOnce.Visible := False;
-         mmShowIcons.Visible := True;
+         mmShowIcons.Visible := False;
          mmOptimate.Enabled := True;
          pmOpenExplorer.Enabled := True;
          lwServiceSelectItem(Sender, lwService.ItemFocused, True);

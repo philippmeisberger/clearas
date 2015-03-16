@@ -1,6 +1,6 @@
 object Main: TMain
-  Left = 317
-  Top = 266
+  Left = 371
+  Top = 135
   Width = 557
   Height = 365
   HorzScrollBar.Visible = False
@@ -620,7 +620,7 @@ object Main: TMain
         OnChange = eContextSearchChange
       end
     end
-    object TabSheet1: TTabSheet
+    object tsService: TTabSheet
       Caption = 'Dienst'
       ImageIndex = 2
       DesignSize = (

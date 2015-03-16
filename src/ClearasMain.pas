@@ -91,7 +91,7 @@ type
     mmShowIcons: TMenuItem;
     IconList: TImageList;
     eContextSearch: TEdit;
-    TabSheet1: TTabSheet;
+    tsService: TTabSheet;
     lwService: TListView;
     lWindows3: TLabel;
     lService: TLabel;
@@ -823,6 +823,8 @@ begin
     lCopy2.Hint := lCopy1.Hint;
 
     // "Service" tab TButton labels
+    tsService.Caption := GetString(61);
+    lService.Caption := lStartup.Caption;
     bEnableServiceItem.Caption := bEnableStartupItem.Caption;
     bDisableServiceItem.Caption := bDisableStartupItem.Caption;
     bExportServiceItem.Caption := bExportStartupItem.Caption;
@@ -2458,7 +2460,6 @@ end;
 
 procedure TMain.PageControlChange(Sender: TObject);
 begin
-  // Disable some menu items not used on context menu page
   case PageControl.ActivePageIndex of
     0: begin
          mmAdd.Caption := FLang.GetString(69);
@@ -2488,10 +2489,10 @@ begin
 
     2: begin
          mmAdd.Caption := FLang.GetString(69);
-         mmImport.Visible := True;
+         mmImport.Visible := False;
          mmDate.Visible := True;
          mmRunOnce.Visible := False;
-         mmShowIcons.Visible := True;
+         mmShowIcons.Visible := False;
          mmOptimate.Enabled := True;
          pmOpenExplorer.Enabled := True;
          lwServiceSelectItem(Sender, lwService.ItemFocused, True);
