@@ -703,8 +703,12 @@ end;
 procedure TMain.OnServiceSearchEnd(Sender: TObject);
 var
   i: Integer;
+  Auto, Manual: string;
 
 begin
+  Auto := FLang.GetString(61);
+  Manual := FLang.GetString(62);
+
   // Print all information about service items
   for i := 0 to FService.Count - 1 do
     with lwService.Items.Add do
@@ -717,7 +721,14 @@ begin
         SubItems.Append(FService[i].Name);
 
       SubItems.Append(FService[i].FilePath);
-      SubItems.Append(FService[i].TypeOf);
+
+      // Show start of service
+      case FService[i].Start of
+        ssAutomatic: SubItems.Append(Auto);
+        ssManual:    SubItems.Append(Manual);
+        else
+                     SubItems.Append(FService[i].TypeOf);
+      end;  //of case
 
       // Show deactivation timestamp?
       if mmDate.Checked then
@@ -823,7 +834,7 @@ begin
     lCopy2.Hint := lCopy1.Hint;
 
     // "Service" tab TButton labels
-    tsService.Caption := GetString(61);
+    tsService.Caption := GetString(60);
     lService.Caption := lStartup.Caption;
     bEnableServiceItem.Caption := bEnableStartupItem.Caption;
     bDisableServiceItem.Caption := bDisableStartupItem.Caption;
@@ -834,7 +845,7 @@ begin
     // "Service" tab TListView labels
     lwService.Columns[0].Caption := lwStartup.Columns[0].Caption;
     lwService.Columns[2].Caption := lwStartup.Columns[2].Caption;
-    lwService.Columns[3].Caption := lwStartup.Columns[3].Caption;
+    lwService.Columns[3].Caption := GetString(59);
     lCopy3.Hint := lCopy1.Hint;
 
     // Popup menu labels
