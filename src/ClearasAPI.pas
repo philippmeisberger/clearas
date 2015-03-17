@@ -334,8 +334,17 @@ type
     property Items[AIndex: Word]: TContextListItem read ItemAt; default;
   end;
 
-    { TServiceStart enum }
+  { Service enums }
   TServiceStart = (ssBoot, ssSystem, ssAutomatic, ssManual, ssDisabled);
+  TErrorControl = (ecIgnore, ecNormal, ecSevere, ecCritical);
+  
+  TServiceType = (
+    stKernel = $1,
+    stFileSystem = $2,
+    stAdapter = $4,
+    stWin32 = $10,
+    stWin32Share = $20
+  );
 
   { TServiceListItem }
   TServiceListItem = class(TRootRegItem)
@@ -362,9 +371,10 @@ type
     function ItemAt(AIndex: Word): TServiceListItem;
     function GetSelectedItem(): TServiceListItem;
   protected
-    function AddService(AName, ACaption: string; AStart: TServiceStart;
-      AReg: TRegistry; AWow64: Boolean = False): Integer;
+    function AddService(AName, ACaption, AImagePath: string;
+      AStart: TServiceStart; AReg: TRegistry; AWow64: Boolean = False): Integer;
   public
+    function AddItem(AFileName, AArguments, ACaption: string): Boolean;
     procedure ExportList(const AFileName: string); override;
     function IndexOf(const ACaptionOrName: string): Integer;
     procedure LoadService(AName: string; AReg: TRegistry);
@@ -3268,8 +3278,8 @@ end;
 
   Adds a service item to the list. }
 
-function TServiceList.AddService(AName, ACaption: string; AStart: TServiceStart;
-  AReg: TRegistry; AWow64: Boolean = False): Integer;
+function TServiceList.AddService(AName, ACaption, AImagePath: string;
+  AStart: TServiceStart; AReg: TRegistry; AWow64: Boolean = False): Integer;
 var
   Item: TServiceListItem;
 
@@ -3282,7 +3292,7 @@ begin
       Name := AName;
       Caption := ACaption;
       FLocation := AReg.CurrentPath;
-      FilePath := AReg.ReadString('ImagePath');
+      FilePath := AImagePath;
       TypeOf := 'Service';
     end;  //of with
 
@@ -3310,6 +3320,57 @@ begin
   except
     Item.Free;
     Result := -1;
+  end;  //of try
+end;
+
+{ public TServiceList.AddItem
+
+  Adds a new service item to services location. }
+
+function TServiceList.AddItem(AFileName, AArguments, ACaption: string): Boolean;
+var
+  Name, FullPath: string;
+  i: Word;
+  Reg: TRegistry;
+
+begin
+  Result := False;
+  Name := ExtractFileName(AFileName);
+
+  // Check invalid extension
+  if (ExtractFileExt(Name) <> '.exe') then
+    raise EInvalidArgument.Create('Invalid program extension! Must be ".exe"!');
+
+  // File path already exists in another item?
+  for i := 0 to Count - 1 do
+    if AnsiContainsStr(ItemAt(i).FilePath, AFileName) then
+      Exit;
+
+  Name := ChangeFileExt(Name, '');
+  Reg := TRegistry.Create(KEY_WRITE);
+
+  // Try to add new startup item to Registry
+  try
+    Reg.RootKey := HKEY_LOCAL_MACHINE;
+    Reg.OpenKey(KEY_SERVICE_ENABLED + Name, True);
+    FullPath := '"'+ AFileName +'"';
+
+    // Append arguments if used
+    if (AArguments <> '') then
+      FullPath := FullPath +' '+ AArguments;
+
+    Reg.WriteExpandString('ImagePath', FullPath);
+    Reg.WriteString('DisplayName', ACaption);
+    Reg.WriteInteger('Start', Ord(ssAutomatic));
+    Reg.WriteInteger('Type', Ord(stWin32));
+    Reg.WriteInteger('ErrorControl', Ord(ecIgnore));
+
+    // Adds item to list
+    Result := (AddService(Name, ACaption, FullPath, ssAutomatic, Reg) <> -1);
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
   end;  //of try
 end;
 
@@ -3375,7 +3436,7 @@ end;
 
 procedure TServiceList.LoadService(AName: string; AReg: TRegistry);
 var
-  Caption: string;
+  Caption, ImagePath: string;
   Start: TServiceStart;
   Wow64: Boolean;
 
@@ -3388,11 +3449,12 @@ begin
     if (not AReg.ValueExists('ImagePath') or not AReg.ValueExists('Type')) then
       Exit;
 
-    // Read status
+    // Read image path and status
+    ImagePath := AReg.ReadString('ImagePath');
     Start := TServiceStart(AReg.ReadInteger('Start'));
 
     // Skip driver services
-    if ((AReg.ReadInteger('Type') < 16) or (Start <= ssSystem)) then
+    if ((AReg.ReadInteger('Type') < Ord(stWin32)) or (Start <= ssSystem)) then
       Exit;
 
     // Display name must be string
@@ -3407,7 +3469,7 @@ begin
     Wow64 := (AReg.ValueExists('WOW64') and AReg.ReadBool('WOW64'));
 
     // Add service to list
-    AddService(AName, Caption, Start, AReg, Wow64);
+    AddService(AName, Caption, ImagePath, Start, AReg, Wow64);
 
   finally
     AReg.CloseKey();

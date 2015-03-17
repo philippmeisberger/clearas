@@ -190,8 +190,8 @@ type
     procedure OnServiceSearchEnd(Sender: TObject);
     procedure OnServiceItemChanged(Sender: TObject);
     procedure SetLanguage(Sender: TObject);
-    procedure ShowColumnDate(AListView: TListView; AShow: Boolean = True);
     function ShowRegistryExportDialog(): Boolean;
+    procedure ShowColumnDate(AListView: TListView; AShow: Boolean = True);
     function UpdateContextPath(): Boolean; overload;
     function UpdateContextPath(ALangFile: TLanguageFile): Boolean; overload; deprecated;
   end;
@@ -246,6 +246,7 @@ begin
 
   FService := TServiceList.Create;
 
+  // Link search events
   with FService do
   begin
     OnSearchStart := OnServiceSearchStart;
@@ -276,21 +277,21 @@ end;
 
 procedure TMain.FormShow(Sender: TObject);
 var
-  windows: string;
-  newWindows: Boolean;
+  WindowsVersion: string;
+  NewWindows: Boolean;
 
 begin
   // Get version of Windows including service pack
-  windows := TOSUtils.GetWinVersion(True);
-  newWindows := TOSUtils.WindowsVistaOrLater();
-  lWindows.Caption := lWindows.Caption +' '+ windows;
+  WindowsVersion := TOSUtils.GetWinVersion(True);
+  NewWindows := TOSUtils.WindowsVistaOrLater();
+  lWindows.Caption := lWindows.Caption +' '+ WindowsVersion;
   lWindows2.Caption := lWindows.Caption;
   lWindows3.Caption := lWindows.Caption;
 
   // Check for incompatibility
-  if not (newWindows or (windows <> '')) then
+  if not (NewWindows or (WindowsVersion <> '')) then
   begin
-    Flang.MessageBox(FLang.Format([64, 65], [windows]), mtError);
+    Flang.MessageBox(FLang.Format([64, 65], [WindowsVersion]), mtError);
     mmExportList.Enabled := False;
     mmRefresh.Enabled := False;
     mmContext.Enabled := False;
@@ -298,12 +299,13 @@ begin
     mmDate.Enabled := False;
     lwStartup.Enabled := False;
     lwContext.Enabled := False;
+    lwService.Enabled := False;
     cbExpert.Enabled := False;
     Exit;
   end;  //of if
 
   // Show "date of deactivation" only on Vista and later
-  mmDate.Enabled := newWindows;
+  mmDate.Enabled := NewWindows;
 
   // Update Clearas recycle bin context menu entry
   mmContext.Checked := UpdateContextPath();
@@ -523,7 +525,8 @@ end;
 
   Event that is called when search is in progress. }
 
-procedure TMain.OnContextSearchProgress(Sender: TObject; const AWorkCount: Cardinal);
+procedure TMain.OnContextSearchProgress(Sender: TObject;
+  const AWorkCount: Cardinal);
 begin
   pbLoad.Position := AWorkCount;
 end;
@@ -532,7 +535,8 @@ end;
 
   Event that is called when search starts. }
 
-procedure TMain.OnContextSearchStart(Sender: TObject; const AWorkCountMax: Cardinal);
+procedure TMain.OnContextSearchStart(Sender: TObject;
+  const AWorkCountMax: Cardinal);
 begin
   mmLang.Enabled := False;
   mmAdd.Enabled := False;
@@ -594,7 +598,8 @@ end;
 
 procedure TMain.OnContextItemChanged(Sender: TObject);
 begin
-  lwContext.Columns[1].Caption := FLang.Format(87, [FContext.Enabled, FContext.Count]);
+  lwContext.Columns[1].Caption := FLang.Format(87, [FContext.Enabled,
+    FContext.Count]);
 end;
 
 { private TMain.OnFinishExportList
@@ -610,7 +615,8 @@ end;
 
   Event that is called when search starts. }
 
-procedure TMain.OnStartupSearchStart(Sender: TObject; const AWorkCountMax: Cardinal);
+procedure TMain.OnStartupSearchStart(Sender: TObject;
+  const AWorkCountMax: Cardinal);
 begin
   mmLang.Enabled := False;
   mmAdd.Enabled := False;
@@ -680,14 +686,16 @@ end;
 
 procedure TMain.OnStartupItemChanged(Sender: TObject);
 begin
-  lwStartup.Columns[1].Caption := FLang.Format(88, [FStartup.Enabled, FStartup.Count]);
+  lwStartup.Columns[1].Caption := FLang.Format(88, [FStartup.Enabled,
+    FStartup.Count]);
 end;
 
 { private TMain.OnServiceSearchStart
 
   Event that is called when search starts. }
 
-procedure TMain.OnServiceSearchStart(Sender: TObject; const AWorkCountMax: Cardinal);
+procedure TMain.OnServiceSearchStart(Sender: TObject;
+  const AWorkCountMax: Cardinal);
 begin
   mmLang.Enabled := False;
   mmAdd.Enabled := False;
@@ -750,7 +758,8 @@ end;
 
 procedure TMain.OnServiceItemChanged(Sender: TObject);
 begin
-  lwService.Columns[1].Caption := FLang.Format(88, [FService.Enabled, FService.Count]);
+  lwService.Columns[1].Caption := FLang.Format(88, [FService.Enabled,
+    FService.Count]);
 end;
 
 { private TMain.SetLanguage
@@ -870,6 +879,28 @@ begin
     for i := 0 to FService.Count - 1 do
       lwService.Items[i].Caption := FService[i].GetStatus(FLang);
   end;  //of begin
+end;
+
+{ private TMain.ShowColumnDate
+
+  Adds or removes the date of deactivation column. }
+
+procedure TMain.ShowColumnDate(AListView: TListView; AShow: Boolean = True);
+begin
+  // Timestamp already shown?
+  if not AShow then
+  begin
+    if (AListView.Columns.Count = 5) then
+      AListView.Columns.Delete(4);
+  end  //of begin
+  else
+    if (AListView.Columns.Count = 4) then
+      with AListView.Columns.Add do
+      begin
+        Caption := FLang.GetString(80);
+        Width := 120;
+        mmShowIcons.Click();
+      end;  //of with
 end;
 
 { private TMain.ShowRegistryExportDialog
@@ -2023,7 +2054,7 @@ begin
       // Add startup item?
       case PageControl.ActivePageIndex of
         0: begin
-             // FStartup item already exists?
+             // Startup item already exists?
              if not FStartup.AddItem(OpenDialog.FileName, Args, Name) then
                raise EWarning.Create(FLang.Format(40, [OpenDialog.FileName]));
 
@@ -2054,6 +2085,15 @@ begin
                List.Free;
              end;  //of try
            end;  //of if
+
+        2: begin
+             // Service item already exists?
+             if not FService.AddItem(OpenDialog.FileName, Args, Name) then
+               raise EWarning.Create(FLang.Format(40, [OpenDialog.FileName]));
+
+             // Update TListView
+             LoadServiceItems(False);
+           end;
       end;  //of case
 
     finally
@@ -2071,8 +2111,7 @@ end;
 
 { TMain.mmDateClick
 
-  MainMenu entry to add or removes the deactivation timestamp column with
-  an animation. }
+  MainMenu entry to add or remove the deactivation timestamp column. }
 
 procedure TMain.mmDateClick(Sender: TObject);
 var
@@ -2086,25 +2125,12 @@ begin
        Exit;
   end;  //of case
 
-  ShowColumnDate(ListView, mmDate.Checked);
-end;
-
-procedure TMain.ShowColumnDate(AListView: TListView; AShow: Boolean = True);
-begin
-  // Timestamp already shown?
-  if not AShow then
-  begin
-    if (AListView.Columns.Count = 5) then
-      AListView.Columns.Delete(4);
-  end  //of begin
+  if mmDate.Checked then
+    Width := Width + 120
   else
-    if (AListView.Columns.Count = 4) then
-      with AListView.Columns.Add do
-      begin
-        Caption := FLang.GetString(80);
-        Width := 120;
-        mmShowIcons.Click();
-      end;  //of with
+    Width := Width - ListView.Columns[4].Width;
+
+  ShowColumnDate(ListView, mmDate.Checked);
 end;
 
 { TMain.mmExportClick
