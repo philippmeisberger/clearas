@@ -320,7 +320,7 @@ type
       AEnabled, AWow64: Boolean): Integer;
   public
     constructor Create;
-    function AddItem(AFilePath, AArguments, ALocationRoot,
+    function AddItem(AFileName, AArguments, ALocationRoot,
       ACaption: string): Boolean;
     procedure ExportList(const AFileName: string); override;
     function IndexOf(AName, ALocationRoot: string): Integer; overload;
@@ -337,13 +337,15 @@ type
   { Service enums }
   TServiceStart = (ssBoot, ssSystem, ssAutomatic, ssManual, ssDisabled);
   TErrorControl = (ecIgnore, ecNormal, ecSevere, ecCritical);
-  
+
   TServiceType = (
     stKernel = $1,
     stFileSystem = $2,
     stAdapter = $4,
     stWin32 = $10,
-    stWin32Share = $20
+    stWin32Share = $20,
+    stWin32Gui = $110,
+    stWin32GuiShare = $120
   );
 
   { TServiceListItem }
@@ -707,7 +709,7 @@ var
 
 begin
   Win64 := TOSUtils.IsWindows64();
-  
+
   // Deny WOW64 redirection only on 64bit Windows
   if Win64 then
     TOSUtils.Wow64FsRedirection(True);
@@ -1563,7 +1565,7 @@ begin
     FEnabled := True;
     FTime := '';
     Result := True;
-    
+
   finally
     Reg.CloseKey();
     Reg.Free;
@@ -2075,7 +2077,9 @@ begin
     try
       Reg.RootKey := HKEY_CURRENT_USER;
       Reg.OpenKey(KEY_STARTUP_RUN, True);
-      FullPath := AFileName;
+
+      // Escape space char using quotes
+      FullPath := '"'+ AFileName +'"';
 
       // Append arguments if used
       if (AArguments <> '') then
@@ -2827,7 +2831,7 @@ end;
 
   Adds a new contextmenu entry. }
 
-function TContextList.AddItem(AFilePath, AArguments, ALocationRoot,
+function TContextList.AddItem(AFileName, AArguments, ALocationRoot,
   ACaption: string): Boolean;
 var
   Name, Ext, FullPath, KeyName: string;
@@ -2839,8 +2843,8 @@ begin
   if ((Trim(ALocationRoot) = '') or (Trim(ACaption) = '')) then
     raise EInvalidArgument.Create('Missing argument!');
 
-  Ext := ExtractFileExt(AFilePath);
-  Name := ChangeFileExt(ExtractFileName(AFilePath), '');
+  Ext := ExtractFileExt(AFileName);
+  Name := ChangeFileExt(ExtractFileName(AFileName), '');
 
   // Check invalid extension
   if ((Ext <> '.exe') and (Ext <> '.bat')) then
@@ -2852,7 +2856,7 @@ begin
     Exit;
 
   // Escape space char using quotes
-  FullPath := '"'+ AFilePath +'"';
+  FullPath := '"'+ AFileName +'"';
 
   // Append arguments if used
   if (AArguments <> '') then
@@ -3115,14 +3119,16 @@ var
 
 begin
   Result := False;
-  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));
+  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_WRITE));
 
   try
     Reg.RootKey := HKEY_LOCAL_MACHINE;
 
+    // Key does not exist?
     if not Reg.OpenKey(FLocation, False) then
       raise Exception.Create('Key does not exist!');
 
+    // Change path
     Reg.WriteExpandString('ImagePath', ANewFilePath);
     FilePath := ANewFilePath;
     Result := True;
@@ -3346,25 +3352,29 @@ begin
     if AnsiContainsStr(ItemAt(i).FilePath, AFileName) then
       Exit;
 
+  Name := ChangeFileExt(Name, '');
   Reg := TRegistry.Create(KEY_WRITE);
 
   // Try to add new startup item to Registry
   try
     Reg.RootKey := HKEY_LOCAL_MACHINE;
-    Reg.OpenKey(KEY_SERVICE_ENABLED + ChangeFileExt(Name, ''), True);
+    Reg.OpenKey(KEY_SERVICE_ENABLED + Name, True);
+
+    // Escape space char using quotes
     FullPath := '"'+ AFileName +'"';
 
     // Append arguments if used
     if (AArguments <> '') then
       FullPath := FullPath +' '+ AArguments;
 
+    // Write new service to Registry
     Reg.WriteExpandString('ImagePath', FullPath);
     Reg.WriteString('DisplayName', ACaption);
     Reg.WriteInteger('Start', Ord(ssAutomatic));
     Reg.WriteInteger('Type', Ord(stWin32));
     Reg.WriteInteger('ErrorControl', Ord(ecIgnore));
 
-    // Adds item to list
+    // Adds service to list
     Result := (AddService(Name, ACaption, FullPath, ssAutomatic, Reg) <> -1);
 
   finally
@@ -3460,7 +3470,7 @@ begin
     if (AReg.ValueExists('DisplayName') and
       (AReg.GetDataType('DisplayName') = rdString)) then
       Caption := AReg.ReadString('DisplayName');
-    
+
     // Filter only non-Windows services
     if (Caption <> '') and (Caption[1] = '@') then
       Exit;

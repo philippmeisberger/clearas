@@ -87,9 +87,9 @@ type
   TRootItem = class(TObject)
   private
     FIndex: Word;
-    FName, FType, FFilePath: string;
+    FName, FType, FFileName: string;
     function GetArguments(): string;
-    function GetFilePath(): string;
+    function GetFileNameOnly(): string;
     function GetIcon(): HICON;
   protected
     FEnabled: Boolean;
@@ -102,7 +102,7 @@ type
     function WriteTimestamp(AReg: TRegistry): string;
   public
     constructor Create(AIndex: Word; AEnabled: Boolean);
-    function ChangeFilePath(const ANewFilePath: string): Boolean; virtual; abstract;
+    function ChangeFilePath(const ANewFileName: string): Boolean; virtual; abstract;
     function ChangeStatus(): Boolean; virtual;
     function Delete(): Boolean; virtual; abstract;
     function Disable(): Boolean; virtual; abstract;
@@ -113,8 +113,8 @@ type
     { external }
     property Arguments: string read GetArguments;
     property Enabled: Boolean read FEnabled;
-    property FilePath: string read FFilePath write FFilePath;
-    property FilePathOnly: string read GetFilePath;
+    property FileName: string read FFileName write FFileName;
+    property FileNameOnly: string read GetFileNameOnly;
     property Icon: HICON read GetIcon;
     property ItemIndex: Word read FIndex;
     property Location: string read FLocation write FLocation;
@@ -195,7 +195,7 @@ type
   protected
     function GetFullLocation(): string; override;
   public
-    function ChangeFilePath(const ANewFilePath: string): Boolean; override;
+    function ChangeFilePath(const ANewFileName: string): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
     { external }
     property RootKey: TRootKey read FRootKey write FRootKey;
@@ -219,7 +219,7 @@ type
     function GetFullLocation(): string; override;
   public
     destructor Destroy; override;
-    function ChangeFilePath(const ANewFilePath: string): Boolean; override;
+    function ChangeFilePath(const ANewFileName: string): Boolean; override;
     function Delete(): Boolean; override;
     function Disable(): Boolean; override;
     function Enable(): Boolean; override;
@@ -291,7 +291,7 @@ type
   private
     function GetKeyPath(): string; override;
   public
-    function ChangeFilePath(const ANewFilePath: string): Boolean; override;
+    function ChangeFilePath(const ANewFileName: string): Boolean; override;
     function Disable(): Boolean; override;
     function Enable(): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
@@ -302,7 +302,7 @@ type
   private
     function GetKeyPath(): string; override;
   public
-    function ChangeFilePath(const ANewFilePath: string): Boolean; override;
+    function ChangeFilePath(const ANewFileName: string): Boolean; override;
     function Disable(): Boolean; override;
     function Enable(): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
@@ -314,13 +314,13 @@ type
     function GetSelectedItem(): TContextListItem;
     function ItemAt(AIndex: Word): TContextListItem;
   protected
-    function AddShellItem(const AName, ALocationRoot, AFilePath, ACaption: string;
+    function AddShellItem(const AName, ALocationRoot, AFileName, ACaption: string;
       AEnabled, AWow64: Boolean): Integer;
-    function AddShellExItem(const AName, ALocationRoot, AFilePath: string;
+    function AddShellExItem(const AName, ALocationRoot, AFileName: string;
       AEnabled, AWow64: Boolean): Integer;
   public
     constructor Create;
-    function AddItem(AFilePath, AArguments, ALocationRoot,
+    function AddItem(AFileName, AArguments, ALocationRoot,
       ACaption: string): Boolean;
     procedure ExportList(const AFileName: string); override;
     function IndexOf(AName, ALocationRoot: string): Integer; overload;
@@ -337,13 +337,15 @@ type
   { Service enums }
   TServiceStart = (ssBoot, ssSystem, ssAutomatic, ssManual, ssDisabled);
   TErrorControl = (ecIgnore, ecNormal, ecSevere, ecCritical);
-  
+
   TServiceType = (
     stKernel = $1,
     stFileSystem = $2,
     stAdapter = $4,
     stWin32 = $10,
-    stWin32Share = $20
+    stWin32Share = $20,
+    stWin32Gui = $110,
+    stWin32GuiShare = $120
   );
 
   { TServiceListItem }
@@ -354,7 +356,7 @@ type
   protected
     function GetFullLocation(): string; override;
   public
-    function ChangeFilePath(const ANewFilePath: string): Boolean; override;
+    function ChangeFilePath(const ANewFileName: string): Boolean; override;
     function Delete(): Boolean; override;
     function Disable(): Boolean; override;
     function Enable(): Boolean; override;
@@ -675,19 +677,19 @@ end;
 
 function TRootItem.GetArguments(): string;
 begin
-  Result := DeleteQuoteChars(ExtractArguments(FFilePath));
+  Result := DeleteQuoteChars(ExtractArguments(FFileName));
 end;
 
-{ private TRootItem.GetFilePath
+{ private TRootItem.GetFileNameOnly
 
-  Returns only the file path (without arguments) of the item. }
+  Returns only the file name of the item (without arguments). }
 
-function TRootItem.GetFilePath(): string;
+function TRootItem.GetFileNameOnly(): string;
 var
   Path: string;
 
 begin
-  Path := DeleteQuoteChars(ExtractPathToFile(FFilePath));
+  Path := DeleteQuoteChars(ExtractPathToFile(FFileName));
 
   // Path has to be expanded?
   if ((Path <> '') and (Path[1] = '%')) then
@@ -707,12 +709,12 @@ var
 
 begin
   Win64 := TOSUtils.IsWindows64();
-  
+
   // Deny WOW64 redirection only on 64bit Windows
   if Win64 then
     TOSUtils.Wow64FsRedirection(True);
 
-  if Succeeded(SHGetFileInfo(PChar(GetFilePath()), 0, FileInfo, SizeOf(FileInfo),
+  if Succeeded(SHGetFileInfo(PChar(GetFileNameOnly()), 0, FileInfo, SizeOf(FileInfo),
     SHGFI_ICON or SHGFI_SMALLICON)) then
     Result := FileInfo.hIcon
   else
@@ -893,7 +895,7 @@ var
 
 begin
   // Extract the file path only (without arguments and quote chars)
-  PreparedFileName := GetFilePath();
+  PreparedFileName := GetFileNameOnly();
 
   // 64bit Windows?
   Win64 := TOSUtils.IsWindows64();
@@ -1306,7 +1308,7 @@ end;
 
   Changes the file path of an TStartupListItem item. }
 
-function TStartupListItem.ChangeFilePath(const ANewFilePath: string): Boolean;
+function TStartupListItem.ChangeFilePath(const ANewFileName: string): Boolean;
 var
   Reg: TRegistry;
   ItemName: string;
@@ -1336,8 +1338,8 @@ begin
       raise Exception.Create('Value does not exist!');
 
     // Change path
-    Reg.WriteString(ItemName, ANewFilePath);
-    FilePath := ANewFilePath;
+    Reg.WriteString(ItemName, ANewFileName);
+    FileName := ANewFileName;
     Result := True;
 
   finally
@@ -1453,7 +1455,7 @@ begin
     Reg.WriteString('hkey', FRootKey);
     Reg.WriteString('key', FLocation);
     Reg.WriteString('item', Name);
-    Reg.WriteString('command', FilePath);
+    Reg.WriteString('command', FileName);
     Reg.WriteString('inimapping', '0');
 
     // Windows >= Vista?
@@ -1543,7 +1545,7 @@ begin
       raise EStartupException.Create('Could not open startup key!');
 
     // Write startup entry
-    Reg.WriteString(Name, FilePath);
+    Reg.WriteString(Name, FileName);
 
     // Delete old key
     Reg.CloseKey();
@@ -1563,7 +1565,7 @@ begin
     FEnabled := True;
     FTime := '';
     Result := True;
-    
+
   finally
     Reg.CloseKey();
     Reg.Free;
@@ -1608,23 +1610,23 @@ end;
 
   Changes the file path of a TStartupUserItem item. }
 
-function TStartupUserItem.ChangeFilePath(const ANewFilePath: string): Boolean;
+function TStartupUserItem.ChangeFilePath(const ANewFileName: string): Boolean;
 var
   NewFilePath, Arguments: string;
 
 begin
   if not FEnabled then
-    inherited ChangeFilePath(ANewFilePath);
+    inherited ChangeFilePath(ANewFileName);
 
-  NewFilePath := DeleteQuoteChars(ExtractPathToFile(ANewFilePath));
-  Arguments := DeleteQuoteChars(ExtractArguments(ANewFilePath));
+  NewFilePath := DeleteQuoteChars(ExtractPathToFile(ANewFileName));
+  Arguments := DeleteQuoteChars(ExtractArguments(ANewFileName));
 
   // Failed to create new .lnk file?
   if (FEnabled and not FLnkFile.WriteLnkFile(FLocation, NewFilePath, Arguments)) then
     raise EStartupException.Create('Could not create .lnk file!');
 
   // Update information
-  FilePath := ANewFilePath;
+  FileName := ANewFileName;
   FLnkFile.ExeFileName := NewFilePath;
   FLnkFile.Arguments := Arguments;
 
@@ -1689,7 +1691,7 @@ begin
 
     Reg.WriteString('path', FLocation);
     Reg.WriteString('item', ChangeFileExt(ExtractFileName(Name), ''));
-    Reg.WriteString('command', FilePath);
+    Reg.WriteString('command', FileName);
     Reg.WriteString('backup', FLnkFile.BackupLnk);
 
     // Special Registry entries only for Windows >= Vista
@@ -1734,7 +1736,8 @@ begin
   else
     begin
       // Failed to create new .lnk file?
-      if not FLnkFile.WriteLnkFile(FLnkFile.FileName, GetFilePath(), GetArguments()) then
+      if not FLnkFile.WriteLnkFile(FLnkFile.FileName, GetFileNameOnly(),
+        GetArguments()) then
         raise EStartupException.Create('Could not create .lnk file!');
     end;  //of if
 
@@ -1866,7 +1869,7 @@ begin
       RootKey := 'HKLM';
       FLocation := AReg.CurrentPath;
       Name := ExtractFileName(FLocation);
-      FilePath := AReg.ReadString('command');
+      FileName := AReg.ReadString('command');
       Time := GetTimestamp(AReg);
 
       // RunOnce item?
@@ -1910,7 +1913,7 @@ begin
       RootKey := HKey;
       FLocation := AKeyPath;
       Name := AName;
-      FilePath := AFileName;
+      FileName := AFileName;
       Time := '';
 
       // RunOnce item?
@@ -1971,7 +1974,7 @@ begin
       RootKey := 'HKLM';
       FLocation := AReg.CurrentPath;
       Name := ExtractFileName(StringReplace(FLocation, '^', '\', [rfReplaceAll]));
-      FilePath := AReg.ReadString('command');
+      FileName := AReg.ReadString('command');
       Time := GetTimestamp(AReg);
       TypeOf := GetStartupUserType(AReg);
       Path := AReg.ReadString('path');
@@ -1983,8 +1986,8 @@ begin
 
       // Setup .lnk
       LnkFile := TLnkFile.Create(Path, Ext);
-      LnkFile.ExeFileName := ExtractPathToFile(FilePath);
-      LnkFile.Arguments := ExtractArguments(FilePath);
+      LnkFile.ExeFileName := ExtractPathToFile(FileName);
+      LnkFile.Arguments := ExtractArguments(FileName);
     end;  //of with
 
     Result := Add(Item);
@@ -2015,7 +2018,7 @@ begin
     begin
       RootKey := '';
       FLocation := ALnkFile.FileName;
-      FilePath := ALnkFile.FullPath;
+      FileName := ALnkFile.FullPath;
       LnkFile := ALnkFile;
       Name := ExtractFileName(ALnkFile.FileName);
       Time := '';
@@ -2054,7 +2057,7 @@ begin
 
   // File path already exists in another item?
   for i := 0 to Count - 1 do
-    if AnsiContainsStr(ItemAt(i).FilePath, AFileName) then
+    if AnsiContainsStr(ItemAt(i).FileName, AFileName) then
       Exit;
 
   // Add new startup user item?
@@ -2075,7 +2078,9 @@ begin
     try
       Reg.RootKey := HKEY_CURRENT_USER;
       Reg.OpenKey(KEY_STARTUP_RUN, True);
-      FullPath := AFileName;
+
+      // Escape space char using quotes
+      FullPath := '"'+ AFileName +'"';
 
       // Append arguments if used
       if (AArguments <> '') then
@@ -2214,7 +2219,7 @@ begin
 
     // File path already exists in another item?
     for i := 0 to Count - 1 do
-      if (ItemAt(i).FilePath = LnkFile.ExeFileName) then
+      if (ItemAt(i).FileName = LnkFile.ExeFileName) then
         Exit;
 
     // Create .lnk file and add it to list
@@ -2427,7 +2432,7 @@ end;
 
   Changes the file path of an TShellItem item. }
 
-function TShellItem.ChangeFilePath(const ANewFilePath: string): Boolean;
+function TShellItem.ChangeFilePath(const ANewFileName: string): Boolean;
 var
   Reg: TRegistry;
 
@@ -2444,13 +2449,13 @@ begin
 
     // Change path
     case Reg.GetDataType('') of
-      rdExpandString: Reg.WriteExpandString('', ANewFilePath);
-      rdString:       Reg.WriteString('', ANewFilePath);
+      rdExpandString: Reg.WriteExpandString('', ANewFileName);
+      rdString:       Reg.WriteString('', ANewFileName);
       else
                       raise EContextMenuException.Create('Invalid data type!');
     end;  //of case
 
-    FilePath := ANewFilePath;
+    FileName := ANewFileName;
     Result := True;
 
   finally
@@ -2558,7 +2563,7 @@ end;
 
   Changes the file path of an TShellExItem item. }
 
-function TShellExItem.ChangeFilePath(const ANewFilePath: string): Boolean;
+function TShellExItem.ChangeFilePath(const ANewFileName: string): Boolean;
 var
   Reg: TRegistry;
   ProgramKeyPath: string;
@@ -2588,14 +2593,14 @@ begin
 
     // Change path
     case Reg.GetDataType('') of
-      rdExpandString: Reg.WriteExpandString('', ANewFilePath);
-      rdString:       Reg.WriteString('', ANewFilePath);
+      rdExpandString: Reg.WriteExpandString('', ANewFileName);
+      rdString:       Reg.WriteString('', ANewFileName);
       else
                       raise EContextMenuException.Create('Invalid data type!');
     end;  //of case
 
     // Update path
-    FilePath := ANewFilePath;
+    FileName := ANewFileName;
     Result := True;
 
   finally
@@ -2774,7 +2779,7 @@ end;
 
   Adds a shell item to list. }
 
-function TContextList.AddShellItem(const AName, ALocationRoot, AFilePath,
+function TContextList.AddShellItem(const AName, ALocationRoot, AFileName,
   ACaption: string; AEnabled, AWow64: Boolean): Integer;
 var
   Item: TContextListItem;
@@ -2786,7 +2791,7 @@ begin
   begin
     Name := AName;
     LocationRoot := ALocationRoot;
-    FilePath := AFilePath;
+    FileName := AFileName;
     Caption := ACaption;
     TypeOf := 'Shell';
 
@@ -2801,7 +2806,7 @@ end;
 
   Adds a shellex item to list. }
 
-function TContextList.AddShellExItem(const AName, ALocationRoot, AFilePath: string;
+function TContextList.AddShellExItem(const AName, ALocationRoot, AFileName: string;
   AEnabled, AWow64: Boolean): Integer;
 var
   Item: TContextListItem;
@@ -2813,7 +2818,7 @@ begin
   begin
     Name := AName;
     LocationRoot := ALocationRoot;
-    FilePath := AFilePath;
+    FileName := AFileName;
     TypeOf := 'ShellEx';
 
     if AEnabled then
@@ -2827,7 +2832,7 @@ end;
 
   Adds a new contextmenu entry. }
 
-function TContextList.AddItem(AFilePath, AArguments, ALocationRoot,
+function TContextList.AddItem(AFileName, AArguments, ALocationRoot,
   ACaption: string): Boolean;
 var
   Name, Ext, FullPath, KeyName: string;
@@ -2839,8 +2844,8 @@ begin
   if ((Trim(ALocationRoot) = '') or (Trim(ACaption) = '')) then
     raise EInvalidArgument.Create('Missing argument!');
 
-  Ext := ExtractFileExt(AFilePath);
-  Name := ChangeFileExt(ExtractFileName(AFilePath), '');
+  Ext := ExtractFileExt(AFileName);
+  Name := ChangeFileExt(ExtractFileName(AFileName), '');
 
   // Check invalid extension
   if ((Ext <> '.exe') and (Ext <> '.bat')) then
@@ -2852,7 +2857,7 @@ begin
     Exit;
 
   // Escape space char using quotes
-  FullPath := '"'+ AFilePath +'"';
+  FullPath := '"'+ AFileName +'"';
 
   // Append arguments if used
   if (AArguments <> '') then
@@ -3109,22 +3114,24 @@ end;
 
   Changes the file path of an TServiceListItem item. }
 
-function TServiceListItem.ChangeFilePath(const ANewFilePath: string): Boolean;
+function TServiceListItem.ChangeFilePath(const ANewFileName: string): Boolean;
 var
   Reg: TRegistry;
 
 begin
   Result := False;
-  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));
+  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_WRITE));
 
   try
     Reg.RootKey := HKEY_LOCAL_MACHINE;
 
+    // Key does not exist?
     if not Reg.OpenKey(FLocation, False) then
       raise Exception.Create('Key does not exist!');
 
-    Reg.WriteExpandString('ImagePath', ANewFilePath);
-    FilePath := ANewFilePath;
+    // Change path
+    Reg.WriteExpandString('ImagePath', ANewFileName);
+    FileName := ANewFileName;
     Result := True;
 
   finally
@@ -3292,7 +3299,7 @@ begin
       Name := AName;
       Caption := ACaption;
       FLocation := AReg.CurrentPath;
-      FilePath := AImagePath;
+      FileName := AImagePath;
       TypeOf := 'Service';
     end;  //of with
 
@@ -3343,7 +3350,7 @@ begin
 
   // File path already exists in another item?
   for i := 0 to Count - 1 do
-    if AnsiContainsStr(ItemAt(i).FilePath, AFileName) then
+    if AnsiContainsStr(ItemAt(i).FileName, AFileName) then
       Exit;
 
   Name := ChangeFileExt(Name, '');
@@ -3353,19 +3360,22 @@ begin
   try
     Reg.RootKey := HKEY_LOCAL_MACHINE;
     Reg.OpenKey(KEY_SERVICE_ENABLED + Name, True);
+
+    // Escape space char using quotes
     FullPath := '"'+ AFileName +'"';
 
     // Append arguments if used
     if (AArguments <> '') then
       FullPath := FullPath +' '+ AArguments;
 
+    // Write new service to Registry
     Reg.WriteExpandString('ImagePath', FullPath);
     Reg.WriteString('DisplayName', ACaption);
     Reg.WriteInteger('Start', Ord(ssAutomatic));
     Reg.WriteInteger('Type', Ord(stWin32));
     Reg.WriteInteger('ErrorControl', Ord(ecIgnore));
 
-    // Adds item to list
+    // Adds service to list
     Result := (AddService(Name, ACaption, FullPath, ssAutomatic, Reg) <> -1);
 
   finally
@@ -3461,7 +3471,7 @@ begin
     if (AReg.ValueExists('DisplayName') and
       (AReg.GetDataType('DisplayName') = rdString)) then
       Caption := AReg.ReadString('DisplayName');
-    
+
     // Filter only non-Windows services
     if (Caption <> '') and (Caption[1] = '@') then
       Exit;

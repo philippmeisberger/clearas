@@ -257,7 +257,7 @@ begin
   Result := ExitWindowsEx(AAction, 0);   //EWX_SHUTDOWN, EWX_POWEROFF, (EWX_FORCE, EWX_FORCEIFHUNG)
 end;
 
-{ public TOSUtils.ExplorerReboot
+{ public TOSUtils.ExpandEnvironmentVar
 
   Expands an environment variable. }
 

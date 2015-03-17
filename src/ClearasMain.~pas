@@ -1977,25 +1977,28 @@ begin
       raise Exception.Create('Error while changing path!');
 
     // Update file path in TListView
-    if (PageControl.ActivePage = tsStartup) then
-    begin
-      lwStartup.ItemFocused.SubItems[1] := EnteredPath;
+    case PageControl.ActivePageIndex of
+      0: begin
+           lwStartup.ItemFocused.SubItems[1] := EnteredPath;
 
-      // Update icon
-      if mmShowIcons.Checked then
-      begin
-        Icon := TIcon.Create;
+           // Update icon
+           if mmShowIcons.Checked then
+           begin
+             Icon := TIcon.Create;
 
-        try
-          Icon.Handle := FStartup.Selected.Icon;
-          lwStartup.ItemFocused.ImageIndex := IconList.AddIcon(Icon);
+             try
+               Icon.Handle := FStartup.Selected.Icon;
+               lwStartup.ItemFocused.ImageIndex := IconList.AddIcon(Icon);
 
-        finally
-          Icon.Free;
-        end;  //of try
-      end;  //of begin
-    end;  //of begin
+             finally
+               Icon.Free;
+             end;  //of try
+           end;  //of begin
+         end;
 
+      2: lwService.ItemFocused.SubItems[1] := EnteredPath;
+    end;  //of case
+    
   except
     on E: EAbort do
       FLang.MessageBox(53, mtWarning);

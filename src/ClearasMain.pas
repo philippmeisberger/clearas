@@ -651,7 +651,7 @@ begin
       begin
         Caption := FStartup[i].GetStatus(FLang);
         SubItems.Append(FStartup[i].Name);
-        SubItems.Append(FStartup[i].FilePath);
+        SubItems.Append(FStartup[i].FileName);
         SubItems.Append(FStartup[i].TypeOf);
 
         // Show deactivation timestamp?
@@ -728,7 +728,7 @@ begin
       else
         SubItems.Append(FService[i].Name);
 
-      SubItems.Append(FService[i].FilePath);
+      SubItems.Append(FService[i].FileName);
 
       // Show start of service
       case FService[i].Start of
@@ -1362,7 +1362,7 @@ begin
       lwStartupSelectItem(Self, lwStartup.ItemFocused, True);
 
       // Warn if file does not exist
-      if not FileExists(FStartup.Selected.FilePathOnly) then
+      if not FileExists(FStartup.Selected.FileNameOnly) then
         raise EWarning.Create(FLang.GetString([45, NEW_LINE, 46]));
     end  //of begin
     else
@@ -1406,7 +1406,7 @@ begin
       lwContextSelectItem(Self, lwContext.ItemFocused, True);
 
       // Warn if file does not exist
-      if not FileExists(FContext.Selected.FilePathOnly) then
+      if not FileExists(FContext.Selected.FileNameOnly) then
         raise EWarning.Create(FLang.GetString([45, NEW_LINE, 46]));
     end  //of begin
     else
@@ -1454,7 +1454,7 @@ begin
       lwServiceSelectItem(Self, lwService.ItemFocused, True);
 
       // Warn if file does not exist
-      if not FileExists(FService.Selected.FilePathOnly) then
+      if not FileExists(FService.Selected.FileNameOnly) then
         raise EWarning.Create(FLang.GetString([45, NEW_LINE, 46]));
     end  //of begin
     else
@@ -1603,7 +1603,7 @@ begin
     pmExport.Enabled := True;
 
     // Enable "edit path" only if file path is present
-    pmEdit.Enabled := (FContext.Selected.FilePath <> '');
+    pmEdit.Enabled := (FContext.Selected.FileName <> '');
 
     // Show popup menu
     PopupMenu.AutoPopup := True;
@@ -1676,7 +1676,7 @@ begin
     pmExport.Enabled := True;
 
     // Enable "edit path" only if file path is present
-    pmEdit.Enabled := (FService.Selected.FilePath <> '');
+    pmEdit.Enabled := (FService.Selected.FileName <> '');
 
     // Show popup menu
     PopupMenu.AutoPopup := True;
@@ -1963,7 +1963,7 @@ var
 
 begin
   try
-    Path := GetSelectedItem().FilePath;
+    Path := GetSelectedItem().FileName;
 
     // Show input box for editing path
     EnteredPath := InputBox(FLang.GetString(33), FLang.GetString(54), Path);
@@ -1977,25 +1977,28 @@ begin
       raise Exception.Create('Error while changing path!');
 
     // Update file path in TListView
-    if (PageControl.ActivePage = tsStartup) then
-    begin
-      lwStartup.ItemFocused.SubItems[1] := EnteredPath;
+    case PageControl.ActivePageIndex of
+      0: begin
+           lwStartup.ItemFocused.SubItems[1] := EnteredPath;
 
-      // Update icon
-      if mmShowIcons.Checked then
-      begin
-        Icon := TIcon.Create;
+           // Update icon
+           if mmShowIcons.Checked then
+           begin
+             Icon := TIcon.Create;
 
-        try
-          Icon.Handle := FStartup.Selected.Icon;
-          lwStartup.ItemFocused.ImageIndex := IconList.AddIcon(Icon);
+             try
+               Icon.Handle := FStartup.Selected.Icon;
+               lwStartup.ItemFocused.ImageIndex := IconList.AddIcon(Icon);
 
-        finally
-          Icon.Free;
-        end;  //of try
-      end;  //of begin
-    end;  //of begin
+             finally
+               Icon.Free;
+             end;  //of try
+           end;  //of begin
+         end;
 
+      2: lwService.ItemFocused.SubItems[1] := EnteredPath;
+    end;  //of case
+    
   except
     on E: EAbort do
       FLang.MessageBox(53, mtWarning);
