@@ -26,7 +26,7 @@ const
   KEY_STARTUP_RUNONCE32 = 'SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnce';
 
   { Service Registry keys }
-  KEY_SERVICE_DISABLED = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\services\';
+  KEY_SERVICE_DISABLED = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\services';
   KEY_SERVICE_ENABLED = 'SYSTEM\CurrentControlSet\services\';
 
   { Context menu Registry subkeys + values}
@@ -3145,12 +3145,40 @@ end;
   Deletes a TServiceListItem object and returns True if successful. }
 
 function TServiceListItem.Delete(): Boolean;
-begin
-  Result := DeleteKey('HKLM', ExtractFileDir(FLocation), Name);
+var
+  Reg: TRegistry;
 
-  // Delete key of deactivated item
-  if not FEnabled then
-    DeleteKey('HKLM', KEY_SERVICE_DISABLED, Name, False);
+begin
+  Result := False;
+  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
+
+  try
+    Reg.RootKey := HKEY_LOCAL_MACHINE;
+    Reg.OpenKey(KEY_SERVICE_ENABLED, False);
+
+    // Delete service key
+    if not Reg.DeleteKey(Name) then
+      raise Exception.Create('Could not delete key!');
+
+    // Delete key or value of disabled service
+    if not FEnabled then
+    begin
+      Reg.CloseKey();
+      Reg.OpenKey(KEY_SERVICE_DISABLED, False);
+
+      // Windows >= Vista?
+      if TOSUtils.WindowsVistaOrLater() then
+        Reg.DeleteKey(Name)
+      else
+        Reg.DeleteValue(Name);
+    end;  //of begin
+
+    Result := True;
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
+  end;  //of try
 end;
 
 { public TServiceListItem.Disable
@@ -3175,15 +3203,24 @@ begin
     Reg.WriteInteger('Start', Ord(ssDisabled));
     Reg.CloseKey();
 
-    // Write disable key
-    if not Reg.OpenKey(KEY_SERVICE_DISABLED + Name, True) then
-      raise Exception.Create('Could not create disable key!');
+    // Windows >= Vista?
+    if TOSUtils.WindowsVistaOrLater() then
+    begin
+      // Write disable key
+      if not Reg.OpenKey(KEY_SERVICE_DISABLED +'\'+ Name, True) then
+        raise Exception.Create('Could not create disable key!');
+
+      // Save deactivation timestamp
+      FTime := WriteTimestamp(Reg);
+    end  //of begin
+    else
+      // Write disable value
+      Reg.OpenKey(KEY_SERVICE_DISABLED, True);
 
     // Save service start
     Reg.WriteInteger(Name, Ord(Start));
 
     // Update information
-    FTime := WriteTimestamp(Reg);
     FEnabled := False;
     Result := True;
 
@@ -3217,11 +3254,18 @@ begin
 
     // Open disable key
     if not Reg.OpenKey(KEY_SERVICE_DISABLED, False) then
-      raise Exception.Create('Key does not exist!');
+      raise Exception.Create('Disable key does not exist!');
 
-    // Delete disable key
-    if (Reg.KeyExists(Name) and not Reg.DeleteKey(Name)) then
-      raise Exception.Create('Could not delete disabled key!');
+    // Winodows >= Vista
+    if TOSUtils.WindowsVistaOrLater() then
+    begin
+      // Delete disable key
+      if (Reg.KeyExists(Name) and not Reg.DeleteKey(Name)) then
+        raise Exception.Create('Could not delete disabled key!');
+    end  //of begin
+    else
+      // Delete disable value
+      Reg.DeleteValue(Name);
 
     // Update information
     FEnabled := True;
@@ -3246,14 +3290,20 @@ begin
   RegFile := TRegistryFile.Create(AFileName, True);
 
   try
+    RegFile.ExportReg(HKEY_LOCAL_MACHINE, FLocation, True);
+
     if not FEnabled then
     begin
-      RegFile.ExportKey(HKEY_LOCAL_MACHINE, KEY_SERVICE_DISABLED + Name, False);
-      RegFile.ExportKey(HKEY_LOCAL_MACHINE, FLocation, True);
-      RegFile.Save();
-    end  //of begin
-    else
-      RegFile.ExportReg(HKEY_LOCAL_MACHINE, FLocation, True);
+      // Windows >= Vista?
+      if TOSUtils.WindowsVistaOrLater() then
+      begin
+        RegFile.ExportKey(HKEY_LOCAL_MACHINE, KEY_SERVICE_DISABLED +'\'+ Name, False);
+        RegFile.ExportKey(HKEY_LOCAL_MACHINE, FLocation, True);
+        RegFile.Save();
+      end  //of begin
+      else
+        RegFile.ExportReg(HKEY_LOCAL_MACHINE, KEY_SERVICE_DISABLED, Name);
+    end;  //of begin
 
   finally
     RegFile.Free;
@@ -3307,11 +3357,17 @@ begin
     begin
       AReg.CloseKey();
 
-      if not AReg.OpenKey(KEY_SERVICE_DISABLED + AName, False) then
-        raise ERegistryException.Create('Key does not exist!');
+      // Windows >= Vista?
+      if TOSUtils.WindowsVistaOrLater() then
+      begin
+        if not AReg.OpenKey(KEY_SERVICE_DISABLED +'\'+ AName, False) then
+          raise ERegistryException.Create('Key does not exist!');
 
-      // Try to read deactivation timestamp
-      Item.Time := Item.GetTimestamp(AReg);
+        // Try to read deactivation timestamp
+        Item.Time := Item.GetTimestamp(AReg);
+      end  //of begin
+      else
+        AReg.OpenKey(KEY_SERVICE_DISABLED, True);
 
       // Read status
       Item.Start := TServiceStart(AReg.ReadInteger(AName));
@@ -3322,6 +3378,7 @@ begin
       Inc(FActCount);
     end;  //of if
 
+    // Add item to list
     Result := Add(Item);
 
   except
@@ -3398,14 +3455,15 @@ begin
   RegFile := TRegistryFile.Create(AFileName, True);
 
   try
+    // Export enabled services
     for i := 0 to Count - 1 do
     begin
       Item := ItemAt(i);
-      RegFile.ExportKey(HKEY_LOCAL_MACHINE, Item.Location, False);
-
-      if not Item.Enabled then
-        RegFile.ExportKey(HKEY_LOCAL_MACHINE, KEY_SERVICE_DISABLED + Item.Name, False);
+      RegFile.ExportKey(HKEY_LOCAL_MACHINE, Item.Location, True);
     end;  //of for
+
+    // Export disabled services
+    RegFile.ExportKey(HKEY_LOCAL_MACHINE, KEY_SERVICE_DISABLED, True);
 
     // Save .reg file
     RegFile.Save();

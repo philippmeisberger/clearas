@@ -1,0 +1,54 @@
+{ *********************************************************************** }
+{                                                                         }
+{ Clearas export list thread                                              }
+{                                                                         }
+{ Copyright (c) 2011-2015 P.Meisberger (PM Code Works)                    }
+{                                                                         }
+{ *********************************************************************** }
+
+unit ExportListThread;
+
+interface
+
+uses
+  Classes, ClearasAPI;
+
+type
+  { TExportListThread }
+  TExportListThread = class(TThread)
+  private
+    FList: TRootRegList;
+    FFileName: string;
+  protected
+    procedure Execute; override;
+  public
+    constructor Create(AList: TRootRegList; const AFileName: string);
+  end;
+
+implementation
+
+{ TExportListThread }
+
+{ public TExportListThread.Create
+
+  Constructor for creating a TExportListThread instance. }
+
+constructor TExportListThread.Create(AList: TRootRegList; const AFileName: string);
+begin
+  inherited Create(True);
+  FreeOnTerminate := True;
+  FList := AList;
+  FFileName := AFileName;
+end;
+
+{ protected TExportListThread.Execute
+
+  Exports a TRootRegList as .reg file. }
+
+procedure TExportListThread.Execute;
+begin
+  FList.ExportList(FFileName);
+end;
+
+end.
+ 
