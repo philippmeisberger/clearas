@@ -899,7 +899,7 @@ begin
       begin
         Caption := FLang.GetString(80);
         Width := 120;
-        mmShowIcons.Click();
+        mmShowIconsClick(Self);
       end;  //of with
 end;
 

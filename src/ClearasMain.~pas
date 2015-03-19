@@ -1429,8 +1429,7 @@ end;
   Enables currently selected service item. }
 
 procedure TMain.bEnableServiceItemClick(Sender: TObject);
-begin
-  try
+begin  try
     // Nothing selected?
     if not Assigned(lwService.ItemFocused) then
       raise EInvalidItem.Create('No item selected!');

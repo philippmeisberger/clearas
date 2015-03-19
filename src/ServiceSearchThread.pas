@@ -11,13 +11,14 @@ unit ServiceSearchThread;
 interface
 
 uses
-  Windows, Classes, Registry, SyncObjs, ClearasAPI, OSUtils;
+  Windows, Classes, SysUtils, SyncObjs, WinSvc, ClearasAPI, OSUtils;
 
 type
   { TServiceSearchThread }
   TServiceSearchThread = class(TThread)
   private
     FServiceList: TServiceList;
+    FManager: SC_HANDLE;
     FProgress, FProgressMax: Word;
     FOnSearching, FOnStart: TSearchEvent;
     FOnFinish: TNotifyEvent;
@@ -28,7 +29,8 @@ type
   protected
     procedure Execute; override;
   public
-    constructor Create(AServiceList: TServiceList; ALock: TCriticalSection);
+    constructor Create(AServiceList: TServiceList; AManager: SC_HANDLE;
+      ALock: TCriticalSection);
     { external }
     property OnFinish: TNotifyEvent read FOnFinish write FOnFinish;
     property OnSearching: TSearchEvent read FOnSearching write FOnSearching;
@@ -44,11 +46,12 @@ implementation
   Constructor for creating a TServiceSearchThread instance. }
 
 constructor TServiceSearchThread.Create(AServiceList: TServiceList;
-  ALock: TCriticalSection);
+  AManager: SC_HANDLE; ALock: TCriticalSection);
 begin
   inherited Create(True);
   FreeOnTerminate := True;
   FServiceList := AServiceList;
+  FManager := AManager;
   FLock := ALock;
 end;
 
@@ -91,43 +94,53 @@ end;
 
 procedure TServiceSearchThread.Execute;
 var
-  Reg: TRegistry;
-  Services: TStringList;
+  Service: SC_HANDLE;
+  Services, ServicesCopy: PEnumServiceStatus;
+  BytesNeeded, ServicesReturned, ResumeHandle: DWORD;
   i: Integer;
 
 begin
   FLock.Acquire;
 
-  // Clear selected item
-  FServiceList.Selected := nil;
-
   // Clear data
   FServiceList.Clear;
+  ServicesReturned := 0;
+  ResumeHandle := 0;
+  Services := nil;
 
-  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));
-  Reg.RootKey := HKEY_LOCAL_MACHINE;
-  Services := TStringList.Create;
+  if EnumServicesStatus(FManager, SERVICE_WIN32_OWN_PROCESS, SERVICE_STATE_ALL,
+    Services^, 0, BytesNeeded, ServicesReturned, ResumeHandle) then
+    Exit;
+
+  if (GetLastError <> ERROR_MORE_DATA) then
+    RaiseLastOSError();
+
+  // Notify start of search
+  FProgressMax := ServicesReturned;
+  Synchronize(DoNotifyOnStart);
+
+  GetMem(Services, BytesNeeded);
 
   try
-    Reg.OpenKey(KEY_SERVICE_ENABLED, False);
-    Reg.GetKeyNames(Services);
+    ServicesReturned := 0;
+    ResumeHandle := 0;
+    ServicesCopy := Services;
 
-    // Notify start of search
-    FProgressMax := Services.Count;
-    Synchronize(DoNotifyOnStart);
-    Reg.CloseKey();
-    
-    for i := 0 to Services.Count - 1 do
+    if not EnumServicesStatus(FManager, SERVICE_WIN32_OWN_PROCESS, SERVICE_STATE_ALL,
+      Services^, BytesNeeded, BytesNeeded, ServicesReturned, ResumeHandle) then
+      raise EServiceException.Create('Error while loading services!');
+
+    for i := 0 to ServicesReturned - 1 do
     begin
       Synchronize(DoNotifyOnSearching);
-      FServiceList.LoadService(Services[i], Reg);
+      Service := OpenService(FManager, ServicesCopy^.lpServiceName, SERVICE_QUERY_CONFIG);
+      FServiceList.LoadService(ServicesCopy^.lpServiceName, Service);
+      Inc(ServicesCopy);
       Inc(FProgress);
     end;  //of for
 
   finally
-    Services.Free;
-    Reg.CloseKey();
-    Reg.Free;
+    FreeMem(Services);
 
     // Notify end of search
     Synchronize(DoNotifyOnFinish);

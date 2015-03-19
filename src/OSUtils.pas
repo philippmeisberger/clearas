@@ -114,7 +114,8 @@ begin
   begin
     if ADisable then
     begin
-      Wow64DisableWow64FsRedirection := GetProcAddress(LibraryHandle, 'Wow64DisableWow64FsRedirection');
+      Wow64DisableWow64FsRedirection := GetProcAddress(LibraryHandle,
+        'Wow64DisableWow64FsRedirection');
 
       // Loading of Wow64DisableWow64FsRedirection successful?
       if Assigned(Wow64DisableWow64FsRedirection) then
@@ -122,7 +123,8 @@ begin
     end  //of begin
     else
        begin
-         Wow64RevertWow64FsRedirection := GetProcAddress(LibraryHandle, 'Wow64RevertWow64FsRedirection');
+         Wow64RevertWow64FsRedirection := GetProcAddress(LibraryHandle,
+           'Wow64RevertWow64FsRedirection');
 
          // Loading of Wow64RevertWow64FsRedirection successful?
          if Assigned(Wow64RevertWow64FsRedirection) then
@@ -141,7 +143,7 @@ type
 
 var
   LibraryHandle: HMODULE;
-  IsWow64: BOOL;
+  IsWow64: LongBool;
   IsWow64Process: TIsWow64Process;
 
 begin
@@ -168,7 +170,7 @@ end;
 class function TWinWOW64.DenyWOW64Redirection(AAccessRight: Cardinal): Cardinal;
 begin
   // Used Windows is a 64bit OS?
-  if IsWindows64() then
+  if TOSUtils.IsWindows64() then
     // Deny WOW64 redirection
     Result := KEY_WOW64_64KEY or AAccessRight
   else
@@ -182,7 +184,7 @@ end;
 
 class function TWinWOW64.GetArchitecture(): string;
 begin
-  if IsWindows64() then
+  if TOSUtils.IsWindows64() then
     Result := ' [64bit]'
   else
     Result := ' [32bit]';
@@ -286,7 +288,7 @@ end;
 
 class function TOSUtils.ExplorerReboot(): Boolean;
 begin
-  Result := KillProcess('explorer.exe');
+  Result := TOSUtils.KillProcess('explorer.exe');
 end;
 
 { public TOSUtils.GetBuildNumber
@@ -398,6 +400,7 @@ begin
            1: Result := '7';
            2: Result := '8';
            3: Result := '8.1';
+           4: Result := '10';
          end; //of case
     end; //of case
 
@@ -579,22 +582,22 @@ end;
   
 class function TOSUtils.PMCertExists(): Boolean;
 var
-  reg: TRegistry;
+  Reg: TRegistry;
 
 const
   CERT_KEY = 'SOFTWARE\Microsoft\SystemCertificates\ROOT\Certificates\';
   PM_CERT_THUMBPRINT = '1350A832ED8A6A8FE8B95D2E674495021EB93A4D';
 
 begin
-  reg := TRegistry.Create(DenyWOW64Redirection(KEY_READ));
+  Reg := TRegistry.Create(DenyWOW64Redirection(KEY_READ));
   
   try
-    reg.RootKey := HKEY_LOCAL_MACHINE;
-    Result := (reg.OpenKeyReadOnly(CERT_KEY) and reg.KeyExists(PM_CERT_THUMBPRINT));
-    reg.CloseKey;
+    Reg.RootKey := HKEY_LOCAL_MACHINE;
+    Result := (Reg.OpenKeyReadOnly(CERT_KEY) and Reg.KeyExists(PM_CERT_THUMBPRINT));
 
   finally
-    reg.Free;
+    Reg.CloseKey;
+    Reg.Free;
   end;  //of try
 end;
 
