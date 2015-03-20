@@ -3127,10 +3127,11 @@ var
 
 begin
   if (FServiceManager = 0) then
-    raise EServiceException.Create('Service manager not set!');
+    raise EServiceException.Create('Service manager not initialized!');
   
   Handle := OpenService(FServiceManager, PChar(Name), AAccess);
 
+  // Error occured?
   if (Handle = 0) then
     raise EServiceException.Create(SysErrorMessage(GetLastError()));
 

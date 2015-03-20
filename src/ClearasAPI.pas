@@ -3646,6 +3646,10 @@ begin
         if not Reg.ValueExists(AName) then
           Exit;
 
+        // Skip demand started services
+        if (not AIncludeDemand and (Reg.ReadInteger(AName) = Ord(ssManual))) then
+          Exit;
+
         // Add disabled item to list
         Result := AddServiceDisabled(AName, ServiceConfig^.lpDisplayName,
           ServiceConfig^.lpBinaryPathName, Reg);
