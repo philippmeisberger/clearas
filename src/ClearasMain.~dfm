@@ -1,6 +1,6 @@
 object Main: TMain
   Left = 371
-  Top = 135
+  Top = 165
   Width = 557
   Height = 365
   HorzScrollBar.Visible = False
@@ -621,7 +621,7 @@ object Main: TMain
       end
     end
     object tsService: TTabSheet
-      Caption = 'Dienst'
+      Caption = 'Dienste'
       ImageIndex = 2
       DesignSize = (
         535
@@ -711,6 +711,7 @@ object Main: TMain
         OnColumnClick = lwStartupColumnClick
         OnCompare = lwStartupCompare
         OnDblClick = lwServiceDblClick
+        OnKeyPress = lwStartupKeyPress
         OnSelectItem = lwServiceSelectItem
       end
       object bExportServiceItem: TButton

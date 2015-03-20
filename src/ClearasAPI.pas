@@ -352,6 +352,8 @@ type
   protected
     function GetFullLocation(): string; override;
   public
+    constructor Create(AIndex: Word; AEnabled: Boolean;
+      AServiceManager: SC_HANDLE);
     function ChangeFilePath(const ANewFileName: string): Boolean; override;
     function Delete(): Boolean; override;
     function Disable(): Boolean; override;
@@ -1000,9 +1002,7 @@ begin
 
   try
     Reg.RootKey := HKEY_CURRENT_USER;
-
-    if not Reg.OpenKey(KEY_REGEDIT, True) then
-      raise Exception.Create('Could not open key!');
+    Reg.OpenKey(KEY_REGEDIT, True);
 
     // Set the Registry key to show
     Reg.WriteString('LastKey', 'Computer\'+ GetFullLocation());
@@ -3105,6 +3105,17 @@ end;
 
 { TServiceListItem }
 
+{ public TServiceListItem.Create
+
+  Constructor for creating a TServiceListItem instance. }
+
+constructor TServiceListItem.Create(AIndex: Word; AEnabled: Boolean;
+  AServiceManager: SC_HANDLE);
+begin
+  inherited Create(AIndex, AEnabled, False);
+  FServiceManager := AServiceManager;
+end;
+
 { private TServiceListItem.GetLocation
 
   Returns the Registry path to a TServiceListItem. }
@@ -3203,7 +3214,9 @@ begin
         Result := Reg.DeleteKey(Name)
       else
         Result := Reg.DeleteValue(Name);
-    end;  //of begin
+    end  //of begin
+    else
+      Result := True;
     
   finally
     Reg.CloseKey();
@@ -3366,12 +3379,12 @@ end;
 constructor TServiceList.Create();
 begin
   inherited Create;
-  FManager := 0;
-  FManager := OpenSCManager(nil, nil, SC_MANAGER_CONNECT or
-    SC_MANAGER_ENUMERATE_SERVICE or SC_MANAGER_CREATE_SERVICE or SC_MANAGER_LOCK);
+  FManager := OpenSCManager(nil, SERVICES_ACTIVE_DATABASE,
+    SC_MANAGER_ENUMERATE_SERVICE or SC_MANAGER_CREATE_SERVICE);
 
+  // Error occured?
   if (FManager = 0) then
-    raise EServiceException.Create('Could not initialize service manager!');
+    raise EServiceException.Create(SysErrorMessage(GetLastError()));
 end;
 
 { public TServiceList.Destroy
@@ -3413,7 +3426,7 @@ var
 
 begin
   Result := -1;
-  Item := TServiceListItem.Create(Count, False, False);
+  Item := TServiceListItem.Create(Count, False, FManager);
 
   try
     with Item do
@@ -3421,7 +3434,6 @@ begin
       Name := AName;
       Caption := ACaption;
       FileName := AFileName;
-      Manager := FManager;
       Start := TServiceStart(AReg.ReadInteger(AName));
       Time := Item.GetTimestamp(AReg);
       TypeOf := 'Service';
@@ -3445,7 +3457,7 @@ var
 
 begin
   Result := -1;
-  Item := TServiceListItem.Create(Count, (AStart <> ssDisabled), False);
+  Item := TServiceListItem.Create(Count, (AStart <> ssDisabled), FManager);
 
   try
     with Item do
@@ -3453,7 +3465,6 @@ begin
       Name := AName;
       Caption := ACaption;
       FileName := AFileName;
-      Manager := FManager;
       Start := AStart;
       TypeOf := 'Service';
     end;  //of with
@@ -3474,8 +3485,10 @@ function TServiceList.AddItem(AFileName, AArguments, ACaption: string): Boolean;
 var
   Name, FullPath: string;
   Service: SC_Handle;
+  LastError: Cardinal;
 
 begin
+  Result := False;
   Name := ExtractFileName(AFileName);
 
   // Check invalid extension
@@ -3491,17 +3504,22 @@ begin
 
   Name := ChangeFileExt(Name, '');
 
+  // Create a new service
   Service := CreateService(FManager, PChar(Name), PChar(ACaption),
-    SC_MANAGER_CONNECT or
-    SC_MANAGER_ENUMERATE_SERVICE or
-    SC_MANAGER_MODIFY_BOOT_CONFIG or
-    SC_MANAGER_QUERY_LOCK_STATUS or
     STANDARD_RIGHTS_READ, SERVICE_WIN32_OWN_PROCESS, SERVICE_AUTO_START,
     SERVICE_ERROR_NORMAL, PChar(FullPath), nil, nil, nil, nil, nil);
 
   // Error occured?
   if (Service = 0) then
-    raise EServiceException.Create(SysErrorMessage(GetLastError()));
+  begin
+    LastError := GetLastError();
+
+    // Service already exists?
+    if (LastError = ERROR_SERVICE_EXISTS) then
+      Exit;
+
+    raise EServiceException.Create(SysErrorMessage(LastError));
+  end;  //of begin
 
   CloseServiceHandle(Service);
 
@@ -3584,7 +3602,7 @@ begin
   if QueryServiceConfig(AService, ServiceConfig, 0, BytesNeeded) then
     Exit;
 
-  if (GetLastError <> ERROR_INSUFFICIENT_BUFFER) then
+  if (GetLastError() <> ERROR_INSUFFICIENT_BUFFER) then
     raise EServiceException.Create(SysErrorMessage(GetLastError()));
 
   GetMem(ServiceConfig, BytesNeeded);

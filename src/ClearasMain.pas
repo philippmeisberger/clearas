@@ -868,16 +868,22 @@ begin
   end;  //of with
 
   // Update list labels
-  if Assigned(FStartup) and Assigned(FContext) then
+  if (Assigned(FStartup) and Assigned(FContext) and Assigned(FService)) then
   begin
     for i := 0 to FStartup.Count - 1 do
       lwStartup.Items[i].Caption := FStartup[i].GetStatus(FLang);
 
+    OnStartupItemChanged(Sender);
+
     for i := 0 to FContext.Count - 1 do
       lwContext.Items[i].Caption := FContext[i].GetStatus(FLang);
 
+    OnContextItemChanged(Sender);
+
     for i := 0 to FService.Count - 1 do
       lwService.Items[i].Caption := FService[i].GetStatus(FLang);
+
+    OnServiceItemChanged(Sender);
   end;  //of begin
 end;
 
@@ -1036,7 +1042,7 @@ begin
       raise EInvalidItem.Create('No item selected!');
 
     // Confirm deletion of item
-    if (FLang.MessageBox(FLang.Format([85, NEW_LINE, 49, 50],
+    if (FLang.MessageBox(FLang.Format([48, NEW_LINE, 49, 50],
       [lwService.ItemFocused.SubItems[0]]), mtConfirm) = IDYES) then
     begin
       // Ask user to export item
@@ -1739,20 +1745,25 @@ end;
 procedure TMain.lwStartupKeyPress(Sender: TObject; var Key: Char);
 var
   i, StartIndex: Integer;
+  SelectedList: TListView;
 
 begin
   StartIndex := 0;
+  SelectedList := (Sender as TListView);
+
+  if not Assigned(SelectedList.ItemFocused) then
+    Exit;
 
   // Current selected item already starts with key?
-  if AnsiStartsText(Key, lwStartup.ItemFocused.SubItems[0]) then
-    StartIndex := lwStartup.ItemFocused.Index + 1;
+  if AnsiStartsText(Key, SelectedList.ItemFocused.SubItems[0]) then
+    StartIndex := SelectedList.ItemFocused.Index + 1;
 
   // Find next item whose first char starts with key
-  for i := StartIndex to lwStartup.Items.Count - 1 do
-    if AnsiStartsText(Key, lwStartup.Items[i].SubItems[0]) then
+  for i := StartIndex to SelectedList.Items.Count - 1 do
+    if AnsiStartsText(Key, SelectedList.Items[i].SubItems[0]) then
     begin
-      lwStartup.ItemIndex := i;
-      lwStartup.ItemFocused := lwStartup.Items[i];
+      SelectedList.ItemIndex := i;
+      SelectedList.ItemFocused := SelectedList.Items[i];
       Break;
     end;  //of begin
 end;

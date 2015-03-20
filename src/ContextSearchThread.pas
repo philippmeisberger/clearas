@@ -216,9 +216,6 @@ procedure TContextSearchThread.Execute;
 begin
   FLock.Acquire;
 
-  // Clear selected item
-  FContextList.Selected := nil;
-
   // Clear data
   FContextList.Clear;
 

@@ -96,7 +96,7 @@ procedure TServiceSearchThread.Execute;
 var
   Service: SC_HANDLE;
   Services, ServicesCopy: PEnumServiceStatus;
-  BytesNeeded, ServicesReturned, ResumeHandle: DWORD;
+  BytesNeeded, ServicesReturned, ResumeHandle, LastError: DWORD;
   i: Integer;
 
 begin
@@ -108,12 +108,16 @@ begin
   ResumeHandle := 0;
   Services := nil;
 
+  // Determine the required size for buffer
   if EnumServicesStatus(FManager, SERVICE_WIN32_OWN_PROCESS, SERVICE_STATE_ALL,
     Services^, 0, BytesNeeded, ServicesReturned, ResumeHandle) then
     Exit;
 
-  if (GetLastError <> ERROR_MORE_DATA) then
-    RaiseLastOSError();
+  LastError := GetLastError();
+
+  // ERROR_MORE_DATA will be fired normally
+  if (LastError <> ERROR_MORE_DATA) then
+    raise EServiceException.Create(SysErrorMessage(LastError));
 
   // Notify start of search
   FProgressMax := ServicesReturned;
@@ -126,10 +130,12 @@ begin
     ResumeHandle := 0;
     ServicesCopy := Services;
 
+    // Read all services matching
     if not EnumServicesStatus(FManager, SERVICE_WIN32_OWN_PROCESS, SERVICE_STATE_ALL,
       Services^, BytesNeeded, BytesNeeded, ServicesReturned, ResumeHandle) then
-      raise EServiceException.Create('Error while loading services!');
+      raise EServiceException.Create(SysErrorMessage(LastError));
 
+    // Add services to list
     for i := 0 to ServicesReturned - 1 do
     begin
       Synchronize(DoNotifyOnSearching);
