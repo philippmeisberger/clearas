@@ -48,7 +48,6 @@ type
     mmDelBackup: TMenuItem;
     mmDefault: TMenuItem;
     N7: TMenuItem;
-    mmOptimate: TMenuItem;
     N8: TMenuItem;
     N6: TMenuItem;
     mmLang: TMenuItem;
@@ -85,7 +84,6 @@ type
     N10: TMenuItem;
     pmEdit: TMenuItem;
     mmReport: TMenuItem;
-    mmRunOnce: TMenuItem;
     pmOpenRegedit: TMenuItem;
     pmOpenExplorer: TMenuItem;
     mmShowIcons: TMenuItem;
@@ -104,6 +102,8 @@ type
     lVersion3: TLabel;
     bEnableStartupItem: TButton;
     cbServiceExpert: TCheckBox;
+    eServiceSearch: TEdit;
+    cbRunOnce: TCheckBox;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -122,7 +122,6 @@ type
     procedure bExportServiceItemClick(Sender: TObject);
     procedure eContextSearchChange(Sender: TObject);
     procedure lwContextDblClick(Sender: TObject);
-    procedure lwContextKeyPress(Sender: TObject; var Key: Char);
     procedure lwContextSelectItem(Sender: TObject; Item: TListItem;
       Selected: Boolean);
     procedure lwServiceDblClick(Sender: TObject);
@@ -148,7 +147,6 @@ type
     procedure mmEngClick(Sender: TObject);
     procedure mmFraClick(Sender: TObject);
     procedure mmDefaultClick(Sender: TObject);
-    procedure mmOptimateClick(Sender: TObject);
     procedure mmInfoClick(Sender: TObject);
     procedure mmUpdateClick(Sender: TObject);
     procedure mmDownloadCertClick(Sender: TObject);
@@ -295,13 +293,15 @@ begin
     mmExportList.Enabled := False;
     mmRefresh.Enabled := False;
     mmContext.Enabled := False;
-    mmRunOnce.Enabled := False;
     mmDate.Enabled := False;
     lwStartup.Enabled := False;
+    cbRunOnce.Enabled := False;
     lwContext.Enabled := False;
-    lwService.Enabled := False;
     cbContextExpert.Enabled := False;
+    eContextSearch.Enabled := False;
+    lwService.Enabled := False;
     cbServiceExpert.Enabled := False;
+    eServiceSearch.Enabled := False;
     Exit;
   end;  //of if
 
@@ -491,7 +491,7 @@ begin
     bExportStartupItem.Enabled := False;
 
     // Load autostart with or without special RunOnce entries (threaded!)
-    FStartup.LoadStartup(mmRunOnce.Checked);
+    FStartup.LoadStartup(cbRunOnce.Checked);
   end  //of begin
   else
     OnStartupSearchEnd(Self);
@@ -712,7 +712,7 @@ end;
 procedure TMain.OnServiceSearchEnd(Sender: TObject);
 var
   i: Integer;
-  Auto, Manual: string;
+  Text, Auto, Manual: string;
 
 begin
   Auto := FLang.GetString(61);
@@ -720,29 +720,35 @@ begin
 
   // Print all information about service items
   for i := 0 to FService.Count - 1 do
-    with lwService.Items.Add do
-    begin
-      Caption := FService[i].GetStatus(FLang);
+  begin
+    // Show name or caption of item?
+    if (FService[i].Caption <> '') then
+      Text := FService[i].Caption
+    else
+      Text := FService[i].Name;
 
-      if (FService[i].Caption <> '') then
-        SubItems.Append(FService[i].Caption)
-      else
-        SubItems.Append(FService[i].Name);
+    // Filter items
+    if ((eServiceSearch.Text = '') or
+      (AnsiContainsText(Text, eServiceSearch.Text))) then
+      with lwService.Items.Add do
+      begin
+        Caption := FService[i].GetStatus(FLang);
+        SubItems.Append(Text);
+        SubItems.Append(FService[i].FileName);
 
-      SubItems.Append(FService[i].FileName);
+        // Show start of service
+        case FService[i].Start of
+          ssAutomatic: SubItems.Append(Auto);
+          ssManual:    SubItems.Append(Manual);
+          else
+                       SubItems.Append(FService[i].TypeOf);
+        end;  //of case
 
-      // Show start of service
-      case FService[i].Start of
-        ssAutomatic: SubItems.Append(Auto);
-        ssManual:    SubItems.Append(Manual);
-        else
-                     SubItems.Append(FService[i].TypeOf);
-      end;  //of case
-
-      // Show deactivation timestamp?
-      if mmDate.Checked then
-        SubItems.Append(FService[i].Time);
-    end;  //of with
+        // Show deactivation timestamp?
+        if mmDate.Checked then
+          SubItems.Append(FService[i].Time);
+      end;  //of with
+    end;  //of for
 
   // Refresh counter label
   OnServiceItemChanged(Sender);
@@ -759,7 +765,7 @@ end;
 
 procedure TMain.OnServiceItemChanged(Sender: TObject);
 begin
-  lwService.Columns[1].Caption := FLang.Format(88, [FService.Enabled,
+  lwService.Columns[1].Caption := FLang.Format(56, [FService.Enabled,
     FService.Count]);
 end;
 
@@ -796,9 +802,8 @@ begin
     mmView.Caption := GetString(20);
     mmRefresh.Caption := GetString(77);
     mmDefault.Caption := GetString(78);
-    mmOptimate.Caption := GetString(79);
     mmDate.Caption := GetString(80);
-    mmRunOnce.Caption := GetString(81);
+    cbRunOnce.Caption := GetString(81);
     mmShowIcons.Caption := GetString(47);
     mmLang.Caption := GetString(25);
 
@@ -858,6 +863,9 @@ begin
     lwService.Columns[2].Caption := lwStartup.Columns[2].Caption;
     lwService.Columns[3].Caption := GetString(59);
     lCopy3.Hint := lCopy1.Hint;
+
+    // Set placeholder text for search
+    TOSUtils.SetCueBanner(eServiceSearch.Handle, GetString(63));
 
     // Popup menu labels
     pmChangeStatus.Caption := bDisableStartupItem.Caption;
@@ -1545,15 +1553,6 @@ begin
         bDeleteContextItem.Click
       else
         FLang.MessageBox(53, mtWarning);
-end;
-
-{ TMain.lwContextKeyPress
-
-  Event method that is called when user pushes a button inside TListView. }
-
-procedure TMain.lwContextKeyPress(Sender: TObject; var Key: Char);
-begin
-  eContextSearch.SetFocus;
 end;
 
 { TMain.lwContextSelectItem
@@ -2354,27 +2353,6 @@ begin
   end;  //of case
 end;
 
-{ TMain.mmOptimateClick
-
-  MainMenu entry to resize all columns to fit the shown text optimal. }
-
-procedure TMain.mmOptimateClick(Sender: TObject);
-begin
-  case PageControl.ActivePageIndex of
-    0: begin
-         lwStartup.Columns[1].Width := ColumnTextWidth;
-         lwStartup.Columns[2].Width := ColumnTextWidth;
-         lwStartup.Columns[3].Width := ColumnTextWidth;
-       end;
-
-    2: begin
-         lwService.Columns[1].Width := ColumnTextWidth;
-         lwService.Columns[2].Width := ColumnTextWidth;
-         lwService.Columns[3].Width := ColumnTextWidth;
-       end;
-  end;  //of begin
-end;
-
 { TMain.mmGerClick
 
   MainMenu entry that allows to change the current language to german. }
@@ -2513,9 +2491,7 @@ begin
          mmAdd.Caption := FLang.GetString(69);
          mmImport.Visible := True;
          mmDate.Visible := True;
-         mmRunOnce.Visible := True;
          mmShowIcons.Visible := True;
-         mmOptimate.Enabled := True;
          pmOpenExplorer.Enabled := True;
          lwStartupSelectItem(Sender, lwStartup.ItemFocused, True);
          ShowColumnDate(lwStartup, mmDate.Checked);
@@ -2525,9 +2501,7 @@ begin
          mmAdd.Caption := FLang.GetString(34);
          mmImport.Visible := False;
          mmDate.Visible := False;
-         mmRunOnce.Visible := False;
          mmShowIcons.Visible := False;
-         mmOptimate.Enabled := False;
          lwContextSelectItem(Sender, lwContext.ItemFocused, True);
 
          // Load context menu entries dynamically
@@ -2539,9 +2513,7 @@ begin
          mmAdd.Caption := FLang.GetString(69);
          mmImport.Visible := False;
          mmDate.Visible := True;
-         mmRunOnce.Visible := False;
          mmShowIcons.Visible := False;
-         mmOptimate.Enabled := True;
          pmOpenExplorer.Enabled := True;
          lwServiceSelectItem(Sender, lwService.ItemFocused, True);
          ShowColumnDate(lwService, mmDate.Checked);

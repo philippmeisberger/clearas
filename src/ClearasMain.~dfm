@@ -442,6 +442,16 @@ object Main: TMain
         TabOrder = 5
         OnClick = bEnableStartupItemClick
       end
+      object cbRunOnce: TCheckBox
+        Left = 406
+        Top = 258
+        Width = 105
+        Height = 17
+        Anchors = [akRight, akBottom]
+        Caption = 'RunOnce-Eintr'#228'ge'
+        TabOrder = 6
+        OnClick = mmRefreshClick
+      end
     end
     object tsContext: TTabSheet
       Caption = 'Kontextmen'#252
@@ -588,13 +598,13 @@ object Main: TMain
         OnColumnClick = lwStartupColumnClick
         OnCompare = lwStartupCompare
         OnDblClick = lwContextDblClick
-        OnKeyPress = lwContextKeyPress
+        OnKeyPress = lwStartupKeyPress
         OnSelectItem = lwContextSelectItem
       end
       object pbContextLoad: TProgressBar
         Left = 21
         Top = 257
-        Width = 150
+        Width = 148
         Height = 18
         Anchors = [akLeft, akBottom]
         TabOrder = 7
@@ -617,7 +627,7 @@ object Main: TMain
         Height = 22
         Anchors = [akLeft, akBottom]
         TabOrder = 8
-        OnChange = eContextSearchChange
+        OnChange = mmShowIconsClick
       end
     end
     object tsService: TTabSheet
@@ -682,7 +692,7 @@ object Main: TMain
             Width = 53
           end
           item
-            Caption = 'Programm (0/0)'
+            Caption = 'Dienst (0/0)'
             Width = 125
           end
           item
@@ -777,6 +787,15 @@ object Main: TMain
         Caption = 'Expertenmodus'
         TabOrder = 6
         OnClick = mmRefreshClick
+      end
+      object eServiceSearch: TEdit
+        Left = 21
+        Top = 256
+        Width = 148
+        Height = 22
+        Anchors = [akLeft, akBottom]
+        TabOrder = 7
+        OnChange = mmShowIconsClick
       end
     end
   end
@@ -887,11 +906,6 @@ object Main: TMain
         ShortCut = 117
         OnClick = mmDefaultClick
       end
-      object mmOptimate: TMenuItem
-        Caption = 'Spaltengr'#246#223'e optimieren'
-        ShortCut = 118
-        OnClick = mmOptimateClick
-      end
       object N5: TMenuItem
         Caption = '-'
       end
@@ -899,11 +913,6 @@ object Main: TMain
         AutoCheck = True
         Caption = 'Deaktivierungsdatum anzeigen'
         OnClick = mmDateClick
-      end
-      object mmRunOnce: TMenuItem
-        AutoCheck = True
-        Caption = 'RunOnce-Eintr'#228'ge anzeigen'
-        OnClick = mmRefreshClick
       end
       object mmShowIcons: TMenuItem
         AutoCheck = True
