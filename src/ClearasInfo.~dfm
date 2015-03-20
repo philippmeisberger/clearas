@@ -412,13 +412,15 @@ object Info: TInfo
           'History'
           '--------'
           ''
-          'Version 4.0  [20.03.15]'
+          'Version 4.0  [23.03.15]'
           ''
           '- API Version 4.1'
           '  - Multi-Threaded'
           '  - Exception Handling stark verbessert'
           '- Neues Feature "Dienst":'
-          '  - Bearbeiten von automatisch gestarteter Windows Dienste'
+          
+            '  - Erm'#246'glicht Bearbeiten automatisch gestarteter Windows Dienst' +
+            'e'
           '- '#196'nderungen im Popup Men'#252':'
           '  - Neue Funktion "Pfad bearbeiten" hinzugef'#252'gt'
           

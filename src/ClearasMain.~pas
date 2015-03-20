@@ -2130,11 +2130,15 @@ begin
        Exit;
   end;  //of case
 
-  if mmDate.Checked then
-    Width := Width + 120
-  else
-    Width := Width - ListView.Columns[4].Width;
+  if (WindowState = wsNormal) then
+  begin
+    if mmDate.Checked then
+      Width := Width + 120
+    else
+      Width := Width - ListView.Columns[4].Width;
+  end;  //of begin
 
+  // Add or remove date column
   ShowColumnDate(ListView, mmDate.Checked);
 end;
 

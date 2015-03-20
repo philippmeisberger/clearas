@@ -1009,9 +1009,9 @@ begin
     // Init Registry access
     FReg.RootKey := AHKey;
 
-    // Invalid key?
+    // Key invalid?
     if not FReg.OpenKey(AKeyPath, False) then
-      raise EParserException.Create('Error while exporting key: Key does not exist!');
+      Exit;
 
     // Read all values from current key
     Values := TStringList.Create;
@@ -1100,11 +1100,11 @@ begin
 
     // Invalid key?
     if not FReg.OpenKey(AKeyPath, False) then
-      raise EParserException.Create('Error while exporting value: Key does not exist!');
+      raise ERegistryException.Create('Error while exporting value: Key does not exist!');
 
     // Invalid value?
     if not FReg.ValueExists(AValueName) then
-      raise EParserException.Create('Error while exporting value: Value does not exist!');
+      raise ERegistryException.Create('Error while exporting value: Value does not exist!');
 
     MakeHeadline();
 

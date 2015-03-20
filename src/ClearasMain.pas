@@ -608,6 +608,7 @@ end;
 
 procedure TMain.OnFinishExportList(Sender: TObject);
 begin
+  mmRefresh.Enabled := True;
   mmExportList.Enabled := True;
 end;
 
@@ -2190,6 +2191,7 @@ begin
     begin
       // Disable button
       mmExportList.Enabled := False;
+      mmRefresh.Enabled := False;
       SelectedList := (GetSelectedList() as TRootRegList);
 
       // Export list (threaded!)

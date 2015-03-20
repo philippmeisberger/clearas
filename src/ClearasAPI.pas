@@ -3117,9 +3117,9 @@ begin
   FServiceManager := AServiceManager;
 end;
 
-{ private TServiceListItem.GetLocation
+{ private TServiceListItem.GetHandle
 
-  Returns the Registry path to a TServiceListItem. }
+  Returns the handle to a service. }
 
 function TServiceListItem.GetHandle(AAccess: DWORD): SC_HANDLE;
 var
