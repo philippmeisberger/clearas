@@ -74,8 +74,8 @@ type
     lContext: TLabel;
     lVersion2: TLabel;
     lVersion: TLabel;
-    pbLoad: TProgressBar;
-    cbExpert: TCheckBox;
+    pbContextLoad: TProgressBar;
+    cbContextExpert: TCheckBox;
     lWindows2: TLabel;
     lWindows: TLabel;
     mmFra: TMenuItem;
@@ -103,6 +103,7 @@ type
     lCopy3: TLabel;
     lVersion3: TLabel;
     bEnableStartupItem: TButton;
+    cbServiceExpert: TCheckBox;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -119,7 +120,6 @@ type
     procedure bExportStartupItemClick(Sender: TObject);
     procedure bExportContextItemClick(Sender: TObject);
     procedure bExportServiceItemClick(Sender: TObject);
-    procedure cbExpertClick(Sender: TObject);
     procedure eContextSearchChange(Sender: TObject);
     procedure lwContextDblClick(Sender: TObject);
     procedure lwContextKeyPress(Sender: TObject; var Key: Char);
@@ -178,8 +178,8 @@ type
     procedure LoadContextMenuItems(ATotalRefresh: Boolean = True);
     procedure LoadStartupItems(ATotalRefresh: Boolean = True);
     procedure LoadServiceItems(ATotalRefresh: Boolean = True);
-    procedure OnContextSearchProgress(Sender: TObject; const AWorkCount: Cardinal);
     procedure OnContextSearchStart(Sender: TObject; const AWorkCountMax: Cardinal);
+    procedure OnContextSearching(Sender: TObject; const AProgress: Cardinal);
     procedure OnContextSearchEnd(Sender: TObject);
     procedure OnContextItemChanged(Sender: TObject);
     procedure OnFinishExportList(Sender: TObject);
@@ -240,7 +240,7 @@ begin
   begin
     OnChanged := OnContextItemChanged;
     OnSearchStart := OnContextSearchStart;
-    OnSearching := OnContextSearchProgress;
+    OnSearching := OnContextSearching;
     OnSearchFinish := OnContextSearchEnd;
   end;  //of with
 
@@ -300,7 +300,8 @@ begin
     lwStartup.Enabled := False;
     lwContext.Enabled := False;
     lwService.Enabled := False;
-    cbExpert.Enabled := False;
+    cbContextExpert.Enabled := False;
+    cbServiceExpert.Enabled := False;
     Exit;
   end;  //of if
 
@@ -460,7 +461,7 @@ begin
     bExportContextItem.Enabled := False;
 
     // Use expert search mode?
-    if cbExpert.Checked then
+    if cbContextExpert.Checked then
       // Start the expert search (threaded!)
       FContext.LoadContextmenus()
     else
@@ -515,20 +516,10 @@ begin
     bExportServiceItem.Enabled := False;
 
     // Load service items (threaded!)
-    FService.LoadServices();
+    FService.LoadServices(cbServiceExpert.Checked);
   end  //of begin
   else
     OnServiceSearchEnd(Self);
-end;
-
-{ private TMain.OnContextSearchProgress
-
-  Event that is called when search is in progress. }
-
-procedure TMain.OnContextSearchProgress(Sender: TObject;
-  const AWorkCount: Cardinal);
-begin
-  pbLoad.Position := AWorkCount;
 end;
 
 { private TMain.OnContextSearchStart
@@ -542,9 +533,18 @@ begin
   mmAdd.Enabled := False;
   mmExportList.Enabled := False;
   eContextSearch.Visible := False;
-  pbLoad.Visible := True;
-  pbLoad.Max := AWorkCountMax;
+  pbContextLoad.Visible := True;
+  pbContextLoad.Max := AWorkCountMax;
   lwContext.Cursor := crHourGlass;
+end;
+
+{ private TMain.OnContextSearching
+
+  Event that is called when search is in progress. }
+
+procedure TMain.OnContextSearching(Sender: TObject; const AProgress: Cardinal);
+begin
+  pbContextLoad.Position := AProgress;
 end;
 
 { private TMain.OnContextSearchEnd
@@ -583,8 +583,8 @@ begin
   OnContextItemChanged(Sender);
 
   // Update some VCL
-  pbLoad.Visible := False;
-  pbLoad.Position := 0;
+  pbContextLoad.Visible := False;
+  pbContextLoad.Position := 0;
   eContextSearch.Visible := True;
   lwContext.Cursor := crDefault;
   mmLang.Enabled := True;
@@ -809,7 +809,7 @@ begin
     mmInfo.Caption := GetString(17);
 
     // "Startup" tab TButton labels
-    tsContext.Caption := GetString(84);
+    tsStartup.Caption := GetString(83);
     bEnableStartupItem.Caption := GetString(93);
     bDisableStartupItem.Caption := GetString(94);
     bExportStartupItem.Caption := GetString(95);
@@ -824,13 +824,13 @@ begin
     lCopy1.Hint := GetString(29);
 
     // "Context menu" tab TButton labels
+    tsContext.Caption := GetString(84);
     bEnableContextItem.Caption := bEnableStartupItem.Caption;
     bDisableContextItem.Caption := bDisableStartupItem.Caption;
     bExportContextItem.Caption := bExportStartupItem.Caption;
     bDeleteContextItem.Caption := bDeleteStartupItem.Caption;
     bCloseContext.Caption := bCloseStartup.Caption;
-    cbExpert.Caption := GetString(89);
-    tsStartup.Caption := GetString(83);
+    cbContextExpert.Caption := GetString(89);
 
     // Set placeholder text for search
     TOSUtils.SetCueBanner(eContextSearch.Handle, GetString(63));
@@ -850,6 +850,7 @@ begin
     bExportServiceItem.Caption := bExportStartupItem.Caption;
     bDeleteServiceItem.Caption := bDeleteStartupItem.Caption;
     bCloseService.Caption := bCloseStartup.Caption;
+    cbServiceExpert.Caption := cbContextExpert.Caption;
 
     // "Service" tab TListView labels
     lwService.Columns[0].Caption := lwStartup.Columns[0].Caption;
@@ -1518,15 +1519,6 @@ begin
   ShowRegistryExportDialog();
 end;
 
-{ TMain.cbExpertClick
-
-  Event method that is called when user clicked on "expert mode". }
-
-procedure TMain.cbExpertClick(Sender: TObject);
-begin
-  LoadContextMenuItems();
-end;
-
 { TMain.eContextSearchChange
 
   Event method that is called when user changes the search string. }
@@ -2138,11 +2130,15 @@ begin
        Exit;
   end;  //of case
 
-  if mmDate.Checked then
-    Width := Width + 120
-  else
-    Width := Width - ListView.Columns[4].Width;
+  if (WindowState = wsNormal) then
+  begin
+    if mmDate.Checked then
+      Width := Width + 120
+    else
+      Width := Width - ListView.Columns[4].Width;
+  end;  //of begin
 
+  // Add or remove date column
   ShowColumnDate(ListView, mmDate.Checked);
 end;
 

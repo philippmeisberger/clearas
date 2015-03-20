@@ -384,8 +384,9 @@ type
     function AddItem(AFileName, AArguments, ACaption: string): Boolean;
     procedure ExportList(const AFileName: string); override;
     function IndexOf(const ACaptionOrName: string): Integer;
-    function LoadService(AName: string; AService: SC_HANDLE): Integer;
-    procedure LoadServices();
+    function LoadService(AName: string; AService: SC_HANDLE;
+      AIncludeDemand: Boolean = False): Integer;
+    procedure LoadServices(AIncludeShared: Boolean);
     { external }
     property Item: TServiceListItem read GetSelectedItem;
     property Items[AIndex: Word]: TServiceListItem read ItemAt; default;
@@ -3126,10 +3127,11 @@ var
 
 begin
   if (FServiceManager = 0) then
-    raise EServiceException.Create('Service manager not set!');
+    raise EServiceException.Create('Service manager not initialized!');
   
   Handle := OpenService(FServiceManager, PChar(Name), AAccess);
 
+  // Error occured?
   if (Handle = 0) then
     raise EServiceException.Create(SysErrorMessage(GetLastError()));
 
@@ -3588,10 +3590,11 @@ end;
 
   Loads and adds a service item to the list. }
 
-function TServiceList.LoadService(AName: string; AService: SC_HANDLE): Integer;
+function TServiceList.LoadService(AName: string; AService: SC_HANDLE;
+  AIncludeDemand: Boolean = False): Integer;
 var
   ServiceConfig: PQueryServiceConfig;
-  BytesNeeded: DWORD;
+  BytesNeeded, LastError: DWORD;
   ServiceStart: TServiceStart;
   Reg: TRegistry;
 
@@ -3599,23 +3602,29 @@ begin
   Result := -1;
   ServiceConfig := nil;
 
-  if QueryServiceConfig(AService, ServiceConfig, 0, BytesNeeded) then
-    Exit;
-
-  if (GetLastError() <> ERROR_INSUFFICIENT_BUFFER) then
-    raise EServiceException.Create(SysErrorMessage(GetLastError()));
+  // Determine the required size for buffer
+  QueryServiceConfig(AService, ServiceConfig, 0, BytesNeeded);
+  LastError := GetLastError();
+  
+  // ERROR_INSUFFICIENT_BUFFER will be fired normally
+  if (LastError <> ERROR_INSUFFICIENT_BUFFER) then
+    raise EServiceException.Create(SysErrorMessage(LastError));
 
   GetMem(ServiceConfig, BytesNeeded);
 
   try
+    // Read service config
     if not QueryServiceConfig(AService, ServiceConfig, BytesNeeded, BytesNeeded) then
       raise EServiceException.Create(SysErrorMessage(GetLastError()));
 
-    // Determine status
+    // Determine status and filter services
     case ServiceConfig^.dwStartType of
       SERVICE_AUTO_START:   ServiceStart := ssAutomatic;
-      SERVICE_DEMAND_START: ServiceStart := ssManual;
       SERVICE_DISABLED:     ServiceStart := ssDisabled;
+      SERVICE_DEMAND_START: if AIncludeDemand then
+                              ServiceStart := ssManual
+                            else
+                              Exit;
       else                  Exit;
     end;
 
@@ -3660,7 +3669,7 @@ end;
 
   Searches for service items. }
 
-procedure TServiceList.LoadServices();
+procedure TServiceList.LoadServices(AIncludeShared: Boolean);
 var
   SearchThread: TServiceSearchThread;
 
@@ -3669,6 +3678,7 @@ begin
 
   with SearchThread do
   begin
+    IncludeShared := AIncludeShared;
     OnStart := OnSearchStart;
     OnSearching := OnSearching;
     OnFinish := OnSearchFinish;

@@ -231,28 +231,30 @@ const
   SE_SHUTDOWN_NAME = 'SeShutdownPrivilege';
 
 var
-  TTokenHd : THandle;
-  TTokenPvg : TTokenPrivileges;
-  cbtpPrevious : DWORD;
-  rTTokenPvg : TTokenPrivileges;
-  pcbtpPreviousRequired : DWORD;
-  tpResult : Boolean;
+  TTokenHd: THandle;
+  TTokenPvg: TTokenPrivileges;
+  cbtpPrevious: DWORD;
+  rTTokenPvg: TTokenPrivileges;
+  pcbtpPreviousRequired: DWORD;
+  TokenResult: Boolean;
 
 begin
   if (AAction <> EWX_LOGOFF) and (Win32Platform = VER_PLATFORM_WIN32_NT) then
   begin
-    tpResult := OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES or TOKEN_QUERY, TTokenHd);
+    TokenResult := OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES or
+      TOKEN_QUERY, TTokenHd);
 
-    if tpResult then
+    if TokenResult then
     begin
-      tpResult := LookupPrivilegeValue(nil, SE_SHUTDOWN_NAME, TTokenPvg.Privileges[0].Luid);
+      TokenResult := LookupPrivilegeValue(nil, SE_SHUTDOWN_NAME, TTokenPvg.Privileges[0].Luid);
       TTokenPvg.PrivilegeCount := 1;
       TTokenPvg.Privileges[0].Attributes := SE_PRIVILEGE_ENABLED;
       cbtpPrevious := SizeOf(rTTokenPvg);
       pcbtpPreviousRequired := 0;
 
-      if tpResult then
-        Windows.AdjustTokenPrivileges(TTokenHd, False, TTokenPvg, cbtpPrevious, rTTokenPvg, pcbtpPreviousRequired);
+      if TokenResult then
+        AdjustTokenPrivileges(TTokenHd, False, TTokenPvg, cbtpPrevious,
+          rTTokenPvg, pcbtpPreviousRequired);
     end;  //of begin
   end;  //begin
 

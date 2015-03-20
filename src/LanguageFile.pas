@@ -151,7 +151,7 @@ end;
 
 function TLanguageFile.GetString(const AIndex: Word) : string;
 begin
-  result := FIni.ReadString(FLang, IntToStr(AIndex + LANGUAGE_INTERVAL));
+  Result := FIni.ReadString(FLang, IntToStr(AIndex + LANGUAGE_INTERVAL));
 end;
 
 { public TLanguageFile.GetLanguages
@@ -176,11 +176,11 @@ var
   ls : Integer;
 
 begin
-  result := '';
+  Result := '';
   ls := LoadString(hInstance, AIndex + FLang, Buffer, SizeOf(Buffer));
 
   if (ls <> 0) then
-    result := Buffer;
+    Result := Buffer;
 end;
 {$ENDIF}
 
@@ -200,7 +200,7 @@ begin
     else
       Text := Text + GetString(AIndexes[i]);
 
-  result := Text;
+  Result := Text;
 end;
 
 { public TLanguageFile.AddListener
@@ -242,7 +242,7 @@ end;
 function TLanguageFile.Format(const AIndex: Word; const AArgs: array of
   {$IFDEF MSWINDOWS}TVarRec{$ELSE}const{$ENDIF}): string;
 begin
-  result := SysUtils.Format(GetString(AIndex), AArgs);
+  Result := SysUtils.Format(GetString(AIndex), AArgs);
 end;
 
 { public TLanguageFile.Format
@@ -262,7 +262,7 @@ begin
     else
       Text := Text + Format(AIndexes[i], AArgs);
 
-  result := Text;
+  Result := Text;
 end;
 
 { public TLanguageFile.MessageBox
@@ -319,7 +319,7 @@ begin
   if AUpdate then
     Title := GetString(5);
 
-  result := FApplication.MessageBox(PChar(AText), PChar(Title), Flags);
+  Result := FApplication.MessageBox(PChar(AText), PChar(Title), Flags);
 end;
 
 { public TLanguageFile.MessageBox
@@ -329,7 +329,7 @@ end;
 function TLanguageFile.MessageBox(TextID: Word; AType: TMessageType = mtInfo;
   AUpdate: Boolean = False): Integer;
 begin
-  result := MessageBox(GetString(TextID), AType, AUpdate);
+  Result := MessageBox(GetString(TextID), AType, AUpdate);
 end;
 
 { public TLanguageFile.MessageBox
@@ -339,7 +339,7 @@ end;
 function TLanguageFile.MessageBox(const AIndexes: array of Word;
   AType: TMessageType = mtInfo; AUpdate: Boolean = False): Integer;
 begin
-  result := MessageBox(GetString(AIndexes), AType, AUpdate);
+  Result := MessageBox(GetString(AIndexes), AType, AUpdate);
 end;
 
 { public TLanguageFile.MessageBox
@@ -350,7 +350,7 @@ function TLanguageFile.MessageBox(const AIndexes: array of Word;
   const AArgs: array of {$IFDEF MSWINDOWS}TVarRec{$ELSE}const{$ENDIF};
   AType: TMessageType = mtInfo; AUpdate: Boolean = False): Integer;
 begin
-  result := MessageBox(Format(AIndexes, AArgs), AType, AUpdate);
+  Result := MessageBox(Format(AIndexes, AArgs), AType, AUpdate);
 end;
 
 { public TLanguageFile.RemoveListener

@@ -49,7 +49,7 @@ var
   end;
 
 begin
-  result := False;
+  Result := False;
 
   // Init TForm
   Form := TForm.Create(Application);
@@ -123,7 +123,7 @@ begin
     if (Form.ShowModal = mrOk) then
     begin
       AValue := Combo.Text;
-      result := True;
+      Result := True;
     end;  //of begin
 
   finally

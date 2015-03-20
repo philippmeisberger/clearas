@@ -591,7 +591,7 @@ object Main: TMain
         OnKeyPress = lwContextKeyPress
         OnSelectItem = lwContextSelectItem
       end
-      object pbLoad: TProgressBar
+      object pbContextLoad: TProgressBar
         Left = 21
         Top = 257
         Width = 150
@@ -600,7 +600,7 @@ object Main: TMain
         TabOrder = 7
         Visible = False
       end
-      object cbExpert: TCheckBox
+      object cbContextExpert: TCheckBox
         Left = 406
         Top = 258
         Width = 105
@@ -608,7 +608,7 @@ object Main: TMain
         Anchors = [akRight, akBottom]
         Caption = 'Expertenmodus'
         TabOrder = 6
-        OnClick = cbExpertClick
+        OnClick = mmRefreshClick
       end
       object eContextSearch: TEdit
         Left = 21
@@ -767,6 +767,16 @@ object Main: TMain
         Enabled = False
         TabOrder = 5
         OnClick = bEnableServiceItemClick
+      end
+      object cbServiceExpert: TCheckBox
+        Left = 406
+        Top = 258
+        Width = 105
+        Height = 17
+        Anchors = [akRight, akBottom]
+        Caption = 'Expertenmodus'
+        TabOrder = 6
+        OnClick = mmRefreshClick
       end
     end
   end
