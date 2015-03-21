@@ -168,6 +168,7 @@ type
     FService: TServiceList;
     FLang: TLanguageFile;
     FUpdateCheck: TUpdateCheck;
+    FPending: Integer;
     procedure AfterUpdate(Sender: TObject; ADownloadedFileName: string);
     procedure BeforeUpdate(Sender: TObject; const ANewBuild: Cardinal);
     function CreateStartupUserBackup(): Boolean;
@@ -180,7 +181,8 @@ type
     procedure OnContextSearching(Sender: TObject; const AProgress: Cardinal);
     procedure OnContextSearchEnd(Sender: TObject);
     procedure OnContextItemChanged(Sender: TObject);
-    procedure OnFinishExportList(Sender: TObject);
+    procedure OnExportListStart(Sender: TObject; const APageControlIndex: Cardinal);
+    procedure OnExportListEnd(Sender: TObject; const APageControlIndex: Cardinal);
     procedure OnStartupSearchStart(Sender: TObject; const AWorkCountMax: Cardinal);
     procedure OnStartupSearchEnd(Sender: TObject);
     procedure OnStartupItemChanged(Sender: TObject);
@@ -213,6 +215,7 @@ begin
   FLang := TLanguageFile.Create(100, Application);
   FLang.AddListener(Self);
   SetLanguage(Self);
+  FPending := -1;
 
   // Init update notificator
   FUpdateCheck := TUpdateCheck.Create(Self, 'Clearas', FLang);
@@ -454,7 +457,7 @@ begin
   // Make a total refresh or just use cached items
   if ATotalRefresh then
   begin
-    // Disable VCL buttons
+      // Disable VCL
     bDisableContextItem.Enabled := False;
     bEnableContextItem.Enabled := False;
     bDeleteContextItem.Enabled := False;
@@ -484,7 +487,7 @@ begin
   // Make a total refresh or just use cached items
   if ATotalRefresh then
   begin
-    // Disable VCL buttons
+    // Disable VCL
     bDisableStartupItem.Enabled := False;
     bEnableStartupItem.Enabled := False;
     bDeleteStartupItem.Enabled := False;
@@ -497,7 +500,7 @@ begin
     OnStartupSearchEnd(Self);
 end;
 
-{ private TMain.LoadStartupItems
+{ private TMain.LoadServiceItems
 
   Loads service entries and brings them into a TListView. }
 
@@ -509,7 +512,7 @@ begin
   // Make a total refresh or just use cached items
   if ATotalRefresh then
   begin
-    // Disable VCL buttons
+    // Disable VCL
     bDisableServiceItem.Enabled := False;
     bEnableServiceItem.Enabled := False;
     bDeleteServiceItem.Enabled := False;
@@ -529,13 +532,16 @@ end;
 procedure TMain.OnContextSearchStart(Sender: TObject;
   const AWorkCountMax: Cardinal);
 begin
+  FPending := 1;
   mmLang.Enabled := False;
-  mmAdd.Enabled := False;
-  mmExportList.Enabled := False;
-  eContextSearch.Visible := False;
-  pbContextLoad.Visible := True;
-  pbContextLoad.Max := AWorkCountMax;
   lwContext.Cursor := crHourGlass;
+
+  if (AWorkCountMax > 0) then
+  begin
+    eContextSearch.Visible := False;
+    pbContextLoad.Visible := True;
+    pbContextLoad.Max := AWorkCountMax;
+  end;  //of begin
 end;
 
 { private TMain.OnContextSearching
@@ -586,10 +592,9 @@ begin
   pbContextLoad.Visible := False;
   pbContextLoad.Position := 0;
   eContextSearch.Visible := True;
-  lwContext.Cursor := crDefault;
   mmLang.Enabled := True;
-  mmAdd.Enabled := True;
-  mmExportList.Enabled := True;
+  lwContext.Cursor := crDefault;
+  FPending := -1;
 end;
 
 { private TMain.OnContextItemChanged
@@ -602,14 +607,24 @@ begin
     FContext.Count]);
 end;
 
-{ private TMain.OnFinishExportList
+{ private TMain.OnExportListStart
+
+  Event that is called when export list starts. }
+
+procedure TMain.OnExportListStart(Sender: TObject; const APageControlIndex: Cardinal);
+begin
+  FPending := APageControlIndex;
+  PageControl.Pages[APageControlIndex].Cursor := crHourGlass;
+end;
+
+{ private TMain.OnExportListEnd
 
   Event that is called when export list ends. }
 
-procedure TMain.OnFinishExportList(Sender: TObject);
+procedure TMain.OnExportListEnd(Sender: TObject; const APageControlIndex: Cardinal);
 begin
-  mmRefresh.Enabled := True;
-  mmExportList.Enabled := True;
+  FPending := -1;
+  PageControl.Pages[APageControlIndex].Cursor := crDefault;
 end;
 
 { private TMain.OnStartupSearchStart
@@ -619,10 +634,9 @@ end;
 procedure TMain.OnStartupSearchStart(Sender: TObject;
   const AWorkCountMax: Cardinal);
 begin
+  FPending := 0;
   mmLang.Enabled := False;
-  mmAdd.Enabled := False;
   mmImport.Enabled := False;
-  mmExportList.Enabled := False;
   lwStartup.Cursor := crHourGlass;
 end;
 
@@ -674,11 +688,10 @@ begin
 
   // Refresh counter label
   OnStartupItemChanged(Sender);
-  lwStartup.Cursor := crDefault;
-  mmLang.Enabled := True;
-  mmAdd.Enabled := True;
   mmImport.Enabled := True;
-  mmExportList.Enabled := True;
+  mmLang.Enabled := True;
+  lwStartup.Cursor := crDefault;
+  FPending := -1;
 end;
 
 { private TMain.OnStartupItemChanged
@@ -698,10 +711,8 @@ end;
 procedure TMain.OnServiceSearchStart(Sender: TObject;
   const AWorkCountMax: Cardinal);
 begin
+  FPending := 2;
   mmLang.Enabled := False;
-  mmAdd.Enabled := False;
-  mmImport.Enabled := False;
-  mmExportList.Enabled := False;
   lwService.Cursor := crHourGlass;
 end;
 
@@ -752,11 +763,9 @@ begin
 
   // Refresh counter label
   OnServiceItemChanged(Sender);
-  lwService.Cursor := crDefault;
   mmLang.Enabled := True;
-  mmAdd.Enabled := True;
-  mmImport.Enabled := True;
-  mmExportList.Enabled := True;
+  lwService.Cursor := crDefault;
+  FPending := -1;
 end;
 
 { private TMain.OnServiceItemChanged
@@ -1035,8 +1044,6 @@ begin
   end;  //of try
 end;
 
-
-
 { TMain.bDeleteServiceItemClick
 
   Deletes currently selected service item. }
@@ -1046,6 +1053,13 @@ var
   Answer: Integer;
 
 begin
+  // Operation pending?
+  if (PageControl.ActivePageIndex = FPending) then
+  begin
+    FLang.MessageBox([100, NEW_LINE, 101], mtWarning);
+    Exit;
+  end;
+
   try
     // Nothing selected?
     if (not Assigned(lwService.ItemFocused) or not Assigned(FService.Selected)) then
@@ -1099,6 +1113,13 @@ var
   Answer: Integer;
 
 begin
+  // Operation pending?
+  if (PageControl.ActivePageIndex = FPending) then
+  begin
+    FLang.MessageBox([100, NEW_LINE, 101], mtWarning);
+    Exit;
+  end;
+
   DelBackup := True;
 
   try
@@ -1175,6 +1196,13 @@ var
   Answer: Integer;
 
 begin
+  // Operation pending?
+  if (PageControl.ActivePageIndex = FPending) then
+  begin
+    FLang.MessageBox([100, NEW_LINE, 101], mtWarning);
+    Exit;
+  end;
+
   try
     // Nothing selected?
     if (not Assigned(lwContext.ItemFocused) or not Assigned(FContext.Selected)) then
@@ -1224,6 +1252,13 @@ end;
 
 procedure TMain.bDisableStartupItemClick(Sender: TObject);
 begin
+  // Operation pending?
+  if (PageControl.ActivePageIndex = FPending) then
+  begin
+    FLang.MessageBox([100, NEW_LINE, 101], mtWarning);
+    Exit;
+  end;
+
   try
     // Nothing selected?
     if not Assigned(lwStartup.ItemFocused) then
@@ -1268,6 +1303,13 @@ end;
 
 procedure TMain.bDisableContextItemClick(Sender: TObject);
 begin
+  // Operation pending?
+  if (PageControl.ActivePageIndex = FPending) then
+  begin
+    FLang.MessageBox([100, NEW_LINE, 101], mtWarning);
+    Exit;
+  end;
+
   try
     // Nothing selected?
     if not Assigned(lwContext.ItemFocused) then
@@ -1308,6 +1350,13 @@ end;
 
 procedure TMain.bDisableServiceItemClick(Sender: TObject);
 begin
+  // Operation pending?
+  if (PageControl.ActivePageIndex = FPending) then
+  begin
+    FLang.MessageBox([100, NEW_LINE, 101], mtWarning);
+    Exit;
+  end;
+
   try
     // Nothing selected?
     if not Assigned(lwService.ItemFocused) then
@@ -1352,6 +1401,13 @@ end;
 
 procedure TMain.bEnableStartupItemClick(Sender: TObject);
 begin
+  // Operation pending?
+  if (PageControl.ActivePageIndex = FPending) then
+  begin
+    FLang.MessageBox([100, NEW_LINE, 101], mtWarning);
+    Exit;
+  end;
+
   try
     // Nothing selected?
     if not Assigned(lwStartup.ItemFocused) then
@@ -1402,6 +1458,13 @@ end;
 
 procedure TMain.bEnableContextItemClick(Sender: TObject);
 begin
+  // Operation pending?
+  if (PageControl.ActivePageIndex = FPending) then
+  begin
+    FLang.MessageBox([100, NEW_LINE, 101], mtWarning);
+    Exit;
+  end;
+
   try
     // Nothing selected?
     if not Assigned(lwContext.ItemFocused) then
@@ -1445,7 +1508,15 @@ end;
   Enables currently selected service item. }
 
 procedure TMain.bEnableServiceItemClick(Sender: TObject);
-begin  try
+begin
+  // Operation pending?
+  if (PageControl.ActivePageIndex = FPending) then
+  begin
+    FLang.MessageBox([100, NEW_LINE, 101], mtWarning);
+    Exit;
+  end;
+  
+  try
     // Nothing selected?
     if not Assigned(lwService.ItemFocused) then
       raise EInvalidItem.Create('No item selected!');
@@ -2024,6 +2095,12 @@ var
   List: TStringList;
 
 begin
+  if (PageControl.ActivePageIndex = FPending) then
+  begin
+    FLang.MessageBox([100, NEW_LINE, 101], mtWarning);
+    Exit;
+  end;
+
   OpenDialog := TOpenDialog.Create(Self);
 
   // Set TOpenDialog options
@@ -2060,7 +2137,7 @@ begin
       case PageControl.ActivePageIndex of
         0: begin
              // Startup item already exists?
-             if not FStartup.AddItem(OpenDialog.FileName, Args, Name) then
+             if not FStartup.Add(OpenDialog.FileName, Args, Name) then
                raise EWarning.Create(FLang.Format(40, [OpenDialog.FileName]));
 
              // Update TListView
@@ -2080,7 +2157,7 @@ begin
                  Exit;
 
                // Contextmenu item already exists?
-               if not FContext.AddItem(OpenDialog.FileName, Args, Location, Name) then
+               if not FContext.Add(OpenDialog.FileName, Args, Location, Name) then
                  raise EWarning.Create(FLang.Format(41, [OpenDialog.FileName]));
 
                // Update TListView
@@ -2093,7 +2170,7 @@ begin
 
         2: begin
              // Service item already exists?
-             if not FService.AddItem(OpenDialog.FileName, Args, Name) then
+             if not FService.Add(OpenDialog.FileName, Args, Name) then
                raise EWarning.Create(FLang.Format(40, [OpenDialog.FileName]));
 
              // Update TListView
@@ -2165,6 +2242,13 @@ var
   SelectedList: TRootRegList;
 
 begin
+  // Operation pending?
+  if (PageControl.ActivePageIndex = FPending) then
+  begin
+    FLang.MessageBox([100, NEW_LINE, 101], mtWarning);
+    Exit;
+  end;
+
   SaveDialog := TSaveDialog.Create(Self);
 
   try
@@ -2188,15 +2272,14 @@ begin
     // User clicked "save"?
     if SaveDialog.Execute then
     begin
-      // Disable button
-      mmExportList.Enabled := False;
-      mmRefresh.Enabled := False;
       SelectedList := (GetSelectedList() as TRootRegList);
 
       // Export list (threaded!)
-      with TExportListThread.Create(SelectedList, SaveDialog.FileName) do
+      with TExportListThread.Create(SelectedList, SaveDialog.FileName,
+        PageControl.ActivePageIndex) do
       begin
-        OnFinish := OnFinishExportList;
+        OnStart := OnExportListStart;
+        OnFinish := OnExportListEnd;
         Resume;
       end;  //of with
     end;  //of begin
@@ -2510,7 +2593,7 @@ begin
        end;
 
     2: begin
-         mmAdd.Caption := FLang.GetString(69);
+         mmAdd.Caption := FLang.GetString(57);
          mmImport.Visible := False;
          mmDate.Visible := True;
          mmShowIcons.Visible := False;

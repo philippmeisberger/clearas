@@ -147,7 +147,11 @@ begin
     begin
       Synchronize(DoNotifyOnSearching);
       Service := OpenService(FManager, ServicesCopy^.lpServiceName, SERVICE_QUERY_CONFIG);
-      FServiceList.LoadService(ServicesCopy^.lpServiceName, Service, FIncludeShared);
+
+      // Skip corrupted service
+      if (Service <> 0) then
+        FServiceList.LoadService(ServicesCopy^.lpServiceName, Service, FIncludeShared);
+
       Inc(ServicesCopy);
     end;  //of for
 

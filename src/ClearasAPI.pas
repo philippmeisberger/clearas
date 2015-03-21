@@ -248,7 +248,7 @@ type
     function AddUserItemEnabled(ALnkFile: TLnkFile; AAllUsers: Boolean): Integer;
   public
     constructor Create;
-    function AddItem(AFileName, AArguments: string; ACaption: string = ''): Boolean;
+    function Add(AFileName, AArguments, ACaption: string): Boolean; reintroduce;
     function BackupExists(): Boolean;
     function ChangeItemStatus(): Boolean; override;
     function DeleteItem(): Boolean; override;
@@ -321,8 +321,7 @@ type
       AEnabled, AWow64: Boolean): Integer;
   public
     constructor Create;
-    function AddItem(AFileName, AArguments, ALocationRoot,
-      ACaption: string): Boolean;
+    function Add(AFileName, AArguments, ALocationRoot, ACaption: string): Boolean; reintroduce;
     procedure ExportList(const AFileName: string); override;
     function IndexOf(AName, ALocationRoot: string): Integer; overload;
     procedure LoadContextmenu(const ALocationRoot: string;
@@ -381,7 +380,7 @@ type
   public
     constructor Create;
     destructor Destroy(); override;
-    function AddItem(AFileName, AArguments, ACaption: string): Boolean;
+    function Add(AFileName, AArguments, ACaption: string): Boolean; reintroduce;
     procedure ExportList(const AFileName: string); override;
     function IndexOf(const ACaptionOrName: string): Integer;
     function LoadService(AName: string; AService: SC_HANDLE;
@@ -1083,17 +1082,25 @@ end;
   Changes the file path of an item. }
 
 function TRootList.ChangeItemFilePath(const ANewFilePath: string): Boolean;
+var
+  Changed: Boolean;
+
 begin
+  FLock.Acquire;
+
   // Invalid item?
   if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
     raise EInvalidItem.Create('No item selected!');
 
   // Change item file path
-  Result := FItem.ChangeFilePath(ANewFilePath);
+  Changed := FItem.ChangeFilePath(ANewFilePath);
 
   // Notify changed
-  if (Result and Assigned(FOnChanged)) then
+  if (Changed and Assigned(FOnChanged)) then
     FOnChanged(Self);
+
+  FLock.Release;
+  Result := Changed;
 end;
 
 { public TRootList.ChangeItemStatus
@@ -1105,6 +1112,8 @@ var
   Changed: Boolean;
 
 begin
+  FLock.Acquire;
+
   if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
     raise EInvalidItem.Create('No item selected!');
 
@@ -1125,6 +1134,7 @@ begin
       FOnChanged(Self);
   end;  //of begin
 
+  FLock.Release;
   Result := Changed;
 end;
 
@@ -1137,6 +1147,8 @@ var
   Deleted: Boolean;
 
 begin
+  FLock.Acquire;
+
   if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
     raise EInvalidItem.Create('No item selected!');
 
@@ -1160,6 +1172,7 @@ begin
       FOnChanged(Self);
   end;  //of begin
 
+  FLock.Release;
   Result := Deleted;
 end;
 
@@ -1168,7 +1181,12 @@ end;
   Disables the current selected item. }
 
 function TRootList.DisableItem(): Boolean;
+var
+  Disabled: Boolean;
+
 begin
+  FLock.Acquire;
+
   if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
     raise EInvalidItem.Create('No item selected!');
 
@@ -1176,9 +1194,9 @@ begin
     raise EWarning.Create('Item already disabled!');
 
   // Disable item
-  Result := FItem.Disable();
+  Disabled := FItem.Disable();
 
-  if Result then
+  if Disabled then
   begin
     // Update active counter
     Dec(FActCount);
@@ -1187,6 +1205,9 @@ begin
     if Assigned(FOnChanged) then
       FOnChanged(Self);
   end;  //of begin
+
+  FLock.Release;
+  Result := Disabled;
 end;
 
 { public TRootList.EnableItem
@@ -1194,7 +1215,12 @@ end;
   Enables the current selected item. }
 
 function TRootList.EnableItem(): Boolean;
+var
+  Enabled: Boolean;
+
 begin
+  FLock.Acquire;
+
   if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
     raise EInvalidItem.Create('No item selected!');
 
@@ -1202,9 +1228,9 @@ begin
     raise EWarning.Create('Item already enabled!');
 
   // Enable item
-  Result := FItem.Enable();
+  Enabled := FItem.Enable();
 
-  if Result then
+  if Enabled then
   begin
     // Update active counter
     Inc(FActCount);
@@ -1213,6 +1239,9 @@ begin
     if Assigned(FOnChanged) then
       FOnChanged(Self);
   end;  //of begin
+
+  FLock.Release;
+  Result := Enabled;
 end;
 
 { public TRootList.ExportItem
@@ -1294,7 +1323,9 @@ end;
 
 function TRootList.Remove(ARootItem: TRootItem): Integer;
 begin
+  FLock.Acquire;
   Result := inherited Remove(ARootItem);
+  FLock.Release;
 end;
 
 
@@ -1885,7 +1916,7 @@ begin
         TypeOf := AReg.ReadString('hkey');
     end;  //of with
 
-    Result := Add(Item);
+    Result := inherited Add(Item);
 
   except
     Item.Free;
@@ -1930,7 +1961,7 @@ begin
     end;  //of with
 
     Inc(FActCount);
-    Result := Add(Item);
+    Result := inherited Add(Item);
 
   except
     Item.Free;
@@ -1995,7 +2026,7 @@ begin
       LnkFile.Arguments := ExtractArguments(FileName);
     end;  //of with
 
-    Result := Add(Item);
+    Result := inherited Add(Item);
 
   except
     Item.Free;
@@ -2031,7 +2062,7 @@ begin
     end;  //of with
 
     Inc(FActCount);
-    Result := Add(Item);
+    Result := inherited Add(Item);
 
   except
     Item.Free;
@@ -2039,12 +2070,11 @@ begin
   end;  //of try
 end;
 
-{ public TStartupList.AddItem
+{ public TStartupList.Add
 
   Adds a new startup item to autostart. }
 
-function TStartupList.AddItem(AFileName, AArguments: string;
-  ACaption: string = ''): Boolean;
+function TStartupList.Add(AFileName, AArguments, ACaption: string): Boolean;
 var
   Name, Ext, FullPath: string;
   i: Word;
@@ -2060,48 +2090,55 @@ begin
     raise EInvalidArgument.Create('Invalid program extension! Must be ".exe"'
       +' or ".bat"!');
 
-  // File path already exists in another item?
-  for i := 0 to Count - 1 do
-    if AnsiContainsStr(ItemAt(i).FileName, AFileName) then
-      Exit;
+  FLock.Acquire;
 
-  // Add new startup user item?
-  if (Ext = '.exe') then
-  begin
-    if (ACaption <> '') then
-      Name := ACaption
+  try
+    // File path already exists in another item?
+    for i := 0 to Count - 1 do
+      if AnsiContainsStr(ItemAt(i).FileName, AFileName) then
+        Exit;
+
+    // Add new startup user item?
+    if (Ext = '.exe') then
+    begin
+      if (ACaption <> '') then
+        Name := ACaption
+      else
+        Name := ChangeFileExt(Name, '');
+
+      Result := AddNewStartupUserItem(Name, AFileName, AArguments);
+    end  //of begin
     else
-      Name := ChangeFileExt(Name, '');
+    begin
+      Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_WRITE));
 
-    Result := AddNewStartupUserItem(Name, AFileName, AArguments);
-  end  //of begin
-  else
-  begin
-    Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_WRITE));
+      // Try to add new startup item to Registry
+      try
+        Reg.RootKey := HKEY_CURRENT_USER;
+        Reg.OpenKey(KEY_STARTUP_RUN, True);
 
-    // Try to add new startup item to Registry
-    try
-      Reg.RootKey := HKEY_CURRENT_USER;
-      Reg.OpenKey(KEY_STARTUP_RUN, True);
+        // Escape space char using quotes
+        FullPath := '"'+ AFileName +'"';
 
-      // Escape space char using quotes
-      FullPath := '"'+ AFileName +'"';
+        // Append arguments if used
+        if (AArguments <> '') then
+          FullPath := FullPath +' '+ AArguments;
 
-      // Append arguments if used
-      if (AArguments <> '') then
-        FullPath := FullPath +' '+ AArguments;
+        Reg.WriteString(ACaption, FullPath);
 
-      Reg.WriteString(ACaption, FullPath);
+        // Adds item to list
+        Result := (AddItemEnabled(HKEY_CURRENT_USER, KEY_STARTUP_RUN, ACaption,
+          FullPath, False) <> -1);
 
-      // Adds item to list
-      Result := (AddItemEnabled(HKEY_CURRENT_USER, KEY_STARTUP_RUN, ACaption,
-        FullPath, False) <> -1);
+      finally
+        Reg.CloseKey();
+        Reg.Free;
+      end;  //of try
+    end;  //of begin
 
-    finally
-      Reg.CloseKey();
-      Reg.Free;
-    end;  //of try
-  end;  //of begin
+  finally
+    FLock.Release;
+  end;  //of try
 end;
 
 { public TStartupList.BackupExists
@@ -2165,6 +2202,8 @@ var
   Item: TStartupListItem;
 
 begin
+  FLock.Acquire;
+
   // Init Reg file
   RegFile := TRegistryFile.Create(AFileName, True);
 
@@ -2185,6 +2224,7 @@ begin
 
   finally
     RegFile.Free;
+    FLock.Release;
   end;  //of try
 end;
 
@@ -2206,6 +2246,8 @@ begin
   if ((Ext <> EXT_COMMON) and (Ext <> EXT_USER)) then
     raise EInvalidArgument.Create('Invalid backup file extension! Must be "'
       + EXT_COMMON +'" or "'+ EXT_USER+'"!');
+
+  FLock.Acquire;
 
   // Init new .lnk file
   LnkFile := TLnkFile.Create(AFileName, Ext);
@@ -2233,6 +2275,7 @@ begin
 
   finally
     LnkFile.Free;
+    FLock.Release;
   end;  //of try
 end;
 
@@ -2804,7 +2847,7 @@ begin
       Inc(FActCount);
   end;  //of with
 
-  Result := Add(Item);
+  Result := inherited Add(Item);
 end;
 
 { protected TContextList.AddShellExItem
@@ -2830,14 +2873,14 @@ begin
       Inc(FActCount);
   end;  //of with
 
-  Result := Add(Item);
+  Result := inherited Add(Item);
 end;
 
-{ public TContextList.AddItem
+{ public TContextList.Add
 
   Adds a new contextmenu entry. }
 
-function TContextList.AddItem(AFileName, AArguments, ALocationRoot,
+function TContextList.Add(AFileName, AArguments, ALocationRoot,
   ACaption: string): Boolean;
 var
   Name, Ext, FullPath, KeyName: string;
@@ -2857,46 +2900,53 @@ begin
     raise EInvalidArgument.Create('Invalid program extension! Must be ".exe"'
       +' or ".bat"!');
 
-  // File path already exists in another item?
-  if (IndexOf(Name, ALocationRoot) <> -1) then
-    Exit;
-
-  // Escape space char using quotes
-  FullPath := '"'+ AFileName +'"';
-
-  // Append arguments if used
-  if (AArguments <> '') then
-    FullPath := FullPath +' '+ AArguments;
-
-  // Build Registry key name
-  KeyName := ALocationRoot + CM_SHELL +'\'+ Name;
-
-  // Adds new context item to Registry
-  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_WRITE));
+  FLock.Acquire;
 
   try
-    Reg.RootKey := HKEY_CLASSES_ROOT;
+    // File path already exists in another item?
+    if (IndexOf(Name, ALocationRoot) <> -1) then
+      Exit;
 
-    if not Reg.OpenKey(KeyName, True) then
-      raise EContextMenuException.Create('Could not create key!');
+    // Escape space char using quotes
+    FullPath := '"'+ AFileName +'"';
 
-    // Write caption of item
-    Reg.WriteString('', ACaption);
-    Reg.CloseKey();
+    // Append arguments if used
+    if (AArguments <> '') then
+      FullPath := FullPath +' '+ AArguments;
 
-    if not Reg.OpenKey(KeyName +'\command', True) then
-      raise EContextMenuException.Create('Could not create "command" key!');
+    // Build Registry key name
+    KeyName := ALocationRoot + CM_SHELL +'\'+ Name;
 
-    // Write command of item
-    Reg.WriteString('', FullPath);
+    // Adds new context item to Registry
+    Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_WRITE));
 
-    // Adds item to list
-    AddShellItem(Name, ALocationRoot, FullPath, ACaption, True, False);
-    Result := True;
+    try
+      Reg.RootKey := HKEY_CLASSES_ROOT;
+
+      if not Reg.OpenKey(KeyName, True) then
+        raise EContextMenuException.Create('Could not create key!');
+
+      // Write caption of item
+      Reg.WriteString('', ACaption);
+      Reg.CloseKey();
+
+      if not Reg.OpenKey(KeyName +'\command', True) then
+        raise EContextMenuException.Create('Could not create "command" key!');
+
+      // Write command of item
+      Reg.WriteString('', FullPath);
+
+      // Adds item to list
+      AddShellItem(Name, ALocationRoot, FullPath, ACaption, True, False);
+      Result := True;
+
+    finally
+      Reg.CloseKey();
+      Reg.Free;
+    end;  //of try
 
   finally
-    Reg.CloseKey();
-    Reg.Free;
+    FLock.Release;
   end;  //of try
 end;
 
@@ -2911,6 +2961,8 @@ var
   Item: TContextListItem;
 
 begin
+  FLock.Acquire;
+
   // Init Reg file
   RegFile := TRegistryFile.Create(AFileName, True);
 
@@ -2926,6 +2978,7 @@ begin
 
   finally
     RegFile.Free;
+    FLock.Release;
   end;  //of try
 end;
 
@@ -3441,7 +3494,7 @@ begin
       TypeOf := 'Service';
     end;  //of with
 
-    Result := Add(Item);
+    Result := inherited Add(Item);
 
   except
     Item.Free;
@@ -3472,18 +3525,18 @@ begin
     end;  //of with
 
     Inc(FActCount);
-    Result := Add(Item);
+    Result := inherited Add(Item);
 
   except
     Item.Free;
   end;  //of try
 end;
 
-{ public TServiceList.AddItem
+{ public TServiceList.Add
 
   Adds a new service item to services location. }
 
-function TServiceList.AddItem(AFileName, AArguments, ACaption: string): Boolean;
+function TServiceList.Add(AFileName, AArguments, ACaption: string): Boolean;
 var
   Name, FullPath: string;
   Service: SC_Handle;
@@ -3497,36 +3550,43 @@ begin
   if (ExtractFileExt(Name) <> '.exe') then
     raise EInvalidArgument.Create('Invalid program extension! Must be ".exe"!');
 
-  // Escape path using quotes
-  FullPath := '"'+ AFileName +'"';
+  FLock.Acquire;
 
-  // Append arguments if used
-  if (AArguments <> '') then
-    FullPath := FullPath +' '+ AArguments;
+  try
+    // Escape path using quotes
+    FullPath := '"'+ AFileName +'"';
 
-  Name := ChangeFileExt(Name, '');
+    // Append arguments if used
+    if (AArguments <> '') then
+      FullPath := FullPath +' '+ AArguments;
 
-  // Create a new service
-  Service := CreateService(FManager, PChar(Name), PChar(ACaption),
-    STANDARD_RIGHTS_READ, SERVICE_WIN32_OWN_PROCESS, SERVICE_AUTO_START,
-    SERVICE_ERROR_NORMAL, PChar(FullPath), nil, nil, nil, nil, nil);
+    Name := ChangeFileExt(Name, '');
 
-  // Error occured?
-  if (Service = 0) then
-  begin
-    LastError := GetLastError();
+    // Create a new service
+    Service := CreateService(FManager, PChar(Name), PChar(ACaption),
+      STANDARD_RIGHTS_READ, SERVICE_WIN32_OWN_PROCESS, SERVICE_AUTO_START,
+      SERVICE_ERROR_NORMAL, PChar(FullPath), nil, nil, nil, nil, nil);
 
-    // Service already exists?
-    if (LastError = ERROR_SERVICE_EXISTS) then
-      Exit;
+    // Error occured?
+    if (Service = 0) then
+    begin
+      LastError := GetLastError();
 
-    raise EServiceException.Create(SysErrorMessage(LastError));
-  end;  //of begin
+      // Service already exists?
+      if (LastError = ERROR_SERVICE_EXISTS) then
+        Exit;
 
-  CloseServiceHandle(Service);
+      raise EServiceException.Create(SysErrorMessage(LastError));
+    end;  //of begin
 
-  // Adds service to list
-  Result := (AddServiceEnabled(Name, ACaption, AFileName, ssAutomatic) <> -1);
+    CloseServiceHandle(Service);
+
+    // Adds service to list
+    Result := (AddServiceEnabled(Name, ACaption, AFileName, ssAutomatic) <> -1);
+
+  finally
+    FLock.Release;
+  end;  //of try
 end;
 
 { public TServiceList.ExportList
@@ -3540,6 +3600,9 @@ var
   Item: TServiceListItem;
 
 begin
+  FLock.Acquire;
+
+  // Init Reg file
   RegFile := TRegistryFile.Create(AFileName, True);
 
   try
@@ -3558,6 +3621,7 @@ begin
 
   finally
     RegFile.Free;
+    FLock.Release;
   end;  //of try
 end;
 

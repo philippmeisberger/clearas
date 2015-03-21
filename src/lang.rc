@@ -58,7 +58,7 @@ STRINGTABLE
 154, "Ändern Sie hier den Pfad:"
 155, "Programm konnte nicht ín den Autostart geladen werden!"
 156, "Dienst (%d/%d)"
-157, "Fehler beim Zugriff auf die Registry!"
+157, "Dienst hinzufügen"
 158, "Wollen Sie den Dienst \"%s\" wirklich löschen?"
 159, "Start"
 160, "Dienste"
@@ -101,7 +101,8 @@ STRINGTABLE
 197, "Eintrag wird wie folgt benannt:"
 198, "Parameter angeben (optional):"
 199, "Parameter bearbeiten"
-
+200, "Ein anderer Vorgang wird noch ausgeführt! "
+201, "Bitte warten Sie, bis er beendet ist."
 
 //Englisch
 300, "Information"
@@ -161,7 +162,7 @@ STRINGTABLE
 354, "Modify the path from here:"
 355, "Program could not be loaded into the startup folder!"
 356, "Service (%d/%d)"
-357, "Error while access to the Registry!"
+357, "Add service"
 358, "Are you sure you want to delete the service \"%s\"?"
 359, "Start" 
 360, "Services"
@@ -204,6 +205,8 @@ STRINGTABLE
 397, "Item will be named as follows:"
 398, "Specify parameters (optional):"
 399, "Edit parameters"
+400, "Another operation is pending! "
+401, "Please wait until it has finished."
 
 
 //Französisch
@@ -264,7 +267,7 @@ STRINGTABLE
 554, "Modifiez le chemin d'ici:"
 555, "Le logiciel ne pouvait pas être chargé dans l'autostart!"
 556, "Service (%d/%d)"
-557, "Erreur en question de l'accès à la registry!"
+557, "Ajouter un service"
 558, "Voulez-vous vraiment supprimer le service \"%s\"?"
 559, "Démarrage"
 560, "Services"
@@ -307,4 +310,6 @@ STRINGTABLE
 597, "L'entrée sera nommé comme suit:"
 598, "Spécifier les paramètres (facultatif):"
 599, "Modifier les paramètres"
+600, "Une autre opération est en cours! "
+601, "Se il vous plaît attendre jusqu'à ce qu'il ait fini."
 }

@@ -395,7 +395,7 @@ object Main: TMain
         Height = 33
         Anchors = [akTop, akRight]
         Caption = 'Beenden'
-        TabOrder = 4
+        TabOrder = 5
         OnClick = bCloseStartupClick
       end
       object bDisableStartupItem: TButton
@@ -406,7 +406,7 @@ object Main: TMain
         Anchors = [akTop, akRight]
         Caption = 'deaktivieren'
         Enabled = False
-        TabOrder = 1
+        TabOrder = 2
         OnClick = bDisableStartupItemClick
       end
       object bDeleteStartupItem: TButton
@@ -417,7 +417,7 @@ object Main: TMain
         Anchors = [akTop, akRight]
         Caption = 'l'#246'schen'
         Enabled = False
-        TabOrder = 3
+        TabOrder = 4
         OnClick = bDeleteStartupItemClick
       end
       object bExportStartupItem: TButton
@@ -428,7 +428,7 @@ object Main: TMain
         Anchors = [akTop, akRight]
         Caption = 'exportieren'
         Enabled = False
-        TabOrder = 2
+        TabOrder = 3
         OnClick = bExportStartupItemClick
       end
       object bEnableStartupItem: TButton
@@ -439,7 +439,7 @@ object Main: TMain
         Anchors = [akTop, akRight]
         Caption = 'aktivieren'
         Enabled = False
-        TabOrder = 5
+        TabOrder = 1
         OnClick = bEnableStartupItemClick
       end
       object cbRunOnce: TCheckBox
@@ -607,7 +607,7 @@ object Main: TMain
         Width = 148
         Height = 18
         Anchors = [akLeft, akBottom]
-        TabOrder = 7
+        TabOrder = 8
         Visible = False
       end
       object cbContextExpert: TCheckBox
@@ -626,7 +626,7 @@ object Main: TMain
         Width = 148
         Height = 22
         Anchors = [akLeft, akBottom]
-        TabOrder = 8
+        TabOrder = 7
         OnChange = mmShowIconsClick
       end
     end
@@ -732,7 +732,7 @@ object Main: TMain
         Anchors = [akTop, akRight]
         Caption = 'exportieren'
         Enabled = False
-        TabOrder = 1
+        TabOrder = 3
         OnClick = bExportServiceItemClick
       end
       object bDeleteServiceItem: TButton
@@ -743,7 +743,7 @@ object Main: TMain
         Anchors = [akTop, akRight]
         Caption = 'l'#246'schen'
         Enabled = False
-        TabOrder = 2
+        TabOrder = 4
         OnClick = bDeleteServiceItemClick
       end
       object bCloseService: TButton
@@ -753,7 +753,7 @@ object Main: TMain
         Height = 33
         Anchors = [akTop, akRight]
         Caption = 'Beenden'
-        TabOrder = 3
+        TabOrder = 5
         OnClick = bCloseStartupClick
       end
       object bDisableServiceItem: TButton
@@ -764,7 +764,7 @@ object Main: TMain
         Anchors = [akTop, akRight]
         Caption = 'deaktivieren'
         Enabled = False
-        TabOrder = 4
+        TabOrder = 2
         OnClick = bDisableServiceItemClick
       end
       object bEnableServiceItem: TButton
@@ -775,7 +775,7 @@ object Main: TMain
         Anchors = [akTop, akRight]
         Caption = 'aktivieren'
         Enabled = False
-        TabOrder = 5
+        TabOrder = 1
         OnClick = bEnableServiceItemClick
       end
       object cbServiceExpert: TCheckBox

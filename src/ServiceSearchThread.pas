@@ -90,9 +90,9 @@ begin
     FOnStart(Self, FProgressMax);
 end;
 
-{ protected TContextMenuSearchThread.Execute
+{ protected TServiceSearchThread.Execute
 
-  Searches for startup items in Registry. }
+  Searches for service items. }
 
 procedure TServiceSearchThread.Execute;
 var
