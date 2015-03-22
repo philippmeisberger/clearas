@@ -454,15 +454,15 @@ begin
   // Clear all visual data
   lwContext.Clear;
 
+  // Disable VCL
+  bDisableContextItem.Enabled := False;
+  bEnableContextItem.Enabled := False;
+  bDeleteContextItem.Enabled := False;
+  bExportContextItem.Enabled := False;
+
   // Make a total refresh or just use cached items
   if ATotalRefresh then
   begin
-      // Disable VCL
-    bDisableContextItem.Enabled := False;
-    bEnableContextItem.Enabled := False;
-    bDeleteContextItem.Enabled := False;
-    bExportContextItem.Enabled := False;
-
     // Use expert search mode?
     if cbContextExpert.Checked then
       // Start the expert search (threaded!)
@@ -484,18 +484,16 @@ begin
   // Clear all visual data
   lwStartup.Clear;
 
+  // Disable VCL
+  bDisableStartupItem.Enabled := False;
+  bEnableStartupItem.Enabled := False;
+  bDeleteStartupItem.Enabled := False;
+  bExportStartupItem.Enabled := False;
+
   // Make a total refresh or just use cached items
   if ATotalRefresh then
-  begin
-    // Disable VCL
-    bDisableStartupItem.Enabled := False;
-    bEnableStartupItem.Enabled := False;
-    bDeleteStartupItem.Enabled := False;
-    bExportStartupItem.Enabled := False;
-
     // Load autostart with or without special RunOnce entries (threaded!)
-    FStartup.LoadStartup(cbRunOnce.Checked);
-  end  //of begin
+    FStartup.LoadStartup(cbRunOnce.Checked)
   else
     OnStartupSearchEnd(Self);
 end;
@@ -509,18 +507,16 @@ begin
   // Clear all visual data
   lwService.Clear;
 
+  // Disable VCL
+  bDisableServiceItem.Enabled := False;
+  bEnableServiceItem.Enabled := False;
+  bDeleteServiceItem.Enabled := False;
+  bExportServiceItem.Enabled := False;
+
   // Make a total refresh or just use cached items
   if ATotalRefresh then
-  begin
-    // Disable VCL
-    bDisableServiceItem.Enabled := False;
-    bEnableServiceItem.Enabled := False;
-    bDeleteServiceItem.Enabled := False;
-    bExportServiceItem.Enabled := False;
-
     // Load service items (threaded!)
-    FService.LoadServices(cbServiceExpert.Checked);
-  end  //of begin
+    FService.LoadServices(cbServiceExpert.Checked)
   else
     OnServiceSearchEnd(Self);
 end;
@@ -723,12 +719,9 @@ end;
 procedure TMain.OnServiceSearchEnd(Sender: TObject);
 var
   i: Integer;
-  Text, Auto, Manual: string;
+  Text: string;
 
 begin
-  Auto := FLang.GetString(61);
-  Manual := FLang.GetString(62);
-
   // Print all information about service items
   for i := 0 to FService.Count - 1 do
   begin
@@ -746,14 +739,7 @@ begin
         Caption := FService[i].GetStatus(FLang);
         SubItems.Append(Text);
         SubItems.Append(FService[i].FileName);
-
-        // Show start of service
-        case FService[i].Start of
-          ssAutomatic: SubItems.Append(Auto);
-          ssManual:    SubItems.Append(Manual);
-          else
-                       SubItems.Append(FService[i].TypeOf);
-        end;  //of case
+        SubItems.Append(FService[i].GetStartText(FLang));
 
         // Show deactivation timestamp?
         if mmDate.Checked then
@@ -900,7 +886,10 @@ begin
     OnContextItemChanged(Sender);
 
     for i := 0 to FService.Count - 1 do
+    begin
       lwService.Items[i].Caption := FService[i].GetStatus(FLang);
+      lwService.Items[i].SubItems[2] := FService[i].GetStartText(FLang);
+    end;  //of for
 
     OnServiceItemChanged(Sender);
   end;  //of begin
@@ -1066,7 +1055,7 @@ begin
       raise EInvalidItem.Create('No item selected!');
 
     // Confirm deletion of item
-    if (FLang.MessageBox(FLang.Format([48, NEW_LINE, 49, 50],
+    if (FLang.MessageBox(FLang.Format([58, NEW_LINE, 49, 50],
       [lwService.ItemFocused.SubItems[0]]), mtConfirm) = IDYES) then
     begin
       // Ask user to export item
@@ -2575,7 +2564,6 @@ begin
          mmImport.Visible := True;
          mmDate.Visible := True;
          mmShowIcons.Visible := True;
-         pmOpenExplorer.Enabled := True;
          lwStartupSelectItem(Sender, lwStartup.ItemFocused, True);
          ShowColumnDate(lwStartup, mmDate.Checked);
        end;
@@ -2597,7 +2585,6 @@ begin
          mmImport.Visible := False;
          mmDate.Visible := True;
          mmShowIcons.Visible := False;
-         pmOpenExplorer.Enabled := True;
          lwServiceSelectItem(Sender, lwService.ItemFocused, True);
          ShowColumnDate(lwService, mmDate.Checked);
 

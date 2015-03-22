@@ -418,9 +418,7 @@ object Info: TInfo
           '  - Multi-Threaded'
           '  - Exception Handling stark verbessert'
           '- Neues Feature "Dienst":'
-          
-            '  - Erm'#246'glicht Bearbeiten automatisch gestarteter Windows Dienst' +
-            'e'
+          '  - Erm'#246'glicht Bearbeiten von Windows Diensten'
           '- '#196'nderungen im Popup Men'#252':'
           '  - Neue Funktion "Pfad bearbeiten" hinzugef'#252'gt'
           

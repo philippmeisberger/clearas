@@ -412,12 +412,12 @@ object Info: TInfo
           'History'
           '--------'
           ''
-          'Version 4.0  [23.03.15]'
+          'Version 4.0  [25.03.15]'
           ''
           '- API Version 4.1'
           '  - Multi-Threaded'
           '  - Exception Handling stark verbessert'
-          '- Neues Feature "Dienst":'
+          '- Neues Feature "Dienste":'
           '  - Erm'#246'glicht Bearbeiten von Windows Diensten'
           '- '#196'nderungen im Popup Men'#252':'
           '  - Neue Funktion "Pfad bearbeiten" hinzugef'#252'gt'
@@ -451,10 +451,9 @@ object Info: TInfo
           '    - Suche beschleunigt'
           '    - Mehr Ergebnisse'
           '- '#196'nderungen auf der Seite "Autostart":'
+          '  - Men'#252'-Eintrag "RunOnce-Eintr'#228'ge" durch Checkbox ersetzt'
           '  - Men'#252'-Eintrag "Symbole anzeigen" hinzugef'#252'gt'
-          
-            '  - Icons von Programmen k'#246'nnen werden nun standardm'#228#223'ig angezei' +
-            'gt'
+          '  - Icons von Programmen werden nun standardm'#228#223'ig angezeigt'
           
             '- Ausw'#228'hlen von Elementen in Autostart und Kontextmen'#252' Listen be' +
             'schleunigt'

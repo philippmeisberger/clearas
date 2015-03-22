@@ -358,6 +358,7 @@ type
     function Disable(): Boolean; override;
     function Enable(): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
+    function GetStartText(ALangFile: TLanguageFile): string;
     { external }
     property Caption: string read FCaption write FCaption;
     property Location: string read GetLocation;
@@ -3422,6 +3423,20 @@ begin
   finally
     RegFile.Free;
   end;  //of try
+end;
+
+{ public TServiceListItem.ExportItem
+
+  Returns the start type of service as string. }
+
+function TServiceListItem.GetStartText(ALangFile: TLanguageFile): string;
+begin
+  case FServiceStart of
+    ssAutomatic: Result := ALangFile.GetString(61);
+    ssManual:    Result := ALangFile.GetString(62);
+    else
+                 Result := TypeOf;
+  end;  //of case
 end;
 
 

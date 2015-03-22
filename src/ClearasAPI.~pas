@@ -1323,7 +1323,9 @@ end;
 
 function TRootList.Remove(ARootItem: TRootItem): Integer;
 begin
+  FLock.Acquire;
   Result := inherited Remove(ARootItem);
+  FLock.Release;
 end;
 
 
