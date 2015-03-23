@@ -59,7 +59,7 @@ type
     class function GetWinDir(): string;
     class function GetWinVersion(AShowServicePack: Boolean = False): string;
     class function HexToInt(AHexValue: string): Integer;
-    class function HKeyToStr(AHKey: HKey): string;
+    class function HKeyToStr(AHKey: HKey; ALongFormat: Boolean = True): string;
     class function KillProcess(AExeName: string): Boolean;
     class function MakeUACShieldButton(AButtonHandle: HWND): Integer;
     class function OpenUrl(const AUrl: string): Boolean;
@@ -426,16 +426,45 @@ end;
 
   Converts a HKEY into its string representation. }
 
-class function TOSUtils.HKeyToStr(AHKey: HKey): string;
+class function TOSUtils.HKeyToStr(AHKey: HKey; ALongFormat: Boolean = True): string;
 begin
   case AHKey of
-    HKEY_CLASSES_ROOT:   Result := 'HKEY_CLASSES_ROOT';
-    HKEY_CURRENT_USER:   Result := 'HKEY_CURRENT_USER';
-    HKEY_LOCAL_MACHINE:  Result := 'HKEY_LOCAL_MACHINE';
-    HKEY_USERS:          Result := 'HKEY_USERS';
-    HKEY_CURRENT_CONFIG: Result := 'HKEY_CURRENT_CONFIG';
-    else
-      raise EInvalidArgument.Create('Unknown HKEY!');
+    HKEY_CLASSES_ROOT:     if ALongFormat then
+                             Result := 'HKEY_CLASSES_ROOT'
+                           else
+                             Result := 'HKCR';
+
+    HKEY_CURRENT_USER:     if ALongFormat then
+                             Result := 'HKEY_CURRENT_USER'
+                           else
+                             Result := 'HKCU';
+
+    HKEY_LOCAL_MACHINE:    if ALongFormat then
+                             Result := 'HKEY_LOCAL_MACHINE'
+                           else
+                             Result := 'HKLM';
+
+    HKEY_USERS:            if ALongFormat then
+                             Result := 'HKEY_USERS'
+                           else
+                             Result := 'HKU';
+
+    HKEY_PERFORMANCE_DATA: if ALongFormat then
+                             Result := 'HKEY_PERFORMANCE_DATA'
+                           else
+                             Result := 'HKPD';
+
+    HKEY_CURRENT_CONFIG:   if ALongFormat then
+                             Result := 'HKEY_CURRENT_CONFIG'
+                           else
+                             Result := 'HKCC';
+
+    HKEY_DYN_DATA:         if ALongFormat then
+                             Result := 'HKEY_DYN_DATA'
+                           else
+                             Result := 'HKDD';
+
+    else                   raise EInvalidArgument.Create('Unknown HKEY!');
   end;  //of case
 end;
 
@@ -694,10 +723,16 @@ begin
         if (ARootKey = 'HKU') then
           Result := HKEY_USERS
         else
-          if (ARootKey = 'HKCC') then
-            Result := HKEY_CURRENT_CONFIG
+          if (ARootKey = 'HKPD') then
+            Result := HKEY_PERFORMANCE_DATA
           else
-            raise EInvalidArgument.Create('Unknown HKEY: "'+ ARootKey +'"!');
+            if (ARootKey = 'HKCC') then
+              Result := HKEY_CURRENT_CONFIG
+            else
+              if (ARootKey = 'HKDD') then
+                Result := HKEY_DYN_DATA
+              else
+                raise EInvalidArgument.Create('Unknown HKEY: "'+ ARootKey +'"!');
 end;
 
 { public TOSUtils.WindowsVistaOrLater

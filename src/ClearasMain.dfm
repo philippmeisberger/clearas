@@ -289,12 +289,6 @@ object Main: TMain
     OnChange = PageControlChange
     object tsStartup: TTabSheet
       Caption = 'Autostart'
-      Font.Charset = ANSI_CHARSET
-      Font.Color = clBlack
-      Font.Height = -11
-      Font.Name = 'Arial'
-      Font.Style = []
-      ParentFont = False
       DesignSize = (
         535
         279)
@@ -368,16 +362,10 @@ object Main: TMain
             MaxWidth = 105
             Width = 75
           end>
-        Font.Charset = ANSI_CHARSET
-        Font.Color = clBlack
-        Font.Height = -11
-        Font.Name = 'Arial'
-        Font.Style = []
         GridLines = True
         HideSelection = False
         ReadOnly = True
         RowSelect = True
-        ParentFont = False
         PopupMenu = PopupMenu
         ShowWorkAreas = True
         TabOrder = 0
@@ -582,16 +570,10 @@ object Main: TMain
             MinWidth = 65
             Width = 65
           end>
-        Font.Charset = ANSI_CHARSET
-        Font.Color = clBlack
-        Font.Height = -11
-        Font.Name = 'Arial'
-        Font.Style = []
         GridLines = True
         HideSelection = False
         ReadOnly = True
         RowSelect = True
-        ParentFont = False
         PopupMenu = PopupMenu
         TabOrder = 0
         ViewStyle = vsReport
@@ -705,16 +687,10 @@ object Main: TMain
             MinWidth = 75
             Width = 75
           end>
-        Font.Charset = ANSI_CHARSET
-        Font.Color = clBlack
-        Font.Height = -11
-        Font.Name = 'Arial'
-        Font.Style = []
         GridLines = True
         HideSelection = False
         ReadOnly = True
         RowSelect = True
-        ParentFont = False
         PopupMenu = PopupMenu
         TabOrder = 0
         ViewStyle = vsReport
