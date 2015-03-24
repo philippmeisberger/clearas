@@ -606,6 +606,12 @@ end;
 procedure TMain.OnExportListStart(Sender: TObject; const APageControlIndex: Cardinal);
 begin
   PageControl.Pages[APageControlIndex].Cursor := crHourGlass;
+
+  case APageControlIndex of
+    0: lwStartup.Cursor := crHourGlass;
+    1: lwContext.Cursor := crHourGlass;
+    2: lwService.Cursor := crHourGlass;
+  end;  //of case
 end;
 
 { private TMain.OnExportListEnd
@@ -615,6 +621,12 @@ end;
 procedure TMain.OnExportListEnd(Sender: TObject; const APageControlIndex: Cardinal);
 begin
   PageControl.Pages[APageControlIndex].Cursor := crDefault;
+
+  case APageControlIndex of
+    0: lwStartup.Cursor := crDefault;
+    1: lwContext.Cursor := crDefault;
+    2: lwService.Cursor := crDefault;
+  end;  //of case
 end;
 
 { private TMain.OnStartupSearchStart
@@ -863,18 +875,24 @@ begin
   end;  //of with
 
   // Update list labels
-  if (Assigned(FStartup) and Assigned(FContext) and Assigned(FService)) then
+  if Assigned(FStartup) then
   begin
     for i := 0 to FStartup.Count - 1 do
       lwStartup.Items[i].Caption := FStartup[i].GetStatus(FLang);
 
     OnStartupItemChanged(Sender);
+  end;  //of begin
 
+  if Assigned(FContext) then
+  begin
     for i := 0 to FContext.Count - 1 do
       lwContext.Items[i].Caption := FContext[i].GetStatus(FLang);
 
     OnContextItemChanged(Sender);
+  end;  //of begin
 
+  if Assigned(FService) then
+  begin
     for i := 0 to FService.Count - 1 do
     begin
       lwService.Items[i].Caption := FService[i].GetStatus(FLang);

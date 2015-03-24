@@ -2017,6 +2017,9 @@ begin
         TypeOf := 'RunOnce'
       else
         TypeOf := AReg.ReadString('hkey');
+
+      if AWow64 then
+        TypeOf := TypeOf +'32'; 
     end;  //of with
 
     Result := inherited Add(Item);
@@ -2061,6 +2064,9 @@ begin
         TypeOf := 'RunOnce'
       else
         TypeOf := HKey;
+
+      if AWow64 then
+        TypeOf := TypeOf +'32';
     end;  //of with
 
     Inc(FActCount);

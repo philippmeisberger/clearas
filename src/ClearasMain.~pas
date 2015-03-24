@@ -198,9 +198,6 @@ type
 var
   Main: TMain;
 
-threadvar
-  FPending: TTabSheet;
-
 implementation
 
 {$R *.dfm}
@@ -217,7 +214,6 @@ begin
   FLang := TLanguageFile.Create(100, Application);
   FLang.AddListener(Self);
   SetLanguage(Self);
-  FPending := nil;
 
   // Init update notificator
   FUpdateCheck := TUpdateCheck.Create(Self, 'Clearas', FLang);
@@ -530,7 +526,6 @@ end;
 procedure TMain.OnContextSearchStart(Sender: TObject;
   const AWorkCountMax: Cardinal);
 begin
-  FPending := tsContext;
   mmLang.Enabled := False;
   lwContext.Cursor := crHourGlass;
 
@@ -592,7 +587,6 @@ begin
   eContextSearch.Visible := True;
   mmLang.Enabled := True;
   lwContext.Cursor := crDefault;
-  FPending := nil;
 end;
 
 { private TMain.OnContextItemChanged
@@ -611,8 +605,7 @@ end;
 
 procedure TMain.OnExportListStart(Sender: TObject; const APageControlIndex: Cardinal);
 begin
-  FPending := PageControl.Pages[APageControlIndex];
-  FPending.Cursor := crHourGlass;
+  PageControl.Pages[APageControlIndex].Cursor := crHourGlass;
 end;
 
 { private TMain.OnExportListEnd
@@ -621,8 +614,7 @@ end;
 
 procedure TMain.OnExportListEnd(Sender: TObject; const APageControlIndex: Cardinal);
 begin
-  FPending.Cursor := crDefault;
-  FPending := nil;
+  PageControl.Pages[APageControlIndex].Cursor := crDefault;
 end;
 
 { private TMain.OnStartupSearchStart
@@ -632,7 +624,6 @@ end;
 procedure TMain.OnStartupSearchStart(Sender: TObject;
   const AWorkCountMax: Cardinal);
 begin
-  FPending := tsStartup;
   mmLang.Enabled := False;
   mmImport.Enabled := False;
   lwStartup.Cursor := crHourGlass;
@@ -689,7 +680,6 @@ begin
   mmImport.Enabled := True;
   mmLang.Enabled := True;
   lwStartup.Cursor := crDefault;
-  FPending := nil;
 end;
 
 { private TMain.OnStartupItemChanged
@@ -709,7 +699,6 @@ end;
 procedure TMain.OnServiceSearchStart(Sender: TObject;
   const AWorkCountMax: Cardinal);
 begin
-  FPending := tsService;
   mmLang.Enabled := False;
   lwService.Cursor := crHourGlass;
 end;
@@ -753,7 +742,6 @@ begin
   OnServiceItemChanged(Sender);
   mmLang.Enabled := True;
   lwService.Cursor := crDefault;
-  FPending := nil;
 end;
 
 { private TMain.OnServiceItemChanged
@@ -875,18 +863,24 @@ begin
   end;  //of with
 
   // Update list labels
-  if (Assigned(FStartup) and Assigned(FContext) and Assigned(FService)) then
+  if Assigned(FStartup) then
   begin
     for i := 0 to FStartup.Count - 1 do
       lwStartup.Items[i].Caption := FStartup[i].GetStatus(FLang);
 
     OnStartupItemChanged(Sender);
+  end;  //of begin
 
+  if Assigned(FContext) then
+  begin
     for i := 0 to FContext.Count - 1 do
       lwContext.Items[i].Caption := FContext[i].GetStatus(FLang);
 
     OnContextItemChanged(Sender);
+  end;  //of begin
 
+  if Assigned(FService) then
+  begin
     for i := 0 to FService.Count - 1 do
     begin
       lwService.Items[i].Caption := FService[i].GetStatus(FLang);
@@ -1044,13 +1038,6 @@ var
   Answer: Integer;
 
 begin
-  // Operation pending?
-  if (Assigned(FPending) and (PageControl.ActivePage = FPending)) then
-  begin
-    FLang.MessageBox([100, NEW_LINE, 101], mtWarning);
-    Exit;
-  end;  //of begin
-
   try
     // Nothing selected?
     if (not Assigned(lwService.ItemFocused) or not Assigned(FService.Selected)) then
@@ -1086,6 +1073,9 @@ begin
     on E: EInvalidItem do
       FLang.MessageBox([96, 18, NEW_LINE, 53], mtWarning);
 
+    on E: EListBlocked do
+      FLang.MessageBox([100, NEW_LINE, 101], mtWarning);
+
     on E: EWarning do
       FLang.MessageBox(E.Message, mtWarning);
 
@@ -1104,13 +1094,6 @@ var
   Answer: Integer;
 
 begin
-  // Operation pending?
-  if (Assigned(FPending) and (PageControl.ActivePage = FPending)) then
-  begin
-    FLang.MessageBox([100, NEW_LINE, 101], mtWarning);
-    Exit;
-  end;  //of begin
-
   DelBackup := True;
 
   try
@@ -1166,6 +1149,9 @@ begin
     on E: EInvalidItem do
       FLang.MessageBox([96, 18, NEW_LINE, 53], mtWarning);
 
+    on E: EListBlocked do
+      FLang.MessageBox([100, NEW_LINE, 101], mtWarning);
+
     on E: EWarning do
       FLang.MessageBox(E.Message, mtWarning);
 
@@ -1187,13 +1173,6 @@ var
   Answer: Integer;
 
 begin
-  // Operation pending?
-  if (Assigned(FPending) and (PageControl.ActivePage = FPending)) then
-  begin
-    FLang.MessageBox([100, NEW_LINE, 101], mtWarning);
-    Exit;
-  end;  //of begin
-
   try
     // Nothing selected?
     if (not Assigned(lwContext.ItemFocused) or not Assigned(FContext.Selected)) then
@@ -1229,6 +1208,9 @@ begin
     on E: EInvalidItem do
       FLang.MessageBox([96, 18, NEW_LINE, 53], mtWarning);
 
+    on E: EListBlocked do
+      FLang.MessageBox([100, NEW_LINE, 101], mtWarning);
+
     on E: EWarning do
       FLang.MessageBox(E.Message, mtWarning);
 
@@ -1243,13 +1225,6 @@ end;
 
 procedure TMain.bDisableStartupItemClick(Sender: TObject);
 begin
-  // Operation pending?
-  if (Assigned(FPending) and (PageControl.ActivePage = FPending)) then
-  begin
-    FLang.MessageBox([100, NEW_LINE, 101], mtWarning);
-    Exit;
-  end;  //of begin
-
   try
     // Nothing selected?
     if not Assigned(lwStartup.ItemFocused) then
@@ -1280,6 +1255,9 @@ begin
     on E: EInvalidItem do
       FLang.MessageBox([94, 18, NEW_LINE, 53], mtWarning);
 
+    on E: EListBlocked do
+      FLang.MessageBox([100, NEW_LINE, 101], mtWarning);
+
     on E: EWarning do
       FLang.MessageBox(E.Message, mtWarning);
 
@@ -1294,13 +1272,6 @@ end;
 
 procedure TMain.bDisableContextItemClick(Sender: TObject);
 begin
-  // Operation pending?
-  if (Assigned(FPending) and (PageControl.ActivePage = FPending)) then
-  begin
-    FLang.MessageBox([100, NEW_LINE, 101], mtWarning);
-    Exit;
-  end;  //of begin
-
   try
     // Nothing selected?
     if not Assigned(lwContext.ItemFocused) then
@@ -1327,6 +1298,9 @@ begin
     on E: EInvalidItem do
       FLang.MessageBox([94, 18, NEW_LINE, 53], mtWarning);
 
+    on E: EListBlocked do
+      FLang.MessageBox([100, NEW_LINE, 101], mtWarning);
+
     on E: EWarning do
       FLang.MessageBox(E.Message, mtWarning);
 
@@ -1341,13 +1315,6 @@ end;
 
 procedure TMain.bDisableServiceItemClick(Sender: TObject);
 begin
-  // Operation pending?
-  if (Assigned(FPending) and (PageControl.ActivePage = FPending)) then
-  begin
-    FLang.MessageBox([100, NEW_LINE, 101], mtWarning);
-    Exit;
-  end;  //of begin
-
   try
     // Nothing selected?
     if not Assigned(lwService.ItemFocused) then
@@ -1378,6 +1345,9 @@ begin
     on E: EInvalidItem do
       FLang.MessageBox([94, 18, NEW_LINE, 53], mtWarning);
 
+    on E: EListBlocked do
+      FLang.MessageBox([100, NEW_LINE, 101], mtWarning);
+
     on E: EWarning do
       FLang.MessageBox(E.Message, mtWarning);
 
@@ -1392,13 +1362,6 @@ end;
 
 procedure TMain.bEnableStartupItemClick(Sender: TObject);
 begin
-  // Operation pending?
-  if (Assigned(FPending) and (PageControl.ActivePage = FPending)) then
-  begin
-    FLang.MessageBox([100, NEW_LINE, 101], mtWarning);
-    Exit;
-  end;  //of begin
-
   try
     // Nothing selected?
     if not Assigned(lwStartup.ItemFocused) then
@@ -1435,6 +1398,9 @@ begin
     on E: EInvalidItem do
       FLang.MessageBox([93, 18, NEW_LINE, 53], mtWarning);
 
+    on E: EListBlocked do
+      FLang.MessageBox([100, NEW_LINE, 101], mtWarning);
+
     on E: EWarning do
       FLang.MessageBox(E.Message, mtWarning);
 
@@ -1449,13 +1415,6 @@ end;
 
 procedure TMain.bEnableContextItemClick(Sender: TObject);
 begin
-  // Operation pending?
-  if (Assigned(FPending) and (PageControl.ActivePage = FPending)) then
-  begin
-    FLang.MessageBox([100, NEW_LINE, 101], mtWarning);
-    Exit;
-  end;  //of begin
-
   try
     // Nothing selected?
     if not Assigned(lwContext.ItemFocused) then
@@ -1486,6 +1445,9 @@ begin
     on E: EInvalidItem do
       FLang.MessageBox([93, 18, NEW_LINE, 53], mtWarning);
 
+    on E: EListBlocked do
+      FLang.MessageBox([100, NEW_LINE, 101], mtWarning);
+
     on E: EWarning do
       FLang.MessageBox(E.Message, mtWarning);
 
@@ -1500,13 +1462,6 @@ end;
 
 procedure TMain.bEnableServiceItemClick(Sender: TObject);
 begin
-  // Operation pending?
-  if (Assigned(FPending) and (PageControl.ActivePage = FPending)) then
-  begin
-    FLang.MessageBox([100, NEW_LINE, 101], mtWarning);
-    Exit;
-  end;  //of begin
-  
   try
     // Nothing selected?
     if not Assigned(lwService.ItemFocused) then
@@ -1540,6 +1495,9 @@ begin
   except
     on E: EInvalidItem do
       FLang.MessageBox([93, 18, NEW_LINE, 53], mtWarning);
+
+    on E: EListBlocked do
+      FLang.MessageBox([100, NEW_LINE, 101], mtWarning);
 
     on E: EWarning do
       FLang.MessageBox(E.Message, mtWarning);
@@ -2086,13 +2044,6 @@ var
   List: TStringList;
 
 begin
-  // Operation pending?
-  if (Assigned(FPending) and (PageControl.ActivePage = FPending)) then
-  begin
-    FLang.MessageBox([100, NEW_LINE, 101], mtWarning);
-    Exit;
-  end;
-
   OpenDialog := TOpenDialog.Create(Self);
 
   // Set TOpenDialog options
@@ -2175,6 +2126,9 @@ begin
     end;  //of try
 
   except
+    on E: EListBlocked do
+      FLang.MessageBox([100, NEW_LINE, 101], mtWarning);
+
     on E: EWarning do
       FLang.MessageBox(E.Message, mtWarning);
 
@@ -2234,8 +2188,10 @@ var
   SelectedList: TRootRegList;
 
 begin
+  SelectedList := (GetSelectedList() as TRootRegList);
+
   // Operation pending?
-  if (Assigned(FPending) and (PageControl.ActivePage = FPending)) then
+  if SelectedList.IsLocked() then
   begin
     FLang.MessageBox([100, NEW_LINE, 101], mtWarning);
     Exit;
@@ -2264,8 +2220,6 @@ begin
     // User clicked "save"?
     if SaveDialog.Execute then
     begin
-      SelectedList := (GetSelectedList() as TRootRegList);
-
       // Export list (threaded!)
       with TExportListThread.Create(SelectedList, SaveDialog.FileName,
         PageControl.ActivePageIndex) do

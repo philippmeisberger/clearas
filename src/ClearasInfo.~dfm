@@ -454,6 +454,7 @@ object Info: TInfo
           '  - Men'#252'-Eintrag "RunOnce-Eintr'#228'ge" durch Checkbox ersetzt'
           '  - Men'#252'-Eintrag "Symbole anzeigen" hinzugef'#252'gt'
           '  - Icons von Programmen werden nun standardm'#228#223'ig angezeigt'
+          '  - 32 Bit Eintr'#228'ge werden nun speziell gekennzeichnet'
           
             '- Ausw'#228'hlen von Elementen in Autostart und Kontextmen'#252' Listen be' +
             'schleunigt'

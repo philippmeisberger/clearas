@@ -35,6 +35,7 @@ Version 4.0  [25.03.15]
   - Menü-Eintrag "RunOnce-Einträge" durch Checkbox ersetzt
   - Menü-Eintrag "Symbole anzeigen" hinzugefügt
   - Icons von Programmen werden nun standardmäßig angezeigt
+  - 32 Bit Einträge werden nun speziell gekennzeichnet (nur 64 Bit Windows)
 - Auswählen von Elementen in Autostart und Kontextmenü Listen beschleunigt
 - "Backup importieren" verbessert
 - Registry Dateiexport verbessert (eigener Parser)
@@ -43,7 +44,7 @@ Version 4.0  [25.03.15]
   - RunOnce Einträge werden nun auch in 32 Bit Schlüsseln ausgelesen (nur 64 Bit Windows)
 - Neues Manifest
 - Updater v2.2
-- OSUtils v2.0.1
+- OSUtils v2.1
 - Open-Source
 
 ---------------------------------

@@ -1405,7 +1405,7 @@ begin
   if Entered then
     FLock.Release;
 
-  Result := Entered;
+  Result := not Entered;
 end;
 
 { public TRootList.Remove
