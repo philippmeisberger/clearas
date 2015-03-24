@@ -18,7 +18,7 @@ uses
 const
   { Startup Registry keys }
   KEY_STARTUP_DISABLED = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\startupreg\';
-  KEY_USER_DISABLED = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\startupfolder\';
+  KEY_STARTUP_USER_DISABLED = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\startupfolder\';
   KEY_STARTUP_RUN = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Run';
   KEY_STARTUP_RUNONCE = 'SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce';
 
@@ -88,7 +88,7 @@ type
   end;
 
   { Exception classes }
-    EInvalidItem = class(EAccessViolation);
+  EInvalidItem = class(EAccessViolation);
   EListBlocked = class(EAbort);
   EWarning = class(EAbort);
 
@@ -137,6 +137,7 @@ type
     FWow64: Boolean;
     function DeleteKey(ARootKey: TRootKey; AKeyPath, AKeyName: string;
       AFailIfNotExists: Boolean = True): Boolean;
+    function GetRootKey(): HKEY; virtual; abstract;
     function GetWow64Key(): string;
     function WriteTimestamp(AReg: TRegistry): string;
   public
@@ -144,6 +145,7 @@ type
     function GetTimestamp(AReg: TRegistry): string;
     procedure OpenInRegEdit(); virtual;
     { external }
+    property RootKey: HKEY read GetRootKey;
     property Wow64: Boolean read FWow64;
     property Wow64Location: string read GetWow64Key;
   end;
@@ -202,15 +204,16 @@ type
   { TStartupListItem }
   TStartupListItem = class(TRootRegItem)
   private
-    FRootKey: Cardinal;
+    FRootKey: HKEY;
     FTime: string;
   protected
     function GetFullLocation(): string; override;
+    function GetRootKey(): HKEY; override;
   public
     function ChangeFilePath(const ANewFileName: string): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
     { external }
-    property RootKey: Cardinal read FRootKey write FRootKey;
+    property RootKey: HKEY read GetRootKey write FRootKey;
     property Time: string read FTime write FTime;
   end;
 
@@ -291,6 +294,7 @@ type
     function GetKeyPath(): string; virtual; abstract;
   protected
     function GetFullLocation(): string; override;
+    function GetRootKey(): HKEY; override;
   public
     function Delete(): Boolean; override;
     { external }
@@ -363,6 +367,7 @@ type
     function GetHandle(AAccess: DWORD): SC_HANDLE;
   protected
     function GetFullLocation(): string; override;
+    function GetRootKey(): HKEY; override;
   public
     constructor Create(AIndex: Word; AEnabled: Boolean;
       AServiceManager: SC_HANDLE);
@@ -1429,9 +1434,18 @@ begin
   Result := TOSUtils.HKeyToStr(FRootKey) +'\'+ FLocation;
 end;
 
+{ protected TStartupListItem.GetRootKey
+
+  Returns the HKEY of an TStartupListItem. }
+
+function TStartupListItem.GetRootKey(): HKEY;
+begin
+  Result := FRootKey;
+end;
+
 { public TStartupListItem.ChangeFilePath
 
-  Changes the file path of an TStartupListItem item. }
+  Changes the file path of an TStartupListItem. }
 
 function TStartupListItem.ChangeFilePath(const ANewFileName: string): Boolean;
 var
@@ -1733,7 +1747,7 @@ end;
 
 { public TStartupUserItem.ChangeFilePath
 
-  Changes the file path of a TStartupUserItem item. }
+  Changes the file path of a TStartupUserItem. }
 
 function TStartupUserItem.ChangeFilePath(const ANewFileName: string): Boolean;
 var
@@ -1778,7 +1792,7 @@ begin
     Result := True;
   end  //of begin
   else
-    Result := DeleteKey('HKLM', KEY_USER_DISABLED, AddCircumflex(FLnkFile.FileName));
+    Result := DeleteKey('HKLM', KEY_STARTUP_USER_DISABLED, AddCircumflex(FLnkFile.FileName));
 end;
 
 { public TStartupUserItem.Disable
@@ -1811,7 +1825,7 @@ begin
     Reg.RootKey := HKEY_LOCAL_MACHINE;
     KeyName := AddCircumflex(FLocation);
 
-    if not Reg.OpenKey(KEY_USER_DISABLED + KeyName, True) then
+    if not Reg.OpenKey(KEY_STARTUP_USER_DISABLED + KeyName, True) then
       raise EStartupException.Create('Could not create key!');
 
     Reg.WriteString('path', FLocation);
@@ -1834,7 +1848,7 @@ begin
       raise EStartupException.Create('Could not delete .lnk file!');
 
     // Update information
-    FLocation := KEY_USER_DISABLED + KeyName;
+    FLocation := KEY_STARTUP_USER_DISABLED + KeyName;
     FRootKey := HKEY_LOCAL_MACHINE;
     FEnabled := False;
     Result := True;
@@ -1867,7 +1881,7 @@ begin
     end;  //of if
 
   // Do not abort if old key could not be deleted
-  if not DeleteKey('HKLM', KEY_USER_DISABLED, AddCircumflex(FLnkFile.FileName), False) then
+  if not DeleteKey('HKLM', KEY_STARTUP_USER_DISABLED, AddCircumflex(FLnkFile.FileName), False) then
     raise EStartupException.Create('Could not delete key!');
 
   // Update information
@@ -2003,6 +2017,9 @@ begin
         TypeOf := 'RunOnce'
       else
         TypeOf := AReg.ReadString('hkey');
+
+      if AWow64 then
+        TypeOf := TypeOf +'32'; 
     end;  //of with
 
     Result := inherited Add(Item);
@@ -2047,6 +2064,9 @@ begin
         TypeOf := 'RunOnce'
       else
         TypeOf := HKey;
+
+      if AWow64 then
+        TypeOf := TypeOf +'32';
     end;  //of with
 
     Inc(FActCount);
@@ -2399,7 +2419,7 @@ begin
   Reg.RootKey := HKEY_LOCAL_MACHINE;
 
   if AStartupUser then
-    KeyPath := KEY_USER_DISABLED
+    KeyPath := KEY_STARTUP_USER_DISABLED
   else
     KeyPath := KEY_STARTUP_DISABLED;
 
@@ -2547,11 +2567,20 @@ end;
 
 { protected TContextListItem.GetFullLocation
 
-  Returns the Registry path to a TStartupListItem. }
+  Returns the Registry path to a TContextListItem. }
 
 function TContextListItem.GetFullLocation(): string;
 begin
   Result := TOSUtils.HKeyToStr(HKEY_CLASSES_ROOT) +'\'+ GetKeyPath();
+end;
+
+{ protected TContextListItem.GetRootKey
+
+  Returns the HKEY of an TContextListItem. }
+
+function TContextListItem.GetRootKey(): HKEY;
+begin
+  Result := HKEY_CLASSES_ROOT;
 end;
 
 { public TContextListItem.Delete
@@ -3320,6 +3349,15 @@ end;
 function TServiceListItem.GetFullLocation(): string;
 begin
   Result := TOSUtils.HKeyToStr(HKEY_LOCAL_MACHINE) +'\'+ GetLocation();
+end;
+
+{ protected TServiceListItem.GetRootKey
+
+  Returns the HKEY of an TServiceListItem. }
+
+function TServiceListItem.GetRootKey(): HKEY;
+begin
+  Result := HKEY_LOCAL_MACHINE;
 end;
 
 { public TServiceListItem.ChangeFilePath

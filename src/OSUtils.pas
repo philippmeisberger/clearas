@@ -1,6 +1,6 @@
 { *********************************************************************** }
 {                                                                         }
-{ PM Code Works Operating System Utilities Unit v2.0.1                    }
+{ PM Code Works Operating System Utilities Unit v2.1                      }
 {                                                                         }
 { Copyright (c) 2011-2015 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
@@ -25,8 +25,10 @@ const
   URL_BASE = 'http://www.pm-codeworks.de/';
   URL_CONTACT = URL_BASE +'kontakt.html';
 
+{$IFDEF MSWINDOWS}
   { Flag to deny WOW64 redirection in Windows Registry }
   KEY_WOW64_64KEY = $0100;
+{$ENDIF}
 
 type
   { Exception class }
@@ -51,7 +53,7 @@ type
     class function CreateTempDir(const AFolderName: string): Boolean;
     class function ExecuteProgram(const AProgram: string;
       AArguments: string = ''; ARunAsAdmin: Boolean = False): Boolean;
-    class function ExitWindows(AAction: Word): Boolean;
+    class function ExitWindows(AAction: UINT): Boolean;
     class function ExplorerReboot(): Boolean;
     class function ExpandEnvironmentVar(const AString: string): string;
     class function GetBuildNumber(): Cardinal;
@@ -226,39 +228,47 @@ end;
 
   Tells Windows to shutdown, reboot or log off. }
 
-class function TOSUtils.ExitWindows(AAction: Word): Boolean;
+class function TOSUtils.ExitWindows(AAction: UINT): Boolean;
 const
   SE_SHUTDOWN_NAME = 'SeShutdownPrivilege';
+  SHTDN_REASON_MAJOR_APPLICATION = $00040000;
+  SHTDN_REASON_MINOR_MAINTENANCE = 1;
 
 var
-  TTokenHd: THandle;
-  TTokenPvg: TTokenPrivileges;
-  cbtpPrevious: DWORD;
-  rTTokenPvg: TTokenPrivileges;
-  pcbtpPreviousRequired: DWORD;
-  TokenResult: Boolean;
+  TokenHandle: THandle;
+  NewState, PreviousState: TTokenPrivileges;
+  BufferLength, ReturnLength: Cardinal;
+  Luid: Int64;
 
 begin
-  if (AAction <> EWX_LOGOFF) and (Win32Platform = VER_PLATFORM_WIN32_NT) then
-  begin
-    TokenResult := OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES or
-      TOKEN_QUERY, TTokenHd);
+  if ((AAction <> EWX_LOGOFF) and (Win32Platform = VER_PLATFORM_WIN32_NT)) then
+  try
+    if not OpenProcessToken(GetCurrentProcess(), TOKEN_ADJUST_PRIVILEGES or
+      TOKEN_QUERY, TokenHandle) then
+      raise Exception.Create(SysErrorMessage(GetLastError()));
 
-    if TokenResult then
-    begin
-      TokenResult := LookupPrivilegeValue(nil, SE_SHUTDOWN_NAME, TTokenPvg.Privileges[0].Luid);
-      TTokenPvg.PrivilegeCount := 1;
-      TTokenPvg.Privileges[0].Attributes := SE_PRIVILEGE_ENABLED;
-      cbtpPrevious := SizeOf(rTTokenPvg);
-      pcbtpPreviousRequired := 0;
+    // Get LUID of shutdown privilege
+    if not LookupPrivilegeValue(nil, SE_SHUTDOWN_NAME, Luid) then
+      raise Exception.Create(SysErrorMessage(GetLastError()));
 
-      if TokenResult then
-        AdjustTokenPrivileges(TTokenHd, False, TTokenPvg, cbtpPrevious,
-          rTTokenPvg, pcbtpPreviousRequired);
-    end;  //of begin
-  end;  //begin
+    // Create new shutdown privilege
+    NewState.PrivilegeCount := 1;
+    NewState.Privileges[0].Luid := Luid;
+    NewState.Privileges[0].Attributes := SE_PRIVILEGE_ENABLED;
+    BufferLength := SizeOf(PreviousState);
+    ReturnLength := 0;
 
-  Result := ExitWindowsEx(AAction, 0);   //EWX_SHUTDOWN, EWX_POWEROFF, (EWX_FORCE, EWX_FORCEIFHUNG)
+    // Set the shutdown privilege
+    if not AdjustTokenPrivileges(TokenHandle, False, NewState, BufferLength,
+      PreviousState, ReturnLength) then
+      raise Exception.Create(SysErrorMessage(GetLastError()));
+
+  finally
+    CloseHandle(TokenHandle);
+  end;  //of try
+
+  Result := ExitWindowsEx(AAction, SHTDN_REASON_MAJOR_APPLICATION or
+    SHTDN_REASON_MINOR_MAINTENANCE);   //EWX_SHUTDOWN, EWX_POWEROFF, (EWX_FORCE, EWX_FORCEIFHUNG)
 end;
 
 { public TOSUtils.ExpandEnvironmentVar

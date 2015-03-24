@@ -134,9 +134,6 @@ const
 
 begin
   FLock.Acquire;
-  
-  // Clear selected item
-  FStartupList.Selected := nil;
 
   // Clear data
   FStartupList.Clear;
