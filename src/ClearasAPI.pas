@@ -3225,6 +3225,9 @@ begin
           Continue;
 
         // Get file path of command
+        if not (Reg.GetDataType('') in [rdString, rdExpandString]) then
+          Continue;
+
         FilePath := Reg.ReadString('');
 
         // Add item to list
@@ -3250,7 +3253,12 @@ begin
 
         // Get file path of command
         if Reg.OpenKey(Format(CM_SHELLEX_FILE, [GuID]), False) then
-          FilePath := Reg.ReadString('')
+        begin
+          if not (Reg.GetDataType('') in [rdString, rdExpandString]) then
+            Continue;
+
+          FilePath := Reg.ReadString('');
+        end  //of begin
         else
           if AWow64 then
           begin
@@ -3258,7 +3266,12 @@ begin
             Wow64 := True;
 
             if Reg.OpenKey(Format(CM_SHELLEX_FILE, [GuID]), False) then
+            begin
+              if not (Reg.GetDataType('') in [rdString, rdExpandString]) then
+                Continue;
+
               FilePath := Reg.ReadString('');
+            end;  //of begin
 
             Reg.Access := Access64;
           end;  //of if

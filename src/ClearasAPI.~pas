@@ -1405,7 +1405,7 @@ begin
   if Entered then
     FLock.Release;
 
-  Result := Entered;
+  Result := not Entered;
 end;
 
 { public TRootList.Remove
@@ -3225,6 +3225,9 @@ begin
           Continue;
 
         // Get file path of command
+        if not (Reg.GetDataType('') in [rdString, rdExpandString]) then
+          Continue;
+
         FilePath := Reg.ReadString('');
 
         // Add item to list

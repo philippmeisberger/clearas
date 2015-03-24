@@ -469,11 +469,6 @@ begin
                            else
                              Result := 'HKCC';
 
-    HKEY_DYN_DATA:         if ALongFormat then
-                             Result := 'HKEY_DYN_DATA'
-                           else
-                             Result := 'HKDD';
-
     else                   raise EInvalidArgument.Create('Unknown HKEY!');
   end;  //of case
 end;
@@ -739,10 +734,7 @@ begin
             if (ARootKey = 'HKCC') then
               Result := HKEY_CURRENT_CONFIG
             else
-              if (ARootKey = 'HKDD') then
-                Result := HKEY_DYN_DATA
-              else
-                raise EInvalidArgument.Create('Unknown HKEY: "'+ ARootKey +'"!');
+              raise EInvalidArgument.Create('Unknown HKEY: "'+ ARootKey +'"!');
 end;
 
 { public TOSUtils.WindowsVistaOrLater

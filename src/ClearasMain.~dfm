@@ -283,7 +283,7 @@ object Main: TMain
     Top = 0
     Width = 543
     Height = 308
-    ActivePage = tsStartup
+    ActivePage = tsContext
     Anchors = [akLeft, akTop, akRight, akBottom]
     TabOrder = 0
     OnChange = PageControlChange

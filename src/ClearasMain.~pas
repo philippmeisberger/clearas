@@ -606,6 +606,12 @@ end;
 procedure TMain.OnExportListStart(Sender: TObject; const APageControlIndex: Cardinal);
 begin
   PageControl.Pages[APageControlIndex].Cursor := crHourGlass;
+
+  case APageControlIndex of
+    0: lwStartup.Cursor := crHourGlass;
+    1: lwContext.Cursor := crHourGlass;
+    2: lwService.Cursor := crHourGlass;
+  end;  //of case
 end;
 
 { private TMain.OnExportListEnd
@@ -615,6 +621,12 @@ end;
 procedure TMain.OnExportListEnd(Sender: TObject; const APageControlIndex: Cardinal);
 begin
   PageControl.Pages[APageControlIndex].Cursor := crDefault;
+
+  case APageControlIndex of
+    0: lwStartup.Cursor := crDefault;
+    1: lwContext.Cursor := crDefault;
+    2: lwService.Cursor := crDefault;
+  end;  //of case
 end;
 
 { private TMain.OnStartupSearchStart
@@ -760,7 +772,9 @@ end;
 
 procedure TMain.SetLanguage(Sender: TObject);
 var
-  i: Integer;
+  i, Index: Integer;
+  Enabled, Disabled: string;
+  Item: TListItem;
 
 begin
   with FLang do
@@ -862,11 +876,22 @@ begin
     pmCopyLocation.Caption := GetString(35);
   end;  //of with
 
+  Enabled := FLang.GetString(31);
+  Disabled := FLang.GetString(32);
+
   // Update list labels
   if Assigned(FStartup) then
   begin
-    for i := 0 to FStartup.Count - 1 do
-      lwStartup.Items[i].Caption := FStartup[i].GetStatus(FLang);
+    for i := 0 to lwStartup.Items.Count - 1 do
+    begin
+      Item := lwStartup.Items[i];
+      Index := FStartup.IndexOf(Item.SubItems[0], (Item.Caption = Enabled));
+
+      if FStartup[Index].Enabled then
+        Item.Caption := Enabled
+      else
+        Item.Caption := Disabled;
+    end;  //of for
 
     OnStartupItemChanged(Sender);
   end;  //of begin
@@ -874,7 +899,15 @@ begin
   if Assigned(FContext) then
   begin
     for i := 0 to FContext.Count - 1 do
-      lwContext.Items[i].Caption := FContext[i].GetStatus(FLang);
+    begin
+      Item := lwContext.Items[i];
+      Index := FContext.IndexOf(Item.SubItems[0], Item.SubItems[1]);
+
+      if FContext[Index].Enabled then
+        Item.Caption := Enabled
+      else
+        Item.Caption := Disabled;
+    end;  //of for
 
     OnContextItemChanged(Sender);
   end;  //of begin
@@ -883,8 +916,15 @@ begin
   begin
     for i := 0 to FService.Count - 1 do
     begin
-      lwService.Items[i].Caption := FService[i].GetStatus(FLang);
-      lwService.Items[i].SubItems[2] := FService[i].GetStartText(FLang);
+      Item := lwService.Items[i];
+      Index := FContext.IndexOf(Item.SubItems[0]);
+
+      if FService[Index].Enabled then
+        Item.Caption := Enabled
+      else
+        Item.Caption := Disabled;
+
+      Item.SubItems[2] := FService[Index].GetStartText(FLang);
     end;  //of for
 
     OnServiceItemChanged(Sender);

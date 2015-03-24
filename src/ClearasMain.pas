@@ -771,9 +771,6 @@ end;
   Updates all component captions with new language text. }
 
 procedure TMain.SetLanguage(Sender: TObject);
-var
-  i: Integer;
-
 begin
   with FLang do
   begin
@@ -874,31 +871,19 @@ begin
     pmCopyLocation.Caption := GetString(35);
   end;  //of with
 
-  // Update list labels
-  if Assigned(FStartup) then
+  // Update TListView captions
+  if Assigned(FStartup) and Assigned(FContext) and Assigned(FService) then
   begin
-    for i := 0 to FStartup.Count - 1 do
-      lwStartup.Items[i].Caption := FStartup[i].GetStatus(FLang);
-
+    lwStartup.Clear;
+    OnStartupSearchEnd(Sender);
     OnStartupItemChanged(Sender);
-  end;  //of begin
 
-  if Assigned(FContext) then
-  begin
-    for i := 0 to FContext.Count - 1 do
-      lwContext.Items[i].Caption := FContext[i].GetStatus(FLang);
-
+    lwContext.Clear;
+    OnContextSearchEnd(Sender);
     OnContextItemChanged(Sender);
-  end;  //of begin
 
-  if Assigned(FService) then
-  begin
-    for i := 0 to FService.Count - 1 do
-    begin
-      lwService.Items[i].Caption := FService[i].GetStatus(FLang);
-      lwService.Items[i].SubItems[2] := FService[i].GetStartText(FLang);
-    end;  //of for
-
+    lwService.Clear;
+    OnServiceSearchEnd(Sender);
     OnServiceItemChanged(Sender);
   end;  //of begin
 end;
