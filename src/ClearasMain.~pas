@@ -342,7 +342,7 @@ var
 
 begin
   // Ask user to permit download
-  if (FLang.MessageBox([21, NEW_LINE, 22], [ANewBuild], mtQuestion, True) = IDYES) then
+  if (FLang.TaskDialog(21, [22], [ANewBuild], mtQuestion, True) = IDYES) then
   begin
     // init TUpdate instance
     Updater := TUpdate.Create(Self, FLang);
@@ -380,7 +380,8 @@ begin
     if (FStartup.Selected.Enabled and (FStartup.Selected is TStartupUserItem)) then
     begin
       FStartup.Selected.ExportItem('');
-      FLang.MessageBox(Flang.Format(42, [(FStartup.Selected as TStartupUserItem).LnkFile.BackupLnk]));
+      FLang.TaskDialog('', FLang.Format(42, [(FStartup.Selected as TStartupUserItem).LnkFile.BackupLnk]));
+
       bExportStartupItem.Enabled := False;
       pmExport.Enabled := False;
       Result := True;
@@ -391,13 +392,13 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.MessageBox([95, 18, NEW_LINE, 53], mtWarning);
+      FLang.TaskDialog(FLang.GetString([95, 18]), FLang.GetString(53), mtWarning);
 
     on E: EStartupException do
-      Flang.MessageBox(43, mtError);
+      FLang.ShowException(FLang.GetString([95, 18]), FLang.GetString(43));
 
     on E: Exception do
-      FLang.MessageBox(FLang.GetString([95, 18, NEW_LINE]) + E.Message, mtError);
+      FLang.ShowException(FLang.GetString([95, 18]), E.Message);
   end;  //of try
 end;
 
@@ -415,7 +416,7 @@ begin
   Item := List.Selected;
 
   if not Assigned(Item) then
-    EAbort.Create('No item selected!');
+    EInvalidItem.Create('No item selected!');
 
   Result := Item;
 end;
@@ -438,7 +439,7 @@ begin
   end;  //of case
 
   if not Assigned(List) then
-    EAbort.Create('No list selected!');
+    EInvalidItem.Create('No list selected!');
 
   Result := List;
 end;
@@ -771,11 +772,6 @@ end;
   Updates all component captions with new language text. }
 
 procedure TMain.SetLanguage(Sender: TObject);
-var
-  i, Index: Integer;
-  Enabled, Disabled: string;
-  Item: TListItem;
-
 begin
   with FLang do
   begin
@@ -784,7 +780,7 @@ begin
 
     case PageControl.ActivePageIndex of
       0,2: mmAdd.Caption := GetString(69);
-      1:   mmAdd.Caption := GetString(34);
+      1:   mmAdd.Caption := GetString(105);
     end;  //of case
 
     mmImport.Caption := GetString(70);
@@ -870,64 +866,18 @@ begin
     pmChangeStatus.Caption := bDisableStartupItem.Caption;
     pmOpenRegedit.Caption := GetString(66);
     pmOpenExplorer.Caption := GetString(51);
-    pmEdit.Caption := GetString(33);
+    pmEdit.Caption := GetString(104);
     pmExport.Caption := mmExport.Caption;
     pmDelete.Caption := bDeleteStartupItem.Caption;
-    pmCopyLocation.Caption := GetString(35);
+    pmCopyLocation.Caption := GetString(106);
   end;  //of with
 
-  Enabled := FLang.GetString(31);
-  Disabled := FLang.GetString(32);
-
-  // Update list labels
-  if Assigned(FStartup) then
+  // Update TListView captions
+  if Assigned(FStartup) and Assigned(FContext) and Assigned(FService) then
   begin
-    for i := 0 to lwStartup.Items.Count - 1 do
-    begin
-      Item := lwStartup.Items[i];
-      Index := FStartup.IndexOf(Item.SubItems[0], (Item.Caption = Enabled));
-
-      if FStartup[Index].Enabled then
-        Item.Caption := Enabled
-      else
-        Item.Caption := Disabled;
-    end;  //of for
-
-    OnStartupItemChanged(Sender);
-  end;  //of begin
-
-  if Assigned(FContext) then
-  begin
-    for i := 0 to FContext.Count - 1 do
-    begin
-      Item := lwContext.Items[i];
-      Index := FContext.IndexOf(Item.SubItems[0], Item.SubItems[1]);
-
-      if FContext[Index].Enabled then
-        Item.Caption := Enabled
-      else
-        Item.Caption := Disabled;
-    end;  //of for
-
-    OnContextItemChanged(Sender);
-  end;  //of begin
-
-  if Assigned(FService) then
-  begin
-    for i := 0 to FService.Count - 1 do
-    begin
-      Item := lwService.Items[i];
-      Index := FContext.IndexOf(Item.SubItems[0]);
-
-      if FService[Index].Enabled then
-        Item.Caption := Enabled
-      else
-        Item.Caption := Disabled;
-
-      Item.SubItems[2] := FService[Index].GetStartText(FLang);
-    end;  //of for
-
-    OnServiceItemChanged(Sender);
+    LoadStartupItems(False);
+    LoadContextMenuItems(False);
+    LoadServiceItems(False);
   end;  //of begin
 end;
 
@@ -1001,10 +951,10 @@ begin
 
   except
     on E: EAccessViolation do
-      FLang.MessageBox([95, 18, NEW_LINE, 53], mtWarning);
+      FLang.TaskDialog(FLang.GetString([95, 18]), FLang.GetString(53), mtWarning);
 
     on E: Exception do
-      FLang.MessageBox(FLang.GetString([95, 18, NEW_LINE]) + E.Message, mtError);
+      FLang.ShowException(FLang.GetString([95, 18]), E.Message);
   end;  //of try
 end;
 
@@ -1084,11 +1034,11 @@ begin
       raise EInvalidItem.Create('No item selected!');
 
     // Confirm deletion of item
-    if (FLang.MessageBox(FLang.Format([58, NEW_LINE, 49, 50],
-      [lwService.ItemFocused.SubItems[0]]), mtConfirm) = IDYES) then
+    if (FLang.TaskDialog(FLang.Format([58], [lwService.ItemFocused.SubItems[0]]),
+      FLang.GetString([49, 50]), mtConfirm) = IDYES) then
     begin
       // Ask user to export item
-      Answer := FLang.MessageBox(52, mtQuestion);
+      Answer := FLang.TaskDialog('', FLang.GetString(52), mtQuestion);
 
       // Abort if user clicks cancel!
       if (((Answer = IDYES) and ShowRegistryExportDialog()) or (Answer = IDNO)) then
@@ -1111,16 +1061,16 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.MessageBox([96, 18, NEW_LINE, 53], mtWarning);
+      FLang.TaskDialog(FLang.GetString([96, 18]), FLang.GetString(53), mtWarning);
 
     on E: EListBlocked do
-      FLang.MessageBox([100, NEW_LINE, 101], mtWarning);
+      FLang.TaskDialog(100, 101, mtWarning);
 
     on E: EWarning do
-      FLang.MessageBox(E.Message, mtWarning);
+      FLang.TaskDialog(FLang.GetString([96, 18]), E.Message, mtWarning);
 
     on E: Exception do
-      FLang.MessageBox(FLang.GetString([96, 18, NEW_LINE]) + E.Message, mtError);
+      FLang.ShowException(FLang.GetString([96, 18]), E.Message);
   end;  //of try
 end;
 
@@ -1142,8 +1092,8 @@ begin
       raise EInvalidItem.Create('No item selected!');
 
     // Confirm deletion of item
-    if (FLang.MessageBox(FLang.Format([48, NEW_LINE, 49, 50],
-      [FStartup.Selected.Name]), mtConfirm) = IDYES) then
+    if (FLang.TaskDialog(FLang.Format([48], [FStartup.Selected.Name]),
+      FLang.GetString([49, 50]), mtConfirm) = IDYES) then
     begin
       // Save the DeleteBackup flag
       DelBackup := FStartup.DeleteBackup;
@@ -1154,7 +1104,7 @@ begin
         and BackupExists) then
         Answer := IDCANCEL
       else
-        Answer := FLang.MessageBox(52, mtQuestion);
+        Answer := FLang.TaskDialog('', FLang.GetString(52), mtQuestion);
 
       // Export item and only continue if this has succeeded
       if (Answer = IDYES) then
@@ -1166,7 +1116,8 @@ begin
       // Ask user to delete old existing backup
       if ((Answer = IDCANCEL) or ((FStartup.Selected is TStartupUserItem)
         and not FStartup.Selected.Enabled and BackupExists)) then
-        FStartup.DeleteBackup := (FLang.MessageBox(44, mtQuestion) = IDYES);
+        FStartup.DeleteBackup := (FLang.TaskDialog('', FLang.GetString(44),
+          mtQuestion) = IDYES);
 
       // Successfully deleted item physically?
       if FStartup.DeleteItem() then
@@ -1187,16 +1138,16 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.MessageBox([96, 18, NEW_LINE, 53], mtWarning);
+      FLang.TaskDialog(FLang.GetString([96, 18]), FLang.GetString(53), mtWarning);
 
     on E: EListBlocked do
-      FLang.MessageBox([100, NEW_LINE, 101], mtWarning);
+      FLang.TaskDialog(100, 101, mtWarning);
 
     on E: EWarning do
-      FLang.MessageBox(E.Message, mtWarning);
+      FLang.TaskDialog(FLang.GetString([96, 18]), E.Message, mtWarning);
 
     on E: Exception do
-      FLang.MessageBox(FLang.GetString([96, 18, NEW_LINE]) + E.Message, mtError);
+      FLang.ShowException(FLang.GetString([96, 18]), E.Message);
   end;  //of try
 
   // Restore the DeleteBackup flag
@@ -1219,11 +1170,11 @@ begin
       raise EInvalidItem.Create('No item selected!');
 
     // Confirm deletion of item
-    if (FLang.MessageBox(FLang.Format([85, NEW_LINE, 49, 50],
-      [lwContext.ItemFocused.SubItems[0]]), mtConfirm) = IDYES) then
+    if (FLang.TaskDialog(FLang.Format([85], [lwContext.ItemFocused.SubItems[0]]),
+      FLang.GetString([49, 50]), mtConfirm) = IDYES) then
     begin
       // Ask user to export item
-      Answer := FLang.MessageBox(52, mtQuestion);
+      Answer := FLang.TaskDialog('', FLang.GetString(52), mtQuestion);
 
       // Abort if user clicks cancel!
       if (((Answer = IDYES) and ShowRegistryExportDialog()) or (Answer = IDNO)) then
@@ -1246,16 +1197,16 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.MessageBox([96, 18, NEW_LINE, 53], mtWarning);
+      FLang.TaskDialog(FLang.GetString([96, 18]), FLang.GetString(53), mtWarning);
 
     on E: EListBlocked do
-      FLang.MessageBox([100, NEW_LINE, 101], mtWarning);
+      FLang.TaskDialog(100, 101, mtWarning);
 
     on E: EWarning do
-      FLang.MessageBox(E.Message, mtWarning);
+      FLang.TaskDialog(FLang.GetString([96, 18]), E.Message, mtWarning);
 
     on E: Exception do
-      FLang.MessageBox(FLang.GetString([96, 18, NEW_LINE]) + E.Message, mtError);
+      FLang.ShowException(FLang.GetString([96, 18]), E.Message);
   end;  //of try
 end;
 
@@ -1293,16 +1244,16 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.MessageBox([94, 18, NEW_LINE, 53], mtWarning);
+      FLang.TaskDialog(FLang.GetString([94, 18]), FLang.GetString(53), mtWarning);
 
     on E: EListBlocked do
-      FLang.MessageBox([100, NEW_LINE, 101], mtWarning);
+      FLang.TaskDialog(100, 101, mtWarning);
 
     on E: EWarning do
-      FLang.MessageBox(E.Message, mtWarning);
+      FLang.TaskDialog(FLang.GetString([94, 18]), E.Message, mtWarning);
 
     on E: Exception do
-      FLang.MessageBox(FLang.GetString([94, 18, NEW_LINE]) + E.Message, mtError);
+      FLang.ShowException(FLang.GetString([94, 18]), E.Message);
   end;  //of try
 end;
 
@@ -1336,16 +1287,16 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.MessageBox([94, 18, NEW_LINE, 53], mtWarning);
+      FLang.TaskDialog(FLang.GetString([94, 18]), FLang.GetString(53), mtWarning);
 
     on E: EListBlocked do
-      FLang.MessageBox([100, NEW_LINE, 101], mtWarning);
+      FLang.TaskDialog(100, 101, mtWarning);
 
     on E: EWarning do
-      FLang.MessageBox(E.Message, mtWarning);
+      FLang.TaskDialog(FLang.GetString([94, 18]), E.Message, mtWarning);
 
     on E: Exception do
-      FLang.MessageBox(FLang.GetString([94, 18, NEW_LINE]) + E.Message, mtError);
+      FLang.ShowException(FLang.GetString([94, 18]), E.Message);
   end;  //of try
 end;
 
@@ -1383,16 +1334,16 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.MessageBox([94, 18, NEW_LINE, 53], mtWarning);
+      FLang.TaskDialog(FLang.GetString([94, 18]), FLang.GetString(53), mtWarning);
 
     on E: EListBlocked do
-      FLang.MessageBox([100, NEW_LINE, 101], mtWarning);
+      FLang.TaskDialog(100, 101, mtWarning);
 
     on E: EWarning do
-      FLang.MessageBox(E.Message, mtWarning);
+      FLang.TaskDialog(FLang.GetString([94, 18]), E.Message, mtWarning);
 
     on E: Exception do
-      FLang.MessageBox(FLang.GetString([94, 18, NEW_LINE]) + E.Message, mtError);
+      FLang.ShowException(FLang.GetString([94, 18]), E.Message);
   end;  //of try
 end;
 
@@ -1436,16 +1387,16 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.MessageBox([93, 18, NEW_LINE, 53], mtWarning);
+      FLang.TaskDialog(FLang.GetString([93, 18]), FLang.GetString(53), mtWarning);
 
     on E: EListBlocked do
-      FLang.MessageBox([100, NEW_LINE, 101], mtWarning);
+      FLang.TaskDialog(100, 101, mtWarning);
 
     on E: EWarning do
-      FLang.MessageBox(E.Message, mtWarning);
+      FLang.TaskDialog('', E.Message, mtWarning);
 
     on E: Exception do
-      FLang.MessageBox(FLang.GetString([93, 18, NEW_LINE]) + E.Message, mtError);
+      FLang.ShowException(FLang.GetString([93, 18]), E.Message);
   end;  //of try
 end;
 
@@ -1483,16 +1434,16 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.MessageBox([93, 18, NEW_LINE, 53], mtWarning);
+      FLang.TaskDialog(FLang.GetString([93, 18]), FLang.GetString(53), mtWarning);
 
     on E: EListBlocked do
-      FLang.MessageBox([100, NEW_LINE, 101], mtWarning);
+      FLang.TaskDialog(100, 101, mtWarning);
 
     on E: EWarning do
-      FLang.MessageBox(E.Message, mtWarning);
+      FLang.TaskDialog('', E.Message, mtWarning);
 
     on E: Exception do
-      FLang.MessageBox(FLang.GetString([93, 18, NEW_LINE]) + E.Message, mtError);
+      FLang.ShowException(FLang.GetString([93, 18]), E.Message);
   end;  //of try
 end;
 
@@ -1534,16 +1485,16 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.MessageBox([93, 18, NEW_LINE, 53], mtWarning);
+      FLang.TaskDialog(FLang.GetString([93, 18]), FLang.GetString(53), mtWarning);
 
     on E: EListBlocked do
-      FLang.MessageBox([100, NEW_LINE, 101], mtWarning);
+      FLang.TaskDialog(100, 101, mtWarning);
 
     on E: EWarning do
-      FLang.MessageBox(E.Message, mtWarning);
+      FLang.TaskDialog('', E.Message, mtWarning);
 
     on E: Exception do
-      FLang.MessageBox(FLang.GetString([93, 18, NEW_LINE]) + E.Message, mtError);
+      FLang.ShowException(FLang.GetString([93, 18]), E.Message);
   end;  //of try
 end;
 
@@ -1565,7 +1516,7 @@ begin
   // Nothing selected?
   if not Assigned(FContext.Selected) then
   begin
-    FLang.MessageBox([95, 18, NEW_LINE, 53], mtWarning);
+    FLang.TaskDialog(FLang.GetString([95, 18]), FLang.GetString(53), mtWarning);
     Exit;
   end;  //of begin
 
@@ -1581,7 +1532,7 @@ begin
   // Nothing selected?
   if not Assigned(FService.Selected) then
   begin
-    FLang.MessageBox([95, 18, NEW_LINE, 53], mtWarning);
+    FLang.TaskDialog(FLang.GetString([95, 18]), FLang.GetString(53), mtWarning);
     Exit;
   end;  //of begin
 
@@ -1612,7 +1563,7 @@ begin
       if bDeleteContextItem.Enabled then
         bDeleteContextItem.Click
       else
-        FLang.MessageBox(53, mtWarning);
+        FLang.TaskDialog('', FLang.GetString(53), mtWarning);
 end;
 
 { TMain.lwContextSelectItem
@@ -1635,7 +1586,7 @@ begin
     if (Index = -1) then
     begin
       PopupMenu.AutoPopup := False;
-      FLang.MessageBox(53, mtWarning);
+      FLang.TaskDialog('', FLang.GetString(53), mtWarning);
       Exit;
     end;  //of begin
 
@@ -1685,7 +1636,7 @@ begin
       if bDeleteServiceItem.Enabled then
         bDeleteServiceItem.Click
       else
-        FLang.MessageBox(53, mtWarning);
+        FLang.TaskDialog('', FLang.GetString(53), mtWarning);
 end;
 
 { TMain.lwServiceSelectItem
@@ -1708,7 +1659,7 @@ begin
     if (Index = -1) then
     begin
       PopupMenu.AutoPopup := False;
-      FLang.MessageBox(53, mtWarning);
+      FLang.TaskDialog('', FLang.GetString(53), mtWarning);
       Exit;
     end;  //of begin
 
@@ -1787,7 +1738,7 @@ begin
       if bDeleteStartupItem.Enabled then
         bDeleteStartupItem.Click
       else
-        FLang.MessageBox(53, mtWarning);
+        FLang.TaskDialog('', FLang.GetString(53), mtWarning);
 end;
 
 { TMain.lwStartupKeyPress
@@ -1859,13 +1810,13 @@ begin
   if (Selected and Assigned(Item)) then
   begin
     // Find index of currently selected item in backend
-    Index := FStartup.IndexOf(Item.SubItems[0], (Item.Caption = FLang.GetString(31)));
+    Index := FStartup.IndexOf(Item.SubItems[0], (Item.Caption = FLang.GetString(102)));
 
     // Item not found?
     if (Index = -1) then
     begin
       PopupMenu.AutoPopup := False;
-      FLang.MessageBox(53, mtWarning);
+      FLang.TaskDialog('', FLang.GetString(53), mtWarning);
       Exit;
     end;  //of begin
 
@@ -1959,10 +1910,11 @@ begin
 
   except
     on E: EWarning do
-      FLang.MessageBox([45, NEW_LINE, 46], mtWarning);
+      FLang.TaskDialog(45, 46, mtWarning);
 
-    on E: EAbort do
-      FLang.MessageBox(53, mtWarning);
+    on E: EInvalidItem do
+      FLang.TaskDialog(StripHotkey(pmOpenExplorer.Caption) + FLang.GetString(18),
+        FLang.GetString(53), mtWarning);
   end;  //of try
 end;
 
@@ -1982,8 +1934,9 @@ begin
       (Item as TRootRegItem).OpenInRegEdit();
 
   except
-    on E: EAbort do
-      FLang.MessageBox(53, mtWarning);
+    on E: EInvalidItem do
+      FLang.TaskDialog(StripHotkey(pmOpenRegedit.Caption) + FLang.GetString(18),
+        FLang.GetString(53), mtWarning);
   end;  //of try
 end;
 
@@ -2009,8 +1962,9 @@ begin
       Clipboard.AsText := Item.LocationFull;
 
   except
-    on E: EAbort do
-      FLang.MessageBox(53, mtWarning);
+    on E: EInvalidItem do
+      FLang.TaskDialog(StripHotkey(pmCopyLocation.Caption) + FLang.GetString(18),
+        FLang.GetString(53), mtWarning);
   end;  //of try
 end;
 
@@ -2028,7 +1982,7 @@ begin
     Path := GetSelectedItem().FileName;
 
     // Show input box for editing path
-    EnteredPath := InputBox(FLang.GetString(33), FLang.GetString(54), Path);
+    EnteredPath := InputBox(FLang.GetString(104), FLang.GetString(54), Path);
 
     // Nothing entered or nothing changed
     if ((Trim(EnteredPath) = '') or (EnteredPath = Path)) then
@@ -2062,14 +2016,14 @@ begin
     end;  //of case
     
   except
-    on E: EAbort do
-      FLang.MessageBox(53, mtWarning);
+    on E: EListBlocked do
+      FLang.TaskDialog(100, 101, mtWarning);
 
-    on E: EAccessViolation do
-      FLang.MessageBox(53, mtWarning);
+    on E: EInvalidItem do
+      FLang.TaskDialog(FLang.GetString([104, 18]), FLang.GetString(53), mtWarning);
     
     on E: Exception do
-      FLang.MessageBox(FLang.GetString([33, 18, NEW_LINE]) + E.Message, mtError);
+      FLang.ShowException(FLang.GetString([104, 18]), E.Message);
   end;  //of try
 end;
 
@@ -2092,7 +2046,7 @@ begin
     Title := StripHotKey(mmAdd.Caption);
     InitialDir := '%ProgramFiles%';
 
-    // Filter .exe files
+    // Filter .exe and .bat files
     Filter := FLang.GetString(38);
   end;  //of with
 
@@ -2135,7 +2089,7 @@ begin
                List.CommaText := CM_LOCATIONS_DEFAULT;
 
                // Show dialog for location selection
-               if not InputCombo(FLang.GetString(34), FLang.GetString(90) +':',
+               if not InputCombo(FLang.GetString(105), FLang.GetString(90) +':',
                  List, Location) then
                  Exit;
 
@@ -2167,13 +2121,15 @@ begin
 
   except
     on E: EListBlocked do
-      FLang.MessageBox([100, NEW_LINE, 101], mtWarning);
+      FLang.TaskDialog(100, 101, mtWarning);
 
     on E: EWarning do
-      FLang.MessageBox(E.Message, mtWarning);
+      FLang.TaskDialog(StripHotKey(mmAdd.Caption) + FLang.GetString(18),
+        E.Message, mtWarning);
 
     on E: Exception do
-      FLang.MessageBox(FLang.GetString([55, NEW_LINE]) + E.Message, mtError);
+      FLang.ShowException(StripHotKey(mmAdd.Caption) + FLang.GetString(18),
+        E.Message);
   end;  //of try
 end;
 
@@ -2233,7 +2189,7 @@ begin
   // Operation pending?
   if SelectedList.IsLocked() then
   begin
-    FLang.MessageBox([100, NEW_LINE, 101], mtWarning);
+    FLang.TaskDialog(100, 101, mtWarning);
     Exit;
   end;
 
@@ -2304,19 +2260,28 @@ begin
     try
       // User clicked "open"?
       if OpenDialog.Execute then
+      begin
         // Item already exists?
         if not FStartup.ImportBackup(OpenDialog.FileName) then
-          FLang.MessageBox(41, mtWarning)
-        else
-          // Update TListView
-          LoadStartupItems(False);
+          raise EWarning.Create(FLang.GetString(41));
+
+        // Update TListView
+        LoadStartupItems(False);
+      end;  //of begin
 
     finally
       OpenDialog.Free;
     end;  //of try
 
   except
-    FLang.MessageBox(55, mtError);
+    on E: EListBlocked do
+      FLang.TaskDialog(100, 101, mtWarning);
+
+    on E: EWarning do
+      FLang.TaskDialog(FLang.GetString(55), E.Message, mtWarning);
+
+    on E: Exception do
+      FLang.ShowException(FLang.GetString(55), E.Message);
   end;  //of try
 end;
 
@@ -2459,8 +2424,7 @@ var
 
 begin
   // Certificate already installed?
-  if (TOSUtils.PMCertExists() and (FLang.MessageBox([27, NEW_LINE, 28],
-    mtQuestion) = IDNO)) then
+  if (TOSUtils.PMCertExists() and (FLang.TaskDialog(27, 28, mtQuestion) = IDNO)) then
     Exit;
 
   // Init downloader
@@ -2566,7 +2530,7 @@ begin
        end;
 
     1: begin
-         mmAdd.Caption := FLang.GetString(34);
+         mmAdd.Caption := FLang.GetString(105);
          mmImport.Visible := False;
          mmDate.Visible := False;
          mmShowIcons.Visible := False;

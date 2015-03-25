@@ -869,9 +869,9 @@ end;
 function TRootItem.GetStatus(ALangFile: TLanguageFile): string;
 begin
   if FEnabled then
-    Result := ALangFile.GetString(31)
+    Result := ALangFile.GetString(36)
   else
-    Result := ALangFile.GetString(32);
+    Result := ALangFile.GetString(37);
 end;
 
 { public TRootItem.OpenInExplorer
@@ -1465,7 +1465,7 @@ begin
 
     // Invalid key?
     if not Reg.OpenKey(FLocation, False) then
-      raise Exception.Create('Key does not exist!');
+      raise EStartupException.Create('Key does not exist!');
 
     if FEnabled then
       ItemName := Name
@@ -1474,7 +1474,7 @@ begin
 
     // Value must exist!
     if not Reg.ValueExists(ItemName) then
-      raise Exception.Create('Value does not exist!');
+      raise EStartupException.Create('Value does not exist!');
 
     // Change path
     Reg.WriteString(ItemName, ANewFileName);
@@ -3253,7 +3253,12 @@ begin
 
         // Get file path of command
         if Reg.OpenKey(Format(CM_SHELLEX_FILE, [GuID]), False) then
-          FilePath := Reg.ReadString('')
+        begin
+          if not (Reg.GetDataType('') in [rdString, rdExpandString]) then
+            Continue;
+
+          FilePath := Reg.ReadString('');
+        end  //of begin
         else
           if AWow64 then
           begin
@@ -3261,7 +3266,12 @@ begin
             Wow64 := True;
 
             if Reg.OpenKey(Format(CM_SHELLEX_FILE, [GuID]), False) then
+            begin
+              if not (Reg.GetDataType('') in [rdString, rdExpandString]) then
+                Continue;
+
               FilePath := Reg.ReadString('');
+            end;  //of begin
 
             Reg.Access := Access64;
           end;  //of if

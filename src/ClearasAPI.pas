@@ -869,9 +869,9 @@ end;
 function TRootItem.GetStatus(ALangFile: TLanguageFile): string;
 begin
   if FEnabled then
-    Result := ALangFile.GetString(31)
+    Result := ALangFile.GetString(102)
   else
-    Result := ALangFile.GetString(32);
+    Result := ALangFile.GetString(103);
 end;
 
 { public TRootItem.OpenInExplorer
@@ -1465,7 +1465,7 @@ begin
 
     // Invalid key?
     if not Reg.OpenKey(FLocation, False) then
-      raise Exception.Create('Key does not exist!');
+      raise EStartupException.Create('Key does not exist!');
 
     if FEnabled then
       ItemName := Name
@@ -1474,7 +1474,7 @@ begin
 
     // Value must exist!
     if not Reg.ValueExists(ItemName) then
-      raise Exception.Create('Value does not exist!');
+      raise EStartupException.Create('Value does not exist!');
 
     // Change path
     Reg.WriteString(ItemName, ANewFileName);

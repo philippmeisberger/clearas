@@ -14,6 +14,7 @@ uses
   Classes, ActiveX, Variants, SyncObjs, Taskschd, Task, ClearasAPI;
 
 type
+  { TTaskSearchThread }
   TTaskSearchThread = class(TThread)
   private
     FTaskList: TTaskList;
@@ -135,9 +136,6 @@ end;
 procedure TTaskSearchThread.Execute;
 begin
   FLock.Acquire;
-
-  // Clear selected item
-  FTaskList.Selected := nil;
 
   // Clear data
   FTaskList.Clear;
