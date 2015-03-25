@@ -416,7 +416,7 @@ begin
   Item := List.Selected;
 
   if not Assigned(Item) then
-    EInvalidItem.Create('No item selected!');
+    raise EInvalidItem.Create('No item selected!');
 
   Result := Item;
 end;
@@ -439,7 +439,7 @@ begin
   end;  //of case
 
   if not Assigned(List) then
-    EInvalidItem.Create('No list selected!');
+    raise EInvalidItem.Create('No list selected!');
 
   Result := List;
 end;

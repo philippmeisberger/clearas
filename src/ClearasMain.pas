@@ -380,7 +380,7 @@ begin
     if (FStartup.Selected.Enabled and (FStartup.Selected is TStartupUserItem)) then
     begin
       FStartup.Selected.ExportItem('');
-      FLang.TaskDialog('', FLang.Format(42, [(FStartup.Selected as TStartupUserItem).LnkFile.BackupLnk]));
+      FLang.TaskDialog(FLang.Format(42, [(FStartup.Selected as TStartupUserItem).LnkFile.BackupLnk]));
 
       bExportStartupItem.Enabled := False;
       pmExport.Enabled := False;
@@ -1038,7 +1038,7 @@ begin
       FLang.GetString([49, 50]), mtConfirm) = IDYES) then
     begin
       // Ask user to export item
-      Answer := FLang.TaskDialog('', FLang.GetString(52), mtQuestion);
+      Answer := FLang.TaskDialog(FLang.GetString(52), mtQuestion);
 
       // Abort if user clicks cancel!
       if (((Answer = IDYES) and ShowRegistryExportDialog()) or (Answer = IDNO)) then
@@ -1104,7 +1104,7 @@ begin
         and BackupExists) then
         Answer := IDCANCEL
       else
-        Answer := FLang.TaskDialog('', FLang.GetString(52), mtQuestion);
+        Answer := FLang.TaskDialog(FLang.GetString(52), mtQuestion);
 
       // Export item and only continue if this has succeeded
       if (Answer = IDYES) then
@@ -1116,7 +1116,7 @@ begin
       // Ask user to delete old existing backup
       if ((Answer = IDCANCEL) or ((FStartup.Selected is TStartupUserItem)
         and not FStartup.Selected.Enabled and BackupExists)) then
-        FStartup.DeleteBackup := (FLang.TaskDialog('', FLang.GetString(44),
+        FStartup.DeleteBackup := (FLang.TaskDialog(FLang.GetString(44),
           mtQuestion) = IDYES);
 
       // Successfully deleted item physically?
@@ -1174,7 +1174,7 @@ begin
       FLang.GetString([49, 50]), mtConfirm) = IDYES) then
     begin
       // Ask user to export item
-      Answer := FLang.TaskDialog('', FLang.GetString(52), mtQuestion);
+      Answer := FLang.TaskDialog(FLang.GetString(52), mtQuestion);
 
       // Abort if user clicks cancel!
       if (((Answer = IDYES) and ShowRegistryExportDialog()) or (Answer = IDNO)) then
@@ -1393,7 +1393,7 @@ begin
       FLang.TaskDialog(100, 101, mtWarning);
 
     on E: EWarning do
-      FLang.TaskDialog('', E.Message, mtWarning);
+      FLang.TaskDialog(E.Message, mtWarning);
 
     on E: Exception do
       FLang.ShowException(FLang.GetString([93, 18]), E.Message);
@@ -1440,7 +1440,7 @@ begin
       FLang.TaskDialog(100, 101, mtWarning);
 
     on E: EWarning do
-      FLang.TaskDialog('', E.Message, mtWarning);
+      FLang.TaskDialog(E.Message, mtWarning);
 
     on E: Exception do
       FLang.ShowException(FLang.GetString([93, 18]), E.Message);
@@ -1491,7 +1491,7 @@ begin
       FLang.TaskDialog(100, 101, mtWarning);
 
     on E: EWarning do
-      FLang.TaskDialog('', E.Message, mtWarning);
+      FLang.TaskDialog(E.Message, mtWarning);
 
     on E: Exception do
       FLang.ShowException(FLang.GetString([93, 18]), E.Message);
@@ -1563,7 +1563,7 @@ begin
       if bDeleteContextItem.Enabled then
         bDeleteContextItem.Click
       else
-        FLang.TaskDialog('', FLang.GetString(53), mtWarning);
+        FLang.TaskDialog(FLang.GetString(53), mtWarning);
 end;
 
 { TMain.lwContextSelectItem
@@ -1586,7 +1586,7 @@ begin
     if (Index = -1) then
     begin
       PopupMenu.AutoPopup := False;
-      FLang.TaskDialog('', FLang.GetString(53), mtWarning);
+      FLang.TaskDialog(FLang.GetString(53), mtWarning);
       Exit;
     end;  //of begin
 
@@ -1636,7 +1636,7 @@ begin
       if bDeleteServiceItem.Enabled then
         bDeleteServiceItem.Click
       else
-        FLang.TaskDialog('', FLang.GetString(53), mtWarning);
+        FLang.TaskDialog(FLang.GetString(53), mtWarning);
 end;
 
 { TMain.lwServiceSelectItem
@@ -1659,7 +1659,7 @@ begin
     if (Index = -1) then
     begin
       PopupMenu.AutoPopup := False;
-      FLang.TaskDialog('', FLang.GetString(53), mtWarning);
+      FLang.TaskDialog(FLang.GetString(53), mtWarning);
       Exit;
     end;  //of begin
 
@@ -1738,7 +1738,7 @@ begin
       if bDeleteStartupItem.Enabled then
         bDeleteStartupItem.Click
       else
-        FLang.TaskDialog('', FLang.GetString(53), mtWarning);
+        FLang.TaskDialog(FLang.GetString(53), mtWarning);
 end;
 
 { TMain.lwStartupKeyPress
@@ -1816,7 +1816,7 @@ begin
     if (Index = -1) then
     begin
       PopupMenu.AutoPopup := False;
-      FLang.TaskDialog('', FLang.GetString(53), mtWarning);
+      FLang.TaskDialog(FLang.GetString(53), mtWarning);
       Exit;
     end;  //of begin
 

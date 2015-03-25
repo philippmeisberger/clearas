@@ -4,13 +4,14 @@ Ein Open-Source Projekt von PM Code Works
 History
 --------
 
-Version 4.0  [25.03.15]
+Version 4.0  [28.03.15]
 
 - API Version 4.1
   - Multi-Threaded
   - Exception Handling stark verbessert
 - Neues Feature "Dienste":
   - Ermöglicht Bearbeiten von Windows Diensten
+- Nutzung des TaskDialogs (ab Vista)
 - Änderungen im Popup Menü:
   - Neue Funktion "Pfad bearbeiten" hinzugefügt
     - Dateipfade sowie Parameter können nach eigenem Ermessen bearbeitet werden

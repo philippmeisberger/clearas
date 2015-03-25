@@ -83,7 +83,9 @@ type
     function MessageBox(AIndexes: array of Word;
       AArgs: array of {$IFDEF MSWINDOWS}TVarRec{$ELSE}const{$ENDIF};
       AType: TMessageType = mtInfo; AUpdate: Boolean = False): Integer; overload;
-    procedure ShowException(AContent, AInformation: string; AFlags: Integer = 0);
+    function ShowException(AContent, AInformation: string; AFlags: Integer = 0): Integer;
+    function TaskDialog(AText: string; AType: TMessageType = mtInfo;
+      AUpdate: Boolean = False): Integer; overload;
     function TaskDialog(APrompt, AText: string; AType: TMessageType = mtInfo;
       AUpdate: Boolean = False): Integer; overload;
     function TaskDialog(APrompt, AText: Word; AType: TMessageType = mtInfo;
@@ -371,31 +373,58 @@ end;
 
   Shows an exception with additional information. }
 
-procedure TLanguageFile.ShowException(AContent, AInformation: string;
-  AFlags: Integer = 0);
+function TLanguageFile.ShowException(AContent, AInformation: string;
+  AFlags: Integer = 0): Integer;
+{$IFDEF MSWINDOWS}
 var
-  Link: string;
-
+  tc: TASKDIALOGCONFIG;
+{$ENDIF}
 begin
 {$IFDEF MSWINDOWS}
   // TaskDialogIndirect only possible for Windows >= Vista!
   if not ((Win32Platform = VER_PLATFORM_WIN32_NT) and (Win32MajorVersion >= 6)) then
   begin
-    MessageBox(GetString(31) + sLineBreak + AContent + sLineBreak +
-      AInformation, mtError);
+    Result := MessageBox(GetString(31) +': '+ AContent + sLineBreak + AInformation,
+      mtError);
     Exit;
   end;  //of begin
 
-  Link := '<a href="mailto:team@pm-codeworks.de?subject=Bug%20Report%20'+
-    FApplication.Name +'">'+ GetString(26) +'</a>';
+  ZeroMemory(@tc, SizeOf(tc));
+  tc.cbSize := SizeOf(tc);
+  tc.hwndParent := FApplication.MainForm.Handle;
+  tc.hInstance := 0;
+  tc.dwFlags := TDF_EXPAND_FOOTER_AREA or TDF_ENABLE_HYPERLINKS or AFlags;
+  tc.dwCommonButtons := TDCBF_CLOSE_BUTTON;
+  tc.pszWindowTitle := StringToOleStr(FApplication.Name);
+  tc.pszMainIcon := MAKEINTRESOURCEW(TD_ICON_ERROR);
+  tc.pszMainInstruction := StringToOleStr(GetString(31));
+  tc.pszContent := StringToOleStr(AContent);
+  tc.pszExpandedInformation := StringToOleStr(AInformation);
+  tc.pszExpandedControlText := StringToOleStr(GetString(33));
+  tc.pszCollapsedControlText := StringToOleStr(GetString(32));
+  tc.pszFooterText := StringToOleStr('<a href="mailto:team@pm-codeworks.de'+
+    '?subject=Bug%20Report%20'+ FApplication.Title +'">'+ GetString(26) +'</a>');
+  tc.pfCallback := @TaskDialogCallback;
 
-  AddDialogs.ShowException(FApplication.MainForm.Handle, FApplication.Name,
-    GetString(31), AContent, AInformation + sLineBreak + Link, GetString(32),
-    AFlags or TDF_ENABLE_HYPERLINKS);
+  if Failed(TaskDialogIndirect(@tc, @Result, nil, nil)) then
+  begin
+    Result := MessageBox(GetString(31) +': '+ AContent + sLineBreak + AInformation,
+      mtError);
+  end;
 {$ELSE}
-  Result := MessageBox(GetString(31) + sLineBreak + AContent + sLineBreak
-    + AInformation, mtError);
+  Result := MessageBox(GetString(31) +': '+ AContent + sLineBreak + AInformation,
+    mtError);
 {$ENDIF}
+end;
+
+{ public TLanguageFile.TaskDialog
+
+  Shows a TaskDialog with text and specific look. }
+
+function TLanguageFile.TaskDialog(AText: string; AType: TMessageType = mtInfo;
+  AUpdate: Boolean = False): Integer;
+begin
+  Result := TaskDialog('', AText, AType, AUpdate);
 end;
 
 { public TLanguageFile.TaskDialog
