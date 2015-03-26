@@ -17,6 +17,9 @@ uses
 
 const
   KEY_RECYCLEBIN = 'CLSID\{645FF040-5081-101B-9F08-00AA002F954E}\shell';
+  LANG_GERMAN   = 100;
+  LANG_ENGLISH  = 300;
+  LANG_FRANCAIS = 500;
 
 type
   { TMain }
@@ -211,7 +214,7 @@ implementation
 procedure TMain.FormCreate(Sender: TObject);
 begin
   // German language default
-  FLang := TLanguageFile.Create(100, Application);
+  FLang := TLanguageFile.Create(LANG_GERMAN, Application);
   FLang.AddListener(Self);
   SetLanguage(Self);
 
@@ -834,7 +837,7 @@ begin
     cbContextExpert.Caption := GetString(89);
 
     // Set placeholder text for search
-    TOSUtils.SetCueBanner(eContextSearch.Handle, GetString(63));
+    Edit_SetCueBannerText(eContextSearch.Handle, WideString(GetString(63)));
 
     // "Context menu" tab TListView labels
     lContext.Caption := GetString(86);
@@ -860,7 +863,7 @@ begin
     lCopy3.Hint := lCopy1.Hint;
 
     // Set placeholder text for search
-    TOSUtils.SetCueBanner(eServiceSearch.Handle, GetString(63));
+    Edit_SetCueBannerText(eServiceSearch.Handle, WideString(GetString(63)));
 
     // Popup menu labels
     pmChangeStatus.Caption := bDisableStartupItem.Caption;
@@ -2393,7 +2396,7 @@ end;
 
 procedure TMain.mmGerClick(Sender: TObject);
 begin
-  FLang.ChangeLanguage(Sender, 100);
+  FLang.ChangeLanguage(Sender, LANG_GERMAN);
 end;
 
 { TMain.mmEngClick
@@ -2402,7 +2405,7 @@ end;
 
 procedure TMain.mmEngClick(Sender: TObject);
 begin
-  FLang.ChangeLanguage(Sender, 300);
+  FLang.ChangeLanguage(Sender, LANG_ENGLISH);
 end;
 
 { TMain.mmFraClick
@@ -2411,7 +2414,7 @@ end;
 
 procedure TMain.mmFraClick(Sender: TObject);
 begin
-  FLang.ChangeLanguage(Sender, 500);
+  FLang.ChangeLanguage(Sender, LANG_FRANCAIS);
 end;
 
 { TMain.mmDownloadCertClick

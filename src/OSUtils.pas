@@ -63,11 +63,9 @@ type
     class function HexToInt(AHexValue: string): Integer;
     class function HKeyToStr(AHKey: HKey; ALongFormat: Boolean = True): string;
     class function KillProcess(AExeName: string): Boolean;
-    class function MakeUACShieldButton(AButtonHandle: HWND): Integer;
     class function OpenUrl(const AUrl: string): Boolean;
     class function PlaySound(AFileName: string; ASynchronized: Boolean = False): Boolean;
     class function PMCertExists(): Boolean;
-    class function SetCueBanner(AHandle: THandle; AText: WideString): Integer;
     class function ShowAddRegistryDialog(ARegFilePath: string): Boolean;
     class function Shutdown(): Boolean;
     class function StrToHKey(ARootKey: TRootKey): HKEY;
@@ -288,7 +286,7 @@ begin
     // Read expanded string into result string
     SetLength(Result, BufferSize - 1);
     ExpandEnvironmentStrings(PChar(AString), PChar(Result), BufferSize);
-  end
+  end  //of begin
   else
     // Trying to expand empty string
     Result := '';
@@ -509,19 +507,6 @@ begin
     CloseHandle(snapshotHandle);
   end;  //of try
 end;
-
-{ public TOSUtils.MakeUACShieldButton
-
-  Adds the Windows UAC shield to a button. }
-
-class function TOSUtils.MakeUACShieldButton(AButtonHandle: HWND): Integer;
-const
-  BCM_FIRST = $1600;
-  BCM_SETSHIELD = BCM_FIRST + $000C;
-
-begin
-  Result := SendMessage(AButtonHandle, BCM_SETSHIELD, 0, Integer(True));
-end;
 {$ENDIF}
 
 { public TOSUtils.OpenUrl
@@ -635,19 +620,6 @@ begin
     Reg.CloseKey;
     Reg.Free;
   end;  //of try
-end;
-
-{ public TOSUtils.SetCueBanner
-
-  Sets a placeholder text for an empty e.g. TEdit. }
-
-class function TOSUtils.SetCueBanner(AHandle: THandle; AText: WideString): Integer;
-const
- ECM_FIRST = $1500;
- EM_SETCUEBANNER = ECM_FIRST + 1;
-
-begin
-  Result := SendMessage(AHandle, EM_SETCUEBANNER, Ord(True), LParam(PWideChar(AText)));
 end;
 
 { public TOSUtils.ShowAddRegistryDialog

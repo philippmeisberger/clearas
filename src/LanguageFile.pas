@@ -15,7 +15,7 @@ interface
 uses
   Classes, SysUtils, Forms,
 {$IFDEF MSWINDOWS}
-  Windows, AddDialogs;
+  Windows, TaskDlg;
 {$ELSE}
   IniFileParser, LCLType;
 {$ENDIF}
@@ -161,7 +161,7 @@ end;
 
   Loads a string from a *.ini file based language file. }
 
-function TLanguageFile.GetString(const AIndex: Word) : string;
+function TLanguageFile.GetString(const AIndex: Word): string;
 begin
   Result := FIni.ReadString(FLang, IntToStr(AIndex + LANGUAGE_INTERVAL));
 end;
@@ -184,15 +184,14 @@ end;
 
 function TLanguageFile.GetString(const AIndex: Word): string;
 var
-  Buffer : array[0..80] of char;
-  ls : Integer;
+  Buffer: array[0..80] of Char;
 
 begin
-  Result := '';
-  ls := LoadString(hInstance, AIndex + FLang, Buffer, SizeOf(Buffer));
+  if (LoadString(hInstance, FLang + AIndex, Buffer, SizeOf(Buffer)) = 0) then
+    raise ELanguageException.Create(Sysutils.Format(SysErrorMessage(
+      GetLastError()) +'. ID %d', [AIndex]));
 
-  if (ls <> 0) then
-    Result := Buffer;
+  Result := Buffer;
 end;
 {$ENDIF}
 
@@ -311,18 +310,12 @@ begin
       begin
         Title := GetString(3);
         Flags := MB_ICONQUESTION or MB_YESNO or MB_DEFBUTTON1;
-      {$IFDEF MSWINDOWS}
-        MessageBeep(MB_ICONWARNING);
-      {$ENDIF}
       end;
 
     mtConfirm:
       begin
         Title := GetString(4);
         Flags := MB_ICONWARNING or MB_YESNO or MB_DEFBUTTON2;
-      {$IFDEF MSWINDOWS}
-        MessageBeep(MB_ICONWARNING);
-      {$ENDIF}
       end;
 
     mtError:
@@ -405,12 +398,11 @@ begin
   tc.pszFooterText := StringToOleStr('<a href="mailto:team@pm-codeworks.de'+
     '?subject=Bug%20Report%20'+ FApplication.Title +'">'+ GetString(26) +'</a>');
   tc.pfCallback := @TaskDialogCallback;
+  MessageBeep(MB_ICONERROR);
 
   if Failed(TaskDialogIndirect(@tc, @Result, nil, nil)) then
-  begin
     Result := MessageBox(GetString(31) +': '+ AContent + sLineBreak + AInformation,
       mtError);
-  end;
 {$ELSE}
   Result := MessageBox(GetString(31) +': '+ AContent + sLineBreak + AInformation,
     mtError);
@@ -455,6 +447,7 @@ begin
         Title := GetString(0);
         Buttons := TDCBF_OK_BUTTON;
         Icon := TD_ICON_INFORMATION;
+        MessageBeep(MB_ICONINFORMATION);
       end;
 
     mtWarning:
@@ -462,6 +455,7 @@ begin
         Title := GetString(1);
         Buttons := TDCBF_OK_BUTTON;
         Icon := TD_ICON_WARNING;
+        MessageBeep(MB_ICONWARNING);
       end;
 
     mtQuestion:
@@ -469,6 +463,7 @@ begin
         Title := GetString(3);
         Buttons := TDCBF_NO_BUTTON or TDCBF_YES_BUTTON;
         Icon := TD_ICON_QUESTION;
+        MessageBeep(MB_ICONQUESTION);
       end;
 
     mtConfirm:
@@ -476,6 +471,7 @@ begin
         Title := GetString(4);
         Buttons := TDCBF_YES_BUTTON or TDCBF_NO_BUTTON;
         Icon := TD_ICON_WARNING;
+        MessageBeep(MB_ICONWARNING);
       end;
 
     mtError:
@@ -483,6 +479,7 @@ begin
         Title := GetString(2);
         Buttons := TDCBF_CLOSE_BUTTON;
         Icon := TD_ICON_ERROR;
+        MessageBeep(MB_ICONERROR);
       end;
   end;  //of case
 
