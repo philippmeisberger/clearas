@@ -347,7 +347,8 @@ var
 
 begin
   // Ask user to permit download
-  if (FLang.TaskDialog(21, [22], [ANewBuild], mtQuestion, True) = IDYES) then
+  if (FLang.TaskDialog(FLang.Format(21, [ANewBuild]), FLang.GetString(22),
+    mtQuestion, True) = IDYES) then
   begin
     // init TUpdate instance
     Updater := TUpdate.Create(Self, FLang);

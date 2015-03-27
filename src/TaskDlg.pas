@@ -21,10 +21,14 @@ const
   TD_ICON_ERROR                    = 98;
   TD_ICON_INFORMATION              = 81;
   TD_ICON_SHIELD                   = 78;
+  TD_ICON_SHIELD_BANNER            = 65531;
+  TD_ICON_SHIELD_WARNING           = 107;
+  TD_ICON_SHIELD_WARNING_BANNER    = 65530;
   TD_ICON_SHIELD_QUESTION          = 104;
   TD_ICON_SHIELD_ERROR             = 105;
+  TD_ICON_SHIELD_ERROR_BANNER      = 65529;
   TD_ICON_SHIELD_OK                = 106;
-  TD_ICON_SHIELD_WARNING           = 107;
+  TD_ICON_SHIELD_OK_BANNER         = 65528;
 
   { Common buttons }
   TDCBF_OK_BUTTON                  = $0001;
@@ -106,10 +110,10 @@ type
           pszContent: PWideChar;
           cButtons: UINT;
           pButtons: PTaskDialogButton;
-          iDefaultButton: Integer;
+          nDefaultButton: Integer;
           cRadioButtons: UINT;
           pRadioButtons: PTaskDialogButton;
-          iDefaultRadioButton: Integer;
+          nDefaultRadioButton: Integer;
           pszVerificationText,
           pszExpandedInformation,
           pszExpandedControlText,
@@ -167,7 +171,8 @@ type
 
   { TTaskDialogIcon }
   TTaskDialogIcon = (tiBlank, tiWarning, tiQuestion, tiError, tiInformation,
-    tiShield, tiShieldQuestion, tiShieldError, tiShieldOk, tiShieldWarning
+    tiShield, tiShieldBanner, tiShieldWarning, tiShieldWarningBanner,
+    tiShieldQuestion, tiShieldError, tiShieldErrorBanner, tiShieldOk, tiShieldOkBanner
   );
 
   { TTaskDialogOption }
@@ -176,6 +181,16 @@ type
     doExpandDefault, doVerify, doProgressBar, doProgressBarMarquee, doCallBackTimer,
     doRelativeToWindow, doRtlLayout, doRadioButtonNoDefault, doMinimize);
   TTaskDialogOptions = set of TTaskDialogOption;
+
+  { TTaskDialogProgressState }
+  TTaskDialogProgressState = (psNormal, psPaused, psCanceled);
+
+  { TProgressEvent }
+  TProgressEvent = procedure(Sender: TObject; var APosition: Integer;
+    var AState: TTaskDialogProgressState) of object;
+
+  //TCallBackEvent = function(hwndDlg: THandle; uNotification: UINT; wp: WPARAM;
+  //  lp: LPARAM; dwRefData: PDWORD): HRESULT of object;
 
   { TTaskDialog }
   TTaskDialog = class(TObject)
@@ -189,9 +204,11 @@ type
     FCustomButtons, FRadioButtons: TStringList;
     FModalResult, FRadioButtonResult, FDefaultButton, FDefaultRadioButton: Integer;
     FVerifyResult: Boolean;
+    //FOnProgress: TProgressEvent;
   public
     constructor Create(AOwner: THandle);
     destructor Destroy; override;
+    function ClickButton(AButtonId: Cardinal): Boolean;
     function Execute(): Boolean;
     { external }
     property CollapsedControlText: WideString read FCollapsedControlText write FCollapsedControlText;
@@ -207,6 +224,7 @@ type
     property Icon: TTaskDialogIcon read FIcon write FIcon;
     property Instruction: WideString read FInstruction write FInstruction;
     property ModalResult: Integer read FModalResult;
+    //property OnProgress: TProgressEvent read FOnProgress write FOnProgress;
     property Options: TTaskDialogOptions read FOptions write FOptions;
     property Owner: THandle read FOwner;
     property RadioButtons: TStringList read FRadioButtons write FRadioButtons;
@@ -235,10 +253,14 @@ const
     TD_ICON_ERROR,
     TD_ICON_INFORMATION,
     TD_ICON_SHIELD,
+    TD_ICON_SHIELD_BANNER,
+    TD_ICON_SHIELD_WARNING,
+    TD_ICON_SHIELD_WARNING_BANNER,
     TD_ICON_SHIELD_QUESTION,
     TD_ICON_SHIELD_ERROR,
+    TD_ICON_SHIELD_ERROR_BANNER,
     TD_ICON_SHIELD_OK,
-    TD_ICON_SHIELD_WARNING
+    TD_ICON_SHIELD_OK_BANNER
   );
 
   { Enumeration to option translator }
@@ -362,8 +384,8 @@ constructor TTaskDialog.Create(AOwner: THandle);
 begin
   inherited Create;
   FOwner := AOwner;
-  FCustomButtons := TStringList.Create;
-  FRadioButtons := TStringList.Create;
+  FCustomButtons := TStringList.Create();
+  FRadioButtons := TStringList.Create();
 end;
 
 { public TTaskDialog.Destroy
@@ -375,6 +397,15 @@ begin
   FRadioButtons.Free;
   FCustomButtons.Free;
   inherited Destroy;
+end;
+
+{ public TTaskDialog.ClickButton
+
+  Invokes the click event of a button. }
+
+function TTaskDialog.ClickButton(AButtonId: Cardinal): Boolean;
+begin
+  Result := Boolean(SendMessage(FOwner, TDM_CLICK_BUTTON, WParam(AButtonId), 0));
 end;
 
 { public TTaskDialog.Execute
@@ -415,7 +446,7 @@ begin
       for i := 0 to FCustomButtons.Count - 1 do
         with CustomButtons[i] do
         begin
-          nButtonId := 100 + i;
+          nButtonId := CUSTOM_BUTTON1 + i;
           pszButtonText := StringToOleStr(FCustomButtons[i]);
         end;  //of with
 
@@ -428,7 +459,7 @@ begin
         if (Button in FButtons) then
           dwCommonButtons := dwCommonButtons + Cardinal(TDCommonButton[Button]);
 
-    iDefaultButton := FDefaultButton;
+    nDefaultButton := FDefaultButton;
 
     // Setup radio buttons
     if (FRadioButtons.Count > 0) then
@@ -438,13 +469,13 @@ begin
       for i := 0 to FRadioButtons.Count - 1 do
         with RadioButtons[i] do
         begin
-          nButtonId := 200 + i;
+          nButtonId := RADIO_BUTTON1 + i;
           pszButtonText := StringToOleStr(FRadioButtons[i]);
         end;  //of with
 
       cRadioButtons := Length(RadioButtons);
       pRadioButtons := @RadioButtons[0];
-      iDefaultRadioButton := FDefaultRadioButton;
+      nDefaultRadioButton := FDefaultRadioButton;
     end;  //of begin
 
     // Enable clickable hyperlink
