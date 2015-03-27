@@ -17,9 +17,11 @@ uses
 
 const
   KEY_RECYCLEBIN = 'CLSID\{645FF040-5081-101B-9F08-00AA002F954E}\shell';
-  LANG_GERMAN   = 100;
-  LANG_ENGLISH  = 300;
-  LANG_FRANCAIS = 500;
+
+  { Language IDs }
+  LANG_GERMAN    = 100;
+  LANG_ENGLISH   = 300;
+  LANG_FRANCAIS  = 500;
 
 type
   { TMain }

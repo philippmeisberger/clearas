@@ -838,7 +838,6 @@ begin
 
     // Set placeholder text for search
     Edit_SetCueBannerText(eContextSearch.Handle, WideString(GetString(63)));
-    GetString(150);
 
     // "Context menu" tab TListView labels
     lContext.Caption := GetString(86);

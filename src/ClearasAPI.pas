@@ -1651,7 +1651,7 @@ begin
 
     if (not Reg.ValueExists('hkey') or not Reg.ValueExists('key')) then
       raise EStartupException.Create('Missing destination Registry values '
-        +'"hkey" or "key"!');
+        +'''hkey'' or ''key''!');
 
     // Set new values
     NewHKey := Reg.ReadString('hkey');
@@ -1659,7 +1659,7 @@ begin
 
     if ((NewHKey = '') or (NewKeyPath = '')) then
       raise EStartupException.Create('Invalid destination Registry values for '
-        +'"hkey" or "key"!');
+        +'hkey or key!');
 
     Reg.CloseKey;
 
@@ -1692,7 +1692,7 @@ begin
     Reg.RootKey := HKEY_LOCAL_MACHINE;
 
     if not Reg.OpenKey(KEY_STARTUP_DISABLED, False) then
-      raise EStartupException.Create('Key "startupreg" does not exist!');
+      raise EStartupException.Create('Key ''startupreg'' does not exist!');
 
     // Do not abort if old key does not exist!
     if (Reg.KeyExists(Name) and not Reg.DeleteKey(Name)) then
@@ -2196,8 +2196,8 @@ begin
 
   // Check invalid extension
   if ((Ext <> '.exe') and (Ext <> '.bat')) then
-    raise EInvalidArgument.Create('Invalid program extension! Must be ".exe"'
-      +' or ".bat"!');
+    raise EInvalidArgument.Create('Invalid program extension! Must be ''.exe'''
+      +' or ''.bat''!');
 
   // List locked?
   if not FLock.TryToAcquire() then
@@ -2355,8 +2355,8 @@ begin
 
   // Check invalid extension
   if ((Ext <> EXT_COMMON) and (Ext <> EXT_USER)) then
-    raise EInvalidArgument.Create('Invalid backup file extension! Must be "'
-      + EXT_COMMON +'" or "'+ EXT_USER+'"!');
+    raise EInvalidArgument.Create('Invalid backup file extension! Must be '''
+      + EXT_COMMON +''' or '''+ EXT_USER+'''!');
 
   // List locked?
   if not FLock.TryToAcquire() then
@@ -3028,8 +3028,8 @@ begin
 
   // Check invalid extension
   if ((Ext <> '.exe') and (Ext <> '.bat')) then
-    raise EInvalidArgument.Create('Invalid program extension! Must be ".exe"'
-      +' or ".bat"!');
+    raise EInvalidArgument.Create('Invalid program extension! Must be ''.exe'''
+      +' or ''.bat''!');
 
   // List locked?
   if not FLock.TryToAcquire() then
@@ -3064,7 +3064,7 @@ begin
       Reg.CloseKey();
 
       if not Reg.OpenKey(KeyName +'\command', True) then
-        raise EContextMenuException.Create('Could not create "command" key!');
+        raise EContextMenuException.Create('Could not create ''command'' key!');
 
       // Write command of item
       Reg.WriteString('', FullPath);
@@ -3726,7 +3726,7 @@ begin
 
   // Check invalid extension
   if (ExtractFileExt(Name) <> '.exe') then
-    raise EInvalidArgument.Create('Invalid program extension! Must be ".exe"!');
+    raise EInvalidArgument.Create('Invalid program extension! Must be ''.exe''!');
 
   // List locked?
   if not FLock.TryToAcquire() then

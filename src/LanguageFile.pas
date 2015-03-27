@@ -83,7 +83,8 @@ type
     function MessageBox(AIndexes: array of Word;
       AArgs: array of {$IFDEF MSWINDOWS}TVarRec{$ELSE}const{$ENDIF};
       AType: TMessageType = mtInfo; AUpdate: Boolean = False): Integer; overload;
-    function ShowException(AContent, AInformation: string; AFlags: Integer = 0): Integer;
+    procedure ShowException(AContent, AInformation: string;
+      AOptions: TTaskDialogOptions = []);
     function TaskDialog(AText: string; AType: TMessageType = mtInfo;
       AUpdate: Boolean = False): Integer; overload;
     function TaskDialog(APrompt, AText: string; AType: TMessageType = mtInfo;
@@ -366,43 +367,59 @@ end;
 
   Shows an exception with additional information. }
 
-function TLanguageFile.ShowException(AContent, AInformation: string;
-  AFlags: Integer = 0): Integer;
+procedure TLanguageFile.ShowException(AContent, AInformation: string;
+  AOptions: TTaskDialogOptions = []);
 {$IFDEF MSWINDOWS}
+
+  function EncodeUri(const AText: string): string;
+  begin
+    Result := StringReplace(AText, '!', '%21', [rfReplaceAll]);
+    Result := StringReplace(Result, ' ', '%20', [rfReplaceAll]);
+  end;
+
 var
-  tc: TASKDIALOGCONFIG;
+  TaskDialog: TTaskDialog;
+  MailSubject, MailBody: string;
+
 {$ENDIF}
 begin
 {$IFDEF MSWINDOWS}
   // TaskDialogIndirect only possible for Windows >= Vista!
   if not ((Win32Platform = VER_PLATFORM_WIN32_NT) and (Win32MajorVersion >= 6)) then
   begin
-    Result := MessageBox(GetString(31) +': '+ AContent + sLineBreak + AInformation,
-      mtError);
+    MessageBox(GetString(31) +': '+ AContent + sLineBreak + AInformation, mtError);
     Exit;
   end;  //of begin
 
-  ZeroMemory(@tc, SizeOf(tc));
-  tc.cbSize := SizeOf(tc);
-  tc.hwndParent := FApplication.MainForm.Handle;
-  tc.hInstance := 0;
-  tc.dwFlags := TDF_EXPAND_FOOTER_AREA or TDF_ENABLE_HYPERLINKS or AFlags;
-  tc.dwCommonButtons := TDCBF_CLOSE_BUTTON;
-  tc.pszWindowTitle := StringToOleStr(FApplication.Name);
-  tc.pszMainIcon := MAKEINTRESOURCEW(TD_ICON_ERROR);
-  tc.pszMainInstruction := StringToOleStr(GetString(31));
-  tc.pszContent := StringToOleStr(AContent);
-  tc.pszExpandedInformation := StringToOleStr(AInformation);
-  tc.pszExpandedControlText := StringToOleStr(GetString(33));
-  tc.pszCollapsedControlText := StringToOleStr(GetString(32));
-  tc.pszFooterText := StringToOleStr('<a href="mailto:team@pm-codeworks.de'+
-    '?subject=Bug%20Report%20'+ FApplication.Title +'">'+ GetString(26) +'</a>');
-  tc.pfCallback := @TaskDialogCallback;
-  MessageBeep(MB_ICONERROR);
+  TaskDialog := TTaskDialog.Create(FApplication.MainForm.Handle);
 
-  if Failed(TaskDialogIndirect(@tc, @Result, nil, nil)) then
-    Result := MessageBox(GetString(31) +': '+ AContent + sLineBreak + AInformation,
-      mtError);
+  try
+    with TaskDialog do
+    begin
+      Title := FApplication.Name;
+      Icon := tiError;
+      Instruction := GetString(31);
+      Content := AContent;
+      ExpandedInformation := AInformation;
+      ExpandedControlText := GetString(33);
+      CollapsedControlText := GetString(32);
+      MailSubject := EncodeUri('Bug Report '+ FApplication.Title);
+      MailBody := EncodeUri('Dear PM Code Works,%0A%0AI found a possible '+
+        'bug:%0A'+ AInformation);
+      Footer := '<a href="mailto:team@pm-codeworks.de?subject='+ MailSubject +
+        '&body='+ MailBody +'">'+ GetString(26) +'</a>';
+      Options := [doExpandFooter, doHyperlinks] + AOptions;
+      CommonButtons := [cbClose];
+    end;  //of with
+
+    MessageBeep(MB_ICONERROR);
+
+    if not TaskDialog.Execute() then
+      MessageBox(GetString(31) +': '+ AContent + sLineBreak + AInformation, mtError);
+    
+  finally
+    TaskDialog.Free;
+  end;  //of try
 {$ELSE}
   Result := MessageBox(GetString(31) +': '+ AContent + sLineBreak + AInformation,
     mtError);
@@ -428,7 +445,8 @@ function TLanguageFile.TaskDialog(APrompt, AText: string; AType: TMessageType = 
 {$IFDEF MSWINDOWS}
 var
   Title: string;
-  Buttons, Icon: Integer;
+  Buttons: TCommonButtons;
+  Icon: TTaskDialogIcon;
 
 begin
   // TaskDialog only possible for Windows >= Vista!
@@ -438,47 +456,45 @@ begin
     Exit;
   end;  //of begin
 
-  Buttons := TDCBF_OK_BUTTON;
-  Icon := TD_ICON_BLANK;
+  Buttons := [cbOk];
+  Icon := tiBlank;
 
   case AType of
     mtInfo:
       begin
         Title := GetString(0);
-        Buttons := TDCBF_OK_BUTTON;
-        Icon := TD_ICON_INFORMATION;
+        Icon := tiInformation;
         MessageBeep(MB_ICONINFORMATION);
       end;
 
     mtWarning:
       begin
         Title := GetString(1);
-        Buttons := TDCBF_OK_BUTTON;
-        Icon := TD_ICON_WARNING;
+        Icon := tiWarning;
         MessageBeep(MB_ICONWARNING);
       end;
 
     mtQuestion:
       begin
         Title := GetString(3);
-        Buttons := TDCBF_NO_BUTTON or TDCBF_YES_BUTTON;
-        Icon := TD_ICON_QUESTION;
+        Buttons := [cbYes, cbNo];
+        Icon := tiQuestion;
         MessageBeep(MB_ICONQUESTION);
       end;
 
     mtConfirm:
       begin
         Title := GetString(4);
-        Buttons := TDCBF_YES_BUTTON or TDCBF_NO_BUTTON;
-        Icon := TD_ICON_WARNING;
+        Buttons := [cbYes, cbNo];
+        Icon := tiWarning;
         MessageBeep(MB_ICONWARNING);
       end;
 
     mtError:
       begin
         Title := GetString(2);
-        Buttons := TDCBF_CLOSE_BUTTON;
-        Icon := TD_ICON_ERROR;
+        Buttons := [cbClose];
+        Icon := tiError;
         MessageBeep(MB_ICONERROR);
       end;
   end;  //of case
@@ -486,8 +502,13 @@ begin
   if AUpdate then
     Title := GetString(5);
 
-  Result := ShowTaskDialog(FApplication.MainForm.Handle, Title,
-    APrompt, AText, Buttons, Icon);
+  try
+    Result := ShowTaskDialog(FApplication.MainForm.Handle, Title,
+      APrompt, AText, Buttons, Icon);
+
+  except
+    Result := MessageBox(APrompt + sLineBreak + AText, AType, AUpdate);
+  end;  //of try
 {$ELSE}
   Result := MessageBox(APrompt + sLineBreak + AText, AType, AUpdate);
 {$ENDIF}

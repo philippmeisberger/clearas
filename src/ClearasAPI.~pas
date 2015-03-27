@@ -869,9 +869,9 @@ end;
 function TRootItem.GetStatus(ALangFile: TLanguageFile): string;
 begin
   if FEnabled then
-    Result := ALangFile.GetString(36)
+    Result := ALangFile.GetString(102)
   else
-    Result := ALangFile.GetString(37);
+    Result := ALangFile.GetString(103);
 end;
 
 { public TRootItem.OpenInExplorer
