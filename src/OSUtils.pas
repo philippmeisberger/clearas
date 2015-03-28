@@ -66,7 +66,6 @@ type
     class function OpenUrl(const AUrl: string): Boolean;
     class function PlaySound(AFileName: string; ASynchronized: Boolean = False): Boolean;
     class function PMCertExists(): Boolean;
-    class function ShowAddRegistryDialog(ARegFilePath: string): Boolean;
     class function Shutdown(): Boolean;
     class function StrToHKey(ARootKey: TRootKey): HKEY;
     class function WindowsVistaOrLater(): Boolean;
@@ -620,21 +619,6 @@ begin
     Reg.CloseKey;
     Reg.Free;
   end;  //of try
-end;
-
-{ public TOSUtils.ShowAddRegistryDialog
-
-  Shows an dialog where user has the choice to add a *.reg file.  }
-
-class function TOSUtils.ShowAddRegistryDialog(ARegFilePath: string): Boolean;
-begin
-  if (ARegFilePath = '') then
-    raise EInvalidArgument.Create('Missing parameter with a .reg file!');
-
-  if (ARegFilePath[1] <> '"') then
-    ARegFilePath := '"'+ ARegFilePath +'"';
-
-  Result := TOSUtils.ExecuteProgram('regedit.exe', ARegFilePath);
 end;
 {$ENDIF}
 

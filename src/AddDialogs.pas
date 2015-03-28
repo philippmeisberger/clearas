@@ -11,50 +11,66 @@ unit AddDialogs;
 interface
 
 uses
-  Windows, Classes, Forms, SysUtils, StdCtrls, Controls, Graphics, CommCtrl;
+  Windows, Classes, Forms, SysUtils, StdCtrls, Controls, Graphics, CommCtrl, 
+  ShellAPI;
 
 const
-  { Control messages }
-  ICC_STANDARD_CLASSES  = $00004000;
-  ICC_LINK_CLASS        = $00008000;
+  { Balloon tip icons }
+  TTI_NONE          = 0;
+  TTI_INFO          = 1;
+  TTI_WARNING       = 2;
+  TTI_ERROR         = 3;
+  TTI_INFO_LARGE    = 4;
+  TTI_WARNING_LARGE = 5;
+  TTI_ERROR_LARGE   = 6;
 
-  CCM_SETWINDOWTHEME    = CCM_FIRST + $0b;
-  CCM_SETVERSION        = CCM_FIRST + $07;
-  CCM_GETVERSION        = CCM_FIRST + $08;
+  { Edit control messages }
+  ECM_FIRST         = $1500;
+  EM_SETCUEBANNER   = ECM_FIRST + 1;
+  EM_GETCUEBANNER   = ECM_FIRST + 2;
 
-  ECM_FIRST             = $1500;  // Edit control messages
-  BCM_FIRST             = $1600;  // Button control messages
-  CBM_FIRST             = $1700;  // Combobox control messages
+function Edit_GetCueBannerText(hEdit: HWND; lpcwText: WideString; cchText: LongInt): BOOL;
+function Edit_SetCueBannerText(hEdit: HWND; lpcwText: WideString): BOOL;
 
 type
   _tagEDITBALLOONTIP = packed record
     cbStruct: DWORD;
     pszTitle,
-    pszText : PWideChar;
-    ttiIcon : integer;
+    pszText: PWideChar;
+    ttiIcon: Integer;
   end;
   EDITBALLOONTIP  = _tagEDITBALLOONTIP;
   TEditBalloonTip = _tagEDITBALLOONTIP;
   PEditBalloonTip = ^TEditBalloonTip;
 
+  { Balloon tip icon }
+  TBalloonIcon = (biNone, biInfo, biWarning, biError, biInfoLarge,
+    biWarningLarge, biErrorLarge);
+
 const
-  EM_SETCUEBANNER   = ECM_FIRST + 1;
-  EM_GETCUEBANNER   = ECM_FIRST + 2;
   EM_SHOWBALLOONTIP = ECM_FIRST + 3;
   EM_HIDEBALLOONTIP = ECM_FIRST + 4;
 
-function Edit_ShowBalloonTip(hEdit: HWND; pEditBalloonTip: PEditBalloonTip): BOOL;
+function Edit_ShowBalloonTip(hEdit: HWND; pEditBalloonTip: PEditBalloonTip): BOOL; overload;
+function Edit_ShowBalloonTip(AEditHandle: THandle; ATitle, AText: WideString;
+  AIcon: TBalloonIcon = biInfo): BOOL; overload;
 function Edit_HideBalloonTip(hEdit: HWND): BOOL;
-function Edit_GetCueBannerText(hEdit: HWND; lpcwText: WideString; cchText: LongInt): BOOL;
-function Edit_SetCueBannerText(hEdit: HWND; lpcwText: WideString): BOOL;
 
 const
-  BCM_SETSHIELD = BCM_FIRST + $000C;
+  { Button control messages }
+  BCM_FIRST         = $1600;
+  BCM_SETSHIELD     = BCM_FIRST + $000C;
 
 function Button_SetElevationRequiredState(hButton: HWND; fRequired: BOOL = True): BOOL;
 
+const
+  { Combobox control messages }
+  CBM_FIRST             = $1700;
+
 function InputCombo(const ACaption, APrompt: string; const AList: TStrings;
   var AValue: string): Boolean;
+function ShowAddRegistryDialog(const ARegFilePath: string): Boolean;
+
 
 implementation
 
@@ -171,6 +187,27 @@ begin
   end;  // of try
 end;
 
+{ ShowAddRegistryDialog
+
+  Shows an dialog where user has the choice to add a *.reg file.  }
+
+function ShowAddRegistryDialog(const ARegFilePath: string): Boolean;
+var
+  RegFilePath: string;
+
+begin
+  if (ARegFilePath = '') then
+    raise Exception.Create('Missing parameter with a .reg file!');
+
+  if (ARegFilePath[1] <> '"') then
+    RegFilePath := '"'+ ARegFilePath +'"'
+  else
+    RegFilePath := ARegFilePath;
+
+  Result := BOOL(ShellExecute(0, 'open', PChar('regedit.exe'), PChar(RegFilePath), 
+    nil, SW_SHOWNORMAL));
+end;
+
 { Edit_ShowBalloonTip
 
   Shows a balloon tip inside an edit field. }
@@ -178,6 +215,38 @@ end;
 function Edit_ShowBalloonTip(hEdit: HWND; pEditBalloonTip: PEditBalloonTip): BOOL;
 begin
   Result := BOOL(SendMessage(hEdit, EM_SHOWBALLOONTIP, 0, LParam(pEditBalloonTip)));
+end;
+
+{ Edit_ShowBalloonTip
+
+  Shows a balloon tip inside an edit field with more comfortable usage. }
+
+function Edit_ShowBalloonTip(AEditHandle: THandle; ATitle, AText: WideString;
+  AIcon: TBalloonIcon = biInfo): BOOL;
+var
+  BalloonTip: TEditBalloonTip;
+
+begin
+  ZeroMemory(@BalloonTip, SizeOf(BalloonTip));
+
+  with BalloonTip do
+  begin
+    cbStruct := SizeOf(BalloonTip);
+    pszTitle := PWideChar(ATitle);
+    pszText := PWideChar(AText);
+
+    case AIcon of
+      biNone: ttiIcon := TTI_NONE;
+      biInfo: ttiIcon := TTI_INFO;
+      biInfoLarge: ttiIcon := TTI_INFO_LARGE;
+      biWarning: ttiIcon := TTI_WARNING;
+      biWarningLarge: ttiIcon := TTI_WARNING_LARGE;
+      biError: ttiIcon := TTI_ERROR;
+      biErrorLarge: ttiIcon := TTI_ERROR_LARGE;
+    end;
+  end;  //of with
+
+  Result := Edit_ShowBalloonTip(AEditHandle, @BalloonTip);
 end;
 
 { Edit_HideBalloonTip

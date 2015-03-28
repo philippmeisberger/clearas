@@ -13,8 +13,9 @@ unit Updater;
 interface
 
 uses
-  SysUtils, Classes, UpdateCheckThread, DownloadThread, LanguageFile, OSUtils,
-
+  SysUtils, Classes, UpdateCheckThread, DownloadThread, LanguageFile, AddDialogs,
+  OSUtils,
+  
 {$IFDEF MSWINDOWS}
   Windows, FileCtrl, Forms, StdCtrls, ComCtrls, Controls;
 {$ELSE}
@@ -142,8 +143,7 @@ end;
 procedure TUpdateCheck.OnCheckError(Sender: TThread; AResponseCode: Integer);
 begin
   if FUserUpdate then
-    with FLang do
-      MessageBox(Format([12, NEW_LINE, 13, 19], [AResponseCode]), mtError, True);
+    FLang.ShowException(FLang.GetString([12, 13]), FLang.Format(19, [AResponseCode]));
 end;
 
 { private TUpdateCheck.OnNoUpdateAvailable
@@ -153,7 +153,7 @@ end;
 procedure TUpdateCheck.OnNoUpdateAvailable(Sender: TObject);
 begin
   if FUserUpdate then
-    FLang.MessageBox(23, mtInfo, True);
+    FLang.TaskDialog(FLang.GetString(23), mtInfo, True);
 end;
 
 { private TUpdateCheck.OnUpdateAvailable
@@ -288,7 +288,7 @@ end;
 procedure TUpdate.OnDownloadCancel(Sender: TObject);
 begin
   Reset();
-  FLang.MessageBox(30, mtInfo);
+  FLang.TaskDialog(FLang.GetString(30), mtInfo, True);
 end;
 
 { private TUpdate.OnDownloadError
@@ -298,10 +298,10 @@ end;
 
 procedure TUpdate.OnDownloadError(Sender: TThread; AResponseCode: Integer);
 begin
-  with FLang do
-    MessageBox(Caption + GetString(18) + Format(19, [AResponseCode]), mtError, True);
-
+  FLang.ShowException(Caption + FLang.GetString(18), FLang.Format(19,
+    [AResponseCode]));
   Reset();
+  BringToFront;
 end;
 
 { private TUpdate.OnDownloadFinished
@@ -322,7 +322,7 @@ begin
 {$IFDEF MSWINDOWS}
   // Show dialog to add certificate
   if (ExtractFileExt(FFileName) = '.reg') then
-    TOSUtils.ShowAddRegistryDialog('"'+ FFileName +'"');
+    ShowAddRegistryDialog('"'+ FFileName +'"');
 {$ENDIF}
 
   // Notify all listeners
@@ -348,6 +348,7 @@ end;
 procedure TUpdate.OnDownloadStart(Sender: TThread; const AFileSize: Integer);
 begin
   pbProgress.Max := AFileSize;
+  BringToFront;
 end;
 
 { public TUpdate.AddListener
@@ -425,6 +426,7 @@ begin
     // Cancel clicked
     Reset();
 
+  BringToFront;
   ShowModal;
 end;
 
