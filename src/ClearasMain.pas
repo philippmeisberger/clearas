@@ -295,7 +295,7 @@ begin
   // Check for incompatibility
   if not (NewWindows or (WindowsVersion <> '')) then
   begin
-    Flang.MessageBox(FLang.Format([64, 65], [WindowsVersion]), mtError);
+    FLang.MessageBox(FLang.Format([64, 65], [WindowsVersion]), mtError);
     mmExportList.Enabled := False;
     mmRefresh.Enabled := False;
     mmContext.Enabled := False;
@@ -534,6 +534,7 @@ procedure TMain.OnContextSearchStart(Sender: TObject;
   const AWorkCountMax: Cardinal);
 begin
   mmLang.Enabled := False;
+  cbContextExpert.Enabled := False;
   lwContext.Cursor := crHourGlass;
 
   if (AWorkCountMax > 0) then
@@ -593,6 +594,7 @@ begin
   pbContextLoad.Position := 0;
   eContextSearch.Visible := True;
   mmLang.Enabled := True;
+  cbContextExpert.Enabled := True;
   lwContext.Cursor := crDefault;
 end;
 
@@ -645,6 +647,7 @@ procedure TMain.OnStartupSearchStart(Sender: TObject;
 begin
   mmLang.Enabled := False;
   mmImport.Enabled := False;
+  cbRunOnce.Enabled := False;
   lwStartup.Cursor := crHourGlass;
 end;
 
@@ -698,6 +701,7 @@ begin
   OnStartupItemChanged(Sender);
   mmImport.Enabled := True;
   mmLang.Enabled := True;
+  cbRunOnce.Enabled := True;
   lwStartup.Cursor := crDefault;
 end;
 
@@ -719,6 +723,7 @@ procedure TMain.OnServiceSearchStart(Sender: TObject;
   const AWorkCountMax: Cardinal);
 begin
   mmLang.Enabled := False;
+  cbServiceExpert.Enabled := False;
   lwService.Cursor := crHourGlass;
 end;
 
@@ -760,6 +765,7 @@ begin
   // Refresh counter label
   OnServiceItemChanged(Sender);
   mmLang.Enabled := True;
+  cbServiceExpert.Enabled := True;
   lwService.Cursor := crDefault;
 end;
 

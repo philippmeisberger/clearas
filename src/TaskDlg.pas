@@ -172,7 +172,8 @@ type
   { TTaskDialogIcon }
   TTaskDialogIcon = (tiBlank, tiWarning, tiQuestion, tiError, tiInformation,
     tiShield, tiShieldBanner, tiShieldWarning, tiShieldWarningBanner,
-    tiShieldQuestion, tiShieldError, tiShieldErrorBanner, tiShieldOk, tiShieldOkBanner
+    tiShieldQuestion, tiShieldError, tiShieldErrorBanner, tiShieldOk,
+    tiShieldOkBanner
   );
 
   { TTaskDialogOption }
@@ -183,11 +184,11 @@ type
   TTaskDialogOptions = set of TTaskDialogOption;
 
   { TTaskDialogProgressState }
-  TTaskDialogProgressState = (psNormal, psPaused, psCanceled);
+  //TTaskDialogProgressState = (psNormal, psPaused, psCanceled);
 
   { TProgressEvent }
-  TProgressEvent = procedure(Sender: TObject; var APosition: Integer;
-    var AState: TTaskDialogProgressState) of object;
+  //TProgressEvent = procedure(Sender: TObject; var APosition: Integer;
+  //  var AState: TTaskDialogProgressState) of object;
 
   //TCallBackEvent = function(hwndDlg: THandle; uNotification: UINT; wp: WPARAM;
   //  lp: LPARAM; dwRefData: PDWORD): HRESULT of object;
@@ -291,8 +292,69 @@ procedure ShowException(AHandle: THandle; AInstruction, AContent,
 
 implementation
 
-function TaskDialog;         external comctl32 name 'TaskDialog';
-function TaskDialogIndirect; external comctl32 name 'TaskDialogIndirect';
+{ TaskDialog
+
+  Creates a TaskDialog. }
+
+function TaskDialog(hwndParent: HWND; hInstance: LongWord; pszWindowTitle,
+  pszMainInstruction, pszContent: PWideChar; dwCommonButtons: DWORD;
+  Icon: PWideChar; var pnButton: Integer): HRESULT;
+type
+  TTaskDialog = function(hwndParent: HWND; hInstance: LongWord; pszWindowTitle,
+    pszMainInstruction, pszContent: PWideChar; dwCommonButtons: DWORD;
+    Icon: PWideChar; var pnButton: Integer): HRESULT; stdcall;
+
+var
+  LibraryHandle: HMODULE;
+  TaskDialog: TTaskDialog;
+
+begin
+  Result := E_FAIL;
+
+  // Init handle
+  LibraryHandle := GetModuleHandle(comctl32);
+
+  if (LibraryHandle <> 0) then
+  begin
+    TaskDialog := GetProcAddress(LibraryHandle, 'TaskDialog');
+
+    // Loading TaskDialog successful?
+    if Assigned(TaskDialog) then
+      Result := TaskDialog(hwndParent, hInstance, pszWindowTitle,
+        pszMainInstruction, pszContent, dwCommonButtons, Icon, pnButton);
+  end;  //of begin
+end;
+
+{ TaskDialogIndirect
+
+  Creates a TaskDialogIndirect. }
+
+function TaskDialogIndirect(ptc: PTaskDialogConfig; pnButton: PInteger;
+  pnRadioButton: PInteger; pfVerificationFlagChecked: PBool): HRESULT;
+type
+  TTaskDialogIndirect = function(ptc: PTaskDialogConfig; pnButton: PInteger;
+    pnRadioButton: PInteger; pfVerificationFlagChecked: PBool): HRESULT; stdcall;
+
+var
+  LibraryHandle: HMODULE;
+  TaskDialogIndirect: TTaskDialogIndirect;
+
+begin
+  Result := E_FAIL;
+
+  // Init handle
+  LibraryHandle := GetModuleHandle(comctl32);
+
+  if (LibraryHandle <> 0) then
+  begin
+    TaskDialogIndirect := GetProcAddress(LibraryHandle, 'TaskDialogIndirect');
+
+    // Loading TaskDialogIndirect successful?
+    if Assigned(TaskDialogIndirect) then
+      Result := TaskDialogIndirect(ptc, pnButton, pnRadioButton,
+        pfVerificationFlagChecked);
+  end;  //of begin
+end;
 
 { TaskDialogCallback
 
@@ -330,6 +392,9 @@ begin
       Content := AContent;
       CommonButtons := ACommonButtons;
       Icon := AIcon;
+
+      if ((AIcon = tiWarning) and (cbNo in ACommonButtons)) then
+        DefaultButton := IDNO;
     end;  //of with
 
     if not TaskDialog.Execute() then

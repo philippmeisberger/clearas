@@ -295,7 +295,7 @@ begin
   // Check for incompatibility
   if not (NewWindows or (WindowsVersion <> '')) then
   begin
-    Flang.MessageBox(FLang.Format([64, 65], [WindowsVersion]), mtError);
+    FLang.MessageBox(FLang.Format([64, 65], [WindowsVersion]), mtError);
     mmExportList.Enabled := False;
     mmRefresh.Enabled := False;
     mmContext.Enabled := False;
@@ -534,6 +534,7 @@ procedure TMain.OnContextSearchStart(Sender: TObject;
   const AWorkCountMax: Cardinal);
 begin
   mmLang.Enabled := False;
+  cbContextExpert.Enabled := False;
   lwContext.Cursor := crHourGlass;
 
   if (AWorkCountMax > 0) then
@@ -593,6 +594,7 @@ begin
   pbContextLoad.Position := 0;
   eContextSearch.Visible := True;
   mmLang.Enabled := True;
+  cbContextExpert.Enabled := True;
   lwContext.Cursor := crDefault;
 end;
 
