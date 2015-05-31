@@ -4,6 +4,13 @@ Ein Open-Source Projekt von PM Code Works
 History
 --------
 
+Version 4.1  [??.??.15]
+
+- ProgressBar wird nun während des Exportierens von Kontextmnü-Einträgen angezeigt
+- Updater v2.3
+
+---------------------------------
+
 Version 4.0  [28.03.15]
 
 - API Version 4.1

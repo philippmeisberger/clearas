@@ -15,7 +15,7 @@ interface
 uses
   Classes, SysUtils, Forms,
 {$IFDEF MSWINDOWS}
-  Windows, Dialogs, System.Generics.Collections;
+  Windows, Dialogs, CommCtrl, System.Generics.Collections;
 {$ELSE}
   IniFileParser, LCLType;
 {$ENDIF}
@@ -42,6 +42,12 @@ type
   ['{FF4AAD19-49DC-403B-8EA0-3E24D984B603}']
     procedure SetLanguage(Sender: TObject);
   end;
+
+{$IFDEF MSWINDOWS}
+  { Balloon tip icon }
+  TBalloonIcon = (biNone, biInfo, biWarning, biError, biInfoLarge,
+    biWarningLarge, biErrorLarge);
+{$ENDIF}
 
   { TLanguageFile }
   TLanguageFile = class(TObject)
@@ -73,6 +79,12 @@ type
       {$IFDEF MSWINDOWS}TVarRec{$ELSE}const{$ENDIF}): string; overload;
     function Format(const AIndexes: array of Word; const AArgs: array of
       {$IFDEF MSWINDOWS}TVarRec{$ELSE}const{$ENDIF}): string; overload;
+  {$IFDEF MSWINDOWS}
+    function EditBalloonTip(AEditHandle: THandle; ATitle, AText: WideString;
+      AIcon: TBalloonIcon = biInfo): Boolean; overload;
+    function EditBalloonTip(AEditHandle: THandle; ATitle, AText: Word;
+      AIcon: TBalloonIcon = biInfo): Boolean; overload;
+  {$ENDIF}
   {$IFDEF LINUX}
     procedure GetLanguages(ASections: TStrings);
   {$ENDIF}
@@ -179,6 +191,35 @@ end;
 
 {$IFDEF MSWINDOWS}
 
+{ public TLanguageFile.EditBalloonTip
+
+  Shows a balloon tip inside an edit field with more comfortable usage. }
+
+function TLanguageFile.EditBalloonTip(AEditHandle: THandle; ATitle, AText: WideString;
+  AIcon: TBalloonIcon = biInfo): Boolean;
+var
+  BalloonTip: TEditBalloonTip;
+
+begin
+  FillChar(BalloonTip, SizeOf(BalloonTip), 0);
+
+  with BalloonTip do
+  begin
+    cbStruct := SizeOf(BalloonTip);
+    pszTitle := PWideChar(ATitle);
+    pszText := PWideChar(AText);
+    ttiIcon := Ord(AIcon);
+  end;  //of with
+
+  Result := Edit_ShowBalloonTip(AEditHandle, BalloonTip);
+end;
+
+function TLanguageFile.EditBalloonTip(AEditHandle: THandle; ATitle, AText: Word;
+  AIcon: TBalloonIcon): Boolean;
+begin
+  Result := EditBalloonTip(AEditHandle, GetString(ATitle), GetString(AText), AIcon);
+end;
+
 { public TLanguageFile.GetString
 
   Loads a single string from a StringTable file based language file. }
@@ -225,7 +266,7 @@ begin
   FListeners.Add(AListener);
 end;
 
-{ public TLanguageFile.AddListener
+{ public TLanguageFile.AddLanguage
 
   Adds a language to the list. }
 
