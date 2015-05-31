@@ -282,7 +282,7 @@ object Main: TMain
     Left = 0
     Top = 0
     Width = 543
-    Height = 305
+    Height = 313
     ActivePage = tsStartup
     Anchors = [akLeft, akTop, akRight, akBottom]
     TabOrder = 0
@@ -291,7 +291,7 @@ object Main: TMain
       Caption = 'Autostart'
       DesignSize = (
         535
-        276)
+        284)
       object lStartup: TLabel
         Left = 21
         Top = 32
@@ -302,8 +302,8 @@ object Main: TMain
           'rt geladen.'
       end
       object lCopy1: TLabel
-        Left = 213
-        Top = 258
+        Left = 211
+        Top = 262
         Width = 112
         Height = 14
         Hint = 'Zur Website'
@@ -320,7 +320,6 @@ object Main: TMain
         OnClick = lCopy1Click
         OnMouseEnter = lCopy1MouseEnter
         OnMouseLeave = lCopy1MouseLeave
-        ExplicitTop = 261
       end
       object lVersion: TLabel
         Left = 510
@@ -432,8 +431,8 @@ object Main: TMain
         OnClick = bEnableStartupItemClick
       end
       object cbRunOnce: TCheckBox
-        Left = 406
-        Top = 255
+        Left = 414
+        Top = 258
         Width = 105
         Height = 17
         Anchors = [akRight, akBottom]
@@ -445,20 +444,15 @@ object Main: TMain
     object tsContext: TTabSheet
       Caption = 'Kontextmen'#252
       ImageIndex = 1
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       DesignSize = (
         535
-        276)
+        284)
       object lCopy2: TLabel
-        Left = 213
-        Top = 258
+        Left = 211
+        Top = 262
         Width = 112
         Height = 14
         Hint = 'Zur Website'
-        Anchors = [akBottom]
         Caption = #169' P.Meisberger 2015'
         Font.Charset = ANSI_CHARSET
         Font.Color = clBlack
@@ -471,7 +465,6 @@ object Main: TMain
         OnClick = lCopy1Click
         OnMouseEnter = lCopy1MouseEnter
         OnMouseLeave = lCopy1MouseLeave
-        ExplicitTop = 261
       end
       object lContext: TLabel
         Left = 21
@@ -591,16 +584,17 @@ object Main: TMain
       end
       object pbContextLoad: TProgressBar
         Left = 21
-        Top = 254
+        Top = 255
         Width = 148
         Height = 18
         Anchors = [akLeft, akBottom]
+        Smooth = True
         TabOrder = 8
         Visible = False
       end
       object cbContextExpert: TCheckBox
-        Left = 406
-        Top = 255
+        Left = 414
+        Top = 258
         Width = 105
         Height = 17
         Anchors = [akRight, akBottom]
@@ -610,7 +604,7 @@ object Main: TMain
       end
       object eContextSearch: TEdit
         Left = 21
-        Top = 253
+        Top = 255
         Width = 148
         Height = 22
         Anchors = [akLeft, akBottom]
@@ -621,13 +615,9 @@ object Main: TMain
     object tsService: TTabSheet
       Caption = 'Dienste'
       ImageIndex = 2
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       DesignSize = (
         535
-        276)
+        284)
       object lWindows3: TLabel
         Left = 21
         Top = 4
@@ -643,8 +633,8 @@ object Main: TMain
         Caption = 'Eintr'#228'ge dieser Liste werden beim Start von Windows gestartet.'
       end
       object lCopy3: TLabel
-        Left = 213
-        Top = 258
+        Left = 211
+        Top = 262
         Width = 112
         Height = 14
         Hint = 'Zur Website'
@@ -661,7 +651,6 @@ object Main: TMain
         OnClick = lCopy1Click
         OnMouseEnter = lCopy1MouseEnter
         OnMouseLeave = lCopy1MouseLeave
-        ExplicitTop = 261
       end
       object lVersion3: TLabel
         Left = 510
@@ -766,8 +755,8 @@ object Main: TMain
         OnClick = bEnableServiceItemClick
       end
       object cbServiceExpert: TCheckBox
-        Left = 406
-        Top = 255
+        Left = 414
+        Top = 258
         Width = 105
         Height = 17
         Anchors = [akRight, akBottom]
@@ -777,7 +766,7 @@ object Main: TMain
       end
       object eServiceSearch: TEdit
         Left = 21
-        Top = 253
+        Top = 255
         Width = 148
         Height = 22
         Anchors = [akLeft, akBottom]
@@ -788,7 +777,7 @@ object Main: TMain
   end
   object PopupMenu: TPopupMenu
     AutoPopup = False
-    Left = 496
+    Left = 336
     object pmChangeStatus: TMenuItem
       Caption = 'deaktivieren'
       Default = True

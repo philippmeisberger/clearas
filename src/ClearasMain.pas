@@ -617,6 +617,9 @@ end;
 
 procedure TMain.OnExportListStart(Sender: TObject; const APageControlIndex: Cardinal);
 begin
+  eContextSearch.Visible := False;
+  pbContextLoad.Visible := True;
+  pbContextLoad.Style := pbstMarquee;
   PageControl.Pages[APageControlIndex].Cursor := crHourGlass;
 
   case APageControlIndex of
@@ -632,6 +635,9 @@ end;
 
 procedure TMain.OnExportListEnd(Sender: TObject; const APageControlIndex: Cardinal);
 begin
+  eContextSearch.Visible := True;
+  pbContextLoad.Visible := False;
+  pbContextLoad.Style := pbstNormal;
   PageControl.Pages[APageControlIndex].Cursor := crDefault;
 
   case APageControlIndex of
@@ -2206,7 +2212,7 @@ begin
   begin
     FLang.ShowMessage(100, 101, mtWarning);
     Exit;
-  end;
+  end;  //of begin
 
   SaveDialog := TSaveDialog.Create(Self);
 

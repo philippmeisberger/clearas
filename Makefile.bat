@@ -1,1 +1,2 @@
-dcc32 src\Clearas.dpr
+cd src\
+dcc32 Clearas.dpr
