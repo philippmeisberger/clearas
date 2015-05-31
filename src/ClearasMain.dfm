@@ -1,11 +1,11 @@
 object Main: TMain
   Left = 371
   Top = 165
-  Width = 557
-  Height = 365
   HorzScrollBar.Visible = False
   VertScrollBar.Visible = False
   Caption = 'Clearas'
+  ClientHeight = 307
+  ClientWidth = 541
   Color = clBtnFace
   Constraints.MinHeight = 365
   Constraints.MinWidth = 557
@@ -282,7 +282,7 @@ object Main: TMain
     Left = 0
     Top = 0
     Width = 543
-    Height = 308
+    Height = 305
     ActivePage = tsStartup
     Anchors = [akLeft, akTop, akRight, akBottom]
     TabOrder = 0
@@ -291,7 +291,7 @@ object Main: TMain
       Caption = 'Autostart'
       DesignSize = (
         535
-        279)
+        276)
       object lStartup: TLabel
         Left = 21
         Top = 32
@@ -303,7 +303,7 @@ object Main: TMain
       end
       object lCopy1: TLabel
         Left = 213
-        Top = 261
+        Top = 258
         Width = 112
         Height = 14
         Hint = 'Zur Website'
@@ -320,6 +320,7 @@ object Main: TMain
         OnClick = lCopy1Click
         OnMouseEnter = lCopy1MouseEnter
         OnMouseLeave = lCopy1MouseLeave
+        ExplicitTop = 261
       end
       object lVersion: TLabel
         Left = 510
@@ -340,7 +341,7 @@ object Main: TMain
         Left = 21
         Top = 56
         Width = 396
-        Height = 196
+        Height = 193
         Anchors = [akLeft, akTop, akRight, akBottom]
         Columns = <
           item
@@ -432,7 +433,7 @@ object Main: TMain
       end
       object cbRunOnce: TCheckBox
         Left = 406
-        Top = 258
+        Top = 255
         Width = 105
         Height = 17
         Anchors = [akRight, akBottom]
@@ -444,12 +445,16 @@ object Main: TMain
     object tsContext: TTabSheet
       Caption = 'Kontextmen'#252
       ImageIndex = 1
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       DesignSize = (
         535
-        279)
+        276)
       object lCopy2: TLabel
         Left = 213
-        Top = 261
+        Top = 258
         Width = 112
         Height = 14
         Hint = 'Zur Website'
@@ -466,6 +471,7 @@ object Main: TMain
         OnClick = lCopy1Click
         OnMouseEnter = lCopy1MouseEnter
         OnMouseLeave = lCopy1MouseLeave
+        ExplicitTop = 261
       end
       object lContext: TLabel
         Left = 21
@@ -547,7 +553,7 @@ object Main: TMain
         Left = 21
         Top = 56
         Width = 396
-        Height = 196
+        Height = 193
         Anchors = [akLeft, akTop, akRight, akBottom]
         Columns = <
           item
@@ -585,7 +591,7 @@ object Main: TMain
       end
       object pbContextLoad: TProgressBar
         Left = 21
-        Top = 257
+        Top = 254
         Width = 148
         Height = 18
         Anchors = [akLeft, akBottom]
@@ -594,7 +600,7 @@ object Main: TMain
       end
       object cbContextExpert: TCheckBox
         Left = 406
-        Top = 258
+        Top = 255
         Width = 105
         Height = 17
         Anchors = [akRight, akBottom]
@@ -604,7 +610,7 @@ object Main: TMain
       end
       object eContextSearch: TEdit
         Left = 21
-        Top = 256
+        Top = 253
         Width = 148
         Height = 22
         Anchors = [akLeft, akBottom]
@@ -615,9 +621,13 @@ object Main: TMain
     object tsService: TTabSheet
       Caption = 'Dienste'
       ImageIndex = 2
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       DesignSize = (
         535
-        279)
+        276)
       object lWindows3: TLabel
         Left = 21
         Top = 4
@@ -634,7 +644,7 @@ object Main: TMain
       end
       object lCopy3: TLabel
         Left = 213
-        Top = 261
+        Top = 258
         Width = 112
         Height = 14
         Hint = 'Zur Website'
@@ -651,6 +661,7 @@ object Main: TMain
         OnClick = lCopy1Click
         OnMouseEnter = lCopy1MouseEnter
         OnMouseLeave = lCopy1MouseLeave
+        ExplicitTop = 261
       end
       object lVersion3: TLabel
         Left = 510
@@ -664,7 +675,7 @@ object Main: TMain
         Left = 21
         Top = 56
         Width = 396
-        Height = 196
+        Height = 193
         Anchors = [akLeft, akTop, akRight, akBottom]
         Columns = <
           item
@@ -756,7 +767,7 @@ object Main: TMain
       end
       object cbServiceExpert: TCheckBox
         Left = 406
-        Top = 258
+        Top = 255
         Width = 105
         Height = 17
         Anchors = [akRight, akBottom]
@@ -766,7 +777,7 @@ object Main: TMain
       end
       object eServiceSearch: TEdit
         Left = 21
-        Top = 256
+        Top = 253
         Width = 148
         Height = 22
         Anchors = [akLeft, akBottom]
@@ -821,7 +832,7 @@ object Main: TMain
     end
   end
   object MainMenu: TMainMenu
-    Left = 464
+    Left = 440
     object mmFile: TMenuItem
       Caption = 'Datei'
       object mmAdd: TMenuItem
@@ -949,6 +960,6 @@ object Main: TMain
     end
   end
   object IconList: TImageList
-    Left = 432
+    Left = 392
   end
 end

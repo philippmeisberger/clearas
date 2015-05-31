@@ -2,7 +2,7 @@
 {                                                                         }
 { Clearas Info Pages                                                      }
 {                                                                         }
-{ Copyright (c) 2011-2015 P.Meisberger (PM Code Works)                    }
+{ Copyright (c) 2011-2015 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
 { *********************************************************************** }
 
@@ -12,7 +12,7 @@ interface
 
 uses
   Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, StdCtrls,
-  ExtCtrls, ComCtrls, OSUtils;
+  ExtCtrls, ComCtrls, PMCW.OSUtils;
 
 type
   TInfo = class(TForm)

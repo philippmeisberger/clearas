@@ -1,23 +1,24 @@
 { *********************************************************************** }
 {                                                                         }
-{ PM Code Works Cross Plattform Updater v2.2                              }
+{ PM Code Works Cross Plattform Updater v2.3                              }
 {                                                                         }
 { Copyright (c) 2011-2015 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
 { *********************************************************************** }
 
-unit Updater;
+unit PMCW.Updater;
 
 {$IFDEF LINUX} {$mode delphi}{$H+} {$ENDIF}
 
 interface
 
 uses
-  SysUtils, Classes, UpdateCheckThread, DownloadThread, LanguageFile, AddDialogs,
-  OSUtils,
-  
+  SysUtils, Classes, PMCW.UpdateCheckThread, PMCW.DownloadThread, PMCW.OSUtils,
+  PMCW.LanguageFile, PMCW.Dialogs,
+
 {$IFDEF MSWINDOWS}
-  Windows, FileCtrl, Forms, StdCtrls, ComCtrls, Controls;
+  Windows, FileCtrl, Forms, StdCtrls, ComCtrls, Controls, System.Win.TaskbarCore,
+  Vcl.Taskbar;
 {$ELSE}
   LCLType;
 {$ENDIF}
@@ -71,13 +72,14 @@ type
     FDownloadDirectory, FTitle, FRemoteFileName, FLocalFileName, FFileName: string;
     FLang: TLanguageFile;
     FListeners: TInterfaceList;
+    FTaskBar: TTaskbar;
     procedure Reset();
     { TDownloadThread events }
     procedure OnDownloadCancel(Sender: TObject);
     procedure OnDownloadError(Sender: TThread; AResponseCode: Integer);
     procedure OnDownloadFinished(Sender: TObject);
-    procedure OnDownloading(Sender: TThread; const ADownloadSize: Integer);
-    procedure OnDownloadStart(Sender: TThread; const AFileSize: Integer);
+    procedure OnDownloading(Sender: TThread; ADownloadSize: Int64);
+    procedure OnDownloadStart(Sender: TThread; AFileSize: Int64);
   public
     constructor Create(AOwner: TComponent; ALang: TLanguageFile); reintroduce;
     destructor Destroy; override;
@@ -153,7 +155,7 @@ end;
 procedure TUpdateCheck.OnNoUpdateAvailable(Sender: TObject);
 begin
   if FUserUpdate then
-    FLang.TaskDialog(FLang.GetString(23), mtInfo, True);
+    FLang.ShowMessage(FLang.GetString(23));
 end;
 
 { private TUpdateCheck.OnUpdateAvailable
@@ -209,11 +211,7 @@ begin
     OnUpdate := OnUpdateAvailable;
     OnNoUpdate := OnNoUpdateAvailable;
     OnError := OnCheckError;
-  {$IFDEF MSWINDOWS}
-    Resume;
-  {$ELSE}
     Start;
-  {$ENDIF}
   end;  //of with
 end;
 
@@ -246,6 +244,8 @@ begin
   // Add owner to list to receive events
   if Assigned(AOwner) then
     FListeners.Add(AOwner);
+
+  FTaskBar := TTaskbar.Create(Self);
 end;
 
 { public TUpdate.Destroy
@@ -254,6 +254,7 @@ end;
 
 destructor TUpdate.Destroy;
 begin
+  FTaskBar.Free;
   FreeAndNil(FListeners);
   inherited Destroy;
 end;
@@ -288,7 +289,7 @@ end;
 procedure TUpdate.OnDownloadCancel(Sender: TObject);
 begin
   Reset();
-  FLang.TaskDialog(FLang.GetString(30), mtInfo, True);
+  FLang.ShowMessage(FLang.GetString(30));
 end;
 
 { private TUpdate.OnDownloadError
@@ -318,6 +319,7 @@ begin
   bFinished.Caption := FLang.GetString(8);
   bFinished.SetFocus;
   FThreadRuns := False;
+  FTaskBar.ProgressState := TTaskBarProgressState.None;
 
 {$IFDEF MSWINDOWS}
   // Show dialog to add certificate
@@ -329,15 +331,18 @@ begin
   for i := 0 to FListeners.Count -1 do
     if Supports(FListeners[i], IUpdateListener, Listener) then
       Listener.AfterUpdate(Self, FFileName);
+
+  FlashWindow(Application.Handle, True);
 end;
 
 { private TUpdate.OnDownloading
 
   Event method that is called by TDownloadThread when download is in progress. }
 
-procedure TUpdate.OnDownloading(Sender: TThread; const ADownloadSize: Integer);
+procedure TUpdate.OnDownloading(Sender: TThread; ADownloadSize: Int64);
 begin
   pbProgress.Position := ADownloadSize;
+  FTaskBar.ProgressValue := ADownloadSize;
   lSize.Caption := IntToStr(ADownloadSize) +'/'+ IntToStr(pbProgress.Max) +'KB';
 end;
 
@@ -345,8 +350,10 @@ end;
 
   Event method that is called by TDownloadThread when download starts. }
 
-procedure TUpdate.OnDownloadStart(Sender: TThread; const AFileSize: Integer);
+procedure TUpdate.OnDownloadStart(Sender: TThread; AFileSize: Int64);
 begin
+  FTaskBar.ProgressMaxValue := AFileSize;
+  FTaskBar.ProgressState := TTaskBarProgressState.Normal;
   pbProgress.Max := AFileSize;
   BringToFront;
 end;
@@ -411,7 +418,7 @@ begin
         OnStart := OnDownloadStart;
         OnFinish := OnDownloadFinished;
         OnError := OnDownloadError;
-        Resume;
+        Start;
       end;  //of with
 
       // Caption "cancel"
@@ -476,4 +483,4 @@ begin
 end;
 {$ENDIF}
 
-end.
+end.

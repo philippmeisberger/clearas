@@ -2,7 +2,7 @@
 {                                                                         }
 { Clearas API Interface Unit v4.1                                         }
 {                                                                         }
-{ Copyright (c) 2011-2015 P.Meisberger (PM Code Works)                    }
+{ Copyright (c) 2011-2015 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
 { *********************************************************************** }
 
@@ -12,7 +12,7 @@ interface
 
 uses
   Windows, WinSvc, Classes, SysUtils, Registry, ShlObj, ActiveX, ComObj,
-  CommCtrl, ShellAPI, Contnrs, SyncObjs, StrUtils, OSUtils, LanguageFile,
+  CommCtrl, ShellAPI, Contnrs, SyncObjs, StrUtils, PMCW.OSUtils, PMCW.LanguageFile,
   IniFileParser;
 
 const
@@ -78,13 +78,6 @@ type
     property FileName: string read FFileName write FFileName;
     property FullPath: string read GetFullPath;
     property FullPathEscaped: string read GetFullPathEscaped;
-  end;
-
-  { TTryCriticalSection }
-  TTryCriticalSection = class(TCriticalSection)
-  public
-    function TryToAcquire(): Boolean;
-    function TryToEnter(): Boolean;
   end;
 
   { Exception classes }
@@ -162,7 +155,7 @@ type
     FOnChanged: TNotifyEvent;
   protected
     FActCount: Word;
-    FLock: TTryCriticalSection;
+    FLock: TCriticalSection;
     function RootItemAt(AIndex: Word): TRootItem;
   public
     constructor Create;
@@ -666,7 +659,7 @@ begin
 
         try
           // Set up information
-          MultiByteToWideChar(CP_ACP, 0, PChar(AFileName), -1, Name, MAX_PATH);
+          MultiByteToWideChar(CP_ACP, 0, PAnsiChar(AFileName), -1, Name, MAX_PATH);
 
           // Save .lnk
           Result := Succeeded(PersistFile.Save(Name, True));
@@ -680,27 +673,6 @@ begin
   finally
     CoUninitialize();
   end;  //of try
-end;
-
-
-{ TTryCriticalSection }
-
-{ public TTryCriticalSection.TryToAcquire
-
-  Trys to enter a critical section without blocking. }
-
-function TTryCriticalSection.TryToAcquire(): Boolean;
-begin
-  Result := TryEnterCriticalSection(FSection);
-end;
-
-{ public TTryCriticalSection.TryToEnter
-
-  Trys to enter a critical section without blocking. }
-
-function TTryCriticalSection.TryToEnter(): Boolean;
-begin
-  Result := TryToAcquire();
 end;
 
 
@@ -739,7 +711,7 @@ begin
 
   // Path has to be expanded?
   if ((Path <> '') and (Path[1] = '%')) then
-    Path := TOSUtils.ExpandEnvironmentVar(Path);
+    TOSUtils.ExpandEnvironmentVar(Path);
 
   Result := Path;
 end;
@@ -929,7 +901,7 @@ var
 
 begin
   Result := False;
-  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
+  Reg := TRegistry.Create(TOSUtils.Wow64RegistryRedirection(KEY_READ or KEY_WRITE));
 
   try
     Reg.RootKey := TOSUtils.StrToHKey(ARootKey);
@@ -1098,7 +1070,7 @@ constructor TRootList.Create;
 begin
   inherited Create;
   FActCount := 0;
-  FLock := TTryCriticalSection.Create;
+  FLock := TCriticalSection.Create;
 end;
 
 { public TRootList.Destroy
@@ -1151,7 +1123,7 @@ var
 
 begin
   // List locked?
-  if not FLock.TryToAcquire() then
+  if not FLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
 
   // Invalid item?
@@ -1179,7 +1151,7 @@ var
 
 begin
   // List locked?
-  if not FLock.TryToAcquire() then
+  if not FLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
 
   if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
@@ -1216,7 +1188,7 @@ var
 
 begin
   // List locked?
-  if not FLock.TryToAcquire() then
+  if not FLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
 
   if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
@@ -1256,7 +1228,7 @@ var
 
 begin
   // List locked?
-  if not FLock.TryToAcquire() then
+  if not FLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
 
   if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
@@ -1292,7 +1264,7 @@ var
 
 begin
   // List locked?
-  if not FLock.TryToAcquire() then
+  if not FLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
 
   if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
@@ -1400,7 +1372,7 @@ var
   Entered: Boolean;
 
 begin
-  Entered := FLock.TryToEnter();
+  Entered := FLock.TryEnter();
 
   if Entered then
     FLock.Release;
@@ -1415,7 +1387,7 @@ end;
 function TRootList.Remove(ARootItem: TRootItem): Integer;
 begin
   // List locked?
-  if not FLock.TryToAcquire() then
+  if not FLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
   
   Result := inherited Remove(ARootItem);
@@ -1572,7 +1544,7 @@ var
 
 begin
   Result := False;
-  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
+  Reg := TRegistry.Create(TOSUtils.Wow64RegistryRedirection(KEY_READ or KEY_WRITE));
 
   try
     Reg.RootKey := HKEY_LOCAL_MACHINE;
@@ -1598,7 +1570,7 @@ begin
     Reg.WriteString('inimapping', '0');
 
     // Windows >= Vista?
-    if TOSUtils.WindowsVistaOrLater() then
+    if (Win32MajorVersion >= 6) then
       // Save deactivation timestamp
       FTime := WriteTimestamp(Reg);
 
@@ -1640,7 +1612,7 @@ var
 
 begin
   Result := False;
-  Access64 := TOSUtils.DenyWOW64Redirection(KEY_READ);
+  Access64 := TOSUtils.Wow64RegistryRedirection(KEY_READ);
   Reg := TRegistry.Create(Access64);
 
   try
@@ -1819,7 +1791,7 @@ begin
   if not FLnkFile.CreateBackup() then
     raise EStartupException.Create('Could not create backup file!');
 
-  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_WRITE));
+  Reg := TRegistry.Create(TOSUtils.Wow64RegistryRedirection(KEY_WRITE));
 
   try
     Reg.RootKey := HKEY_LOCAL_MACHINE;
@@ -1834,7 +1806,7 @@ begin
     Reg.WriteString('backup', FLnkFile.BackupLnk);
 
     // Special Registry entries only for Windows >= Vista
-    if TOSUtils.WindowsVistaOrLater() then
+    if (Win32MajorVersion >= 6) then
     begin
       Reg.WriteString('backupExtension', FLnkFile.BackupExt);
       Reg.WriteString('location', ExtractFileDir(FLocation));
@@ -1957,7 +1929,7 @@ var
 
 begin
   // Windows >= Vista?
-  if TOSUtils.WindowsVistaOrLater() then
+  if (Win32MajorVersion >= 6) then
   begin
     StartupType := AReg.ReadString('backupExtension');
 
@@ -1977,7 +1949,7 @@ end;
 function TStartupList.GetStartupUserType(AAllUsers: Boolean): string;
 begin
   // Windows >= Vista?
-  if TOSUtils.WindowsVistaOrLater() then
+  if (Win32MajorVersion >= 6) then
   begin
     if AAllUsers then
       Result := TYPE_COMMON
@@ -2200,7 +2172,7 @@ begin
       +' or ''.bat''!');
 
   // List locked?
-  if not FLock.TryToAcquire() then
+  if not FLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
 
   try
@@ -2221,7 +2193,7 @@ begin
     end  //of begin
     else
     begin
-      Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_WRITE));
+      Reg := TRegistry.Create(TOSUtils.Wow64RegistryRedirection(KEY_WRITE));
 
       // Try to add new startup item to Registry
       try
@@ -2359,7 +2331,7 @@ begin
       + EXT_COMMON +''' or '''+ EXT_USER+'''!');
 
   // List locked?
-  if not FLock.TryToAcquire() then
+  if not FLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
 
   // Init new .lnk file
@@ -2415,7 +2387,7 @@ var
 
 begin
   Items := TStringList.Create;
-  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));
+  Reg := TRegistry.Create(TOSUtils.Wow64RegistryRedirection(KEY_READ));
   Reg.RootKey := HKEY_LOCAL_MACHINE;
 
   if AStartupUser then
@@ -2515,7 +2487,7 @@ begin
   if AWow64 then
     Reg := TRegistry.Create(KEY_READ)
   else
-    Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));
+    Reg := TRegistry.Create(TOSUtils.Wow64RegistryRedirection(KEY_READ));
 
   // Set startup location
   if ARunOnce then
@@ -2558,7 +2530,7 @@ begin
     OnStart := FOnSearchStart;
     OnSearching := FOnSearching;
     OnFinish := FOnSearchFinish;
-    Resume;
+    Start;
   end;  // of with
 end;
 
@@ -2617,7 +2589,7 @@ var
 
 begin
   Result := False;
-  Reg := TRegistry.Create(TWinWOW64.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
+  Reg := TRegistry.Create(TWinWOW64.Wow64RegistryRedirection(KEY_READ or KEY_WRITE));
 
   try
     Reg.RootKey := HKEY_CLASSES_ROOT;
@@ -2653,7 +2625,7 @@ var
 
 begin
   Result := False;
-  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
+  Reg := TRegistry.Create(TOSUtils.Wow64RegistryRedirection(KEY_READ or KEY_WRITE));
 
   try
     Reg.RootKey := HKEY_CLASSES_ROOT;
@@ -2684,7 +2656,7 @@ var
 
 begin
   Result := False;
-  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
+  Reg := TRegistry.Create(TOSUtils.Wow64RegistryRedirection(KEY_READ or KEY_WRITE));
 
   try
     Reg.RootKey := HKEY_CLASSES_ROOT;
@@ -2753,7 +2725,7 @@ begin
   if FWow64 then
     Reg := TRegistry.Create(KEY_READ or KEY_WRITE)
   else
-    Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
+    Reg := TRegistry.Create(TOSUtils.Wow64RegistryRedirection(KEY_READ or KEY_WRITE));
 
   try
     Reg.RootKey := HKEY_CLASSES_ROOT;
@@ -2799,7 +2771,7 @@ var
 
 begin
   Result := False;
-  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
+  Reg := TRegistry.Create(TOSUtils.Wow64RegistryRedirection(KEY_READ or KEY_WRITE));
 
   try
     Reg.RootKey := HKEY_CLASSES_ROOT;
@@ -2846,7 +2818,7 @@ var
 
 begin
   Result := False;
-  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
+  Reg := TRegistry.Create(TOSUtils.Wow64RegistryRedirection(KEY_READ or KEY_WRITE));
 
   try
     Reg.RootKey := HKEY_CLASSES_ROOT;
@@ -2898,7 +2870,7 @@ begin
   if FWow64 then
     Reg := TRegistry.Create(KEY_READ)
   else
-    Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));
+    Reg := TRegistry.Create(TOSUtils.Wow64RegistryRedirection(KEY_READ));
 
   try
     Reg.RootKey := HKEY_CLASSES_ROOT;
@@ -3032,7 +3004,7 @@ begin
       +' or ''.bat''!');
 
   // List locked?
-  if not FLock.TryToAcquire() then
+  if not FLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
 
   try
@@ -3051,7 +3023,7 @@ begin
     KeyName := ALocationRoot + CM_SHELL +'\'+ Name;
 
     // Adds new context item to Registry
-    Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_WRITE));
+    Reg := TRegistry.Create(TOSUtils.Wow64RegistryRedirection(KEY_WRITE));
 
     try
       Reg.RootKey := HKEY_CLASSES_ROOT;
@@ -3177,7 +3149,7 @@ var
   Access64: Cardinal;
 
 begin
-  Access64 := TOSUtils.DenyWOW64Redirection(KEY_READ);
+  Access64 := TOSUtils.Wow64RegistryRedirection(KEY_READ);
   Reg := TRegistry.Create(Access64);
   List := TStringList.Create;
 
@@ -3307,7 +3279,7 @@ begin
     OnStart := FOnSearchStart;
     OnSearching := FOnSearching;
     OnFinish := FOnSearchFinish;
-    Resume;
+    Start;
   end;  // of with
 end;
 
@@ -3415,7 +3387,7 @@ var
 begin
   Result := False;
   Service := GetHandle(SERVICE_DELETE);
-  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
+  Reg := TRegistry.Create(TOSUtils.Wow64RegistryRedirection(KEY_READ or KEY_WRITE));
 
   try
     // Delete service
@@ -3429,7 +3401,7 @@ begin
       Reg.OpenKey(KEY_SERVICE_DISABLED, False);
 
       // Windows >= Vista?
-      if TOSUtils.WindowsVistaOrLater() then
+      if (Win32MajorVersion >= 6) then
         Result := Reg.DeleteKey(Name)
       else
         Result := Reg.DeleteValue(Name);
@@ -3456,7 +3428,7 @@ var
 begin
   Result := False;
   Service := GetHandle(SERVICE_CHANGE_CONFIG);
-  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
+  Reg := TRegistry.Create(TOSUtils.Wow64RegistryRedirection(KEY_READ or KEY_WRITE));
 
   try
     // Disable service
@@ -3468,7 +3440,7 @@ begin
     Reg.RootKey := HKEY_LOCAL_MACHINE;
 
     // Windows >= Vista?
-    if TOSUtils.WindowsVistaOrLater() then
+    if (Win32MajorVersion >= 6) then
     begin
       // Write disable key
       if not Reg.OpenKey(KEY_SERVICE_DISABLED +'\'+ Name, True) then
@@ -3506,13 +3478,13 @@ var
 begin
   Result := False;
   Service := GetHandle(SERVICE_CHANGE_CONFIG);
-  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
+  Reg := TRegistry.Create(TOSUtils.Wow64RegistryRedirection(KEY_READ or KEY_WRITE));
 
   try
     Reg.RootKey := HKEY_LOCAL_MACHINE;
 
     // Winodows >= Vista?
-    if TOSUtils.WindowsVistaOrLater() then
+    if (Win32MajorVersion >= 6) then
     begin
       if not Reg.OpenKey(KEY_SERVICE_DISABLED +'\'+ Name, False) then
         EServiceException.Create('Disable key does not exist!');
@@ -3530,7 +3502,7 @@ begin
       raise EServiceException.Create(SysErrorMessage(GetLastError()));
 
     // Winodows >= Vista?
-    if TOSUtils.WindowsVistaOrLater() then
+    if (Win32MajorVersion >= 6) then
     begin
       Reg.CloseKey();
       Reg.OpenKey(KEY_SERVICE_DISABLED, True);
@@ -3573,7 +3545,7 @@ begin
     if not FEnabled then
     begin
       // Windows >= Vista?
-      if TOSUtils.WindowsVistaOrLater() then
+      if (Win32MajorVersion >= 6) then
       begin
         RegFile.ExportKey(HKEY_LOCAL_MACHINE, KEY_SERVICE_DISABLED +'\'+ Name, False);
         RegFile.ExportKey(HKEY_LOCAL_MACHINE, GetLocation(), True);
@@ -3729,7 +3701,7 @@ begin
     raise EInvalidArgument.Create('Invalid program extension! Must be ''.exe''!');
 
   // List locked?
-  if not FLock.TryToAcquire() then
+  if not FLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
 
   try
@@ -3846,7 +3818,7 @@ end;
 function TServiceList.LoadService(AName: string; AService: SC_HANDLE;
   AIncludeDemand: Boolean = False): Integer;
 var
-  ServiceConfig: PQueryServiceConfig;
+  ServiceConfig: LPQUERY_SERVICE_CONFIG;
   BytesNeeded, LastError: DWORD;
   ServiceStart: TServiceStart;
   Reg: TRegistry;
@@ -3884,13 +3856,13 @@ begin
     // Read last status of disabled service
     if (ServiceStart = ssDisabled) then
     begin
-      Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));
+      Reg := TRegistry.Create(TOSUtils.Wow64RegistryRedirection(KEY_READ));
 
       try
         Reg.RootKey := HKEY_LOCAL_MACHINE;
 
         // Windows >= Vista?
-        if TOSUtils.WindowsVistaOrLater() then
+        if (Win32MajorVersion >= 6) then
           Reg.OpenKey(KEY_SERVICE_DISABLED +'\'+ AName, False)
         else
           Reg.OpenKey(KEY_SERVICE_DISABLED, False);
@@ -3939,7 +3911,7 @@ begin
     OnStart := OnSearchStart;
     OnSearching := OnSearching;
     OnFinish := OnSearchFinish;
-    Resume;
+    Start;
   end;  //of with
 end;
 

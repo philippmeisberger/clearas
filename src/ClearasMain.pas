@@ -2,7 +2,7 @@
 {                                                                         }
 { Clearas Main Unit                                                       }
 {                                                                         }
-{ Copyright (c) 2011-2015 P.Meisberger (PM Code Works)                    }
+{ Copyright (c) 2011-2015 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
 { *********************************************************************** }
 
@@ -13,15 +13,11 @@ interface
 uses
   Windows, SysUtils, Classes, Controls, Forms, ComCtrls, StdCtrls, ExtCtrls,
   Dialogs, Menus, Graphics, ClipBrd, ImgList, Registry, StrUtils, ClearasAPI,
-  ClearasInfo, LanguageFile, OSUtils, Updater, AddDialogs, ExportListThread;
+  ExportListThread, ClearasInfo, PMCW.LanguageFile, PMCW.OSUtils, PMCW.Updater,
+  PMCW.Dialogs;
 
 const
   KEY_RECYCLEBIN = 'CLSID\{645FF040-5081-101B-9F08-00AA002F954E}\shell';
-
-  { Language IDs }
-  LANG_GERMAN    = 100;
-  LANG_ENGLISH   = 300;
-  LANG_FRANCAIS  = 500;
 
 type
   { TMain }
@@ -216,9 +212,11 @@ implementation
 procedure TMain.FormCreate(Sender: TObject);
 begin
   // German language default
-  FLang := TLanguageFile.Create(LANG_GERMAN, Application);
-  FLang.AddListener(Self);
-  SetLanguage(Self);
+  FLang := TLanguageFile.Create(Self, Application);
+  FLang.AddLanguage(LANG_GERMAN, 100);
+  FLang.AddLanguage(LANG_ENGLISH, 300);
+  FLang.AddLanguage(LANG_FRENCH, 500);
+  FLang.ChangeLanguage(LANG_USER);
 
   // Init update notificator
   FUpdateCheck := TUpdateCheck.Create(Self, 'Clearas', FLang);
@@ -282,20 +280,20 @@ end;
 procedure TMain.FormShow(Sender: TObject);
 var
   WindowsVersion: string;
-  NewWindows: Boolean;
+  WindowsVistaMin: Boolean;
 
 begin
   // Get version of Windows including service pack
   WindowsVersion := TOSUtils.GetWinVersion(True);
-  NewWindows := TOSUtils.WindowsVistaOrLater();
+  WindowsVistaMin := (Win32MajorVersion >= 6);
   lWindows.Caption := lWindows.Caption +' '+ WindowsVersion;
   lWindows2.Caption := lWindows.Caption;
   lWindows3.Caption := lWindows.Caption;
 
   // Check for incompatibility
-  if not (NewWindows or (WindowsVersion <> '')) then
+  if not (WindowsVistaMin or (WindowsVersion <> '')) then
   begin
-    FLang.MessageBox(FLang.Format([64, 65], [WindowsVersion]), mtError);
+    FLang.ShowMessage(FLang.Format([64, 65], [WindowsVersion]), mtError);
     mmExportList.Enabled := False;
     mmRefresh.Enabled := False;
     mmContext.Enabled := False;
@@ -312,7 +310,7 @@ begin
   end;  //of if
 
   // Show "date of deactivation" only on Vista and later
-  mmDate.Enabled := NewWindows;
+  mmDate.Enabled := WindowsVistaMin;
 
   // Update Clearas recycle bin context menu entry
   mmContext.Checked := UpdateContextPath();
@@ -347,8 +345,8 @@ var
 
 begin
   // Ask user to permit download
-  if (FLang.TaskDialog(FLang.Format(21, [ANewBuild]), FLang.GetString(22),
-    mtQuestion, True) = IDYES) then
+  if (FLang.ShowMessage(FLang.Format(21, [ANewBuild]), FLang.GetString(22),
+    mtConfirmation) = IDYES) then
   begin
     // init TUpdate instance
     Updater := TUpdate.Create(Self, FLang);
@@ -357,7 +355,12 @@ begin
       with Updater do
       begin
         Title := FLang.GetString(24);
+
+      {$IFDEF WIN64}
+        Download('clearas64.exe', 'Clearas.exe');
+      {$ELSE}
         Download('clearas.exe', 'Clearas.exe');
+      {$ENDIF}
       end;  //of begin
 
     finally
@@ -386,7 +389,7 @@ begin
     if (FStartup.Selected.Enabled and (FStartup.Selected is TStartupUserItem)) then
     begin
       FStartup.Selected.ExportItem('');
-      FLang.TaskDialog(FLang.Format(42, [(FStartup.Selected as TStartupUserItem).LnkFile.BackupLnk]));
+      FLang.ShowMessage(FLang.Format(42, [(FStartup.Selected as TStartupUserItem).LnkFile.BackupLnk]));
 
       bExportStartupItem.Enabled := False;
       pmExport.Enabled := False;
@@ -398,7 +401,7 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.TaskDialog(FLang.GetString([95, 18]), FLang.GetString(53), mtWarning);
+      FLang.ShowMessage(FLang.GetString([95, 18]), FLang.GetString(53), mtWarning);
 
     on E: EStartupException do
       FLang.ShowException(FLang.GetString([95, 18]), FLang.GetString(43));
@@ -846,7 +849,7 @@ begin
     cbContextExpert.Caption := GetString(89);
 
     // Set placeholder text for search
-    Edit_SetCueBannerText(eContextSearch.Handle, WideString(GetString(63)));
+    eContextSearch.TextHint := GetString(63);
 
     // "Context menu" tab TListView labels
     lContext.Caption := GetString(86);
@@ -872,7 +875,7 @@ begin
     lCopy3.Hint := lCopy1.Hint;
 
     // Set placeholder text for search
-    Edit_SetCueBannerText(eServiceSearch.Handle, WideString(GetString(63)));
+    eServiceSearch.TextHint := eContextSearch.TextHint;
 
     // Popup menu labels
     pmChangeStatus.Caption := bDisableStartupItem.Caption;
@@ -963,7 +966,7 @@ begin
 
   except
     on E: EAccessViolation do
-      FLang.TaskDialog(FLang.GetString([95, 18]), FLang.GetString(53), mtWarning);
+      FLang.ShowMessage(FLang.GetString([95, 18]), FLang.GetString(53), mtWarning);
 
     on E: Exception do
       FLang.ShowException(FLang.GetString([95, 18]), E.Message);
@@ -979,7 +982,7 @@ var
   Reg: TRegistry;
 
 begin
-  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_WRITE));
+  Reg := TRegistry.Create(TOSUtils.Wow64RegistryRedirection(KEY_WRITE));
 
   try
     Reg.RootKey := HKEY_CLASSES_ROOT;
@@ -1009,7 +1012,7 @@ var
   ClearasKey: string;
 
 begin
-  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
+  Reg := TRegistry.Create(TOSUtils.Wow64RegistryRedirection(KEY_READ or KEY_WRITE));
 
   try
     Reg.RootKey := HKEY_CLASSES_ROOT;
@@ -1046,11 +1049,11 @@ begin
       raise EInvalidItem.Create('No item selected!');
 
     // Confirm deletion of item
-    if (FLang.TaskDialog(FLang.Format([58], [lwService.ItemFocused.SubItems[0]]),
-      FLang.GetString([49, 50]), mtConfirm) = IDYES) then
+    if (FLang.ShowMessage(FLang.Format([58], [lwService.ItemFocused.SubItems[0]]),
+      FLang.GetString([49, 50]), mtCustom) = IDYES) then
     begin
       // Ask user to export item
-      Answer := FLang.TaskDialog(FLang.GetString(52), mtQuestion);
+      Answer := FLang.ShowMessage(FLang.GetString(52), mtConfirmation);
 
       // Abort if user clicks cancel!
       if (((Answer = IDYES) and ShowRegistryExportDialog()) or (Answer = IDNO)) then
@@ -1073,13 +1076,13 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.TaskDialog(FLang.GetString([96, 18]), FLang.GetString(53), mtWarning);
+      FLang.ShowMessage(FLang.GetString([96, 18]), FLang.GetString(53), mtWarning);
 
     on E: EListBlocked do
-      FLang.TaskDialog(100, 101, mtWarning);
+      FLang.ShowMessage(100, 101, mtWarning);
 
     on E: EWarning do
-      FLang.TaskDialog(FLang.GetString([96, 18]), E.Message, mtWarning);
+      FLang.ShowMessage(FLang.GetString([96, 18]), E.Message, mtWarning);
 
     on E: Exception do
       FLang.ShowException(FLang.GetString([96, 18]), E.Message);
@@ -1104,8 +1107,8 @@ begin
       raise EInvalidItem.Create('No item selected!');
 
     // Confirm deletion of item
-    if (FLang.TaskDialog(FLang.Format([48], [FStartup.Selected.Name]),
-      FLang.GetString([49, 50]), mtConfirm) = IDYES) then
+    if (FLang.ShowMessage(FLang.Format([48], [FStartup.Selected.Name]),
+      FLang.GetString([49, 50]), mtCustom) = IDYES) then
     begin
       // Save the DeleteBackup flag
       DelBackup := FStartup.DeleteBackup;
@@ -1116,7 +1119,7 @@ begin
         and BackupExists) then
         Answer := IDCANCEL
       else
-        Answer := FLang.TaskDialog(FLang.GetString(52), mtQuestion);
+        Answer := FLang.ShowMessage(FLang.GetString(52), mtConfirmation);
 
       // Export item and only continue if this has succeeded
       if (Answer = IDYES) then
@@ -1128,8 +1131,8 @@ begin
       // Ask user to delete old existing backup
       if ((Answer = IDCANCEL) or ((FStartup.Selected is TStartupUserItem)
         and not FStartup.Selected.Enabled and BackupExists)) then
-        FStartup.DeleteBackup := (FLang.TaskDialog(FLang.GetString(44),
-          mtQuestion) = IDYES);
+        FStartup.DeleteBackup := (FLang.ShowMessage(FLang.GetString(44),
+          mtConfirmation) = IDYES);
 
       // Successfully deleted item physically?
       if FStartup.DeleteItem() then
@@ -1150,13 +1153,13 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.TaskDialog(FLang.GetString([96, 18]), FLang.GetString(53), mtWarning);
+      FLang.ShowMessage(FLang.GetString([96, 18]), FLang.GetString(53), mtWarning);
 
     on E: EListBlocked do
-      FLang.TaskDialog(100, 101, mtWarning);
+      FLang.ShowMessage(100, 101, mtWarning);
 
     on E: EWarning do
-      FLang.TaskDialog(FLang.GetString([96, 18]), E.Message, mtWarning);
+      FLang.ShowMessage(FLang.GetString([96, 18]), E.Message, mtWarning);
 
     on E: Exception do
       FLang.ShowException(FLang.GetString([96, 18]), E.Message);
@@ -1182,11 +1185,11 @@ begin
       raise EInvalidItem.Create('No item selected!');
 
     // Confirm deletion of item
-    if (FLang.TaskDialog(FLang.Format([85], [lwContext.ItemFocused.SubItems[0]]),
-      FLang.GetString([49, 50]), mtConfirm) = IDYES) then
+    if (FLang.ShowMessage(FLang.Format([85], [lwContext.ItemFocused.SubItems[0]]),
+      FLang.GetString([49, 50]), mtCustom) = IDYES) then
     begin
       // Ask user to export item
-      Answer := FLang.TaskDialog(FLang.GetString(52), mtQuestion);
+      Answer := FLang.ShowMessage(FLang.GetString(52), mtConfirmation);
 
       // Abort if user clicks cancel!
       if (((Answer = IDYES) and ShowRegistryExportDialog()) or (Answer = IDNO)) then
@@ -1209,13 +1212,13 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.TaskDialog(FLang.GetString([96, 18]), FLang.GetString(53), mtWarning);
+      FLang.ShowMessage(FLang.GetString([96, 18]), FLang.GetString(53), mtWarning);
 
     on E: EListBlocked do
-      FLang.TaskDialog(100, 101, mtWarning);
+      FLang.ShowMessage(100, 101, mtWarning);
 
     on E: EWarning do
-      FLang.TaskDialog(FLang.GetString([96, 18]), E.Message, mtWarning);
+      FLang.ShowMessage(FLang.GetString([96, 18]), E.Message, mtWarning);
 
     on E: Exception do
       FLang.ShowException(FLang.GetString([96, 18]), E.Message);
@@ -1256,13 +1259,13 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.TaskDialog(FLang.GetString([94, 18]), FLang.GetString(53), mtWarning);
+      FLang.ShowMessage(FLang.GetString([94, 18]), FLang.GetString(53), mtWarning);
 
     on E: EListBlocked do
-      FLang.TaskDialog(100, 101, mtWarning);
+      FLang.ShowMessage(100, 101, mtWarning);
 
     on E: EWarning do
-      FLang.TaskDialog(FLang.GetString([94, 18]), E.Message, mtWarning);
+      FLang.ShowMessage(FLang.GetString([94, 18]), E.Message, mtWarning);
 
     on E: Exception do
       FLang.ShowException(FLang.GetString([94, 18]), E.Message);
@@ -1299,13 +1302,13 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.TaskDialog(FLang.GetString([94, 18]), FLang.GetString(53), mtWarning);
+      FLang.ShowMessage(FLang.GetString([94, 18]), FLang.GetString(53), mtWarning);
 
     on E: EListBlocked do
-      FLang.TaskDialog(100, 101, mtWarning);
+      FLang.ShowMessage(100, 101, mtWarning);
 
     on E: EWarning do
-      FLang.TaskDialog(FLang.GetString([94, 18]), E.Message, mtWarning);
+      FLang.ShowMessage(FLang.GetString([94, 18]), E.Message, mtWarning);
 
     on E: Exception do
       FLang.ShowException(FLang.GetString([94, 18]), E.Message);
@@ -1346,13 +1349,13 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.TaskDialog(FLang.GetString([94, 18]), FLang.GetString(53), mtWarning);
+      FLang.ShowMessage(FLang.GetString([94, 18]), FLang.GetString(53), mtWarning);
 
     on E: EListBlocked do
-      FLang.TaskDialog(100, 101, mtWarning);
+      FLang.ShowMessage(100, 101, mtWarning);
 
     on E: EWarning do
-      FLang.TaskDialog(FLang.GetString([94, 18]), E.Message, mtWarning);
+      FLang.ShowMessage(FLang.GetString([94, 18]), E.Message, mtWarning);
 
     on E: Exception do
       FLang.ShowException(FLang.GetString([94, 18]), E.Message);
@@ -1399,13 +1402,13 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.TaskDialog(FLang.GetString([93, 18]), FLang.GetString(53), mtWarning);
+      FLang.ShowMessage(FLang.GetString([93, 18]), FLang.GetString(53), mtWarning);
 
     on E: EListBlocked do
-      FLang.TaskDialog(100, 101, mtWarning);
+      FLang.ShowMessage(100, 101, mtWarning);
 
     on E: EWarning do
-      FLang.TaskDialog(E.Message, mtWarning);
+      FLang.ShowMessage(E.Message, mtWarning);
 
     on E: Exception do
       FLang.ShowException(FLang.GetString([93, 18]), E.Message);
@@ -1446,13 +1449,13 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.TaskDialog(FLang.GetString([93, 18]), FLang.GetString(53), mtWarning);
+      FLang.ShowMessage(FLang.GetString([93, 18]), FLang.GetString(53), mtWarning);
 
     on E: EListBlocked do
-      FLang.TaskDialog(100, 101, mtWarning);
+      FLang.ShowMessage(100, 101, mtWarning);
 
     on E: EWarning do
-      FLang.TaskDialog(E.Message, mtWarning);
+      FLang.ShowMessage(E.Message, mtWarning);
 
     on E: Exception do
       FLang.ShowException(FLang.GetString([93, 18]), E.Message);
@@ -1497,13 +1500,13 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.TaskDialog(FLang.GetString([93, 18]), FLang.GetString(53), mtWarning);
+      FLang.ShowMessage(FLang.GetString([93, 18]), FLang.GetString(53), mtWarning);
 
     on E: EListBlocked do
-      FLang.TaskDialog(100, 101, mtWarning);
+      FLang.ShowMessage(100, 101, mtWarning);
 
     on E: EWarning do
-      FLang.TaskDialog(E.Message, mtWarning);
+      FLang.ShowMessage(E.Message, mtWarning);
 
     on E: Exception do
       FLang.ShowException(FLang.GetString([93, 18]), E.Message);
@@ -1528,7 +1531,7 @@ begin
   // Nothing selected?
   if not Assigned(FContext.Selected) then
   begin
-    FLang.TaskDialog(FLang.GetString([95, 18]), FLang.GetString(53), mtWarning);
+    FLang.ShowMessage(FLang.GetString([95, 18]), FLang.GetString(53), mtWarning);
     Exit;
   end;  //of begin
 
@@ -1544,7 +1547,7 @@ begin
   // Nothing selected?
   if not Assigned(FService.Selected) then
   begin
-    FLang.TaskDialog(FLang.GetString([95, 18]), FLang.GetString(53), mtWarning);
+    FLang.ShowMessage(FLang.GetString([95, 18]), FLang.GetString(53), mtWarning);
     Exit;
   end;  //of begin
 
@@ -1575,7 +1578,7 @@ begin
       if bDeleteContextItem.Enabled then
         bDeleteContextItem.Click
       else
-        FLang.TaskDialog(FLang.GetString(53), mtWarning);
+        FLang.ShowMessage(FLang.GetString(53), mtWarning);
 end;
 
 { TMain.lwContextSelectItem
@@ -1598,7 +1601,7 @@ begin
     if (Index = -1) then
     begin
       PopupMenu.AutoPopup := False;
-      FLang.TaskDialog(FLang.GetString(53), mtWarning);
+      FLang.ShowMessage(FLang.GetString(53), mtWarning);
       Exit;
     end;  //of begin
 
@@ -1648,7 +1651,7 @@ begin
       if bDeleteServiceItem.Enabled then
         bDeleteServiceItem.Click
       else
-        FLang.TaskDialog(FLang.GetString(53), mtWarning);
+        FLang.ShowMessage(FLang.GetString(53), mtWarning);
 end;
 
 { TMain.lwServiceSelectItem
@@ -1671,7 +1674,7 @@ begin
     if (Index = -1) then
     begin
       PopupMenu.AutoPopup := False;
-      FLang.TaskDialog(FLang.GetString(53), mtWarning);
+      FLang.ShowMessage(FLang.GetString(53), mtWarning);
       Exit;
     end;  //of begin
 
@@ -1750,7 +1753,7 @@ begin
       if bDeleteStartupItem.Enabled then
         bDeleteStartupItem.Click
       else
-        FLang.TaskDialog(FLang.GetString(53), mtWarning);
+        FLang.ShowMessage(FLang.GetString(53), mtWarning);
 end;
 
 { TMain.lwStartupKeyPress
@@ -1828,7 +1831,7 @@ begin
     if (Index = -1) then
     begin
       PopupMenu.AutoPopup := False;
-      FLang.TaskDialog(FLang.GetString(53), mtWarning);
+      FLang.ShowMessage(FLang.GetString(53), mtWarning);
       Exit;
     end;  //of begin
 
@@ -1922,10 +1925,10 @@ begin
 
   except
     on E: EWarning do
-      FLang.TaskDialog(45, 46, mtWarning);
+      FLang.ShowMessage(45, 46, mtWarning);
 
     on E: EInvalidItem do
-      FLang.TaskDialog(StripHotkey(pmOpenExplorer.Caption) + FLang.GetString(18),
+      FLang.ShowMessage(StripHotkey(pmOpenExplorer.Caption) + FLang.GetString(18),
         FLang.GetString(53), mtWarning);
   end;  //of try
 end;
@@ -1947,7 +1950,7 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.TaskDialog(StripHotkey(pmOpenRegedit.Caption) + FLang.GetString(18),
+      FLang.ShowMessage(StripHotkey(pmOpenRegedit.Caption) + FLang.GetString(18),
         FLang.GetString(53), mtWarning);
   end;  //of try
 end;
@@ -1975,7 +1978,7 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.TaskDialog(StripHotkey(pmCopyLocation.Caption) + FLang.GetString(18),
+      FLang.ShowMessage(StripHotkey(pmCopyLocation.Caption) + FLang.GetString(18),
         FLang.GetString(53), mtWarning);
   end;  //of try
 end;
@@ -2029,10 +2032,10 @@ begin
     
   except
     on E: EListBlocked do
-      FLang.TaskDialog(100, 101, mtWarning);
+      FLang.ShowMessage(100, 101, mtWarning);
 
     on E: EInvalidItem do
-      FLang.TaskDialog(FLang.GetString([104, 18]), FLang.GetString(53), mtWarning);
+      FLang.ShowMessage(FLang.GetString([104, 18]), FLang.GetString(53), mtWarning);
     
     on E: Exception do
       FLang.ShowException(FLang.GetString([104, 18]), E.Message);
@@ -2101,7 +2104,7 @@ begin
                List.CommaText := CM_LOCATIONS_DEFAULT;
 
                // Show dialog for location selection
-               if not InputCombo(FLang.GetString(105), FLang.GetString(90) +':',
+               if not InputCombo(Self, FLang.GetString(105), FLang.GetString(90) +':',
                  List, Location) then
                  Exit;
 
@@ -2133,10 +2136,10 @@ begin
 
   except
     on E: EListBlocked do
-      FLang.TaskDialog(100, 101, mtWarning);
+      FLang.ShowMessage(100, 101, mtWarning);
 
     on E: EWarning do
-      FLang.TaskDialog(StripHotKey(mmAdd.Caption) + FLang.GetString(18),
+      FLang.ShowMessage(StripHotKey(mmAdd.Caption) + FLang.GetString(18),
         E.Message, mtWarning);
 
     on E: Exception do
@@ -2201,7 +2204,7 @@ begin
   // Operation pending?
   if SelectedList.IsLocked() then
   begin
-    FLang.TaskDialog(100, 101, mtWarning);
+    FLang.ShowMessage(100, 101, mtWarning);
     Exit;
   end;
 
@@ -2234,7 +2237,7 @@ begin
       begin
         OnStart := OnExportListStart;
         OnFinish := OnExportListEnd;
-        Resume;
+        Start;
       end;  //of with
     end;  //of begin
 
@@ -2287,10 +2290,10 @@ begin
 
   except
     on E: EListBlocked do
-      FLang.TaskDialog(100, 101, mtWarning);
+      FLang.ShowMessage(100, 101, mtWarning);
 
     on E: EWarning do
-      FLang.TaskDialog(FLang.GetString(55), E.Message, mtWarning);
+      FLang.ShowMessage(FLang.GetString(55), E.Message, mtWarning);
 
     on E: Exception do
       FLang.ShowException(FLang.GetString(55), E.Message);
@@ -2315,7 +2318,7 @@ var
   Reg: TRegistry;
 
 begin
-  Reg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ or KEY_WRITE));
+  Reg := TRegistry.Create(TOSUtils.Wow64RegistryRedirection(KEY_READ or KEY_WRITE));
 
   try
     Reg.RootKey := HKEY_CLASSES_ROOT;
@@ -2405,7 +2408,7 @@ end;
 
 procedure TMain.mmGerClick(Sender: TObject);
 begin
-  FLang.ChangeLanguage(Sender, LANG_GERMAN);
+  FLang.ChangeLanguage(LANG_GERMAN);
 end;
 
 { TMain.mmEngClick
@@ -2414,7 +2417,7 @@ end;
 
 procedure TMain.mmEngClick(Sender: TObject);
 begin
-  FLang.ChangeLanguage(Sender, LANG_ENGLISH);
+  FLang.ChangeLanguage(LANG_ENGLISH);
 end;
 
 { TMain.mmFraClick
@@ -2423,7 +2426,7 @@ end;
 
 procedure TMain.mmFraClick(Sender: TObject);
 begin
-  FLang.ChangeLanguage(Sender, LANG_FRANCAIS);
+  FLang.ChangeLanguage(LANG_FRENCH);
 end;
 
 { TMain.mmDownloadCertClick
@@ -2436,7 +2439,7 @@ var
 
 begin
   // Certificate already installed?
-  if (TOSUtils.PMCertExists() and (FLang.TaskDialog(27, 28, mtQuestion) = IDNO)) then
+  if (TOSUtils.PMCertExists() and (FLang.ShowMessage(27, 28, mtConfirmation) = IDNO)) then
     Exit;
 
   // Init downloader

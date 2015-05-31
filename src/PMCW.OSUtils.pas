@@ -6,7 +6,7 @@
 {                                                                         }
 { *********************************************************************** }
 
-unit OSUtils;
+unit PMCW.OSUtils;
 
 {$IFDEF LINUX} {$mode delphi}{$H+} {$ENDIF}
 
@@ -25,11 +25,6 @@ const
   URL_BASE = 'http://www.pm-codeworks.de/';
   URL_CONTACT = URL_BASE +'kontakt.html';
 
-{$IFDEF MSWINDOWS}
-  { Flag to deny WOW64 redirection in Windows Registry }
-  KEY_WOW64_64KEY = $0100;
-{$ENDIF}
-
 type
   { Exception class }
   EInvalidArgument = class(Exception);
@@ -38,8 +33,10 @@ type
   { TWinWOW64 }
   TWinWOW64 = class(TObject)
   public
-    class function DenyWOW64Redirection(AAccessRight: Cardinal): Cardinal;
-    class function Wow64FsRedirection(ADisable: Boolean): Boolean;
+    class function DenyWOW64Redirection(AAccessRight: Cardinal): Cardinal; deprecated;
+    class function Wow64FsRedirection(ADisable: Boolean = True): Boolean;
+    class function Wow64RegistryRedirection(AAccessRight: Cardinal;
+      A64Bit: Boolean = True): Cardinal;
     class function GetArchitecture(): string;
     class function IsWindows64(): Boolean;
   end;
@@ -55,7 +52,7 @@ type
       AArguments: string = ''; ARunAsAdmin: Boolean = False): Boolean;
     class function ExitWindows(AAction: UINT): Boolean;
     class function ExplorerReboot(): Boolean;
-    class function ExpandEnvironmentVar(const AString: string): string;
+    class function ExpandEnvironmentVar(var AVariable: string): Boolean;
     class function GetBuildNumber(): Cardinal;
     class function GetTempDir(): string;
     class function GetWinDir(): string;
@@ -68,7 +65,7 @@ type
     class function PMCertExists(): Boolean;
     class function Shutdown(): Boolean;
     class function StrToHKey(ARootKey: TRootKey): HKEY;
-    class function WindowsVistaOrLater(): Boolean;
+    class function WindowsVistaOrLater(): Boolean; deprecated;
   end;
 {$ELSE}
   { TOSUtils }
@@ -89,11 +86,11 @@ uses StrUtils;
 {$IFDEF MSWINDOWS}
 { TWinWOW64 }
 
-{ protected TWinWOW64.Wow64FsRedirection
+{ public TWinWOW64.Wow64FsRedirection
 
-  Disables or reverts the WOW64 redirection on 64bit Windows. }
+  Disables or reverts the WOW64 file system redirection on 64 Bit Windows. }
 
-class function TWinWOW64.Wow64FsRedirection(ADisable: Boolean): Boolean;
+class function TWinWOW64.Wow64FsRedirection(ADisable: Boolean = True): Boolean;
 type
   TWow64DisableWow64FsRedirection = function(OldValue: Pointer): BOOL; stdcall;
   TWow64RevertWow64FsRedirection = function(OldValue: Pointer): BOOL; stdcall;
@@ -132,6 +129,26 @@ begin
   end;  //of begin
 end;
 
+{ public TWinWOW64.Wow64RegistryRedirection
+
+  Disables or reverts the WOW64 registry redirection on 64 Bit Windows. }
+
+class function TWinWOW64.Wow64RegistryRedirection(AAccessRight: Cardinal;
+  A64Bit: Boolean = True): Cardinal;
+begin
+  Result := AAccessRight;
+
+{$IFDEF WIN64}
+   if not A64Bit then
+     // Enable redirection to 32 Bit registry hive
+     Result := KEY_WOW64_32KEY or AAccessRight;
+{$ELSE}
+  if (A64Bit and TOSUtils.IsWindows64()) then
+    // Enable redirection to 64 Bit registry hive
+    Result := KEY_WOW64_64KEY or AAccessRight;
+{$ENDIF}
+end;
+
 { public TWinWOW64.IsWindows64
 
   Returns if current Windows is a 32 or 64bit OS. }
@@ -142,7 +159,7 @@ type
 
 var
   LibraryHandle: HMODULE;
-  IsWow64: LongBool;
+  IsWow64: BOOL;
   IsWow64Process: TIsWow64Process;
 
 begin
@@ -208,7 +225,7 @@ end;
 class function TOSUtils.ExecuteProgram(const AProgram: string;
   AArguments: string = ''; ARunAsAdmin: Boolean = False): Boolean;
 var
-  Operation: PAnsiChar;
+  Operation: PWideChar;
 
 begin
   // Run as administrator?
@@ -272,23 +289,27 @@ end;
 
   Expands an environment variable. }
 
-class function TOSUtils.ExpandEnvironmentVar(const AString: string): string;
+class function TOSUtils.ExpandEnvironmentVar(var AVariable: string): Boolean;
 var
   BufferSize: Integer;
+  Buffer: array of Char;
 
 begin
+  Result := False;
+
   // Get required buffer size
-  BufferSize := ExpandEnvironmentStrings(PChar(AString), nil, 0);
+  BufferSize := ExpandEnvironmentStrings(PChar(AVariable), nil, 0);
 
   if (BufferSize > 0) then
   begin
-    // Read expanded string into result string
-    SetLength(Result, BufferSize - 1);
-    ExpandEnvironmentStrings(PChar(AString), PChar(Result), BufferSize);
-  end  //of begin
-  else
-    // Trying to expand empty string
-    Result := '';
+    SetLength(Buffer, BufferSize);
+
+    if (ExpandEnvironmentStrings(PChar(AVariable), PChar(Buffer), BufferSize) <> 0) then
+    begin
+      AVariable := StrPas(PChar(Buffer));
+      Result := True;
+    end;  //of begin
+  end;  //of begin
 end;
 
 { public TOSUtils.ExplorerReboot
@@ -402,15 +423,18 @@ begin
            0: Result := '2000';
            1: Result := 'XP';
            2: Result := 'XP 64-Bit Edition';
-         end; //of case
+         end;  //of case
 
       6: case Win32MinorVersion of
            0: Result := 'Vista';
            1: Result := '7';
            2: Result := '8';
            3: Result := '8.1';
-           4: Result := '10';
-         end; //of case
+         end;  //of case
+
+      10: case Win32MinorVersion of
+            0: Result := '10';
+          end;  //of case
     end; //of case
 
   // Add information about service packs?
@@ -609,7 +633,7 @@ const
   PM_CERT_THUMBPRINT = '1350A832ED8A6A8FE8B95D2E674495021EB93A4D';
 
 begin
-  Reg := TRegistry.Create(DenyWOW64Redirection(KEY_READ));
+  Reg := TRegistry.Create(Wow64RegistryRedirection(KEY_READ));
   
   try
     Reg.RootKey := HKEY_LOCAL_MACHINE;

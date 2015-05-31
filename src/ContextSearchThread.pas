@@ -11,7 +11,7 @@ unit ContextSearchThread;
 interface
 
 uses
-  Windows, Classes, Registry, OSUtils, SyncObjs, ClearasAPI;
+  Windows, Classes, Registry, PMCW.OSUtils, SyncObjs, ClearasAPI;
 
 type
   { TContextSearchThread }
@@ -64,7 +64,7 @@ begin
   FLocations := TStringList.Create;
 
   // Init Registry access with read-only
-  FReg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));
+  FReg := TRegistry.Create(TOSUtils.Wow64RegistryRedirection(KEY_READ));
   FReg.RootKey := HKEY_CLASSES_ROOT;
 end;
 

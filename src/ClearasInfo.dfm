@@ -37,6 +37,10 @@ object Info: TInfo
     TabOrder = 0
     object tsInfo: TTabSheet
       Caption = 'Infos'
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       DesignSize = (
         451
         230)
@@ -367,11 +371,16 @@ object Info: TInfo
           '03/2015')
         ReadOnly = True
         TabOrder = 1
+        Zoom = 100
       end
     end
     object tsHistory: TTabSheet
       Caption = 'Versions History'
       ImageIndex = 1
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       DesignSize = (
         451
         230)
@@ -668,6 +677,7 @@ object Info: TInfo
         ReadOnly = True
         ScrollBars = ssVertical
         TabOrder = 1
+        Zoom = 100
       end
     end
   end

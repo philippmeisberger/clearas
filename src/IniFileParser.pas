@@ -16,7 +16,7 @@ uses
 {$IFDEF MSWINDOWS}
   Windows, Registry,
 {$ENDIF}
-  Classes, SysUtils, StrUtils, OSUtils;
+  Classes, SysUtils, StrUtils, PMCW.OSUtils;
 
 {$IFDEF MSWINDOWS}
 const
@@ -838,7 +838,7 @@ begin
 
   inherited Create(AFileName, AOverwriteIfExists, ASaveOnDestroy);
   MakeHeadline();
-  FReg := TRegistry.Create(TOSUtils.DenyWOW64Redirection(KEY_READ));
+  FReg := TRegistry.Create(TOSUtils.Wow64RegistryRedirection(KEY_READ));
 end;
 
 { public TRegistryFile.Destroy

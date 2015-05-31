@@ -1,12 +1,12 @@
 { *********************************************************************** }
 {                                                                         }
-{ PM Code Works Cross Plattform Update Check Thread v2.2                  }
+{ PM Code Works Cross Plattform Update Check Thread v2.3                  }
 {                                                                         }
 { Copyright (c) 2011-2015 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
 { *********************************************************************** }
 
-unit UpdateCheckThread;
+unit PMCW.UpdateCheckThread;
 
 {$IFDEF LINUX} {$mode delphi}{$H+} {$ENDIF}
 

@@ -2,16 +2,15 @@ program Clearas;
 
 uses
   Forms,
-  Mutex in 'Mutex.pas',
-  LanguageFile in 'LanguageFile.pas',
+  PMCW.Mutex in 'PMCW.Mutex.pas',
   AdminManifest in 'AdminManifest.pas',
   ClearasMain in 'ClearasMain.pas' {Main},
   ClearasInfo in 'ClearasInfo.pas' {Info},
-  Updater in 'Updater.pas' {Update},
   ClearasAPI in 'ClearasAPI.pas',
   StartupSearchThread in 'StartupSearchThread.pas',
   ContextSearchThread in 'ContextSearchThread.pas',
-  ExportListThread in 'ExportListThread.pas';
+  ExportListThread in 'ExportListThread.pas',
+  PMCW.Updater in 'PMCW.Updater.pas' {Update};
 
 {$R *.res}
 
