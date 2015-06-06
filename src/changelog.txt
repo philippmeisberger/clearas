@@ -7,6 +7,7 @@ History
 Version 4.1  [??.??.15]
 
 - ProgressBar wird nun während des Exportierens von Kontextmnü-Einträgen angezeigt
+- Verwendung von Unicode
 - Updater v2.3
 
 ---------------------------------

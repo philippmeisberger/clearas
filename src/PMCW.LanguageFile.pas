@@ -24,10 +24,11 @@ const
   { Flag indicating line feed }
   NEW_LINE     = 1023;
 
+{$IFDEF MSWINDOWS}
   { Flag to load user language }
   LANG_USER    = 0;
-
-{$IFDEF LINUX}
+{$ELSE}
+  LANG_USER    = '';
   LANG_GERMAN  = $07;
   LANG_ENGLISH = $09;
   LANG_FRENCH  = $0c;
@@ -53,28 +54,28 @@ type
   TLanguageFile = class(TObject)
   private
   {$IFDEF LINUX}
-    FLang: string;
+    FLangId: string;
     FIni: TIniFile;
-    FHashmap: TDictionary<Word, string>;
+    FLanguages: TDictionary<Word, string>;
   {$ELSE}
-    FLang: Word;
-    FHashmap: TDictionary<Word, Word>;
+    FLangId: Word;
+    FLanguages: TDictionary<Word, Word>;
   {$ENDIF}
-    FApplication: TApplication;
+    FLocale: Word;
+    FOwner: TComponent;
   protected
     FListeners: TInterfaceList;
   public
   {$IFDEF MSWINDOWS}
-    constructor Create(AOwner: TComponent; AApplication: TApplication);
+    constructor Create(AOwner: TComponent);
   {$ELSE}
-    constructor Create(ALanguage: string; AConfig: string = '';
-      AApplication: TApplication = nil);
+    constructor Create(ALanguage: string; AConfig: string = '');
   {$ENDIF}
     destructor Destroy; override;
     procedure AddListener(AListener: IChangeLanguageListener);
-    procedure AddLanguage(APrimaryLanguage: Word;
-      ALanguageIndex: {$IFDEF MSWINDOWS}Word{$ELSE}string{$ENDIF});
-    procedure ChangeLanguage(APrimaryLanguage: Word);
+    procedure AddLanguage(ALanguage: Word;
+      ALanguageId: {$IFDEF MSWINDOWS}Word{$ELSE}string{$ENDIF});
+    procedure ChangeLanguage(ALanguage: Word);
     function Format(const AIndex: Word; const AArgs: array of
       {$IFDEF MSWINDOWS}TVarRec{$ELSE}const{$ENDIF}): string; overload;
     function Format(const AIndexes: array of Word; const AArgs: array of
@@ -106,7 +107,8 @@ type
     procedure ShowException(AText, AInformation: string;
       AOptions: TTaskDialogFlags = []);
     { external }
-    property Lang: {$IFDEF LINUX}string{$ELSE}Word{$ENDIF} read FLang write FLang;
+    property Id: {$IFDEF MSWINDOWS}Word{$ELSE}string{$ENDIF} read FLangId;
+    property Locale: Word read FLocale;
   end;
 
 implementation
@@ -120,13 +122,14 @@ implementation
 {$IFDEF MSWINDOWS}
 {$R 'lang.res' 'lang.rc'}
 
-constructor TLanguageFile.Create(AOwner: TComponent; AApplication: TApplication);
+constructor TLanguageFile.Create(AOwner: TComponent);
 begin
   inherited Create;
-  FApplication := AApplication;
+  FOwner := AOwner;
   FListeners := TInterfaceList.Create;
   FListeners.Add(AOwner);
-  FHashmap := TDictionary<Word, Word>.Create;
+  FLanguages := TDictionary<Word, Word>.Create;
+  FLocale := LANG_USER;
 end;
 
 { public TLanguageFile.Destroy
@@ -135,15 +138,14 @@ end;
 
 destructor TLanguageFile.Destroy;
 begin
-  FHashmap.Free;
+  FLanguages.Free;
   FreeAndNil(FListeners);
   inherited Destroy;
 end;
 {$ENDIF}
 
 {$IFDEF LINUX}
-constructor TLanguageFile.Create(ALanguage: string; AConfig: string = '';
-  AApplication: TApplication = nil);
+constructor TLanguageFile.Create(ALanguage: string; AConfig: string = '');
 begin
   if (AConfig = '') then
     AConfig := ExtractFilePath(ParamStr(0)) +'lang';
@@ -151,11 +153,10 @@ begin
   if not FileExists(AConfig) then
     raise ELanguageException.Create('"'+ AConfig +'" not found!');
 
-  FLang := ALanguage;
+  FLangId := ALanguage;
   FIni := TIniFile.Create(AConfig);
-  FApplication := AApplication;
   FListeners := TInterfaceList.Create;
-  FHashmap := TDictionary<Word, string>.Create;
+  FLanguages := TDictionary<Word, string>.Create;
 end;
 
 { public TLanguageFile.Destroy
@@ -165,7 +166,7 @@ end;
 destructor TLanguageFile.Destroy;
 begin
   FIni.Free;
-  FHashmap.Free;
+  FLanguages.Free;
   FreeAndNil(FListeners);
   inherited Destroy;
 end;
@@ -176,7 +177,7 @@ end;
 
 function TLanguageFile.GetString(const AIndex: Word): string;
 begin
-  Result := FIni.ReadString(FLang, IntToStr(AIndex + LANGUAGE_INTERVAL));
+  Result := FIni.ReadString(FLangId, IntToStr(AIndex + 100));
 end;
 
 { public TLanguageFile.GetLanguages
@@ -206,8 +207,8 @@ begin
   with BalloonTip do
   begin
     cbStruct := SizeOf(BalloonTip);
-    pszTitle := PWideChar(ATitle);
-    pszText := PWideChar(AText);
+    pszTitle := PChar(ATitle);
+    pszText := PChar(AText);
     ttiIcon := Ord(AIcon);
   end;  //of with
 
@@ -229,7 +230,7 @@ var
   Buffer: array[0..80] of Char;
 
 begin
-  if (LoadString(HInstance, FLang + AIndex, Buffer, SizeOf(Buffer)) = 0) then
+  if (LoadString(HInstance, FLangId + AIndex, Buffer, SizeOf(Buffer)) = 0) then
     if (GetLastError() <> 0) then
       raise ELanguageException.Create(SysUtils.Format(SysErrorMessage(
         ERROR_RESOURCE_LANG_NOT_FOUND) +'. ID %d', [AIndex]));
@@ -269,40 +270,47 @@ end;
 { public TLanguageFile.AddLanguage
 
   Adds a language to the list. }
-
-procedure TLanguageFile.AddLanguage(APrimaryLanguage: Word;
-  ALanguageIndex: {$IFDEF MSWINDOWS}Word{$ELSE}string{$ENDIF});
+{$IFDEF MSWINDOWS}
+procedure TLanguageFile.AddLanguage(ALanguage, ALanguageId: Word);
 begin
-  FHashmap.Add(MAKELANGID(APrimaryLanguage, SUBLANG_DEFAULT), ALanguageIndex);
+  FLanguages.Add(MAKELANGID(ALanguage, SUBLANG_DEFAULT), ALanguageId);
 end;
+{$ELSE}
+procedure TLanguageFile.AddLanguage(ALanguage: Word; ALanguageId: string);
+begin
+  FLanguages.Add(ALanguage, ALanguageId);
+end;
+{$ENDIF}
 
 { public TLanguageFile.ChangeLanguage
 
   Allows users to change the language. }
 
-procedure TLanguageFile.ChangeLanguage(APrimaryLanguage: Word);
+procedure TLanguageFile.ChangeLanguage(ALanguage: Word);
 var
-  Locale, i: Word;
+  Locale: Word;
+  i: Word;
   Listener: IChangeLanguageListener;
 
 begin
   // Get user language
-  if (APrimaryLanguage = LANG_USER) then
+  if (ALanguage = LANG_USER) then
     Locale := GetSystemDefaultLCID()
   else
-    Locale := MAKELANGID(APrimaryLanguage, SUBLANG_DEFAULT);
+    Locale := MAKELANGID(ALanguage, SUBLANG_DEFAULT);
 
   // Load default language
-  if not FHashmap.ContainsKey(Locale) then
+  if not FLanguages.ContainsKey(Locale) then
   begin
     Locale := MAKELANGID(LANG_GERMAN, SUBLANG_DEFAULT);
 
     // Language file contains no default language?
-    if not FHashmap.ContainsKey(Locale) then
+    if not FLanguages.ContainsKey(Locale) then
       raise ELanguageException.Create('No languages not found in language file!');
-  end;
+  end;  //of begin
 
-  FLang := FHashmap[Locale];
+  FLangId := FLanguages[Locale];
+  FLocale := Locale;
 
   // Notify all listeners
   for i := 0 to FListeners.Count - 1 do
@@ -461,19 +469,19 @@ begin
     Exit;
   end;  //of begin
 
-  TaskDialog := TTaskDialog.Create(FApplication.MainForm);
+  TaskDialog := TTaskDialog.Create(FOwner);
 
   try
     with TaskDialog do
     begin
-      Title := FApplication.Name;
+      //Title := Application.Title;
       MainIcon := tdiError;
       Caption := GetString(31);
       Text := AText;
       ExpandedText := AInformation;
       ExpandButtonCaption := GetString(33);
       //CollapsedControlText := GetString(32);
-      MailSubject := EncodeUri('Bug Report '+ FApplication.Title);
+      MailSubject := EncodeUri('Bug Report '+ Application.Title);
       MailBody := EncodeUri('Dear PM Code Works,%0A%0AI found a possible '+
         'bug:%0A'+ AInformation);
       FooterText := '<a href="mailto:team@pm-codeworks.de?subject='+ MailSubject +
@@ -491,7 +499,7 @@ begin
     TaskDialog.Free;
   end;  //of try
 {$ELSE}
-  Result := ShowMessage(GetString(31) +': '+ AContent + sLineBreak + AInformation,
+  Result := ShowMessage(GetString(31) +': '+ AText + sLineBreak + AInformation,
     mtError);
 {$ENDIF}
 end;
@@ -502,7 +510,7 @@ end;
 
 procedure TLanguageFile.RemoveLanguage(ALocale: Word);
 begin
-  FHashmap.Remove(ALocale);
+  FLanguages.Remove(ALocale);
 end;
 
 { public TLanguageFile.RemoveListener

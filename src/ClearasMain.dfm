@@ -327,7 +327,7 @@ object Main: TMain
         Width = 21
         Height = 14
         Anchors = [akTop, akRight]
-        Caption = 'v4.0'
+        Caption = 'v4.1'
       end
       object lWindows: TLabel
         Left = 21
@@ -444,6 +444,8 @@ object Main: TMain
     object tsContext: TTabSheet
       Caption = 'Kontextmen'#252
       ImageIndex = 1
+      ExplicitLeft = 0
+      ExplicitTop = 29
       DesignSize = (
         535
         284)
@@ -479,7 +481,7 @@ object Main: TMain
         Width = 21
         Height = 14
         Anchors = [akTop, akRight]
-        Caption = 'v4.0'
+        Caption = 'v4.1'
       end
       object lWindows2: TLabel
         Left = 21
@@ -609,6 +611,7 @@ object Main: TMain
         Height = 22
         Anchors = [akLeft, akBottom]
         TabOrder = 7
+        TextHint = 'Suchen ...'
         OnChange = mmShowIconsClick
       end
     end
@@ -658,7 +661,7 @@ object Main: TMain
         Width = 21
         Height = 14
         Anchors = [akTop, akRight]
-        Caption = 'v4.0'
+        Caption = 'v4.1'
       end
       object lwService: TListView
         Left = 21
@@ -771,6 +774,7 @@ object Main: TMain
         Height = 22
         Anchors = [akLeft, akBottom]
         TabOrder = 7
+        TextHint = 'Suchen ...'
         OnChange = mmShowIconsClick
       end
     end
@@ -904,7 +908,6 @@ object Main: TMain
         object mmGer: TMenuItem
           AutoCheck = True
           Caption = 'Deutsch (German)'
-          Checked = True
           RadioItem = True
           OnClick = mmGerClick
         end
@@ -914,11 +917,11 @@ object Main: TMain
           RadioItem = True
           OnClick = mmEngClick
         end
-        object mmFra: TMenuItem
+        object mmFre: TMenuItem
           AutoCheck = True
           Caption = 'Franz'#246'sisch (Fran'#231'ais)'
           RadioItem = True
-          OnClick = mmFraClick
+          OnClick = mmFreClick
         end
       end
     end

@@ -577,7 +577,7 @@ begin
     CoInitialize(nil);
 
     if Succeeded(CoCreateInstance(CLSID_ShellLink, nil, CLSCTX_INPROC_SERVER,
-      IID_IShellLinkA, ShellLink)) then
+      IID_IShellLink, ShellLink)) then
     begin
       PersistFile := (ShellLink as IPersistFile);
 
@@ -624,7 +624,6 @@ function TLnkFile.WriteLnkFile(AFileName, AExeFileName: string;
 var
   ShellLink : IShellLink;
   PersistFile : IPersistFile;
-  Name : PWideChar;
 
 begin
   Result := False;
@@ -639,7 +638,7 @@ begin
     CoInitialize(nil);
 
     if Succeeded(CoCreateInstance(CLSID_ShellLink, nil, CLSCTX_INPROC_SERVER,
-      IID_IShellLinkA, ShellLink)) then
+      IID_IShellLink, ShellLink)) then
     begin
       // Set path to .exe
       if Failed(ShellLink.SetPath(PChar(AExeFileName))) then
@@ -653,21 +652,9 @@ begin
       // Set working directory
       ShellLink.SetWorkingDirectory(PChar(ExtractFilePath(AExeFileName)));
 
+      // Save .lnk
       if Succeeded(ShellLink.QueryInterface(IPersistFile, PersistFile)) then
-      begin
-        GetMem(Name, MAX_PATH * 2);
-
-        try
-          // Set up information
-          MultiByteToWideChar(CP_ACP, 0, PAnsiChar(AFileName), -1, Name, MAX_PATH);
-
-          // Save .lnk
-          Result := Succeeded(PersistFile.Save(Name, True));
-
-        finally
-          FreeMem(Name, MAX_PATH * 2);
-        end; //of finally
-      end; //of begin
+        Result := Succeeded(PersistFile.Save(PChar(AFileName), True));
     end; //of begin
 
   finally
@@ -994,7 +981,7 @@ var
 
 begin
   if FWow64 then
-    Reg := TRegistry.Create(KEY_WRITE)
+    Reg := TRegistry.Create(KEY_WOW64_32KEY or KEY_WRITE)
   else
     Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_WRITE);
 

@@ -78,7 +78,7 @@ type
     cbContextExpert: TCheckBox;
     lWindows2: TLabel;
     lWindows: TLabel;
-    mmFra: TMenuItem;
+    mmFre: TMenuItem;
     mmUpdate: TMenuItem;
     N9: TMenuItem;
     mmDownloadCert: TMenuItem;
@@ -146,7 +146,7 @@ type
     procedure mmShowIconsClick(Sender: TObject);
     procedure mmGerClick(Sender: TObject);
     procedure mmEngClick(Sender: TObject);
-    procedure mmFraClick(Sender: TObject);
+    procedure mmFreClick(Sender: TObject);
     procedure mmDefaultClick(Sender: TObject);
     procedure mmInfoClick(Sender: TObject);
     procedure mmUpdateClick(Sender: TObject);
@@ -212,11 +212,18 @@ implementation
 procedure TMain.FormCreate(Sender: TObject);
 begin
   // German language default
-  FLang := TLanguageFile.Create(Self, Application);
+  FLang := TLanguageFile.Create(Self);
   FLang.AddLanguage(LANG_GERMAN, 100);
   FLang.AddLanguage(LANG_ENGLISH, 300);
   FLang.AddLanguage(LANG_FRENCH, 500);
   FLang.ChangeLanguage(LANG_USER);
+
+  case FLang.Id of
+    300: mmEng.Checked := True;
+    500: mmFre.Checked := True;
+    else
+         mmGer.Checked := True;
+  end;
 
   // Init update notificator
   FUpdateCheck := TUpdateCheck.Create(Self, 'Clearas', FLang);
@@ -2430,7 +2437,7 @@ end;
 
   MainMenu entry that allows to change the current language to french. }
 
-procedure TMain.mmFraClick(Sender: TObject);
+procedure TMain.mmFreClick(Sender: TObject);
 begin
   FLang.ChangeLanguage(LANG_FRENCH);
 end;

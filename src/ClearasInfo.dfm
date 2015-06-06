@@ -37,10 +37,6 @@ object Info: TInfo
     TabOrder = 0
     object tsInfo: TTabSheet
       Caption = 'Infos'
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       DesignSize = (
         451
         230)
@@ -323,7 +319,7 @@ object Info: TInfo
         Top = 68
         Width = 21
         Height = 14
-        Caption = 'v4.0'
+        Caption = 'v4.1'
       end
       object lBuild: TLabel
         Left = 14
@@ -368,7 +364,7 @@ object Info: TInfo
             '.'
           'F'#252'r Sch'#228'den an Hard- und Software, die durch die Benutzung'
           'dieses Programms entstehen, wird keine Haftung '#252'bernommen.'
-          '03/2015')
+          '06/2015')
         ReadOnly = True
         TabOrder = 1
         Zoom = 100
@@ -377,10 +373,6 @@ object Info: TInfo
     object tsHistory: TTabSheet
       Caption = 'Versions History'
       ImageIndex = 1
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       DesignSize = (
         451
         230)
@@ -420,6 +412,17 @@ object Info: TInfo
           ''
           'History'
           '--------'
+          ''
+          'Version 4.1  [??.??.15]'
+          ''
+          
+            '- ProgressBar wird nun w'#228'hrend des Exportierens von Kontextmn'#252'-E' +
+            'intr'#228'gen '
+          'angezeigt'
+          '- Verwendung von Unicode'
+          '- Updater v2.3'
+          ''
+          '---------------------------------'
           ''
           'Version 4.0  [28.03.15]'
           ''
@@ -673,7 +676,7 @@ object Info: TInfo
             'hicken.'
           'Meine Adresse erfahren Sie unter team@pm-codeworks.de.'
           ''
-          '03/2015')
+          '06/2015')
         ReadOnly = True
         ScrollBars = ssVertical
         TabOrder = 1
