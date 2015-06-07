@@ -264,7 +264,7 @@ begin
   end;  //of with
 
   // Set title
-  Caption := Application.Title + TOSUtils.GetArchitecture();
+  Caption := Application.Title + PLATFORM_ARCH;
 end;
 
 { TMain.FormDestroy

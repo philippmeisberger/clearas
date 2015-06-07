@@ -13,7 +13,7 @@ unit PMCW.OSUtils;
 interface
 
 uses
- SysUtils,
+  SysUtils,
 {$IFDEF MSWINDOWS}
   Windows, Classes, TLHelp32, Registry, ShellAPI, MMSystem;
 {$ELSE}
@@ -24,6 +24,11 @@ const
   { PMCW Website URLs }
   URL_BASE = 'http://www.pm-codeworks.de/';
   URL_CONTACT = URL_BASE +'kontakt.html';
+{$IFDEF WIN64}
+  PLATFORM_ARCH = ' [64-Bit]';
+{$ELSE}
+  PLATFORM_ARCH = ' [32-Bit]';
+{$ENDIF}
 
 type
   { Exception class }
@@ -33,11 +38,9 @@ type
   { TWinWOW64 }
   TWinWOW64 = class(TObject)
   public
-    class function DenyWOW64Redirection(AAccessRight: Cardinal): Cardinal; deprecated;
     class function Wow64FsRedirection(A64Bit: Boolean = True): Boolean;
     class function Wow64RegistryRedirection(AAccessRight: Cardinal;
       A64Bit: Boolean = True): Cardinal;
-    class function GetArchitecture(): string;
     class function IsWindows64(): Boolean;
   end;
 
@@ -147,11 +150,11 @@ begin
 {$IFDEF WIN64}
    if not A64Bit then
      // Enable redirection to 32 Bit registry hive
-     Result := KEY_WOW64_32KEY or AAccessRight;
+     Result := Result or KEY_WOW64_32KEY;
 {$ELSE}
   if (A64Bit and TOSUtils.IsWindows64()) then
     // Enable redirection to 64 Bit registry hive
-    Result := KEY_WOW64_64KEY or AAccessRight;
+    Result := Result or KEY_WOW64_64KEY;
 {$ENDIF}
 end;
 
@@ -160,6 +163,7 @@ end;
   Returns if current Windows is a 32 or 64bit OS. }
 
 class function TWinWOW64.IsWindows64(): Boolean;
+{$IFDEF WIN32}
 type
   TIsWow64Process = function(AHandle: THandle; var AIsWow64: BOOL): BOOL; stdcall;
 
@@ -182,34 +186,11 @@ begin
       if IsWow64Process(GetCurrentProcess(), IsWow64) then
         Result := IsWow64;
   end;  //of begin
-end;
-
-{ public TWinWOW64.DenyWOW64Redirection
-
-  Disables the WOW64 Registry redirection temporary under 64bit systems that
-  a 32 bit application can get access to the 64 bit Registry. }
-
-class function TWinWOW64.DenyWOW64Redirection(AAccessRight: Cardinal): Cardinal;
+{$ELSE}
 begin
-  // Used Windows is a 64bit OS?
-  if TOSUtils.IsWindows64() then
-    // Deny WOW64 redirection
-    Result := KEY_WOW64_64KEY or AAccessRight
-  else
-    // Ignore redirection
-    Result := AAccessRight;
-end;
-
-{ public TWinWOW64.GetArchitecture
-
-  Returns formatted string indicating if current Windows is a 32 or 64bit OS. }
-
-class function TWinWOW64.GetArchitecture(): string;
-begin
-  if TOSUtils.IsWindows64() then
-    Result := ' [64bit]'
-  else
-    Result := ' [32bit]';
+  // Compiled for 64 bit!
+  Result := True;
+{$ENDIF}
 end;
 
 

@@ -2,6 +2,6 @@ syntax: glob
 BACKUP/**
 src\__history\**
 **.dcu
-bin\**.exe
+**.exe
 **.reg
 **.rtf
