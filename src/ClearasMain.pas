@@ -2088,10 +2088,12 @@ begin
       Name := ChangeFileExt(ExtractFileName(OpenDialog.FileName), '');
 
       // User can edit the name
-      Name := InputBox(FLang.GetString(74), FLang.GetString(97), Name);
+      if not InputQuery(FLang.GetString(74), FLang.GetString(97), Name) then
+        Exit;
 
       // Name must not be empty!
       if (Name = '') then
+        // TODO: Show abort message
         Exit;
 
       // Append optional parameters

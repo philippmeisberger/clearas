@@ -4,7 +4,7 @@ interface
 
 uses
   Windows, SysUtils, Classes, ShlObj, ActiveX, Variants, SyncObjs, Taskschd,
-  OSUtils, ClearasAPI;
+  ClearasAPI, PMCW.OSUtils;
 
 type
   { Exception }
@@ -38,13 +38,12 @@ type
     function ItemAt(AIndex: Word): TTaskListItem;
   protected
     function AddTaskItem(ATask: IRegisteredTask; ATaskFolder: ITaskFolder): Integer;
-    function ReadUnicodeFile(const AFileName: string): WideString;
   public
     constructor Create;
     destructor Destroy; override;
     function ImportBackup(const AFileName: string): Boolean;
     procedure LoadTasks(ATaskFolder: ITaskFolder; AIncludeHidden: Boolean); overload;
-    procedure LoadTasks(APath: WideString = '\'; ARecursive: Boolean = False;
+    procedure LoadTasks(APath: string = '\'; ARecursive: Boolean = False;
       AIncludeHidden: Boolean = False); overload;
     { external }
     property Item: TTaskListItem read GetSelectedItem;
@@ -79,9 +78,8 @@ var
 
 begin
   // Update task
-  if Failed(FTaskFolder.RegisterTaskDefinition(StringToOleStr(Name),
-    FTaskDefinition, Ord(TASK_UPDATE), Null, Null,
-    FTaskDefinition.Principal.LogonType, Null, NewTask)) then
+  if Failed(FTaskFolder.RegisterTaskDefinition(PChar(Name), FTaskDefinition,
+    Ord(TASK_UPDATE), Null, Null, FTaskDefinition.Principal.LogonType, Null, NewTask)) then
     raise ETaskException.Create('Could not update task definition!');
 
   Result := True;
@@ -93,7 +91,7 @@ end;
 
 function TTaskListItem.GetFullLocation(): string;
 begin
-  Result := FilePath;
+  Result := FileName;
 end;
 
 { public TTaskListItem.ChangeFilePath
@@ -123,12 +121,12 @@ begin
       ExecAction := Action as IExecAction;
 
       // Change path + arguments
-      ExecAction.Path := StringToOleStr(ExtractPathToFile(ANewFilePath));
-      ExecAction.Arguments := StringToOleStr(ExtractArguments(ANewFilePath));
+      ExecAction.Path := PChar(ExtractPathToFile(ANewFilePath));
+      ExecAction.Arguments := PChar(ExtractArguments(ANewFilePath));
 
       // Update task
       Result := UpdateTask(FTaskDefinition);
-      FilePath := ANewFilePath;
+      FileName := ANewFilePath;
       Break;
     end;  //of begin
   end;  //of while
@@ -141,7 +139,7 @@ end;
 function TTaskListItem.Delete(): Boolean;
 begin
   // Delete task
-  if Failed(FTaskFolder.DeleteTask(StringToOleStr(Name), 0)) then
+  if Failed(FTaskFolder.DeleteTask(PChar(Name), 0)) then
     raise ETaskException.Create('Could not read task!');
 
   Result := True;
@@ -310,11 +308,11 @@ begin
       if (Action.ActionType = TASK_ACTION_EXEC) then
       begin
         ExecAction := Action as IExecAction;
-        FilePath := ExecAction.Path;
+        FileName := ExecAction.Path;
 
         // Append arguments?
         if (ExecAction.Arguments <> '') then
-          FilePath := FilePath +' '+ ExecAction.Arguments;
+          FileName := FileName +' '+ ExecAction.Arguments;
 
         Break;
       end;  //of begin
@@ -330,61 +328,21 @@ begin
   Result := Add(Item);
 end;
 
-{ protected TTaskList.ReadUnicodeFile
-
-  Reads an Unicode encoded file. }
-
-function TTaskList.ReadUnicodeFile(const AFileName: string): WideString;
-var
-  Stream: TMemoryStream;
-  WideCharPtr: PWideChar;
-  s: AnsiString;
-  DestLength, SourceLength: Integer;
-
-begin
-  Stream := TMemoryStream.Create;
-
-  try
-    Stream.LoadFromFile(AFileName);
-    WideCharPtr := PWideChar(Stream.Memory);
-    DestLength := Stream.Size div SizeOf(WideChar);
-
-    if ((DestLength >= 1) and (PWord(WideCharPtr)^ = $FEFF)) then
-    begin
-      Inc(WideCharPtr);
-      Dec(DestLength);
-    end;  //of begin
-
-    SourceLength := WideCharToMultiByte(0, 0, WideCharPtr, DestLength,
-      nil, 0, nil, nil);
-
-    if (SourceLength > 0) then
-    begin
-      SetLength(s, SourceLength);
-      WideCharToMultiByte(0, 0, WideCharPtr, DestLength, PAnsiChar(s),
-        SourceLength, nil, nil);
-    end;  //of begin
-
-    Result := s;
-
-  finally
-    Stream.Free;
-  end;  //of try
-end;
-
 { public TTaskList.ImportBackup
 
   Imports an exported task item as .xml file and adds it to the list. }
 
 function TTaskList.ImportBackup(const AFileName: string): Boolean;
 var
-  Path, XmlText: WideString;
+  Path, XmlText: string;
+  TaskFile: TStringList;
   Win64: Boolean;
   TaskFolder: ITaskFolder;
   NewTask: IRegisteredTask;
 
 begin
   Path := '\'+ ChangeFileExt(ExtractFileName(AFileName), '');
+  TaskFile := TStringList.Create;
   Win64 := TOSUtils.IsWindows64();
 
   // Deny WOW64 redirection on 64 Bit Windows
@@ -393,9 +351,12 @@ begin
 
   try
     // Read .xml task file
-    XmlText := ReadUnicodeFile(AFileName);
+    TaskFile.LoadFromFile(AFileName);
+    XmlText := TaskFile.Text;
 
   finally
+    TaskFile.Free;
+
     // Allow WOW64 redirection on 64 Bit Windows again
     if Win64 then
       TOSUtils.Wow64FsRedirection(False);
@@ -406,13 +367,12 @@ begin
     raise ETaskException.Create('Could not open task folder!');
 
   // Task exists?
-  if Succeeded(TaskFolder.GetTask(PWideChar(Path), NewTask)) then
+  if Succeeded(TaskFolder.GetTask(PChar(Path), NewTask)) then
     raise EWarning.Create('Task already exists!');
 
   // Register new task
-  if Failed(TaskFolder.RegisterTask(PWideChar(Path), PWideChar(XmlText),
-    Ord(TASK_CREATE), Null, Null, TASK_LOGON_INTERACTIVE_TOKEN, Null,
-    NewTask)) then
+  if Failed(TaskFolder.RegisterTask(PChar(Path), PChar(XmlText), Ord(TASK_CREATE),
+    Null, Null, TASK_LOGON_INTERACTIVE_TOKEN, Null, NewTask)) then
     raise ETaskException.Create('Could not register task!');
 
   // Add new task to list
@@ -468,7 +428,7 @@ end;
 
   Searches for task items in specific folder and adds them to the list. }
 
-procedure TTaskList.LoadTasks(APath: WideString = '\'; ARecursive: Boolean = False;
+procedure TTaskList.LoadTasks(APath: string = '\'; ARecursive: Boolean = False;
   AIncludeHidden: Boolean = False);
 var
   SearchThread: TTaskSearchThread;
@@ -489,7 +449,7 @@ begin
     OnStart := OnSearchStart;
     OnSearching := OnSearching;
     OnFinish := OnSearchFinish;
-    Resume;
+    Start;
   end;  //of with
 end;
 

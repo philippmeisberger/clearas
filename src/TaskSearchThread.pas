@@ -2,7 +2,7 @@
 {                                                                         }
 { Clearas task search thread                                              }
 {                                                                         }
-{ Copyright (c) 2011-2015 P.Meisberger (PM Code Works)                    }
+{ Copyright (c) 2011-2015 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
 { *********************************************************************** }
 
@@ -19,7 +19,7 @@ type
   private
     FTaskList: TTaskList;
     FTaskService: ITaskService;
-    FPath: WideString;
+    FPath: string;
     FIncludeHidden, FIncludeSubFolders, FWin64: Boolean;
     FOnSearching, FOnStart: TSearchEvent;
     FOnFinish: TNotifyEvent;
@@ -27,7 +27,7 @@ type
     procedure DoNotifyOnFinish();
     procedure DoNotifyOnSearching();
     procedure DoNotifyOnStart();
-    procedure LoadTasks(APath: WideString);
+    procedure LoadTasks(APath: string);
   protected
     procedure Execute; override;
   public
@@ -39,7 +39,7 @@ type
     property OnFinish: TNotifyEvent read FOnFinish write FOnFinish;
     property OnSearching: TSearchEvent read FOnSearching write FOnSearching;
     property OnStart: TSearchEvent read FOnStart write FOnStart;
-    property Path: WideString read FPath write FPath default '\';
+    property Path: string read FPath write FPath default '\';
     property Win64: Boolean read FWin64 write FWin64;
   end;
 
@@ -95,7 +95,7 @@ end;
 
   Searches for task items in specific folder and adds them to the list. }
 
-procedure TTaskSearchThread.LoadTasks(APath: WideString);
+procedure TTaskSearchThread.LoadTasks(APath: string);
 var
   FolderCollection: ITaskFolderCollection;
   Folders: IEnumVariant;

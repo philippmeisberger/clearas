@@ -11,8 +11,8 @@ unit PMCW.Dialogs;
 interface
 
 uses
-  Classes, SysUtils, Types, Windows, Forms, StdCtrls, Graphics, Dialogs,
-  ShellAPI;
+  Classes, SysUtils, Types, Windows, Forms, StdCtrls, Graphics, Controls,
+  Dialogs, Consts, ShellAPI;
 
 const
   tdiQuestion            = 99;
@@ -25,8 +25,8 @@ const
   tdiShieldOk            = 106;
   tdiShieldOkBanner      = 65528;
 
-function InputCombo(AOwner: TComponent; ACaption, APrompt: string; AList: TStrings;
-  var AValue: string): Boolean;
+function InputCombo(AOwner: TComponent; ACaption, APrompt: string;
+  AList: TStrings; var AValue: string): Boolean;
 
 function ShowAddRegistryDialog(ARegFilePath: string): Boolean;
 
@@ -39,6 +39,8 @@ procedure ShowException(AOwner: TComponent; ACaption, AText, AInformation: WideS
 
 
 implementation
+
+uses System.Math;
 
 { InputCombo
 
@@ -122,18 +124,17 @@ begin
     with TButton.Create(Form) do
     begin
       Parent := Form;
-      Caption := 'OK';
+      Caption := SMsgDlgOK;
       ModalResult := IDOK;
       Default := True;
-      SetBounds(MulDiv(38, DialogUnits.X, 4), ButtonTop, ButtonWidth,
-        ButtonHeight);
+      SetBounds(MulDiv(38, DialogUnits.X, 4), ButtonTop, ButtonWidth, ButtonHeight);
     end;  //of with
 
     // Init "Cancel" TButton
     with TButton.Create(Form) do
     begin
       Parent := Form;
-      Caption := 'Cancel';
+      Caption := SMsgDlgCancel;
       ModalResult := IDCANCEL;
       Cancel := True;
       SetBounds(MulDiv(92, DialogUnits.X, 4), Combo.Top + Combo.Height + 15,

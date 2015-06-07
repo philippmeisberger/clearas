@@ -419,7 +419,8 @@ object Info: TInfo
             '- ProgressBar wird nun w'#228'hrend des Exportierens von Kontextmn'#252'-E' +
             'intr'#228'gen '
           'angezeigt'
-          '- Verwendung von Unicode'
+          '- Sprache wird nun benutzerspezifisch gesetzt'
+          '- Unterst'#252'tzung f'#252'r Unicode'
           '- Updater v2.3'
           ''
           '---------------------------------'

@@ -34,7 +34,7 @@ type
   TWinWOW64 = class(TObject)
   public
     class function DenyWOW64Redirection(AAccessRight: Cardinal): Cardinal; deprecated;
-    class function Wow64FsRedirection(ADisable: Boolean = True): Boolean;
+    class function Wow64FsRedirection(A64Bit: Boolean = True): Boolean;
     class function Wow64RegistryRedirection(AAccessRight: Cardinal;
       A64Bit: Boolean = True): Cardinal;
     class function GetArchitecture(): string;
@@ -90,7 +90,8 @@ uses StrUtils;
 
   Disables or reverts the WOW64 file system redirection on 64 Bit Windows. }
 
-class function TWinWOW64.Wow64FsRedirection(ADisable: Boolean = True): Boolean;
+class function TWinWOW64.Wow64FsRedirection(A64Bit: Boolean = True): Boolean;
+{$IFDEF WIN32}
 type
   TWow64DisableWow64FsRedirection = function(OldValue: Pointer): BOOL; stdcall;
   TWow64RevertWow64FsRedirection = function(OldValue: Pointer): BOOL; stdcall;
@@ -108,7 +109,7 @@ begin
 
   if (LibraryHandle <> 0) then
   begin
-    if ADisable then
+    if A64Bit then
     begin
       Wow64DisableWow64FsRedirection := GetProcAddress(LibraryHandle,
         'Wow64DisableWow64FsRedirection');
@@ -127,6 +128,11 @@ begin
            Result := Wow64RevertWow64FsRedirection(nil);
        end;  //of begin
   end;  //of begin
+{$ELSE}
+begin
+  // Nothing redirected on 64 bit Windows!
+  Result := True;
+{$ENDIF}
 end;
 
 { public TWinWOW64.Wow64RegistryRedirection

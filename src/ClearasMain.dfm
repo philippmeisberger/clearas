@@ -444,8 +444,6 @@ object Main: TMain
     object tsContext: TTabSheet
       Caption = 'Kontextmen'#252
       ImageIndex = 1
-      ExplicitLeft = 0
-      ExplicitTop = 29
       DesignSize = (
         535
         284)
