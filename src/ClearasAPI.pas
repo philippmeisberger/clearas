@@ -13,7 +13,7 @@ interface
 uses
   Windows, WinSvc, Classes, SysUtils, Registry, ShlObj, ActiveX, ComObj,
   CommCtrl, ShellAPI, Contnrs, SyncObjs, StrUtils, PMCW.OSUtils, PMCW.LanguageFile,
-  IniFileParser;
+  PMCW.IniFileParser;
 
 const
   { Startup Registry keys }
