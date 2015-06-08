@@ -419,8 +419,13 @@ object Info: TInfo
             '- ProgressBar wird nun w'#228'hrend des Exportierens von Kontextmn'#252'-E' +
             'intr'#228'gen '
           'angezeigt'
-          '- Sprache wird nun benutzerspezifisch gesetzt'
-          '- Unterst'#252'tzung f'#252'r Unicode'
+          
+            '- "Abbrechen" w'#228'hrend des Hinzuf'#252'gens von Eintr'#228'gen funktioniert' +
+            ' nun korrekt'
+          '- "Symbole anzeigen" entfernt'
+          '- Sprache wird benutzerspezifisch geladen'
+          '- Unterst'#252'tzung von Unicode'
+          '- 32/64-Bit Bin'#228'rdateien'
           '- Updater v2.3'
           ''
           '---------------------------------'

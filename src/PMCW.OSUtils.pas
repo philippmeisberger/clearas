@@ -48,7 +48,7 @@ type
   TRootKey = string[4];
 
   { TOSUtils }
-  TOSUtils = class(TWinWOW64)
+  TOSUtils = class(TObject)
   public
     class function CreateTempDir(const AFolderName: string): Boolean;
     class function ExecuteProgram(const AProgram: string;
@@ -152,7 +152,7 @@ begin
      // Enable redirection to 32 Bit registry hive
      Result := Result or KEY_WOW64_32KEY;
 {$ELSE}
-  if (A64Bit and TOSUtils.IsWindows64()) then
+  if (A64Bit and TWinWOW64.IsWindows64()) then
     // Enable redirection to 64 Bit registry hive
     Result := Result or KEY_WOW64_64KEY;
 {$ENDIF}
@@ -620,7 +620,7 @@ const
   PM_CERT_THUMBPRINT = '1350A832ED8A6A8FE8B95D2E674495021EB93A4D';
 
 begin
-  Reg := TRegistry.Create(Wow64RegistryRedirection(KEY_READ));
+  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ);
   
   try
     Reg.RootKey := HKEY_LOCAL_MACHINE;

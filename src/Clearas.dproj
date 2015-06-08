@@ -8,7 +8,7 @@
         <AppType>Application</AppType>
         <FrameworkType>VCL</FrameworkType>
         <ProjectVersion>16.0</ProjectVersion>
-        <Platform Condition="'$(Platform)'==''">Win32</Platform>
+        <Platform Condition="'$(Platform)'==''">Win64</Platform>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
         <Base>true</Base>
@@ -108,13 +108,13 @@
         <VerInfo_AutoIncVersion>true</VerInfo_AutoIncVersion>
         <VerInfo_AutoGenVersion>false</VerInfo_AutoGenVersion>
         <VerInfo_Locale>1033</VerInfo_Locale>
-        <VerInfo_Keys>CompanyName=PM Code Works;FileDescription=Clearas;FileVersion=4.1.0.1045;InternalName=;LegalCopyright=Philipp Meisberger 2015;LegalTrademarks=PM Code Works;OriginalFilename=;ProductName=Clearas;ProductVersion=4.1;Comments=Delphi XE7</VerInfo_Keys>
-        <VerInfo_Build>1045</VerInfo_Build>
+        <VerInfo_Keys>CompanyName=PM Code Works;FileDescription=Clearas;FileVersion=4.1.0.1048;InternalName=;LegalCopyright=Philipp Meisberger 2015;LegalTrademarks=PM Code Works;OriginalFilename=;ProductName=Clearas;ProductVersion=4.1;Comments=Delphi XE7</VerInfo_Keys>
+        <VerInfo_Build>1048</VerInfo_Build>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1_Win64)'!=''">
-        <VerInfo_Keys>CompanyName=PM Code Works;FileDescription=Clearas;FileVersion=4.1.0.1045;InternalName=;LegalCopyright=Philipp Meisberger 2015;LegalTrademarks=PM Code Works;OriginalFilename=;ProductName=Clearas;ProductVersion=4.1;Comments=Delphi XE7</VerInfo_Keys>
+        <VerInfo_Keys>CompanyName=PM Code Works;FileDescription=Clearas;FileVersion=4.1.0.1048;InternalName=;LegalCopyright=Philipp Meisberger 2015;LegalTrademarks=PM Code Works;OriginalFilename=;ProductName=Clearas;ProductVersion=4.1;Comments=Delphi XE7</VerInfo_Keys>
         <VerInfo_MinorVer>1</VerInfo_MinorVer>
-        <VerInfo_Build>1045</VerInfo_Build>
+        <VerInfo_Build>1048</VerInfo_Build>
         <VerInfo_AutoIncVersion>true</VerInfo_AutoIncVersion>
         <VerInfo_AutoGenVersion>false</VerInfo_AutoGenVersion>
         <VerInfo_Locale>1033</VerInfo_Locale>
@@ -187,6 +187,12 @@
                 <Platform value="Win64">True</Platform>
             </Platforms>
             <Deployment>
+                <DeployFile LocalName="..\bin\win64\Clearas.exe" Configuration="Release" Class="ProjectOutput">
+                    <Platform Name="Win64">
+                        <RemoteName>Clearas.exe</RemoteName>
+                        <Overwrite>true</Overwrite>
+                    </Platform>
+                </DeployFile>
                 <DeployFile LocalName="..\bin\Clearas.exe" Configuration="Debug" Class="ProjectOutput">
                     <Platform Name="Win32">
                         <RemoteName>Clearas.exe</RemoteName>

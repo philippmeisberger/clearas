@@ -838,7 +838,7 @@ begin
 
   inherited Create(AFileName, AOverwriteIfExists, ASaveOnDestroy);
   MakeHeadline();
-  FReg := TRegistry.Create(TOSUtils.Wow64RegistryRedirection(KEY_READ));
+  FReg := TRegistry.Create(TWinWOW64.Wow64RegistryRedirection(KEY_READ));
 end;
 
 { public TRegistryFile.Destroy

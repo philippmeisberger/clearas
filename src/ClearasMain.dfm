@@ -444,10 +444,6 @@ object Main: TMain
     object tsContext: TTabSheet
       Caption = 'Kontextmen'#252
       ImageIndex = 1
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       DesignSize = (
         535
         284)
@@ -620,10 +616,6 @@ object Main: TMain
     object tsService: TTabSheet
       Caption = 'Dienste'
       ImageIndex = 2
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       DesignSize = (
         535
         284)
@@ -892,19 +884,10 @@ object Main: TMain
         ShortCut = 117
         OnClick = mmDefaultClick
       end
-      object N5: TMenuItem
-        Caption = '-'
-      end
       object mmDate: TMenuItem
         AutoCheck = True
         Caption = 'Deaktivierungsdatum anzeigen'
         OnClick = mmDateClick
-      end
-      object mmShowIcons: TMenuItem
-        AutoCheck = True
-        Caption = 'Symbole anzeigen'
-        Checked = True
-        OnClick = mmShowIconsClick
       end
       object N6: TMenuItem
         Caption = '-'

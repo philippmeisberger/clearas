@@ -713,11 +713,11 @@ var
   Win64: Boolean;
 
 begin
-  Win64 := TOSUtils.IsWindows64();
+  Win64 := TWinWOW64.IsWindows64();
 
   // Deny WOW64 redirection only on 64bit Windows
   if Win64 then
-    TOSUtils.Wow64FsRedirection(True);
+    TWinWOW64.Wow64FsRedirection(True);
 
   if Succeeded(SHGetFileInfo(PChar(GetFileNameOnly()), 0, FileInfo, SizeOf(FileInfo),
     SHGFI_ICON or SHGFI_SMALLICON)) then
@@ -727,7 +727,7 @@ begin
 
   // Allow WOW64 redirection only on 64bit Windows
   if Win64 then
-    TOSUtils.Wow64FsRedirection(False);
+    TWinWOW64.Wow64FsRedirection(False);
 end;
 
 { protected TRootItem.DeleteQuoteChars
@@ -808,17 +808,17 @@ var
 
 begin
   // 64bit Windows?
-  Win64 := TOSUtils.IsWindows64();
+  Win64 := TWinWOW64.IsWindows64();
 
   // Deny WOW64 redirection only on 64bit Windows
   if Win64 then
-    TOSUtils.Wow64FsRedirection(True);
+    TWinWOW64.Wow64FsRedirection(True);
 
   Result := SysUtils.FileExists(GetFileNameOnly());
 
   // Allow WOW64 redirection only on 64bit Windows
   if Win64 then
-    TOSUtils.Wow64FsRedirection(False);
+    TWinWOW64.Wow64FsRedirection(False);
 end;
 
 { public TRootItem.GetStatus
@@ -847,11 +847,11 @@ begin
   PreparedFileName := GetFileNameOnly();
 
   // 64bit Windows?
-  Win64 := TOSUtils.IsWindows64();
+  Win64 := TWinWOW64.IsWindows64();
 
   // Deny WOW64 redirection only on 64bit Windows
   if Win64 then
-    TOSUtils.Wow64FsRedirection(True);
+    TWinWOW64.Wow64FsRedirection(True);
 
   // Open file in explorer
   if ((PreparedFileName <> '') and SysUtils.FileExists(PreparedFileName)) then
@@ -861,7 +861,7 @@ begin
 
   // Allow WOW64 redirection only on 64bit Windows
   if Win64 then
-    TOSUtils.Wow64FsRedirection(False);
+    TWinWOW64.Wow64FsRedirection(False);
 end;
 
 
@@ -888,7 +888,7 @@ var
 
 begin
   Result := False;
-  Reg := TRegistry.Create(TOSUtils.Wow64RegistryRedirection(KEY_READ or KEY_WRITE));
+  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
 
   try
     Reg.RootKey := TOSUtils.StrToHKey(ARootKey);
@@ -993,11 +993,11 @@ begin
     Reg.WriteString('LastKey', 'Computer\'+ GetFullLocation());
 
     // Deny WOW64 redirection only on 64 Bit Windows for 64 Bit items
-    if (TOSUtils.IsWindows64() xor (FEnabled and FWow64)) then
+    if (TWinWOW64.IsWindows64() xor (FEnabled and FWow64)) then
     begin
-      TOSUtils.Wow64FsRedirection(True);
+      TWinWOW64.Wow64FsRedirection(True);
       TOSUtils.ExecuteProgram('regedit.exe');
-      TOSUtils.Wow64FsRedirection(False);
+      TWinWOW64.Wow64FsRedirection(False);
     end  //of begin
     else
       TOSUtils.ExecuteProgram('regedit.exe');
@@ -1415,7 +1415,7 @@ begin
   Result := False;
 
   if (FEnabled and FWow64) then
-    Reg := TRegistry.Create(KEY_READ or KEY_WRITE)
+    Reg := TRegistry.Create(KEY_WOW64_32KEY or KEY_READ or KEY_WRITE)
   else
     Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
 
@@ -1483,7 +1483,7 @@ begin
   Result := False;
 
   if (FEnabled and FWow64) then
-    Reg := TRegistry.Create(KEY_READ or KEY_WRITE)
+    Reg := TRegistry.Create(KEY_WOW64_32KEY or KEY_READ or KEY_WRITE)
   else
     Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
 
@@ -1531,7 +1531,7 @@ var
 
 begin
   Result := False;
-  Reg := TRegistry.Create(TOSUtils.Wow64RegistryRedirection(KEY_READ or KEY_WRITE));
+  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
 
   try
     Reg.RootKey := HKEY_LOCAL_MACHINE;
@@ -1564,9 +1564,9 @@ begin
     // Open startup location
     Reg.CloseKey();
 
-    // Allow redirection to 32 Bit key
+    // Redirect to 32 Bit key?
     if FWow64 then
-      Reg.Access := KEY_READ or KEY_WRITE;
+      Reg.Access := KEY_WOW64_32KEY or KEY_READ or KEY_WRITE;
 
     Reg.RootKey := FRootKey;
     Reg.OpenKey(FLocation, False);
@@ -1599,7 +1599,7 @@ var
 
 begin
   Result := False;
-  Access64 := TOSUtils.Wow64RegistryRedirection(KEY_READ);
+  Access64 := KEY_WOW64_64KEY or KEY_READ;
   Reg := TRegistry.Create(Access64);
 
   try
@@ -1622,7 +1622,7 @@ begin
 
     Reg.CloseKey;
 
-    // Allow redirection to 32 Bit key
+    // Redirect to 32 Bit key?
     if FWow64 then
     begin
       // RunOnce item?
@@ -1631,7 +1631,7 @@ begin
       else
         NewKeyPath := KEY_STARTUP_RUN;
 
-      Reg.Access := KEY_READ or KEY_WRITE;
+      Reg.Access := KEY_WOW64_32KEY or KEY_READ or KEY_WRITE;
     end  //of begin
     else
       Reg.Access := Access64 or KEY_WRITE;
@@ -1778,7 +1778,7 @@ begin
   if not FLnkFile.CreateBackup() then
     raise EStartupException.Create('Could not create backup file!');
 
-  Reg := TRegistry.Create(TOSUtils.Wow64RegistryRedirection(KEY_WRITE));
+  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_WRITE);
 
   try
     Reg.RootKey := HKEY_LOCAL_MACHINE;
@@ -2180,7 +2180,7 @@ begin
     end  //of begin
     else
     begin
-      Reg := TRegistry.Create(TOSUtils.Wow64RegistryRedirection(KEY_WRITE));
+      Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_WRITE);
 
       // Try to add new startup item to Registry
       try
@@ -2374,7 +2374,7 @@ var
 
 begin
   Items := TStringList.Create;
-  Reg := TRegistry.Create(TOSUtils.Wow64RegistryRedirection(KEY_READ));
+  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ);
   Reg.RootKey := HKEY_LOCAL_MACHINE;
 
   if AStartupUser then
@@ -2472,9 +2472,9 @@ begin
 
   // Allow WOW64 redirection?
   if AWow64 then
-    Reg := TRegistry.Create(KEY_READ)
+    Reg := TRegistry.Create(KEY_WOW64_32KEY or KEY_READ)
   else
-    Reg := TRegistry.Create(TOSUtils.Wow64RegistryRedirection(KEY_READ));
+    Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ);
 
   // Set startup location
   if ARunOnce then
@@ -2512,7 +2512,7 @@ begin
 
   with StartupSearchThread do
   begin
-    Win64 := TOSUtils.IsWindows64();
+    Win64 := TWinWOW64.IsWindows64();
     IncludeRunOnce := AIncludeRunOnce;
     OnStart := FOnSearchStart;
     OnSearching := FOnSearching;
@@ -2576,7 +2576,7 @@ var
 
 begin
   Result := False;
-  Reg := TRegistry.Create(TWinWOW64.Wow64RegistryRedirection(KEY_READ or KEY_WRITE));
+  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
 
   try
     Reg.RootKey := HKEY_CLASSES_ROOT;
@@ -2612,7 +2612,7 @@ var
 
 begin
   Result := False;
-  Reg := TRegistry.Create(TOSUtils.Wow64RegistryRedirection(KEY_READ or KEY_WRITE));
+  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
 
   try
     Reg.RootKey := HKEY_CLASSES_ROOT;
@@ -2643,7 +2643,7 @@ var
 
 begin
   Result := False;
-  Reg := TRegistry.Create(TOSUtils.Wow64RegistryRedirection(KEY_READ or KEY_WRITE));
+  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
 
   try
     Reg.RootKey := HKEY_CLASSES_ROOT;
@@ -2710,9 +2710,9 @@ begin
   Result := False;
 
   if FWow64 then
-    Reg := TRegistry.Create(KEY_READ or KEY_WRITE)
+    Reg := TRegistry.Create(KEY_WOW64_32KEY or KEY_READ or KEY_WRITE)
   else
-    Reg := TRegistry.Create(TOSUtils.Wow64RegistryRedirection(KEY_READ or KEY_WRITE));
+    Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
 
   try
     Reg.RootKey := HKEY_CLASSES_ROOT;
@@ -2758,7 +2758,7 @@ var
 
 begin
   Result := False;
-  Reg := TRegistry.Create(TOSUtils.Wow64RegistryRedirection(KEY_READ or KEY_WRITE));
+  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
 
   try
     Reg.RootKey := HKEY_CLASSES_ROOT;
@@ -2805,7 +2805,7 @@ var
 
 begin
   Result := False;
-  Reg := TRegistry.Create(TOSUtils.Wow64RegistryRedirection(KEY_READ or KEY_WRITE));
+  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
 
   try
     Reg.RootKey := HKEY_CLASSES_ROOT;
@@ -2855,9 +2855,9 @@ begin
   RegFile := TRegistryFile.Create(AFileName, True);
 
   if FWow64 then
-    Reg := TRegistry.Create(KEY_READ)
+    Reg := TRegistry.Create(KEY_WOW64_32KEY or KEY_READ)
   else
-    Reg := TRegistry.Create(TOSUtils.Wow64RegistryRedirection(KEY_READ));
+    Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ);
 
   try
     Reg.RootKey := HKEY_CLASSES_ROOT;
@@ -3010,7 +3010,7 @@ begin
     KeyName := ALocationRoot + CM_SHELL +'\'+ Name;
 
     // Adds new context item to Registry
-    Reg := TRegistry.Create(TOSUtils.Wow64RegistryRedirection(KEY_WRITE));
+    Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_WRITE);
 
     try
       Reg.RootKey := HKEY_CLASSES_ROOT;
@@ -3136,7 +3136,7 @@ var
   Access64: Cardinal;
 
 begin
-  Access64 := TOSUtils.Wow64RegistryRedirection(KEY_READ);
+  Access64 := KEY_WOW64_64KEY or KEY_READ;
   Reg := TRegistry.Create(Access64);
   List := TStringList.Create;
 
@@ -3262,7 +3262,7 @@ begin
   with SearchThread do
   begin
     Locations.CommaText := ALocationRootCommaList;
-    Win64 := TOSUtils.IsWindows64();
+    Win64 := TWinWOW64.IsWindows64();
     OnStart := FOnSearchStart;
     OnSearching := FOnSearching;
     OnFinish := FOnSearchFinish;
@@ -3374,7 +3374,7 @@ var
 begin
   Result := False;
   Service := GetHandle(SERVICE_DELETE);
-  Reg := TRegistry.Create(TOSUtils.Wow64RegistryRedirection(KEY_READ or KEY_WRITE));
+  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
 
   try
     // Delete service
@@ -3415,7 +3415,7 @@ var
 begin
   Result := False;
   Service := GetHandle(SERVICE_CHANGE_CONFIG);
-  Reg := TRegistry.Create(TOSUtils.Wow64RegistryRedirection(KEY_READ or KEY_WRITE));
+  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
 
   try
     // Disable service
@@ -3465,7 +3465,7 @@ var
 begin
   Result := False;
   Service := GetHandle(SERVICE_CHANGE_CONFIG);
-  Reg := TRegistry.Create(TOSUtils.Wow64RegistryRedirection(KEY_READ or KEY_WRITE));
+  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
 
   try
     Reg.RootKey := HKEY_LOCAL_MACHINE;
@@ -3843,7 +3843,7 @@ begin
     // Read last status of disabled service
     if (ServiceStart = ssDisabled) then
     begin
-      Reg := TRegistry.Create(TOSUtils.Wow64RegistryRedirection(KEY_READ));
+      Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ);
 
       try
         Reg.RootKey := HKEY_LOCAL_MACHINE;

@@ -2,7 +2,7 @@
 {                                                                         }
 { Clearas service search thread                                           }
 {                                                                         }
-{ Copyright (c) 2011-2015 P.Meisberger (PM Code Works)                    }
+{ Copyright (c) 2011-2015 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
 { *********************************************************************** }
 
@@ -98,7 +98,7 @@ procedure TServiceSearchThread.Execute;
 var
   Service: SC_HANDLE;
   Services, ServicesCopy: PEnumServiceStatus;
-  BytesNeeded, ServicesReturned, ResumeHandle, LastError, ServiceType: DWORD;
+  BytesNeeded, ServicesReturned, ResumeHandle, LastError, ServiceType: Cardinal;
   i: Integer;
 
 begin

@@ -2,7 +2,7 @@
 {                                                                         }
 { Clearas context menu search thread                                      }
 {                                                                         }
-{ Copyright (c) 2011-2015 P.Meisberger (PM Code Works)                    }
+{ Copyright (c) 2011-2015 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
 { *********************************************************************** }
 
@@ -11,7 +11,7 @@ unit ContextSearchThread;
 interface
 
 uses
-  Windows, Classes, Registry, PMCW.OSUtils, SyncObjs, ClearasAPI;
+  Windows, Classes, Registry, SyncObjs, ClearasAPI, PMCW.OSUtils;
 
 type
   { TContextSearchThread }
@@ -25,6 +25,8 @@ type
     FOnFinish: TNotifyEvent;
     FLock: TCriticalSection;
     FWin64: Boolean;
+    FRoot: string;
+    FRootKey: HKEY;
     procedure DoNotifyOnFinish();
     procedure DoNotifyOnStart();
     procedure DoNotifyOnSearching();
@@ -41,6 +43,8 @@ type
     property OnSearching: TSearchEvent read FOnSearching write FOnSearching;
     property OnStart: TSearchEvent read FOnStart write FOnStart;
     property OnFinish: TNotifyEvent read FOnFinish write FOnFinish;
+    property Root: string read FRoot write FRoot;
+    property RootKey: HKEY read FRootKey write FRootKey;
     property Win64: Boolean read FWin64 write FWin64;
   end;
 
@@ -64,8 +68,9 @@ begin
   FLocations := TStringList.Create;
 
   // Init Registry access with read-only
-  FReg := TRegistry.Create(TOSUtils.Wow64RegistryRedirection(KEY_READ));
-  FReg.RootKey := HKEY_CLASSES_ROOT;
+  FReg := TRegistry.Create(TWinWOW64.Wow64RegistryRedirection(KEY_READ));
+  FRootKey := HKEY_CLASSES_ROOT;
+  FRoot := '';
 end;
 
 { public TContextSearchThread.Destroy
@@ -126,7 +131,7 @@ begin
     if not FReg.OpenKey(AKeyName, False) then
       Exit;
 
-    if FReg.HasSubKeys then
+    if FReg.HasSubKeys() then
     begin
       // Load subkeys
       FReg.GetKeyNames(Keys);
@@ -156,31 +161,37 @@ end;
 procedure TContextSearchThread.LoadAllContextMenus();
 var
   i: Integer;
-  Hkcr: TStringList;
+  Keys: TStringList;
 
 begin
-  Hkcr := TStringList.Create;
+  Keys := TStringList.Create;
 
   try
-    FReg.OpenKey('', False);
-    FReg.GetKeyNames(Hkcr);
+    FReg.RootKey := FRootKey;
+    FReg.OpenKey(FRoot, False);
+    FReg.GetKeyNames(Keys);
     FReg.CloseKey();
 
-    FProgressMax := Hkcr.Count;
+    FProgressMax := Keys.Count;
     FProgress := 0;
 
     // Notify start of search
     Synchronize(DoNotifyOnStart);
 
-    for i := 0 to Hkcr.Count - 1 do
+    for i := 0 to Keys.Count - 1 do
     begin
       Synchronize(DoNotifyOnSearching);
-      SearchSubkey(Hkcr[i]);
+
+      if (FRoot <> '') then
+        SearchSubkey(FRoot +'\'+ Keys[i])
+      else
+        SearchSubkey(Keys[i]);
+
       Inc(FProgress);
     end;  //of for
 
   finally
-    Hkcr.Free;
+    Keys.Free;
   end;  //of try
 end;
 

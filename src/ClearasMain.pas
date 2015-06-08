@@ -43,7 +43,6 @@ type
     mmExport: TMenuItem;
     mmAdd: TMenuItem;
     N4: TMenuItem;
-    N5: TMenuItem;
     mmDate: TMenuItem;
     mmImport: TMenuItem;
     mmDelBackup: TMenuItem;
@@ -87,7 +86,6 @@ type
     mmReport: TMenuItem;
     pmOpenRegedit: TMenuItem;
     pmOpenExplorer: TMenuItem;
-    mmShowIcons: TMenuItem;
     IconList: TImageList;
     eContextSearch: TEdit;
     tsService: TTabSheet;
@@ -366,7 +364,12 @@ begin
       {$IFDEF WIN64}
         Download('clearas64.exe', 'Clearas.exe');
       {$ELSE}
-        Download('clearas.exe', 'Clearas.exe');
+        // Ask user to permit download of 64-Bit version
+        if (FLang.ShowMessage(FLang.Format([34, 35], ['Clearas']),
+          mtConfirmation) = IDYES) then
+          Download('clearas64.exe', 'Clearas.exe')
+        else
+          Download('clearas.exe', 'Clearas.exe');
       {$ENDIF}
       end;  //of begin
 
@@ -678,12 +681,6 @@ var
 
 begin
   IconList.Clear;
-
-  if mmShowIcons.Checked then
-    lwStartup.SmallImages := IconList
-  else
-    lwStartup.SmallImages := nil;
-
   Icon := TIcon.Create;
 
   try
@@ -700,13 +697,9 @@ begin
         if mmDate.Checked then
           SubItems.Append(FStartup[i].Time);
 
-        // Show icon of program?
-        if mmShowIcons.Checked then
-        begin
-          // Get icon of program
-          Icon.Handle := FStartup[i].Icon;
-          ImageIndex := IconList.AddIcon(Icon);
-        end;  //of begin
+        // Get icon of program
+        Icon.Handle := FStartup[i].Icon;
+        ImageIndex := IconList.AddIcon(Icon);
       end;  //of with
 
   finally
@@ -827,7 +820,6 @@ begin
     mmDefault.Caption := GetString(78);
     mmDate.Caption := GetString(80);
     cbRunOnce.Caption := GetString(81);
-    mmShowIcons.Caption := GetString(47);
     mmLang.Caption := GetString(25);
 
     // Help menu labels
@@ -995,7 +987,7 @@ var
   Reg: TRegistry;
 
 begin
-  Reg := TRegistry.Create(TOSUtils.Wow64RegistryRedirection(KEY_WRITE));
+  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_WRITE);
 
   try
     Reg.RootKey := HKEY_CLASSES_ROOT;
@@ -1025,7 +1017,7 @@ var
   ClearasKey: string;
 
 begin
-  Reg := TRegistry.Create(TOSUtils.Wow64RegistryRedirection(KEY_READ or KEY_WRITE));
+  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
 
   try
     Reg.RootKey := HKEY_CLASSES_ROOT;
@@ -2026,18 +2018,15 @@ begin
            lwStartup.ItemFocused.SubItems[1] := EnteredPath;
 
            // Update icon
-           if mmShowIcons.Checked then
-           begin
-             Icon := TIcon.Create;
+           Icon := TIcon.Create;
 
-             try
-               Icon.Handle := FStartup.Selected.Icon;
-               lwStartup.ItemFocused.ImageIndex := IconList.AddIcon(Icon);
+           try
+             Icon.Handle := FStartup.Selected.Icon;
+             lwStartup.ItemFocused.ImageIndex := IconList.AddIcon(Icon);
 
-             finally
-               Icon.Free;
-             end;  //of try
-           end;  //of begin
+           finally
+             Icon.Free;
+           end;  //of try
          end;
 
       2: lwService.ItemFocused.SubItems[1] := EnteredPath;
@@ -2333,7 +2322,7 @@ var
   Reg: TRegistry;
 
 begin
-  Reg := TRegistry.Create(TOSUtils.Wow64RegistryRedirection(KEY_READ or KEY_WRITE));
+  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
 
   try
     Reg.RootKey := HKEY_CLASSES_ROOT;
@@ -2554,7 +2543,6 @@ begin
          mmAdd.Caption := FLang.GetString(69);
          mmImport.Visible := True;
          mmDate.Visible := True;
-         mmShowIcons.Visible := True;
          lwStartupSelectItem(Sender, lwStartup.ItemFocused, True);
          ShowColumnDate(lwStartup, mmDate.Checked);
        end;
@@ -2563,7 +2551,6 @@ begin
          mmAdd.Caption := FLang.GetString(105);
          mmImport.Visible := False;
          mmDate.Visible := False;
-         mmShowIcons.Visible := False;
          lwContextSelectItem(Sender, lwContext.ItemFocused, True);
 
          // Load context menu entries dynamically
@@ -2575,7 +2562,6 @@ begin
          mmAdd.Caption := FLang.GetString(57);
          mmImport.Visible := False;
          mmDate.Visible := True;
-         mmShowIcons.Visible := False;
          lwServiceSelectItem(Sender, lwService.ItemFocused, True);
          ShowColumnDate(lwService, mmDate.Checked);
 
