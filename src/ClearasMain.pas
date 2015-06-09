@@ -289,7 +289,7 @@ var
 
 begin
   // Get version of Windows including service pack
-  WindowsVersion := TOSUtils.GetWinVersion(True);
+  WindowsVersion := GetWinVersion(True);
   WindowsVistaMin := (Win32MajorVersion >= 6);
   lWindows.Caption := lWindows.Caption +' '+ WindowsVersion;
   lWindows2.Caption := lWindows.Caption;
@@ -1975,7 +1975,7 @@ begin
 
     if (Item is TStartupItem) then
     begin
-      RootKey := TOSUtils.HKeyToStr((Item as TStartupItem).RootKey);
+      RootKey := HKeyToStr((Item as TStartupItem).RootKey);
       Clipboard.AsText := RootKey +'\'+ (Item as TStartupItem).Wow64Location;
     end  //of begin
     else
@@ -2443,7 +2443,7 @@ var
 
 begin
   // Certificate already installed?
-  if (TOSUtils.PMCertExists() and (FLang.ShowMessage(27, 28, mtConfirmation) = IDNO)) then
+  if (PMCertExists() and (FLang.ShowMessage(27, 28, mtConfirmation) = IDNO)) then
     Exit;
 
   // Init downloader
@@ -2478,7 +2478,7 @@ end;
 
 procedure TMain.mmReportClick(Sender: TObject);
 begin
-  TOSUtils.OpenUrl(URL_CONTACT);
+  OpenUrl(URL_CONTACT);
 end;
 
 { TMain.mmInfoClick
@@ -2501,7 +2501,7 @@ end;
 
 procedure TMain.lCopy1Click(Sender: TObject);
 begin
-  TOSUtils.OpenUrl(URL_BASE);
+  OpenUrl(URL_BASE);
 end;
 
 { TMain.lCopyMouseEnter

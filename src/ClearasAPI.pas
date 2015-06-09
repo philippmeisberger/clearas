@@ -521,7 +521,7 @@ end;
 
 class function TLnkFile.GetBackupDir(): string;
 begin
-  Result := TOSUtils.GetWinDir +'\pss\';
+  Result := GetWinDir() +'\pss\';
 end;
 
 { public TLnkFile.GetStartUpDir
@@ -698,7 +698,7 @@ begin
 
   // Path has to be expanded?
   if ((Path <> '') and (Path[1] = '%')) then
-    TOSUtils.ExpandEnvironmentVar(Path);
+    ExpandEnvironmentVar(Path);
 
   Result := Path;
 end;
@@ -713,11 +713,11 @@ var
   Win64: Boolean;
 
 begin
-  Win64 := TWinWOW64.IsWindows64();
+  Win64 := IsWindows64();
 
   // Deny WOW64 redirection only on 64bit Windows
   if Win64 then
-    TWinWOW64.Wow64FsRedirection(True);
+    Wow64FsRedirection(True);
 
   if Succeeded(SHGetFileInfo(PChar(GetFileNameOnly()), 0, FileInfo, SizeOf(FileInfo),
     SHGFI_ICON or SHGFI_SMALLICON)) then
@@ -727,7 +727,7 @@ begin
 
   // Allow WOW64 redirection only on 64bit Windows
   if Win64 then
-    TWinWOW64.Wow64FsRedirection(False);
+    Wow64FsRedirection(False);
 end;
 
 { protected TRootItem.DeleteQuoteChars
@@ -808,17 +808,17 @@ var
 
 begin
   // 64bit Windows?
-  Win64 := TWinWOW64.IsWindows64();
+  Win64 := IsWindows64();
 
   // Deny WOW64 redirection only on 64bit Windows
   if Win64 then
-    TWinWOW64.Wow64FsRedirection(True);
+    Wow64FsRedirection(True);
 
   Result := SysUtils.FileExists(GetFileNameOnly());
 
   // Allow WOW64 redirection only on 64bit Windows
   if Win64 then
-    TWinWOW64.Wow64FsRedirection(False);
+    Wow64FsRedirection(False);
 end;
 
 { public TRootItem.GetStatus
@@ -847,21 +847,21 @@ begin
   PreparedFileName := GetFileNameOnly();
 
   // 64bit Windows?
-  Win64 := TWinWOW64.IsWindows64();
+  Win64 := IsWindows64();
 
   // Deny WOW64 redirection only on 64bit Windows
   if Win64 then
-    TWinWOW64.Wow64FsRedirection(True);
+    Wow64FsRedirection(True);
 
   // Open file in explorer
   if ((PreparedFileName <> '') and SysUtils.FileExists(PreparedFileName)) then
-    TOSUtils.ExecuteProgram('explorer.exe', '/select, '+ PreparedFileName)
+    ExecuteProgram('explorer.exe', '/select, '+ PreparedFileName)
   else
     raise EWarning.Create('File "'+ PreparedFileName +'" does not exist!');
 
   // Allow WOW64 redirection only on 64bit Windows
   if Win64 then
-    TWinWOW64.Wow64FsRedirection(False);
+    Wow64FsRedirection(False);
 end;
 
 
@@ -891,7 +891,7 @@ begin
   Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
 
   try
-    Reg.RootKey := TOSUtils.StrToHKey(ARootKey);
+    Reg.RootKey := StrToHKey(ARootKey);
 
     if not Reg.OpenKey(AKeyPath, False) then
       raise Exception.Create('Key does not exist!');
@@ -993,14 +993,14 @@ begin
     Reg.WriteString('LastKey', 'Computer\'+ GetFullLocation());
 
     // Deny WOW64 redirection only on 64 Bit Windows for 64 Bit items
-    if (TWinWOW64.IsWindows64() xor (FEnabled and FWow64)) then
+    if (IsWindows64() xor (FEnabled and FWow64)) then
     begin
-      TWinWOW64.Wow64FsRedirection(True);
-      TOSUtils.ExecuteProgram('regedit.exe');
-      TWinWOW64.Wow64FsRedirection(False);
+      Wow64FsRedirection(True);
+      ExecuteProgram('regedit.exe');
+      Wow64FsRedirection(False);
     end  //of begin
     else
-      TOSUtils.ExecuteProgram('regedit.exe');
+      ExecuteProgram('regedit.exe');
 
   finally
     Reg.CloseKey();
@@ -1390,7 +1390,7 @@ end;
 
 function TStartupListItem.GetFullLocation(): string;
 begin
-  Result := TOSUtils.HKeyToStr(FRootKey) +'\'+ FLocation;
+  Result := HKeyToStr(FRootKey) +'\'+ FLocation;
 end;
 
 { protected TStartupListItem.GetRootKey
@@ -1550,7 +1550,7 @@ begin
     end;  //of begin
 
     // Write values
-    Reg.WriteString('hkey', TOSUtils.HKeyToStr(FRootKey, False));
+    Reg.WriteString('hkey', HKeyToStr(FRootKey, False));
     Reg.WriteString('key', FLocation);
     Reg.WriteString('item', Name);
     Reg.WriteString('command', FileName);
@@ -1636,7 +1636,7 @@ begin
     else
       Reg.Access := Access64 or KEY_WRITE;
 
-    Reg.RootKey := TOSUtils.StrToHKey(NewHKey);
+    Reg.RootKey := StrToHKey(NewHKey);
 
     // Failed to create new key?
     if not Reg.OpenKey(NewKeyPath, True) then
@@ -1658,7 +1658,7 @@ begin
       raise EStartupException.Create('Could not delete old key!');
 
     // Update information
-    FRootKey := TOSUtils.StrToHKey(NewHKey);
+    FRootKey := StrToHKey(NewHKey);
     FLocation := NewKeyPath;
     FEnabled := True;
     FTime := '';
@@ -2512,7 +2512,7 @@ begin
 
   with StartupSearchThread do
   begin
-    Win64 := TWinWOW64.IsWindows64();
+    Win64 := IsWindows64();
     IncludeRunOnce := AIncludeRunOnce;
     OnStart := FOnSearchStart;
     OnSearching := FOnSearching;
@@ -2530,7 +2530,7 @@ end;
 
 function TContextListItem.GetFullLocation(): string;
 begin
-  Result := TOSUtils.HKeyToStr(HKEY_CLASSES_ROOT) +'\'+ GetKeyPath();
+  Result := HKeyToStr(HKEY_CLASSES_ROOT) +'\'+ GetKeyPath();
 end;
 
 { protected TContextListItem.GetRootKey
@@ -3262,7 +3262,7 @@ begin
   with SearchThread do
   begin
     Locations.CommaText := ALocationRootCommaList;
-    Win64 := TWinWOW64.IsWindows64();
+    Win64 := IsWindows64();
     OnStart := FOnSearchStart;
     OnSearching := FOnSearching;
     OnFinish := FOnSearchFinish;
@@ -3320,7 +3320,7 @@ end;
 
 function TServiceListItem.GetFullLocation(): string;
 begin
-  Result := TOSUtils.HKeyToStr(HKEY_LOCAL_MACHINE) +'\'+ GetLocation();
+  Result := HKeyToStr(HKEY_LOCAL_MACHINE) +'\'+ GetLocation();
 end;
 
 { protected TServiceListItem.GetRootKey

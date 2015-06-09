@@ -37,6 +37,10 @@ object Info: TInfo
     TabOrder = 0
     object tsInfo: TTabSheet
       Caption = 'Infos'
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       DesignSize = (
         451
         230)
@@ -373,6 +377,10 @@ object Info: TInfo
     object tsHistory: TTabSheet
       Caption = 'Versions History'
       ImageIndex = 1
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       DesignSize = (
         451
         230)

@@ -203,7 +203,7 @@ begin
   end;  //of begin
 
   if (ACurrentBuild = 0) then
-    ACurrentBuild := TOSUtils.GetBuildNumber();
+    ACurrentBuild := GetBuildNumber();
 
   // Search for update
   with TUpdateCheckThread.Create(ACurrentBuild, FRemoteDirName) do
@@ -443,7 +443,7 @@ end;
 
 procedure TUpdate.DownloadCertificate();
 begin
-  Download('cert.reg', 'Install_PMCW_Cert.reg', TOSUtils.GetTempDir());
+  Download('cert.reg', 'Install_PMCW_Cert.reg', GetTempDir());
 end;
 
 { public TUpdate.RemoveListener

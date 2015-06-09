@@ -38,7 +38,7 @@ implementation
 
 procedure TInfo.FormCreate(Sender: TObject);
 begin
-  lBuild.Caption := '(Build: '+ IntToStr(TOSUtils.GetBuildNumber()) +')';
+  lBuild.Caption := '(Build: '+ IntToStr(GetBuildNumber()) +')';
 end;
 
 end.

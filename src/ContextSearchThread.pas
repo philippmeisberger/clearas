@@ -68,7 +68,7 @@ begin
   FLocations := TStringList.Create;
 
   // Init Registry access with read-only
-  FReg := TRegistry.Create(TWinWOW64.Wow64RegistryRedirection(KEY_READ));
+  FReg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ);
   FRootKey := HKEY_CLASSES_ROOT;
   FRoot := '';
 end;

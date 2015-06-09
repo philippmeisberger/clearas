@@ -72,7 +72,9 @@ type
     function Remove(ASectionName, AKey: string): Boolean; overload;
     function RemoveSection(ASectionName: string): Boolean;
     procedure Save(); overload;
+{$IFDEF MSWINDOWS}
     procedure Save(AEncoding: TEncoding); overload;
+{$ENDIF}
     function SectionExists(ASectionName: string): Boolean;
     function WriteBoolean(ASectionName, AKey: string; AValue: Boolean): Integer;
     function WriteInteger(ASectionName, AKey: string; AValue: Integer): Integer;
@@ -731,9 +733,14 @@ end;
 
 procedure TIniFile.Save();
 begin
+{$IFDEF MSWINDOWS}
   Save(TEncoding.UTF8);
+{$ELSE}
+  FFile.SaveToFile(FFileName);
+{$ENDIF}
 end;
 
+{$IFDEF MSWINDOWS}
 { public TIniFile.Save
 
   Writes current file with explicit encoding to disk. }
@@ -742,6 +749,7 @@ procedure TIniFile.Save(AEncoding: TEncoding);
 begin
   FFile.SaveToFile(FFileName, AEncoding);
 end;
+{$ENDIF}
 
 { public TIniFile.SectionExists
 
@@ -800,7 +808,7 @@ begin
     end;  //of begin
   end  //of begin
   else
-    // Delete current item 
+    // Delete current item
     Remove(Index, GetEndOfItem(Index));
 
   // Add item
@@ -1036,7 +1044,7 @@ begin
       for i := 0 to Values.Count -1 do
         case FReg.GetDataType(Values[i]) of
           rdString:
-            if (rdString in AFilter) then 
+            if (rdString in AFilter) then
               WriteString(Section, Values[i], FReg.ReadString(Values[i]));
 
           rdInteger:
@@ -1084,7 +1092,7 @@ procedure TRegistryFile.ExportReg(AHKey: HKEY; AKeyPath: string;
   ARecursive: Boolean = True; AFilter: TFilterDataTypes = []);
 begin
   if Assigned(FOnExportBegin) then
-    FOnExportBegin(Self); 
+    FOnExportBegin(Self);
 
   MakeHeadline();
   ExportKey(AHKey, AKeyPath, ARecursive, AFilter);
@@ -1149,7 +1157,7 @@ end;
 
 function TRegistryFile.GetSection(AHKey: HKEY; AKeyPath: string): string;
 begin
-  Result := TOSUtils.HKeyToStr(AHKey) +'\'+ AKeyPath;
+  Result := HKeyToStr(AHKey) +'\'+ AKeyPath;
 end;
 
 { public TRegistryFile.MakeHeadline
@@ -1258,7 +1266,7 @@ begin
   if AnsiContainsStr(StringVal, REG_INTEGER) then
   begin
     StringVal := Copy(StringVal, 7, Length(StringVal));
-    Result := TOSUtils.HexToInt(StringVal);
+    Result := HexToInt(StringVal);
   end;  //of begin
 end;
 
