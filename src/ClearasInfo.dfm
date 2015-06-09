@@ -37,10 +37,6 @@ object Info: TInfo
     TabOrder = 0
     object tsInfo: TTabSheet
       Caption = 'Infos'
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       DesignSize = (
         451
         230)
@@ -377,10 +373,6 @@ object Info: TInfo
     object tsHistory: TTabSheet
       Caption = 'Versions History'
       ImageIndex = 1
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       DesignSize = (
         451
         230)
@@ -411,7 +403,7 @@ object Info: TInfo
       end
       object reHistory: TRichEdit
         Left = 16
-        Top = 16
+        Top = 17
         Width = 419
         Height = 177
         Lines.Strings = (
@@ -421,7 +413,7 @@ object Info: TInfo
           'History'
           '--------'
           ''
-          'Version 4.1  [??.??.15]'
+          'Version 4.1  [??.06.15]'
           ''
           
             '- ProgressBar wird nun w'#228'hrend des Exportierens von Kontextmn'#252'-E' +

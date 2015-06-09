@@ -363,11 +363,11 @@ object Main: TMain
             Width = 75
           end>
         GridLines = True
-        HideSelection = False
         ReadOnly = True
         RowSelect = True
         PopupMenu = PopupMenu
         ShowWorkAreas = True
+        SmallImages = IconList
         TabOrder = 0
         ViewStyle = vsReport
         OnColumnClick = lwStartupColumnClick
@@ -444,10 +444,6 @@ object Main: TMain
     object tsContext: TTabSheet
       Caption = 'Kontextmen'#252
       ImageIndex = 1
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       DesignSize = (
         535
         284)
@@ -620,10 +616,6 @@ object Main: TMain
     object tsService: TTabSheet
       Caption = 'Dienste'
       ImageIndex = 2
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       DesignSize = (
         535
         284)

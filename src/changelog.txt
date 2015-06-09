@@ -4,7 +4,7 @@ Ein Open-Source Projekt von PM Code Works
 History
 --------
 
-Version 4.1  [??.??.15]
+Version 4.1  [??.06.15]
 
 - ProgressBar wird nun während des Exportierens von Kontextmnü-Einträgen angezeigt
 - "Abbrechen" während des Hinzufügens von Einträgen funktioniert nun korrekt
