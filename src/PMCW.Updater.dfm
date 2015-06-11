@@ -18,11 +18,12 @@ object Update: TUpdate
   PixelsPerInch = 96
   TextHeight = 14
   object lSize: TLabel
-    Left = 280
+    Left = 308
     Top = 16
-    Width = 53
+    Width = 29
     Height = 14
-    Caption = '000/000KB'
+    Alignment = taRightJustify
+    Caption = '0/0KB'
     Transparent = True
   end
   object pbProgress: TProgressBar
