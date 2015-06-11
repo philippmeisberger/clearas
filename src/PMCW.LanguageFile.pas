@@ -15,7 +15,7 @@ interface
 uses
   Classes, SysUtils, Forms,
 {$IFDEF MSWINDOWS}
-  Windows, Dialogs, CommCtrl, System.Generics.Collections;
+  Windows, Dialogs, CommCtrl, System.Generics.Collections, ShellAPI;
 {$ELSE}
   IniFileParser, LCLType;
 {$ENDIF}
@@ -53,6 +53,8 @@ type
   { TLanguageFile }
   TLanguageFile = class(TObject)
   private
+    FLocale: Word;
+    FOwner: TComponent;
   {$IFDEF LINUX}
     FLangId: string;
     FIni: TIniFile;
@@ -60,9 +62,8 @@ type
   {$ELSE}
     FLangId: Word;
     FLanguages: TDictionary<Word, Word>;
+    procedure HyperlinkClicked(Sender: TObject);
   {$ENDIF}
-    FLocale: Word;
-    FOwner: TComponent;
   protected
     FListeners: TInterfaceList;
   public
@@ -142,11 +143,23 @@ begin
   FreeAndNil(FListeners);
   inherited Destroy;
 end;
+
+{ private TLanguageFile.HyperlinkClicked
+
+  Event that is called when user clicked on hyperlink. }
+
+procedure TLanguageFile.HyperlinkClicked(Sender: TObject);
+begin
+  if (Sender is TTaskDialog) then
+    ShellExecute(0, 'open', PChar((Sender as TTaskDialog).URL), nil, nil, SW_SHOWNORMAL);
+end;
 {$ENDIF}
 
 {$IFDEF LINUX}
 constructor TLanguageFile.Create(ALanguage: string; AConfig: string = '');
 begin
+  inherited Create;
+
   if (AConfig = '') then
     AConfig := ExtractFilePath(ParamStr(0)) +'lang';
 
@@ -157,6 +170,7 @@ begin
   FIni := TIniFile.Create(AConfig);
   FListeners := TInterfaceList.Create;
   FLanguages := TDictionary<Word, string>.Create;
+  FLocale := LANG_USER;
 end;
 
 { public TLanguageFile.Destroy
@@ -407,7 +421,14 @@ begin
       end;
   end;  //of case
 
+{$IFDEF MSWINDOWS}
   Result := TaskMessageDlg(ATitle, AText, AMessageType, Buttons, 0, DefaultButton);
+{$ELSE}
+  if (ATitle <> '') then
+    Result := MessageDlg(ATitle + sLineBreak + AText, AMessageType, Buttons, 0)
+  else
+    Result := MessageDlg(AText, AMessageType, Buttons, 0);
+{$ENDIF}
 end;
 
 { public TLanguageFile.ShowMessage
@@ -474,13 +495,12 @@ begin
   try
     with TaskDialog do
     begin
-      //Title := Application.Title;
+      Caption := Application.Title;
       MainIcon := tdiError;
-      Caption := GetString(31);
+      Title := GetString(31);
       Text := AText;
       ExpandedText := AInformation;
-      ExpandButtonCaption := GetString(33);
-      //CollapsedControlText := GetString(32);
+      ExpandButtonCaption := GetString(32);
       MailSubject := EncodeUri('Bug Report '+ Application.Title);
       MailBody := EncodeUri('Dear PM Code Works,%0A%0AI found a possible '+
         'bug:%0A'+ AInformation);
@@ -488,6 +508,7 @@ begin
         '&body='+ MailBody +'">'+ GetString(26) +'</a>';
       Flags := [tfExpandFooterArea, tfEnableHyperlinks] + AOptions;
       CommonButtons := [tcbClose];
+      OnHyperlinkClicked := HyperlinkClicked;
     end;  //of with
 
     MessageBeep(MB_ICONERROR);

@@ -92,17 +92,16 @@ type
   { Filter set }
   TFilterDataTypes = set of TRegDataType;
 
-  { Array data type }
-  TByteArray = array of Byte;
-
   { TRegistryFile }
   TRegistryFile = class(TIniFile)
   private
     FOnExportBegin, FOnExportEnd: TNotifyEvent;
     FReg: TRegistry;
+    FAccess64: Boolean;
     function EscapeIdentifier(const AIdent: string): string;
     function GetKey(AIndex: Integer): string;
     function GetValue(AIndex: Integer): string;
+    procedure SetAccess(AAccess64: Boolean);
     procedure WriteBinary(ASection, AIdent: string; ARegBinary: Boolean;
       ABytes: array of Byte); overload;
   public
@@ -121,23 +120,24 @@ type
     procedure ExportReg(AHKey: HKEY; AKeyPath, AValueName: string); overload;
     function GetSection(AHKey: HKEY; AKeyPath: string): string;
     procedure MakeHeadline();
-    function ReadBinary(ASection, AIdent: string): TByteArray;
+    function ReadBinary(ASection, AIdent: string): TBytes;
     function ReadBoolean(ASection, AIdent: string): Boolean;
     function ReadExpandString(ASection, AIdent: string): string;
     function ReadInteger(ASection, AIdent: string): Integer;
     function ReadString(ASection, AIdent: string): string;
     function Remove(ASection, AIdent: string): Boolean;
     function UnescapePathDelimiter(const APath: string): string;
-    procedure WriteBinary(ASection, AIdent: string; AValue: TByteArray); overload;
+    procedure WriteBinary(ASection, AIdent: string; AValue: TBytes); overload;
     procedure WriteBoolean(ASection, AIdent: string; AValue: Boolean);
     procedure WriteExpandString(ASection, AIdent, AValue: string);
     procedure WriteInteger(ASection, AIdent: string; AValue: Integer);
     procedure WriteString(ASection, AIdent, AValue: string);
     { external }
+    property Access64: Boolean read FAccess64 write SetAccess;
     property Keys[AIndex: Integer]: string read GetKey; default;
-    property Values[AIndex: Integer]: string read GetValue;
     property OnExportBegin: TNotifyEvent read FOnExportBegin write FOnExportBegin;
     property OnExportEnd: TNotifyEvent read FOnExportEnd write FOnExportEnd;
+    property Values[AIndex: Integer]: string read GetValue;
   end;
 {$ENDIF}
 
@@ -856,6 +856,7 @@ begin
 
   inherited Create(AFileName, AOverwriteIfExists, ASaveOnDestroy);
   MakeHeadline();
+  FAccess64 := True;
   FReg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ);
 end;
 
@@ -897,6 +898,20 @@ end;
 function TRegistryFile.GetValue(AIndex: Integer): string;
 begin
   Result := DeleteQuoteChars(inherited GetValue(AIndex));
+end;
+
+{ private TRegistryFile.SetAccess
+
+  Sets the current registry access rights. }
+
+procedure TRegistryFile.SetAccess(AAccess64: Boolean);
+begin
+  if AAccess64 then
+    FReg.Access := KEY_WOW64_64KEY or KEY_READ
+  else
+    FReg.Access := KEY_READ;
+
+  FAccess64 := AAccess64;
 end;
 
 { private TRegistryFile.WriteBinary
@@ -1016,7 +1031,7 @@ var
   Values, Keys: TStringList;
   i: Cardinal;
   Section: string;
-  Buffer: TByteArray;
+  Buffer: TBytes;
 
 begin
   // Default: Filter nothing
@@ -1109,7 +1124,7 @@ end;
 procedure TRegistryFile.ExportReg(AHKey: HKEY; AKeyPath, AValueName: string);
 var
   Section: string;
-  Buffer: TByteArray;
+  Buffer: TBytes;
 
 begin
   try
@@ -1174,7 +1189,7 @@ end;
 
   Reads a little endian encoded binary value from a .reg file. }
 
-function TRegistryFile.ReadBinary(ASection, AIdent: string): TByteArray;
+function TRegistryFile.ReadBinary(ASection, AIdent: string): TBytes;
 var
   StringValue: string;
   StartIndex, EndIndex, i, j: Integer;
@@ -1235,7 +1250,7 @@ end;
 function TRegistryFile.ReadExpandString(ASection, AIdent: string): string;
 var
   i: Integer;
-  Bytes: TByteArray;
+  Bytes: TBytes;
 
 begin
   // Convert little endian encoded hex value to Byte array
@@ -1310,7 +1325,7 @@ end;
 
   Writes a little endian encoded binary value to a .reg file. }
 
-procedure TRegistryFile.WriteBinary(ASection, AIdent: string; AValue: TByteArray);
+procedure TRegistryFile.WriteBinary(ASection, AIdent: string; AValue: TBytes);
 begin
   WriteBinary(ASection, AIdent, True, AValue);
 end;
