@@ -15,6 +15,7 @@ object Update: TUpdate
   OldCreateOrder = False
   Position = poScreenCenter
   OnCloseQuery = FormCloseQuery
+  OnShow = FormShow
   PixelsPerInch = 96
   TextHeight = 14
   object lSize: TLabel
@@ -39,7 +40,7 @@ object Update: TUpdate
     Width = 78
     Height = 33
     Cancel = True
-    Caption = 'Fertig!'
+    Caption = 'abbrechen'
     Default = True
     TabOrder = 1
     OnClick = bFinishedClick

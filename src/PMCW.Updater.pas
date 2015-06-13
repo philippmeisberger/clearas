@@ -273,6 +273,7 @@ end;
 procedure TUpdate.FormShow(Sender: TObject);
 begin
   Caption := FTitle;
+  bFinished.Caption := FLang.GetString(6);
 end;
 
 { private TUpdate.OnDownloadCancel
@@ -383,35 +384,26 @@ begin
     Url := URL_DOWNLOAD + FRemoteFileName;
     FFileName := IncludeTrailingPathDelimiter(ADownloadDirectory) + FLocalFileName;
 
-    // Try to init thread
-    try
-      with TDownloadThread.Create(Url, FFileName) do
-      begin
-        // Link download events
-        FOnUserCancel := OnUserCancel;
+    with TDownloadThread.Create(Url, FFileName) do
+    begin
+      // Link download events
+      FOnUserCancel := OnUserCancel;
 
-        // Link TProgressBar events and start download thread
-        OnDownloading := Self.OnDownloading;
-        OnCancel := OnDownloadCancel;
-        OnStart := OnDownloadStart;
-        OnFinish := OnDownloadFinished;
-        OnError := OnDownloadError;
-        Start;
-      end;  //of with
+      // Link TProgressBar events and start download thread
+      OnDownloading := Self.OnDownloading;
+      OnCancel := OnDownloadCancel;
+      OnStart := OnDownloadStart;
+      OnFinish := OnDownloadFinished;
+      OnError := OnDownloadError;
+      Start;
+    end;  //of with
 
-      // Caption "cancel"
-      bFinished.Caption := FLang.GetString(6);
-      FThreadRuns := True;
-
-    except
-      OnDownloadError(nil, -2);
-    end;  //of try
+    FThreadRuns := True;
   end  //of begin
   else
     // Cancel clicked
     Reset();
 
-  BringToFront;
   ShowModal;
   Result := (bFinished.ModalResult = mrOk);
 end;
