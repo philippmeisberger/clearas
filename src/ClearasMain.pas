@@ -167,8 +167,6 @@ type
     FService: TServiceList;
     FLang: TLanguageFile;
     FUpdateCheck: TUpdateCheck;
-    procedure AfterUpdate(Sender: TObject; ADownloadedFileName: string);
-    procedure BeforeUpdate(Sender: TObject; const ANewBuild: Cardinal);
     function CreateStartupUserBackup(): Boolean;
     function GetSelectedItem(): TRootItem;
     function GetSelectedList(): TRootList;
@@ -187,6 +185,7 @@ type
     procedure OnServiceSearchStart(Sender: TObject; const AWorkCountMax: Cardinal);
     procedure OnServiceSearchEnd(Sender: TObject);
     procedure OnServiceItemChanged(Sender: TObject);
+    procedure OnUpdate(Sender: TObject; const ANewBuild: Cardinal);
     procedure SetLanguage(Sender: TObject);
     function ShowRegistryExportDialog(): Boolean;
     procedure ShowColumnDate(AListView: TListView; AShow: Boolean = True);
@@ -324,27 +323,11 @@ begin
   LoadStartupItems();
 end;
 
-{ private TMain.AfterUpdate
+{ private TMain.OnUpdate
 
-  Event method that is called by TUpdate when download is finished. }
+  Event that is called by TUpdateCheck when an update is available. }
 
-procedure TMain.AfterUpdate(Sender: TObject; ADownloadedFileName: string);
-begin
-  if (ExtractFileExt(ADownloadedFileName) <> '.reg') then
-  begin
-    // Caption "Search for update"
-    mmUpdate.Caption := FLang.GetString(15);
-    mmUpdate.Enabled := False;
-  end  //of begin
-  else
-    mmDownloadCert.Enabled := False;
-end;
-
-{ private TMain.BeforeUpdate
-
-  Event that is called by TUpdateCheck when TUpdateCheckThread finds an update. }
-
-procedure TMain.BeforeUpdate(Sender: TObject; const ANewBuild: Cardinal);
+procedure TMain.OnUpdate(Sender: TObject; const ANewBuild: Cardinal);
 var
   Updater: TUpdate;
 
@@ -357,20 +340,30 @@ begin
     Updater := TUpdate.Create(Self, FLang);
 
     try
+      // Set updater options
       with Updater do
       begin
         Title := FLang.GetString(24);
+        FileNameLocal := 'Clearas.exe';
 
       {$IFDEF WIN64}
-        Download('clearas64.exe', 'Clearas.exe');
+        FileNameRemote := 'clearas64.exe';
       {$ELSE}
         // Ask user to permit download of 64-Bit version
         if (FLang.ShowMessage(FLang.Format([34, 35], ['Clearas']),
           mtConfirmation) = IDYES) then
-          Download('clearas64.exe', 'Clearas.exe')
+          FileNameRemote := 'clearas64.exe'
         else
-          Download('clearas.exe', 'Clearas.exe');
+          FileNameRemote := 'clearas.exe';
       {$ENDIF}
+      end;  //of begin
+
+      // Successfully downloaded update?
+      if Updater.Execute() then
+      begin
+        // Caption "Search for update"
+        mmUpdate.Caption := FLang.GetString(15);
+        mmUpdate.Enabled := False;
       end;  //of begin
 
     finally
@@ -2454,8 +2447,14 @@ begin
     with Updater do
     begin
       Title := FLang.GetString(16);
-      DownloadCertificate();
+      FileNameRemote := 'cert.reg';
+      FileNameLocal := 'PMCW-Certificate.reg';
+      DownloadDirectory := GetTempDir();
     end;  //of begin
+
+    // Successfully downloaded certificate?
+    if Updater.Execute() then
+      mmDownloadCert.Enabled := False;
 
   finally
     Updater.Free;

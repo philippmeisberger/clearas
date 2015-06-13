@@ -86,7 +86,7 @@ begin
     OnWork := Downloading;
 
     // Set the user-agent because of some issues with default
-    Request.UserAgent := 'Updater/2.2 (PM Code Works Update Utility)';
+    Request.UserAgent := 'Updater/2.3 (PM Code Works Update Utility)';
 
     // Close connection after completion of the response
     Request.Connection := 'close';
@@ -235,7 +235,7 @@ end;
   Synchronizable event method that is called when an error occurs while download
   is in progress. }
   
-procedure TDownloadThread.DoNotifyOnError;                  
+procedure TDownloadThread.DoNotifyOnError;
 begin
   if Assigned(OnError) then
     OnError(Self, FHttp.ResponseCode);

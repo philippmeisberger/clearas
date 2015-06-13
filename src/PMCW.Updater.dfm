@@ -38,7 +38,9 @@ object Update: TUpdate
     Top = 64
     Width = 78
     Height = 33
+    Cancel = True
     Caption = 'Fertig!'
+    Default = True
     TabOrder = 1
     OnClick = bFinishedClick
   end

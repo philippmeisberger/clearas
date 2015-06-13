@@ -74,7 +74,7 @@ begin
   with FHttp.Request do
   begin
     // Set the user-agent because of some issues with default
-    UserAgent := 'Updater/2.2 (PM Code Works Update Utility)';
+    UserAgent := 'Updater/2.3 (PM Code Works Update Utility)';
 
     // Close connection after completion of the response
     Connection := 'close';
