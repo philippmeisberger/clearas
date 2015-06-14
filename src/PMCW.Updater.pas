@@ -73,7 +73,8 @@ type
     FListeners: TInterfaceList;
     FTaskBar: TTaskbar;
     procedure OnDownloadCancel(Sender: TObject);
-    procedure OnDownloadError(Sender: TThread; AResponseCode: Integer);
+    procedure OnDownloadError(Sender: TThread; AResponseCode: Integer;
+      AResponseText: string);
     procedure OnDownloadFinished(Sender: TObject);
     procedure OnDownloading(Sender: TThread; ADownloadSize: Int64);
     procedure OnDownloadStart(Sender: TThread; AFileSize: Int64);
@@ -294,12 +295,13 @@ end;
   Event method that is called by TDownloadThread when an error occurs while
   downloading the update. }
 
-procedure TUpdate.OnDownloadError(Sender: TThread; AResponseCode: Integer);
+procedure TUpdate.OnDownloadError(Sender: TThread; AResponseCode: Integer;
+  AResponseText: string);
 begin
   FTaskBar.ProgressState := TTaskBarProgressState.Error;
   pbProgress.State := TProgressBarState.pbsError;
   Reset();
-  FLang.ShowException(Caption + FLang.GetString(18), FLang.Format(19, [AResponseCode]));
+  FLang.ShowException(Caption + FLang.GetString(18), AResponseText);
   bFinished.ModalResult := mrAbort;
 end;
 

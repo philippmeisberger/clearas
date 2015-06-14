@@ -18,7 +18,8 @@ uses
 type
   { Thread events }
   TOnDownloadEvent = procedure(Sender: TThread; AFileSize: Int64) of object;
-  TOnDownloadErrorEvent = procedure(Sender: TThread; AResponseCode: Integer) of object;
+  TOnDownloadErrorEvent = procedure(Sender: TThread; AResponseCode: Integer;
+    AResponseMessage: string) of object;
 
   { TDownloadThread }
   TDownloadThread = class(TThread)
@@ -197,7 +198,7 @@ begin
     Inc(i);
   end;  //of while
 
-  result := NewFileName;
+  Result := NewFileName;
 end;
 
 { public TDownloadThread.OnUserCancel
@@ -238,7 +239,7 @@ end;
 procedure TDownloadThread.DoNotifyOnError;
 begin
   if Assigned(OnError) then
-    OnError(Self, FHttp.ResponseCode);
+    OnError(Self, FHttp.ResponseCode, FHttp.ResponseText);
 end;
 
 { private TDownloadThread.DoNotifyOnFinish

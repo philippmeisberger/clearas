@@ -13,7 +13,7 @@ unit PMCW.LanguageFile;
 interface
 
 uses
-  Classes, SysUtils, Forms,
+  Classes, SysUtils, Forms, IdURI,
 {$IFDEF MSWINDOWS}
   Windows, Dialogs, CommCtrl, System.Generics.Collections, ShellAPI;
 {$ELSE}
@@ -469,20 +469,11 @@ end;
 procedure TLanguageFile.ShowException(AText, AInformation: string;
   AOptions: TTaskDialogFlags = []);
 {$IFDEF MSWINDOWS}
-
-  function EncodeUri(const AText: string): string;
-  begin
-    Result := StringReplace(AText, '!', '%21', [rfReplaceAll]);
-    Result := StringReplace(Result, ' ', '%20', [rfReplaceAll]);
-  end;
-
 var
   TaskDialog: TTaskDialog;
   MailSubject, MailBody: string;
 
-{$ENDIF}
 begin
-{$IFDEF MSWINDOWS}
   // TaskDialogIndirect only possible for Windows >= Vista!
   if (Win32MajorVersion < 6) then
   begin
@@ -501,9 +492,9 @@ begin
       Text := AText;
       ExpandedText := AInformation;
       ExpandButtonCaption := GetString(32);
-      MailSubject := EncodeUri('Bug Report '+ Application.Title);
-      MailBody := EncodeUri('Dear PM Code Works,%0A%0AI found a possible '+
-        'bug:%0A'+ AInformation);
+      MailSubject := TIdURI.ParamsEncode('Bug Report "'+ Application.Title +'"');
+      MailBody := TIdURI.ParamsEncode('Dear PM Code Works,'+ sLineBreak + sLineBreak +
+        'I found a possible bug:'+ sLineBreak + AText +' '+ AInformation);
       FooterText := '<a href="mailto:team@pm-codeworks.de?subject='+ MailSubject +
         '&body='+ MailBody +'">'+ GetString(26) +'</a>';
       Flags := [tfExpandFooterArea, tfEnableHyperlinks] + AOptions;
@@ -515,11 +506,12 @@ begin
 
     if not TaskDialog.Execute() then
       ShowMessage(GetString(31) +': '+ AText + sLineBreak + AInformation, mtError);
-    
+
   finally
     TaskDialog.Free;
   end;  //of try
 {$ELSE}
+begin
   Result := ShowMessage(GetString(31) +': '+ AText + sLineBreak + AInformation,
     mtError);
 {$ENDIF}
