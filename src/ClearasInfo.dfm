@@ -346,14 +346,12 @@ object Info: TInfo
         Height = 177
         Lines.Strings = (
           
-            '"Clearas ist ein Reinigungs-Programm zum Editieren von Autostart' +
-            '-'
-          'Programmen. Es gibt viele solcher Programme auf jedem Rechner,'
-          
-            'die die Startzeit des Betriebssytems erheblich beeintr'#228'chtigen. ' +
-            'Mit'
-          'Clearas k'#246'nnen Sie die Programme ausw'#228'hlen, die nicht mehr beim'
-          'Start geladen werden sollen."'
+            '"Clearas ist ein Reinigungs-Programm zum Editieren von Diensten,' +
+            ' '
+          'Autostart- und Kontextmen'#252'-Eintr'#228'gen. Es gibt einige ungewollte '
+          'Dienste und Autostart-Programme, die die Startzeit des '
+          'Betriebssystems erheblich beeintr'#228'chtigen. Clearas schafft hier '
+          'Abhilfe."'
           ''
           'Clearas ist durch internationale Copyright-Gesetze gesch'#252'tzt und'
           
