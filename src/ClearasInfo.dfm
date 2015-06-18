@@ -353,16 +353,13 @@ object Info: TInfo
           'Betriebssystems erheblich beeintr'#228'chtigen. Clearas schafft hier '
           'Abhilfe."'
           ''
-          'Clearas ist durch internationale Copyright-Gesetze gesch'#252'tzt und'
+          'Copyright (C) 2011 Philipp Meisberger'
+          ''
+          'Dieses Programm kann durch jedermann gem'#228#223' den Bestimmungen der '
           
-            'unterliegt dem Urheberrecht. Das Copyright f'#252'r alle Programmteil' +
-            'e'
-          
-            'liegt beim Autor von Clearas: Philipp Meisberger (PM Code Works)' +
-            '.'
-          'F'#252'r Sch'#228'den an Hard- und Software, die durch die Benutzung'
-          'dieses Programms entstehen, wird keine Haftung '#252'bernommen.'
-          '06/2015')
+            'Deutschen Freien Software Lizenz genutzt werden. Die Lizenz kann' +
+            ' '
+          'unter http://www.d-fsl.de abgerufen werden.')
         ReadOnly = True
         TabOrder = 1
         Zoom = 100
@@ -668,8 +665,8 @@ object Info: TInfo
             '----------------------------------------------------------------' +
             '---------------------------------'
           
-            'Clearas wurde unter der BSD-Lizenz ver'#246'ffentlicht und ist somit ' +
-            'Open-Source. '
+            'Clearas wurde unter der D-FSL-Lizenz ver'#246'ffentlicht und ist somi' +
+            't Open-Source. '
           'Der Quelltext kann auf der Website heruntergeladen werden.'
           ''
           

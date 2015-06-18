@@ -70,7 +70,7 @@ type
   {$IFDEF MSWINDOWS}
     constructor Create(AOwner: TComponent);
   {$ELSE}
-    constructor Create(ALanguage: string; AConfig: string = '');
+    constructor Create(AOwner: TComponent; AConfig: string = '');
   {$ENDIF}
     destructor Destroy; override;
     procedure AddListener(AListener: IChangeLanguageListener);
@@ -86,9 +86,8 @@ type
       AIcon: TBalloonIcon = biInfo): Boolean; overload;
     function EditBalloonTip(AEditHandle: THandle; ATitle, AText: Word;
       AIcon: TBalloonIcon = biInfo): Boolean; overload;
-  {$ENDIF}
-  {$IFDEF LINUX}
-    procedure GetLanguages(ASections: TStrings);
+  {$ELSE}
+    procedure GetLanguages(ALanguageFile: string; ASections: TStrings);
   {$ENDIF}
     function GetString(const AIndex: Word): string; overload;
     function GetString(const AIndexes: array of Word): string; overload;
@@ -129,7 +128,11 @@ begin
   FOwner := AOwner;
   FListeners := TInterfaceList.Create;
   FListeners.Add(AOwner);
+{$IFDEF LINUX}
+  FLanguages := TDictionary<Word, string>.Create;
+{$ELSE}
   FLanguages := TDictionary<Word, Word>.Create;
+{$ENDIF}
   FLocale := LANG_USER;
 end;
 
@@ -139,6 +142,10 @@ end;
 
 destructor TLanguageFile.Destroy;
 begin
+{$IFDEF LINUX}
+  if Assigned(FIni) then
+    FIni.Free;
+{$ENDIF}
   FLanguages.Free;
   FreeAndNil(FListeners);
   inherited Destroy;
@@ -153,38 +160,7 @@ begin
   if (Sender is TTaskDialog) then
     ShellExecute(0, 'open', PChar((Sender as TTaskDialog).URL), nil, nil, SW_SHOWNORMAL);
 end;
-{$ENDIF}
-
-{$IFDEF LINUX}
-constructor TLanguageFile.Create(ALanguage: string; AConfig: string = '');
-begin
-  inherited Create;
-
-  if (AConfig = '') then
-    AConfig := ExtractFilePath(ParamStr(0)) +'lang';
-
-  if not FileExists(AConfig) then
-    raise ELanguageException.Create('"'+ AConfig +'" not found!');
-
-  FLangId := ALanguage;
-  FIni := TIniFile.Create(AConfig);
-  FListeners := TInterfaceList.Create;
-  FLanguages := TDictionary<Word, string>.Create;
-  FLocale := LANG_USER;
-end;
-
-{ public TLanguageFile.Destroy
-
-  Destructor for destroying a TLanguageFile instance. }
-
-destructor TLanguageFile.Destroy;
-begin
-  FIni.Free;
-  FLanguages.Free;
-  FreeAndNil(FListeners);
-  inherited Destroy;
-end;
-
+{$ELSE}
 { public TLanguageFile.GetString
 
   Loads a string from a *.ini file based language file. }
@@ -198,14 +174,16 @@ end;
 
   Returns a list containing all available languages. }
 
-procedure TLanguageFile.GetLanguages(ASections: TStrings);
+procedure TLanguageFile.GetLanguages(ALanguageFile: string; ASections: TStrings);
 begin
+  if (ALanguageFile = '') then
+    ALanguageFile := ExtractFilePath(ParamStr(0)) +'lang';
+
+  FIni := TIniFile.Create(ALanguageFile);
   FIni.GetSections(ASections);
 end;
 {$ENDIF}
-
 {$IFDEF MSWINDOWS}
-
 { public TLanguageFile.EditBalloonTip
 
   Shows a balloon tip inside an edit field with more comfortable usage. }
@@ -302,8 +280,7 @@ end;
 
 procedure TLanguageFile.ChangeLanguage(ALanguage: Word);
 var
-  Locale: Word;
-  i: Word;
+  Locale, i: Word;
   Listener: IChangeLanguageListener;
 
 begin

@@ -8,7 +8,7 @@
         <AppType>Application</AppType>
         <FrameworkType>VCL</FrameworkType>
         <ProjectVersion>16.0</ProjectVersion>
-        <Platform Condition="'$(Platform)'==''">Win32</Platform>
+        <Platform Condition="'$(Platform)'==''">Win64</Platform>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
         <Base>true</Base>
@@ -58,6 +58,9 @@
         <Base>true</Base>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base)'!=''">
+        <Manifest_File>$(BDS)\bin\default_app.manifest</Manifest_File>
+        <VerInfo_MinorVer>1</VerInfo_MinorVer>
+        <Icon_MainIcon>clearas.ico</Icon_MainIcon>
         <DCC_SymbolReferenceInfo>1</DCC_SymbolReferenceInfo>
         <VerInfo_AutoGenVersion>true</VerInfo_AutoGenVersion>
         <DCC_S>false</DCC_S>
@@ -68,7 +71,7 @@
         <SanitizedProjectName>Clearas</SanitizedProjectName>
         <DCC_SYMBOL_PLATFORM>false</DCC_SYMBOL_PLATFORM>
         <DCC_E>false</DCC_E>
-        <VerInfo_Keys>CompanyName=PM Code Works;FileDescription=Clearas;FileVersion=4.0.0.1026;InternalName=;LegalCopyright=P. Meisberger 2015;LegalTrademarks=PM Code Works;OriginalFilename=;ProductName=Clearas;ProductVersion=4.0;Comments=</VerInfo_Keys>
+        <VerInfo_Keys>CompanyName=PM Code Works;FileDescription=Clearas;FileVersion=4.1.0.1026;InternalName=;LegalCopyright=P. Meisberger 2015;LegalTrademarks=PM Code Works;OriginalFilename=;ProductName=Clearas;ProductVersion=4.0;Comments=</VerInfo_Keys>
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
         <DCC_K>false</DCC_K>
         <DCC_Namespace>Vcl;Vcl.Imaging;Vcl.Touch;Vcl.Samples;Vcl.Shell;System;Xml;Data;Datasnap;Web;Soap;Winapi;System.Win;$(DCC_Namespace)</DCC_Namespace>
@@ -104,19 +107,17 @@
         <DCC_LocalDebugSymbols>false</DCC_LocalDebugSymbols>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1_Win32)'!=''">
-        <VerInfo_MinorVer>1</VerInfo_MinorVer>
         <VerInfo_AutoIncVersion>true</VerInfo_AutoIncVersion>
         <VerInfo_AutoGenVersion>false</VerInfo_AutoGenVersion>
         <VerInfo_Locale>1033</VerInfo_Locale>
-        <VerInfo_Keys>CompanyName=PM Code Works;FileDescription=Clearas;FileVersion=4.1.0.1058;InternalName=;LegalCopyright=Philipp Meisberger 2015;LegalTrademarks=PM Code Works;OriginalFilename=;ProductName=Clearas;ProductVersion=4.1;Comments=Delphi XE7</VerInfo_Keys>
-        <VerInfo_Build>1058</VerInfo_Build>
+        <VerInfo_Keys>CompanyName=PM Code Works;FileDescription=Clearas;FileVersion=4.1.0.1059;InternalName=;LegalCopyright=Philipp Meisberger 2015;LegalTrademarks=PM Code Works;OriginalFilename=;ProductName=Clearas;ProductVersion=4.1;Comments=Delphi XE7</VerInfo_Keys>
+        <VerInfo_Build>1059</VerInfo_Build>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1_Win64)'!=''">
-        <VerInfo_AutoIncVersion>true</VerInfo_AutoIncVersion>
         <VerInfo_MajorVer>1</VerInfo_MajorVer>
-        <VerInfo_Keys>CompanyName=PM Code Works;FileDescription=Clearas;FileVersion=1.1.0.1058;InternalName=;LegalCopyright=Philipp Meisberger 2015;LegalTrademarks=PM Code Works;OriginalFilename=;ProductName=Clearas;ProductVersion=4.1;Comments=Delphi XE7</VerInfo_Keys>
-        <VerInfo_MinorVer>1</VerInfo_MinorVer>
-        <VerInfo_Build>1058</VerInfo_Build>
+        <VerInfo_AutoIncVersion>true</VerInfo_AutoIncVersion>
+        <VerInfo_Keys>CompanyName=PM Code Works;FileDescription=Clearas;FileVersion=1.1.0.1060;InternalName=;LegalCopyright=Philipp Meisberger 2015;LegalTrademarks=PM Code Works;OriginalFilename=;ProductName=Clearas;ProductVersion=4.1;Comments=Delphi XE7</VerInfo_Keys>
+        <VerInfo_Build>1060</VerInfo_Build>
         <VerInfo_AutoGenVersion>false</VerInfo_AutoGenVersion>
         <VerInfo_Locale>1033</VerInfo_Locale>
     </PropertyGroup>

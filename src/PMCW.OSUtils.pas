@@ -15,7 +15,7 @@ interface
 uses
   SysUtils,
 {$IFDEF MSWINDOWS}
-  Windows, Classes, TLHelp32, Registry, ShellAPI, MMSystem;
+  Windows, Classes, TLHelp32, Registry, ShellAPI, MMSystem, ShlObj;
 {$ELSE}
   Process, Resource, ElfReader, VersionResource, LResources;
 {$ENDIF}
@@ -48,6 +48,7 @@ type
   function GetBuildNumber(): Cardinal;
 {$IFDEF MSWINDOWS}
   function GetTempDir(): string;
+  function GetUserDir(): string;
   function GetWinDir(): string;
   function GetWinVersion(AShowServicePack: Boolean = False): string;
 {$ENDIF}
@@ -263,6 +264,21 @@ end;
 function GetTempDir(): string;
 begin
   Result := SysUtils.GetEnvironmentVariable('temp');
+end;
+
+{ GetUserDir
+
+  Returns the path to users application data directory. }
+
+function GetUserDir(): string;
+var
+  Path: string;
+
+begin
+  Path := '%APPDATA%';
+
+  if ExpandEnvironmentVar(Path) then
+    Result := IncludeTrailingBackslash(Path);
 end;
 
 { GetWinDir

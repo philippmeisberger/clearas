@@ -350,8 +350,8 @@ begin
         FileNameRemote := 'clearas64.exe';
       {$ELSE}
         // Ask user to permit download of 64-Bit version
-        if (FLang.ShowMessage(FLang.Format([34, 35], ['Clearas']),
-          mtConfirmation) = IDYES) then
+        if (IsWindows64() and (FLang.ShowMessage(FLang.Format([34, 35], ['Clearas']),
+          mtConfirmation) = IDYES)) then
           FileNameRemote := 'clearas64.exe'
         else
           FileNameRemote := 'clearas.exe';
