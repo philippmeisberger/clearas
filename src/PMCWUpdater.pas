@@ -6,15 +6,15 @@
 {                                                                         }
 { *********************************************************************** }
 
-unit PMCW.Updater;
+unit PMCWUpdater;
 
 {$IFDEF LINUX} {$mode delphi}{$H+} {$ENDIF}
 
 interface
 
 uses
-  SysUtils, Classes, Vcl.Dialogs, PMCW.UpdateCheckThread, PMCW.DownloadThread,
-  PMCW.OSUtils, PMCW.LanguageFile, PMCW.Dialogs,
+  SysUtils, Classes, Dialogs, PMCWUpdateCheckThread, PMCWDownloadThread,
+  PMCWOSUtils, PMCWLanguageFile, PMCWDialogs,
 
 {$IFDEF MSWINDOWS}
   Windows, FileCtrl, Forms, StdCtrls, ComCtrls, Controls, System.Win.TaskbarCore,
@@ -41,7 +41,8 @@ type
     FRemoteDirName: string;
     FNewBuild: Cardinal;
     { TUpdateCheckThread events }
-    procedure OnCheckError(Sender: TThread; AResponseCode: Integer);
+    procedure OnCheckError(Sender: TThread; AResponseCode: Integer;
+      AResponseText: string);
     procedure OnNoUpdateAvailable(Sender: TObject);
     procedure OnUpdateAvailable(Sender: TThread; const ANewBuild: Cardinal);
   protected
@@ -146,11 +147,12 @@ end;
   Event method that is called TUpdateCheckThread when error occurs while
   searching for update. }
 
-procedure TUpdateCheck.OnCheckError(Sender: TThread; AResponseCode: Integer);
+procedure TUpdateCheck.OnCheckError(Sender: TThread; AResponseCode: Integer;
+  AResponseText: string);
 begin
   if FUserUpdate then
     if (AResponseCode <> -1) then
-      FLang.ShowException(FLang.GetString([12, 13]), FLang.Format(19, [AResponseCode]))
+      FLang.ShowException(FLang.GetString([12, 13]), AResponseText)
     else
       FLang.ShowMessage(12, 13, mtError);
 end;

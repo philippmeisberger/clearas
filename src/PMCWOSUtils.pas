@@ -6,7 +6,7 @@
 {                                                                         }
 { *********************************************************************** }
 
-unit PMCW.OSUtils;
+unit PMCWOSUtils;
 
 {$IFDEF LINUX} {$mode delphi}{$H+} {$ENDIF}
 
@@ -59,8 +59,8 @@ type
   function KillProcess(AExeName: string): Boolean;
 {$ENDIF}
   function OpenUrl(const AUrl: string): Boolean;
-{$IFDEF MSWINDOWS}
   function PlaySound(AFileName: string; ASynchronized: Boolean = False): Boolean;
+{$IFDEF MSWINDOWS}
   function PMCertExists(): Boolean;
 {$ENDIF}
   function Shutdown(): Boolean;

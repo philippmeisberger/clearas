@@ -6,7 +6,7 @@
 {                                                                         }
 { *********************************************************************** }
 
-unit PMCW.IniFileParser;
+unit PMCWIniFileParser;
 
 {$IFDEF LINUX} {$mode delphi}{$H+} {$ENDIF}
 
@@ -16,7 +16,7 @@ uses
 {$IFDEF MSWINDOWS}
   Windows, Registry,
 {$ENDIF}
-  Classes, SysUtils, StrUtils, PMCW.OSUtils;
+  Classes, SysUtils, StrUtils, PMCWOSUtils;
 
 {$IFDEF MSWINDOWS}
 const

@@ -11,7 +11,7 @@ unit ContextSearchThread;
 interface
 
 uses
-  Windows, Classes, Registry, SyncObjs, ClearasAPI, PMCW.OSUtils;
+  Windows, Classes, Registry, SyncObjs, ClearasAPI, PMCWOSUtils;
 
 type
   { TContextSearchThread }

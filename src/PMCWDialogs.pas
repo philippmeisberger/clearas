@@ -6,12 +6,13 @@
 {                                                                         }
 { *********************************************************************** }
 
-unit PMCW.Dialogs;
+unit PMCWDialogs;
 
 interface
 
+{$IFDEF MSWINDOWS}
 uses
-  Classes, SysUtils, Types, Windows, Forms, StdCtrls, Graphics, Controls,
+  Windows, Classes, SysUtils, Forms, StdCtrls, Graphics, Controls, Math, Types,
   Dialogs, Consts, ShellAPI;
 
 const
@@ -36,12 +37,11 @@ function ShowTaskDialog(AOwner: TComponent; ACaption, ATitle, AText: WideString;
 
 procedure ShowException(AOwner: TComponent; ACaption, AText, AInformation: WideString;
   AFlags: TTaskDialogFlags = [tfExpandFooterArea]);
-
+{$ENDIF}
 
 implementation
 
-uses System.Math;
-
+{$IFDEF MSWINDOWS}
 { InputCombo
 
   Shows a dialog with a pre defined TComboBox list item selection. Similar to
@@ -243,5 +243,5 @@ begin
     TaskDialog.Free;
   end;  //of try
 end;
-
-end.
+{$ENDIF}
+end.

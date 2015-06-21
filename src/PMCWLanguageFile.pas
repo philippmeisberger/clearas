@@ -6,7 +6,7 @@
 {                                                                         }
 { *********************************************************************** }
 
-unit PMCW.LanguageFile;
+unit PMCWLanguageFile;
 
 {$IFDEF LINUX} {$mode objfpc}{$H+} {$ENDIF}
 

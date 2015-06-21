@@ -6,7 +6,7 @@
 {                                                                         }
 { *********************************************************************** }
 
-unit PMCW.UpdateCheckThread;
+unit PMCWUpdateCheckThread;
 
 {$IFDEF LINUX} {$mode delphi}{$H+} {$ENDIF}
 
@@ -21,7 +21,8 @@ const
 type
   { Thread event }
   TOnUpdateAvailableEvent = procedure(Sender: TThread; const ANewBuild: Cardinal) of object;
-  TOnUpdateCheckErrorEvent = procedure(Sender: TThread; AResponseCode: Integer) of object;
+  TOnUpdateCheckErrorEvent = procedure(Sender: TThread; AResponseCode: Integer;
+    AResponseText: string) of object;
 
   { TUpdateCheckThread }
   TUpdateCheckThread = class(TThread)
@@ -32,7 +33,7 @@ type
     FOnNoUpdate: TNotifyEvent;
     FCurBuild, FNewBuild: Cardinal;
     FRemoteDirName: string;
-    { Synchronizable events }
+    { Synchronized events }
     procedure DoNotifyOnError;
     procedure DoNotifyOnNoUpdate;
     procedure DoNotifyOnUpdate;
@@ -76,6 +77,9 @@ begin
     // Set the user-agent because of some issues with default
     UserAgent := 'Updater/2.3 (PM Code Works Update Utility)';
 
+    // Only accept plain text
+    Accept := 'text/plain';
+
     // Close connection after completion of the response
     Connection := 'close';
   end;  //of with
@@ -115,7 +119,7 @@ begin
 
   except
     Synchronize(DoNotifyOnError);
-  end;  //of except
+  end;  //of try
 end;
 
 { private TDownloadThread.DoNotifyOnError
@@ -126,7 +130,7 @@ end;
 procedure TUpdateCheckThread.DoNotifyOnError;
 begin
   if Assigned(OnError) then
-    OnError(Self, FHttp.ResponseCode);
+    OnError(Self, FHttp.ResponseCode, FHttp.ResponseText);
 end;
 
 { private TDownloadThread.DoNotifyOnNoUpdate

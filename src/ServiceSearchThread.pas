@@ -11,7 +11,7 @@ unit ServiceSearchThread;
 interface
 
 uses
-  Windows, Classes, SysUtils, SyncObjs, WinSvc, ClearasAPI, PMCW.OSUtils;
+  Windows, Classes, SysUtils, SyncObjs, WinSvc, ClearasAPI, PMCWOSUtils;
 
 type
   { TServiceSearchThread }

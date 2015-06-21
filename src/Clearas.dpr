@@ -2,7 +2,7 @@ program Clearas;
 
 uses
   Forms,
-  PMCW.Mutex in 'PMCW.Mutex.pas',
+  PMCWMutex in 'PMCWMutex.pas',
   AdminManifest in 'AdminManifest.pas',
   ClearasMain in 'ClearasMain.pas' {Main},
   ClearasInfo in 'ClearasInfo.pas' {Info},
@@ -10,7 +10,7 @@ uses
   StartupSearchThread in 'StartupSearchThread.pas',
   ContextSearchThread in 'ContextSearchThread.pas',
   ExportListThread in 'ExportListThread.pas',
-  PMCW.Updater in 'PMCW.Updater.pas' {Update};
+  PMCWUpdater in 'PMCWUpdater.pas' {Update};
 
 {$R *.res}
 

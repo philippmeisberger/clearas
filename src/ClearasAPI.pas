@@ -12,8 +12,8 @@ interface
 
 uses
   Windows, WinSvc, Classes, SysUtils, Registry, ShlObj, ActiveX, ComObj,
-  CommCtrl, ShellAPI, Contnrs, SyncObjs, StrUtils, PMCW.OSUtils, PMCW.LanguageFile,
-  PMCW.IniFileParser;
+  CommCtrl, ShellAPI, Contnrs, SyncObjs, StrUtils, PMCWOSUtils, PMCWLanguageFile,
+  PMCWIniFileParser;
 
 const
   { Startup Registry keys }

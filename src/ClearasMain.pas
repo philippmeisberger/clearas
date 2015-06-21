@@ -13,8 +13,8 @@ interface
 uses
   Windows, SysUtils, Classes, Controls, Forms, ComCtrls, StdCtrls, ExtCtrls,
   Dialogs, Menus, Graphics, ClipBrd, ImgList, Registry, StrUtils, ClearasAPI,
-  ExportListThread, ClearasInfo, PMCW.LanguageFile, PMCW.OSUtils, PMCW.Updater,
-  PMCW.Dialogs;
+  ExportListThread, ClearasInfo, PMCWLanguageFile, PMCWOSUtils, PMCWUpdater,
+  PMCWDialogs;
 
 const
   KEY_RECYCLEBIN = 'CLSID\{645FF040-5081-101B-9F08-00AA002F954E}\shell';

@@ -1,19 +1,19 @@
 { *********************************************************************** }
 {                                                                         }
-{ PM Code Works Cross Plattform Update Thread v2.3                        }
+{ PM Code Works Cross Plattform Download Thread v2.3                      }
 {                                                                         }
 { Copyright (c) 2011-2015 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
 { *********************************************************************** }
 
-unit PMCW.DownloadThread;
+unit PMCWDownloadThread;
 
 {$IFDEF LINUX} {$mode delphi}{$H+} {$ENDIF}
 
 interface
 
 uses
-  Classes, SysUtils, IdComponent, IdHTTP;
+  Classes, SysUtils, IdComponent, IdHTTP, IdSSLOpenSSL, StrUtils;
 
 type
   { Thread events }
@@ -75,13 +75,29 @@ begin
     FFileName := GetUniqueFileName(AFileName);
 
   FUrl := AUrl;
-  
+
   // Init IdHTTP component dynamically
   FHttp := TIdHTTP.Create(nil);
 
   // Setup some HTTP options
   with FHttp do
   begin
+    // OpenSSL libraries exist in current directory?
+    if (FileExists('ssleay32.dll') and FileExists('libeay32.dll')) then
+    begin
+      // Use TLS v1.2 encrypted connection
+      IOHandler := TIdSSLIOHandlerSocketOpenSSL.Create(FHttp);
+      (IOHandler as TIdSSLIOHandlerSocketOpenSSL).SSLOptions.Method := {$IFDEF MSWINDOWS}sslvTLSv1_2{$ELSE}sslvTLSv1{$ENDIF};
+
+      // Use secure https instead of plain http
+      if AnsiStartsStr('http://', AUrl) then
+        FUrl := 'https://'+ Copy(AUrl, 8, Length(AUrl) - 7);
+    end  //of begin
+    else
+      // Use plain http instead of secure https
+      if AnsiStartsStr('https://', AUrl) then
+        FUrl := 'http://'+ Copy(AUrl, 9, Length(AUrl) - 8);
+
     // Link HTTP events
     OnWorkBegin := DownloadStart;
     OnWork := Downloading;
@@ -246,7 +262,7 @@ end;
 
   Synchronizable event method that is called when download is finished. }
   
-procedure TDownloadThread.DoNotifyOnFinish;                
+procedure TDownloadThread.DoNotifyOnFinish;
 begin
   if Assigned(OnFinish) then
     OnFinish(Self);

@@ -12,7 +12,7 @@ interface
 
 uses
   Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, StdCtrls,
-  ExtCtrls, ComCtrls, PMCW.OSUtils;
+  ExtCtrls, ComCtrls, PMCWOSUtils;
 
 type
   TInfo = class(TForm)
