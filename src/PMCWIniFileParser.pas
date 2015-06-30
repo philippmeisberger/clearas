@@ -155,7 +155,7 @@ begin
   inherited Create;
 
   if (AFileName = '') then
-    raise EInvalidArgument.Create('Missing parameter file name!');
+    raise EArgumentException.Create('Missing parameter file name!');
 
   FFileName := AFileName;
   FSaveOnDestroy := ASaveOnDestroy;
@@ -852,7 +852,7 @@ constructor TRegistryFile.Create(const AFileName: string;
   AOverwriteIfExists: Boolean = False; ASaveOnDestroy: Boolean = False);
 begin
   if (ExtractFileExt(AFileName) <> '.reg') then
-    raise EInvalidArgument.Create('The specified file is no .reg file!');
+    raise EArgumentException.Create('The specified file is no .reg file!');
 
   inherited Create(AFileName, AOverwriteIfExists, ASaveOnDestroy);
   MakeHeadline();
@@ -1281,7 +1281,7 @@ begin
   if AnsiContainsStr(StringVal, REG_INTEGER) then
   begin
     StringVal := Copy(StringVal, 7, Length(StringVal));
-    Result := HexToInt(StringVal);
+    Result := StrToInt('$'+ StringVal);
   end;  //of begin
 end;
 
@@ -1386,4 +1386,4 @@ begin
 end;
 {$ENDIF}
 
-end.
+end.

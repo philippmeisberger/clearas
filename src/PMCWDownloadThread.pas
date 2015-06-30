@@ -13,7 +13,7 @@ unit PMCWDownloadThread;
 interface
 
 uses
-  Classes, SysUtils, IdComponent, IdHTTP, IdSSLOpenSSL, StrUtils;
+  Classes, SysUtils, IdComponent, IdHTTP;
 
 type
   { Thread events }
@@ -29,7 +29,7 @@ type
     FOnFinish, FOnCancel: TNotifyEvent;
     FOnError: TOnDownloadErrorEvent;
     FFileSize, FDownloadSize: Int64;
-    FFileName, FUrl: string;
+    FFileName, FUrl, FResponseText: string;
     { Synchronized events }
     procedure DoNotifyOnCancel;
     procedure DoNotifyOnDownloading;
@@ -82,22 +82,6 @@ begin
   // Setup some HTTP options
   with FHttp do
   begin
-    // OpenSSL libraries exist in current directory?
-    if (FileExists('ssleay32.dll') and FileExists('libeay32.dll')) then
-    begin
-      // Use TLS v1.2 encrypted connection
-      IOHandler := TIdSSLIOHandlerSocketOpenSSL.Create(FHttp);
-      (IOHandler as TIdSSLIOHandlerSocketOpenSSL).SSLOptions.Method := {$IFDEF MSWINDOWS}sslvTLSv1_2{$ELSE}sslvTLSv1{$ENDIF};
-
-      // Use secure https instead of plain http
-      if AnsiStartsStr('http://', AUrl) then
-        FUrl := 'https://'+ Copy(AUrl, 8, Length(AUrl) - 7);
-    end  //of begin
-    else
-      // Use plain http instead of secure https
-      if AnsiStartsStr('https://', AUrl) then
-        FUrl := 'http://'+ Copy(AUrl, 9, Length(AUrl) - 8);
-
     // Link HTTP events
     OnWorkBegin := DownloadStart;
     OnWork := Downloading;
@@ -123,7 +107,7 @@ end;
 { protected TDownloadThread.Execute
 
   Thread main method that downloads a file from an HTTP source. }
-  
+
 procedure TDownloadThread.Execute;
 var
   FileStream: TFileStream;
@@ -156,6 +140,7 @@ begin
 
     on E: Exception do
     begin
+      FResponseText := E.Message;
       DeleteFile(FFileName);
       Synchronize(DoNotifyOnError);
     end;  //of begin
@@ -240,7 +225,7 @@ end;
 { private TDownloadThread.DoNotifyOnDownloading
 
   Synchronizable event method that is called when download is in progress. }
-  
+
 procedure TDownloadThread.DoNotifyOnDownloading;
 begin
   if Assigned(OnDownloading) then
@@ -251,17 +236,17 @@ end;
 
   Synchronizable event method that is called when an error occurs while download
   is in progress. }
-  
+
 procedure TDownloadThread.DoNotifyOnError;
 begin
   if Assigned(OnError) then
-    OnError(Self, FHttp.ResponseCode, FHttp.ResponseText);
+    OnError(Self, FHttp.ResponseCode, FResponseText);
 end;
 
 { private TDownloadThread.DoNotifyOnFinish
 
   Synchronizable event method that is called when download is finished. }
-  
+
 procedure TDownloadThread.DoNotifyOnFinish;
 begin
   if Assigned(OnFinish) then
@@ -271,11 +256,11 @@ end;
 { private TDownloadThread.DoNotifyOnStart
 
   Synchronizable event method that is called when download starts. }
-  
+
 procedure TDownloadThread.DoNotifyOnStart;
 begin
   if Assigned(OnStart) then
     OnStart(Self, FFileSize);
 end;
 
-end.
+end.

@@ -11,10 +11,10 @@ unit ClearasMain;
 interface
 
 uses
-  Windows, SysUtils, Classes, Controls, Forms, ComCtrls, StdCtrls, ExtCtrls,
-  Dialogs, Menus, Graphics, ClipBrd, ImgList, Registry, StrUtils, ClearasAPI,
-  ExportListThread, ClearasInfo, PMCWLanguageFile, PMCWOSUtils, PMCWUpdater,
-  PMCWDialogs;
+  Winapi.Windows, System.SysUtils, System.Classes, Vcl.Controls, Vcl.Forms,
+  Vcl.ComCtrls, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Dialogs, Vcl.Menus, Vcl.Graphics,
+  Vcl.ClipBrd, Vcl.ImgList, Registry, StrUtils, ClearasAPI, ExportListThread,
+  ClearasInfo, PMCWLanguageFile, PMCWOSUtils, PMCWUpdater, PMCWDialogs;
 
 const
   KEY_RECYCLEBIN = 'CLSID\{645FF040-5081-101B-9F08-00AA002F954E}\shell';
@@ -282,22 +282,16 @@ end;
   VCL event that is called when form is shown. }
 
 procedure TMain.FormShow(Sender: TObject);
-var
-  WindowsVersion: string;
-  WindowsVistaMin: Boolean;
-
 begin
   // Get version of Windows including service pack
-  WindowsVersion := GetWinVersion(True);
-  WindowsVistaMin := (Win32MajorVersion >= 6);
-  lWindows.Caption := lWindows.Caption +' '+ WindowsVersion;
+  lWindows.Caption := TOSVersion.Name +' '+ Win32CSDVersion;
   lWindows2.Caption := lWindows.Caption;
   lWindows3.Caption := lWindows.Caption;
 
-  // Check for incompatibility
-  if not (WindowsVistaMin or (WindowsVersion <> '')) then
+  // At least Windows 2000!
+  if not TOSVersion.Check(5) then
   begin
-    FLang.ShowMessage(FLang.Format([64, 65], [WindowsVersion]), mtError);
+    FLang.ShowMessage(FLang.Format([64, 65], [TOSVersion.Name]), mtError);
     mmExportList.Enabled := False;
     mmRefresh.Enabled := False;
     mmContext.Enabled := False;
@@ -314,7 +308,7 @@ begin
   end;  //of if
 
   // Show "date of deactivation" only on Vista and later
-  mmDate.Enabled := WindowsVistaMin;
+  mmDate.Enabled := TOSVersion.Check(6);
 
   // Update Clearas recycle bin context menu entry
   mmContext.Checked := UpdateContextPath();
@@ -350,8 +344,8 @@ begin
         FileNameRemote := 'clearas64.exe';
       {$ELSE}
         // Ask user to permit download of 64-Bit version
-        if (IsWindows64() and (FLang.ShowMessage(FLang.Format([34, 35], ['Clearas']),
-          mtConfirmation) = IDYES)) then
+        if ((TOSVersion.Architecture = arIntelX64) and (FLang.ShowMessage(
+          FLang.Format([34, 35], ['Clearas']), mtConfirmation) = IDYES)) then
           FileNameRemote := 'clearas64.exe'
         else
           FileNameRemote := 'clearas.exe';
@@ -2436,7 +2430,8 @@ var
 
 begin
   // Certificate already installed?
-  if (PMCertExists() and (FLang.ShowMessage(27, 28, mtConfirmation) = IDNO)) then
+  if (TUpdate.PMCertificateExists() and (FLang.ShowMessage(27, 28,
+    mtConfirmation) = IDNO)) then
     Exit;
 
   // Init downloader

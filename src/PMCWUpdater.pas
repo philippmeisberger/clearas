@@ -14,13 +14,13 @@ interface
 
 uses
   SysUtils, Classes, Dialogs, PMCWUpdateCheckThread, PMCWDownloadThread,
-  PMCWOSUtils, PMCWLanguageFile, PMCWDialogs,
+  PMCWLanguageFile,
 
 {$IFDEF MSWINDOWS}
   Windows, FileCtrl, Forms, StdCtrls, ComCtrls, Controls, System.Win.TaskbarCore,
-  Vcl.Taskbar;
+  Vcl.Taskbar, Registry, ShellAPI;
 {$ELSE}
-  LCLType;
+  LCLType, Resource, ElfReader, VersionResource, LResources;
 {$ENDIF}
 
 const
@@ -54,6 +54,7 @@ type
     destructor Destroy; override;
     procedure AddListener(AListener: IUpdateListener);
     procedure CheckForUpdate(AUserUpdate: Boolean; ACurrentBuild: Cardinal = 0);
+    class function GetBuildNumber(): Cardinal;
     procedure RemoveListener(AListener: IUpdateListener);
   end;
 
@@ -68,8 +69,13 @@ type
     procedure FormShow(Sender: TObject);
   private
     FOnUserCancel: TNotifyEvent;
-    FThreadRuns: Boolean;
-    FDownloadDirectory, FTitle, FRemoteFileName, FLocalFileName, FFileName: string;
+    FThreadRuns,
+    FExecuteFile: Boolean;
+    FDownloadDirectory,
+    FTitle,
+    FRemoteFileName,
+    FLocalFileName,
+    FFileName: string;
     FLang: TLanguageFile;
     FListeners: TInterfaceList;
     FTaskBar: TTaskbar;
@@ -88,9 +94,11 @@ type
     destructor Destroy; override;
     procedure AddListener(AListener: IUpdateListener);
     function Execute(): Boolean;
+    class function PMCertificateExists(): Boolean;
     procedure RemoveListener(AListener: IUpdateListener);
     { external }
     property DownloadDirectory: string read FDownloadDirectory write FDownloadDirectory;
+    property ExecuteDownloadedFile: Boolean read FExecuteFile write FExecuteFile;
     property FileNameLocal: string read FLocalFileName write FLocalFileName;
     property FileNameRemote: string read FRemoteFileName write FRemoteFileName;
     property LanguageFile: TLanguageFile read FLang write FLang;
@@ -224,6 +232,73 @@ begin
   end;  //of with
 end;
 
+{ TUpdateCheck.GetBuildNumber
+
+  Returns build number of current running program. }
+
+class function TUpdateCheck.GetBuildNumber(): Cardinal;
+{$IFDEF MSWINDOWS}
+var
+  VerInfoSize, VerValueSize, Dummy: DWord;
+  VerInfo: Pointer;
+  VerValue: PVSFixedFileInfo;
+
+begin
+  VerInfoSize := GetFileVersionInfoSize(PChar(ParamStr(0)), Dummy);
+
+  if (VerInfoSize <> 0) then
+  begin
+    GetMem(VerInfo, VerInfoSize);
+
+    try
+      GetFileVersionInfo(PChar(ParamStr(0)), 0, VerInfoSize, VerInfo);
+
+      if VerQueryValue(VerInfo, '\', Pointer(VerValue), VerValueSize) then
+        with VerValue^ do
+          Result := (dwFileVersionLS and $FFFF)
+      else
+        Result := 0;
+
+    finally
+      FreeMem(VerInfo, VerInfoSize);
+    end;   //of try
+  end  //of begin
+  else
+    Result := 0;
+end;
+{$ELSE}
+var
+  RS : TResources;
+  E : TElfResourceReader;
+  VR : TVersionResource;
+  i : Cardinal;
+
+begin
+  RS := TResources.Create;
+  VR := nil;
+  i := 0;
+
+  try
+    E := TElfResourceReader.Create;
+    Rs.LoadFromFile(ParamStr(0), E);
+    E.Free;
+
+    while (VR = nil) and (i < RS.Count) do
+    begin
+      if RS.Items[i] is TVersionResource then
+        VR := TVersionResource(RS.Items[i]);
+      Inc(i);
+    end;  //of while
+
+    if Assigned(VR) then
+      Result := VR.FixedInfo.FileVersion[3];
+
+  finally
+    RS.FRee;
+  end;  //of try
+end;
+{$ENDIF}
+
 { public TUpdateCheck.RemoveListener
 
   Removes a listener from the notification list. }
@@ -246,6 +321,7 @@ begin
   inherited Create(AOwner);
   FLang := ALang;
   FThreadRuns := False;
+  FExecuteFile := False;
 
   // Init list of listeners
   FListeners := TInterfaceList.Create;
@@ -322,7 +398,11 @@ begin
 {$IFDEF MSWINDOWS}
   // Show dialog to add certificate
   if (ExtractFileExt(FFileName) = '.reg') then
-    ShowAddRegistryDialog('"'+ FFileName +'"');
+    ShellExecute(0, 'open', PChar('regedit.exe'), PChar(FFileName), nil, SW_SHOWNORMAL);
+
+  // Launch setup?
+  if FExecuteFile then
+    ShellExecute(0, 'open', PChar(FFileName), nil, nil, SW_SHOWNORMAL);
 {$ENDIF}
   FlashWindow(Application.Handle, True);
   bFinished.ModalResult := mrOk;
@@ -348,7 +428,6 @@ begin
   FTaskBar.ProgressMaxValue := AFileSize;
   FTaskBar.ProgressState := TTaskBarProgressState.Normal;
   pbProgress.Max := AFileSize;
-  BringToFront;
 end;
 
 { private TUpdate.Reset
@@ -428,9 +507,34 @@ end;
 function TUpdate.Execute(): Boolean;
 begin
   if ((FRemoteFileName = '') or (FLocalFileName = '')) then
-    raise EInvalidArgument.Create('Missing argument: "RemoteFileName" or "LocalFileName"!');
+    raise EArgumentException.Create('Missing argument: "RemoteFileName" or "LocalFileName"!');
 
   Result := Download(FRemoteFileName, FLocalFileName, FDownloadDirectory);
+end;
+
+{ public TUpdate.PMCertificateExists
+
+  Returns if the PM Code Works certificate is already installed. }
+
+class function TUpdate.PMCertificateExists(): Boolean;
+var
+  Reg: TRegistry;
+
+const
+  CERT_KEY = 'SOFTWARE\Microsoft\SystemCertificates\ROOT\Certificates\';
+  PM_CERT_THUMBPRINT = '1350A832ED8A6A8FE8B95D2E674495021EB93A4D';
+
+begin
+  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ);
+
+  try
+    Reg.RootKey := HKEY_LOCAL_MACHINE;
+    Result := (Reg.OpenKeyReadOnly(CERT_KEY) and Reg.KeyExists(PM_CERT_THUMBPRINT));
+
+  finally
+    Reg.CloseKey;
+    Reg.Free;
+  end;  //of try
 end;
 
 { public TUpdate.RemoveListener

@@ -2,7 +2,7 @@
 {                                                                         }
 { PM Code Works Additional Dialogs Unit                                   }
 {                                                                         }
-{ Copyright (c) 2011-2015 P.Meisberger (PM Code Works)                    }
+{ Copyright (c) 2011-2015 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
 { *********************************************************************** }
 
@@ -10,7 +10,6 @@ unit PMCWDialogs;
 
 interface
 
-{$IFDEF MSWINDOWS}
 uses
   Windows, Classes, SysUtils, Forms, StdCtrls, Graphics, Controls, Math, Types,
   Dialogs, Consts, ShellAPI;
@@ -37,11 +36,9 @@ function ShowTaskDialog(AOwner: TComponent; ACaption, ATitle, AText: WideString;
 
 procedure ShowException(AOwner: TComponent; ACaption, AText, AInformation: WideString;
   AFlags: TTaskDialogFlags = [tfExpandFooterArea]);
-{$ENDIF}
 
 implementation
 
-{$IFDEF MSWINDOWS}
 { InputCombo
 
   Shows a dialog with a pre defined TComboBox list item selection. Similar to
@@ -243,5 +240,5 @@ begin
     TaskDialog.Free;
   end;  //of try
 end;
-{$ENDIF}
-end.
+
+end.

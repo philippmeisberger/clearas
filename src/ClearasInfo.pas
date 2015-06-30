@@ -11,8 +11,8 @@ unit ClearasInfo;
 interface
 
 uses
-  Windows, Messages, SysUtils, Classes, Graphics, Controls, Forms, StdCtrls,
-  ExtCtrls, ComCtrls, PMCWOSUtils;
+  SysUtils, Classes, Graphics, Controls, Forms, StdCtrls, ExtCtrls, ComCtrls,
+  PMCWUpdater;
 
 type
   TInfo = class(TForm)
@@ -38,7 +38,7 @@ implementation
 
 procedure TInfo.FormCreate(Sender: TObject);
 begin
-  lBuild.Caption := '(Build: '+ IntToStr(GetBuildNumber()) +')';
+  lBuild.Caption := '(Build: '+ IntToStr(TUpdateCheck.GetBuildNumber()) +')';
 end;
 
 end.

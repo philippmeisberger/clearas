@@ -629,10 +629,10 @@ begin
   Result := False;
 
   if (AFileName = '') then
-    raise EInvalidArgument.Create('File name for .lnk file must not be empty!');
+    raise EArgumentException.Create('File name for .lnk file must not be empty!');
 
   if (AExeFileName = '') then
-    raise EInvalidArgument.Create('File path to .exe must not be empty!');
+    raise EArgumentException.Create('File path to .exe must not be empty!');
 
   try
     CoInitialize(nil);
@@ -713,7 +713,7 @@ var
   Win64: Boolean;
 
 begin
-  Win64 := IsWindows64();
+  Win64 := (TOSVersion.Architecture = arIntelX64);
 
   // Deny WOW64 redirection only on 64bit Windows
   if Win64 then
@@ -808,7 +808,7 @@ var
 
 begin
   // 64bit Windows?
-  Win64 := IsWindows64();
+  Win64 := (TOSVersion.Architecture = arIntelX64);
 
   // Deny WOW64 redirection only on 64bit Windows
   if Win64 then
@@ -847,7 +847,7 @@ begin
   PreparedFileName := GetFileNameOnly();
 
   // 64bit Windows?
-  Win64 := IsWindows64();
+  Win64 := (TOSVersion.Architecture = arIntelX64);
 
   // Deny WOW64 redirection only on 64bit Windows
   if Win64 then
@@ -993,7 +993,7 @@ begin
     Reg.WriteString('LastKey', 'Computer\'+ GetFullLocation());
 
     // Deny WOW64 redirection only on 64 Bit Windows for 64 Bit items
-    if (IsWindows64() xor (FEnabled and FWow64)) then
+    if ((TOSVersion.Architecture = arIntelX64) xor (FEnabled and FWow64)) then
     begin
       Wow64FsRedirection(True);
       ExecuteProgram('regedit.exe');
@@ -2155,7 +2155,7 @@ begin
 
   // Check invalid extension
   if ((Ext <> '.exe') and (Ext <> '.bat')) then
-    raise EInvalidArgument.Create('Invalid program extension! Must be ''.exe'''
+    raise EArgumentException.Create('Invalid program extension! Must be ''.exe'''
       +' or ''.bat''!');
 
   // List locked?
@@ -2314,7 +2314,7 @@ begin
 
   // Check invalid extension
   if ((Ext <> EXT_COMMON) and (Ext <> EXT_USER)) then
-    raise EInvalidArgument.Create('Invalid backup file extension! Must be '''
+    raise EArgumentException.Create('Invalid backup file extension! Must be '''
       + EXT_COMMON +''' or '''+ EXT_USER+'''!');
 
   // List locked?
@@ -2512,7 +2512,7 @@ begin
 
   with StartupSearchThread do
   begin
-    Win64 := IsWindows64();
+    Win64 := (TOSVersion.Architecture = arIntelX64);
     IncludeRunOnce := AIncludeRunOnce;
     OnStart := FOnSearchStart;
     OnSearching := FOnSearching;
@@ -2980,14 +2980,14 @@ begin
   Result := False;
 
   if ((Trim(ALocationRoot) = '') or (Trim(ACaption) = '')) then
-    raise EInvalidArgument.Create('Missing argument!');
+    raise EArgumentException.Create('Missing argument!');
 
   Ext := ExtractFileExt(AFileName);
   Name := ChangeFileExt(ExtractFileName(AFileName), '');
 
   // Check invalid extension
   if ((Ext <> '.exe') and (Ext <> '.bat')) then
-    raise EInvalidArgument.Create('Invalid program extension! Must be ''.exe'''
+    raise EArgumentException.Create('Invalid program extension! Must be ''.exe'''
       +' or ''.bat''!');
 
   // List locked?
@@ -3262,7 +3262,7 @@ begin
   with SearchThread do
   begin
     Locations.CommaText := ALocationRootCommaList;
-    Win64 := IsWindows64();
+    Win64 := (TOSVersion.Architecture = arIntelX64);
     OnStart := FOnSearchStart;
     OnSearching := FOnSearching;
     OnFinish := FOnSearchFinish;
@@ -3685,7 +3685,7 @@ begin
 
   // Check invalid extension
   if (ExtractFileExt(Name) <> '.exe') then
-    raise EInvalidArgument.Create('Invalid program extension! Must be ''.exe''!');
+    raise EArgumentException.Create('Invalid program extension! Must be ''.exe''!');
 
   // List locked?
   if not FLock.TryEnter() then
