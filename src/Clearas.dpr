@@ -17,6 +17,7 @@ uses
 begin
   Application.Initialize;
   Application.Title := 'Clearas';
+  Application.MainFormOnTaskbar := True;
   Application.CreateForm(TMain, Main);
   Application.Run;
 end.

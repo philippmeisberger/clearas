@@ -37,10 +37,6 @@ object Info: TInfo
     TabOrder = 0
     object tsInfo: TTabSheet
       Caption = 'Infos'
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       DesignSize = (
         451
         230)
@@ -372,10 +368,6 @@ object Info: TInfo
     object tsHistory: TTabSheet
       Caption = 'Versions History'
       ImageIndex = 1
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       DesignSize = (
         451
         230)
@@ -416,7 +408,7 @@ object Info: TInfo
           'History'
           '--------'
           ''
-          'Version 4.1  [??.06.15]'
+          'Version 4.1  [07.07.15]'
           ''
           
             '- ProgressBar wird nun w'#228'hrend des Exportierens von Kontextmn'#252'-E' +
@@ -685,7 +677,7 @@ object Info: TInfo
             'hicken.'
           'Meine Adresse erfahren Sie unter team@pm-codeworks.de.'
           ''
-          '06/2015')
+          '07/2015')
         ReadOnly = True
         ScrollBars = ssVertical
         TabOrder = 1

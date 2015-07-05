@@ -11,8 +11,8 @@ unit PMCWDialogs;
 interface
 
 uses
-  Windows, Classes, SysUtils, Forms, StdCtrls, Graphics, Controls, Math, Types,
-  Dialogs, Consts, ShellAPI;
+  Windows, Classes, SysUtils, Forms, StdCtrls, Graphics, Controls, Types,
+  Dialogs, Consts;
 
 const
   tdiQuestion            = 99;
@@ -27,8 +27,6 @@ const
 
 function InputCombo(AOwner: TComponent; ACaption, APrompt: string;
   AList: TStrings; var AValue: string): Boolean;
-
-function ShowAddRegistryDialog(ARegFilePath: string): Boolean;
 
 function ShowTaskDialog(AOwner: TComponent; ACaption, ATitle, AText: WideString;
   ACommonButtons: TTaskDialogCommonButtons; AIcon: TTaskDialogIcon;
@@ -149,27 +147,6 @@ begin
   finally
     Form.Free;
   end;  // of try
-end;
-
-{ ShowAddRegistryDialog
-
-  Shows an dialog where user has the choice to add a *.reg file.  }
-
-function ShowAddRegistryDialog(ARegFilePath: string): Boolean;
-var
-  RegFilePath: string;
-
-begin
-  if (ARegFilePath = '') then
-    raise Exception.Create('Missing parameter with a .reg file!');
-
-  if (ARegFilePath[1] <> '"') then
-    RegFilePath := '"'+ ARegFilePath +'"'
-  else
-    RegFilePath := ARegFilePath;
-
-  Result := BOOL(ShellExecute(0, 'open', PChar('regedit.exe'), PChar(RegFilePath),
-    nil, SW_SHOWNORMAL));
 end;
 
 { ShowTaskDialog
