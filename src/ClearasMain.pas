@@ -338,23 +338,25 @@ begin
       with Updater do
       begin
         Title := FLang.GetString(24);
-        FileNameLocal := 'Clearas.exe';
+        FileNameLocal := 'Clearas.zip';
 
       {$IFDEF WIN64}
-        FileNameRemote := 'clearas64.exe';
+        FileNameRemote := 'clearas64.zip';
       {$ELSE}
         // Ask user to permit download of 64-Bit version
         if ((TOSVersion.Architecture = arIntelX64) and (FLang.ShowMessage(
           FLang.Format([34, 35], ['Clearas']), mtConfirmation) = IDYES)) then
-          FileNameRemote := 'clearas64.exe'
+          FileNameRemote := 'clearas64.zip'
         else
-          FileNameRemote := 'clearas.exe';
+          FileNameRemote := 'clearas.zip';
       {$ENDIF}
       end;  //of begin
 
       // Successfully downloaded update?
       if Updater.Execute() then
       begin
+        Updater.Unzip := True;
+
         // Caption "Search for update"
         mmUpdate.Caption := FLang.GetString(15);
         mmUpdate.Enabled := False;

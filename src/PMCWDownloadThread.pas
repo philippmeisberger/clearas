@@ -13,7 +13,8 @@ unit PMCWDownloadThread;
 interface
 
 uses
-  Classes, SysUtils, IdComponent, IdHTTP;
+  Classes, SysUtils, IdComponent, IdHTTP, IdSSLOpenSSL, IdSSLOpenSSLHeaders,
+  IdCTypes, {$IFDEF MSWINDOWS}ComObj, ActiveX,{$ENDIF} StrUtils;
 
 type
   { Thread events }
@@ -25,17 +26,39 @@ type
   TDownloadThread = class(TThread)
   private
     FHttp: TIdHTTP;
-    FOnStart, FOnDownloading: TOnDownloadEvent;
-    FOnFinish, FOnCancel: TNotifyEvent;
+    FOnStart,
+    FOnDownloading: TOnDownloadEvent;
+    FOnFinish,
+  {$IFDEF MSWINDOWS}
+    FOnUnzip,
+  {$ENDIF}
+    FOnCancel: TNotifyEvent;
     FOnError: TOnDownloadErrorEvent;
-    FFileSize, FDownloadSize: Int64;
-    FFileName, FUrl, FResponseText: string;
-    { Synchronized events }
+    FFileSize,
+    FDownloadSize: Int64;
+    FFileName,
+    FUrl,
+    FResponseText: string;
+    FAllowOverwrite,
+  {$IFDEF MSWINDOWS}
+    FUnzip,
+  {$ENDIF}
+    FTLSEnabled: Boolean;
     procedure DoNotifyOnCancel;
     procedure DoNotifyOnDownloading;
     procedure DoNotifyOnError;
     procedure DoNotifyOnFinish;
     procedure DoNotifyOnStart;
+  {$IFDEF MSWINDOWS}
+    procedure DoNotifyOnUnzip;
+  {$ENDIF}
+    procedure OnSSLStatusInfoEx(ASender: TObject; const ASslSocket: PSSL;
+      const AWhere, ARet: TIdC_INT; const AType, AMsg: string);
+    function OnVerifyServerCertificate(ACertificate: TIdX509; AOk: Boolean;
+      ADepth, AError: Integer): Boolean;
+  {$IFDEF MSWINDOWS}
+    function UnzipArchive(): Boolean;
+  {$ENDIF}
   protected
     procedure Execute; override;
   public
@@ -46,12 +69,19 @@ type
     procedure DownloadStart(Sender: TObject; AWorkMode: TWorkMode; AFileSize: Int64);
     function GetUniqueFileName(const AFileName: string): string;
     procedure OnUserCancel(Sender: TObject);
-    { Externalized events }
+    { external }
     property OnCancel: TNotifyEvent read FOnCancel write FOnCancel;
     property OnDownloading: TOnDownloadEvent read FOnDownloading write FOnDownloading;
     property OnError: TOnDownloadErrorEvent read FOnError write FOnError;
     property OnFinish: TNotifyEvent read FOnFinish write FOnFinish;
     property OnStart: TOnDownloadEvent read FOnStart write FOnStart;
+  {$IFDEF MSWINDOWS}
+    property OnUnzip: TNotifyEvent read FOnUnzip write FOnUnzip;
+  {$ENDIF}
+    property TLSEnabled: Boolean read FTLSEnabled;
+  {$IFDEF MSWINDOWS}
+    property Unzip: Boolean read FUnzip write FUnzip;
+  {$ENDIF}
   end;
 
 implementation
@@ -67,6 +97,8 @@ constructor TDownloadThread.Create(const AUrl, AFileName: string;
 begin
   inherited Create(ACreateSuspended);
   FreeOnTerminate := True;
+  FUnzip := False;
+  FAllowOverwrite := AAllowOverwrite;
 
   // Rename file if already exists?
   if AAllowOverwrite then
@@ -82,6 +114,39 @@ begin
   // Setup some HTTP options
   with FHttp do
   begin
+    // OpenSSL libraries exist?
+    if LoadOpenSSLLibrary() then
+    begin
+      // Use TLS encrypted connection
+      IOHandler := TIdSSLIOHandlerSocketOpenSSL.Create(FHttp);
+
+      with (IOHandler as TIdSSLIOHandlerSocketOpenSSL) do
+      begin
+      {$IFDEF MSWINDOWS}
+        SSLOptions.Method := sslvTLSv1_2;
+      {$ENDIF}
+        SSLOptions.VerifyMode := [sslvrfPeer];
+        OnVerifyPeer := OnVerifyServerCertificate;
+        OnStatusInfoEx := OnSSLStatusInfoEx;
+      end;  //of with
+
+      // Use secure https instead of plain http
+      if AnsiStartsStr('http://', AUrl) then
+        FUrl := 'https://'+ Copy(AUrl, 8, Length(AUrl) - 7);
+
+      FTLSEnabled := True;
+    end  //of begin
+    else
+    begin
+      // Use plain http instead of secure https
+      if AnsiStartsStr('https://', AUrl) then
+        FUrl := 'http://'+ Copy(AUrl, 9, Length(AUrl) - 8);
+
+      FTLSEnabled := False;
+    end;  //of if
+
+    HandleRedirects := True;
+
     // Link HTTP events
     OnWorkBegin := DownloadStart;
     OnWork := Downloading;
@@ -103,6 +168,169 @@ begin
   FHttp.Free;
   inherited Destroy;
 end;
+
+{ private TDownloadThread.DoNotifyOnCancel
+
+  Synchronizable event method that is called when download has been canceled
+  by user. }
+
+procedure TDownloadThread.DoNotifyOnCancel;
+begin
+  if Assigned(OnCancel) then
+    OnCancel(Self);
+end;
+
+{ private TDownloadThread.DoNotifyOnDownloading
+
+  Synchronizable event method that is called when download is in progress. }
+  
+procedure TDownloadThread.DoNotifyOnDownloading;
+begin
+  if Assigned(OnDownloading) then
+    OnDownloading(Self, FDownloadSize);
+end;
+
+{ private TDownloadThread.DoNotifyOnError
+
+  Synchronizable event method that is called when an error occurs while download
+  is in progress. }
+  
+procedure TDownloadThread.DoNotifyOnError;
+begin
+  if Assigned(OnError) then
+    OnError(Self, FHttp.ResponseCode, FResponseText);
+end;
+
+{ private TDownloadThread.DoNotifyOnFinish
+
+  Synchronizable event method that is called when download is finished. }
+  
+procedure TDownloadThread.DoNotifyOnFinish;
+begin
+  if Assigned(OnFinish) then
+    OnFinish(Self);
+end;
+
+{ private TDownloadThread.DoNotifyOnStart
+
+  Synchronizable event method that is called when download starts. }
+
+procedure TDownloadThread.DoNotifyOnStart;
+begin
+  if Assigned(OnStart) then
+    OnStart(Self, FFileSize);
+end;
+
+{$IFDEF MSWINDOWS}
+{ private TDownloadThread.DoNotifyOnUnzip
+
+  Synchronizable event method that is called when zip file gets unzipped. }
+
+procedure TDownloadThread.DoNotifyOnUnzip;
+begin
+  if Assigned(FOnUnzip) then
+    OnUnzip(Self);
+end;
+{$ENDIF}
+
+{ private TDownloadThread.OnSSLStatusInfoEx
+
+  Event method that is called when connection status information are available. }
+
+procedure TDownloadThread.OnSSLStatusInfoEx(ASender: TObject;
+  const ASslSocket: PSSL; const AWhere, ARet: TIdC_INT; const AType, AMsg: string);
+begin
+  // Explict set hostname for server name identification (SNI) support
+  SSL_set_tlsext_host_name(ASslSocket, FHttp.Request.Host);
+end;
+
+{ private TDownloadThread.OnVerifyServerCertificate
+
+  Event method that is called when OpenSSL retrieves the peer certicate to run
+  checks against it. }
+
+function TDownloadThread.OnVerifyServerCertificate(ACertificate: TIdX509;
+  AOk: Boolean; ADepth, AError: Integer): Boolean;
+var
+  CertificateFields: TStringList;
+  CommonName: string;
+
+begin
+  Result := False;
+  CertificateFields := TStringList.Create;
+
+  // Extract common name (CN) from subject
+  try
+    CertificateFields.Delimiter := '/';
+    CertificateFields.DelimitedText := ACertificate.Subject.OneLine;
+    CommonName := Trim(CertificateFields.Values['CN']);
+
+  finally
+    CertificateFields.Free;
+  end;  //of try
+
+  // Common name matches hostname?
+  if (CommonName[1] = '*') then
+  begin
+    CommonName := Copy(CommonName, 2, Length(CommonName) - 1);
+    Result := AnsiEndsText(CommonName, FHttp.Request.Host);
+  end  //of begin
+  else
+    Result := AnsiSameText(CommonName, FHttp.Request.Host);
+
+  // Certificate not expired?
+  Result := (Result and (ACertificate.notAfter > Now()));
+end;
+
+{$IFDEF MSWINDOWS}
+{ private TDownloadThread.Unzip
+
+  Unzips the downloaded .zip archive. }
+
+function TDownloadThread.UnzipArchive(): Boolean;
+const
+  SHCONTCH_NOPROGRESSBOX   = 4;
+  SHCONTCH_AUTORENAME      = 8;
+  SHCONTCH_RESPONDYESTOALL = 16;
+  SHCONTF_FOLDERS          = 32;
+  SHCONTF_NONFOLDERS       = 64;
+
+var
+  ShellObj, Source, Destination, Items: OleVariant;
+  Flags: Byte;
+
+  function GetNameSpace(Ole: OleVariant): OleVariant;
+  begin
+    Result := ShellObj.NameSpace(Ole);
+  end;
+
+begin
+  Result := False;
+  Synchronize(DoNotifyOnUnzip);
+  CoInitialize(nil);
+
+  try
+    ShellObj := CreateOleObject('Shell.Application');
+
+    Source := GetNameSpace(FFileName);
+    Destination := GetNameSpace(ExtractFileDir(FFileName));
+    Items := Source.Items;
+
+    // Setup flags
+    Flags := SHCONTCH_NOPROGRESSBOX;
+
+    if FAllowOverwrite then
+      Flags := Flags or SHCONTCH_RESPONDYESTOALL;
+
+    // Unzip files
+    Destination.CopyHere(Items, Flags);
+    Result := True;
+
+  finally
+    CoUninitialize();
+  end;  //of try
+end;
+{$ENDIF}
 
 { protected TDownloadThread.Execute
 
@@ -127,7 +355,17 @@ begin
 
     // Check if download was successful?
     if (FHttp.ResponseCode = 200) then
-      Synchronize(DoNotifyOnFinish)
+    begin
+    {$IFDEF MSWINDOWS}
+      // Unzip downloaded archive?
+      if (FUnzip and (ExtractFileExt(FFileName) = '.zip')) then
+      begin
+        if UnzipArchive() then
+          DeleteFile(FFileName);
+      end;  //of begin
+    {$ENDIF}
+      Synchronize(DoNotifyOnFinish);
+    end  //of begin
     else
       raise Exception.Create('Error while downloading! HTTP response code was not 200!');
 
@@ -211,56 +449,4 @@ begin
   Terminate;
 end;
 
-{ private TDownloadThread.DoNotifyOnCancel
-
-  Synchronizable event method that is called when download has been canceled
-  by user. }
-
-procedure TDownloadThread.DoNotifyOnCancel;
-begin
-  if Assigned(OnCancel) then
-    OnCancel(Self);
-end;
-
-{ private TDownloadThread.DoNotifyOnDownloading
-
-  Synchronizable event method that is called when download is in progress. }
-
-procedure TDownloadThread.DoNotifyOnDownloading;
-begin
-  if Assigned(OnDownloading) then
-    OnDownloading(Self, FDownloadSize);
-end;
-
-{ private TDownloadThread.DoNotifyOnError
-
-  Synchronizable event method that is called when an error occurs while download
-  is in progress. }
-
-procedure TDownloadThread.DoNotifyOnError;
-begin
-  if Assigned(OnError) then
-    OnError(Self, FHttp.ResponseCode, FResponseText);
-end;
-
-{ private TDownloadThread.DoNotifyOnFinish
-
-  Synchronizable event method that is called when download is finished. }
-
-procedure TDownloadThread.DoNotifyOnFinish;
-begin
-  if Assigned(OnFinish) then
-    OnFinish(Self);
-end;
-
-{ private TDownloadThread.DoNotifyOnStart
-
-  Synchronizable event method that is called when download starts. }
-
-procedure TDownloadThread.DoNotifyOnStart;
-begin
-  if Assigned(OnStart) then
-    OnStart(Self, FFileSize);
-end;
-
-end.
+end.

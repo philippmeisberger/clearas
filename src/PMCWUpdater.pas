@@ -69,8 +69,8 @@ type
     procedure FormShow(Sender: TObject);
   private
     FOnUserCancel: TNotifyEvent;
-    FThreadRuns,
-    FExecuteFile: Boolean;
+    FUnzip,
+    FThreadRuns: Boolean;
     FDownloadDirectory,
     FTitle,
     FRemoteFileName,
@@ -85,6 +85,7 @@ type
     procedure OnDownloadFinished(Sender: TObject);
     procedure OnDownloading(Sender: TThread; ADownloadSize: Int64);
     procedure OnDownloadStart(Sender: TThread; AFileSize: Int64);
+    procedure OnUnzipArchive(Sender: TObject);
     procedure Reset();
   protected
     function Download(ARemoteFileName, ALocalFileName: string;
@@ -94,15 +95,16 @@ type
     destructor Destroy; override;
     procedure AddListener(AListener: IUpdateListener);
     function Execute(): Boolean;
+    procedure LaunchSetup();
     class function PMCertificateExists(): Boolean;
     procedure RemoveListener(AListener: IUpdateListener);
     { external }
     property DownloadDirectory: string read FDownloadDirectory write FDownloadDirectory;
-    property ExecuteDownloadedFile: Boolean read FExecuteFile write FExecuteFile;
     property FileNameLocal: string read FLocalFileName write FLocalFileName;
     property FileNameRemote: string read FRemoteFileName write FRemoteFileName;
     property LanguageFile: TLanguageFile read FLang write FLang;
     property Title: string read FTitle write FTitle;
+    property Unzip: Boolean read FUnzip write FUnzip;
   end;
 {$ENDIF}
 
@@ -321,7 +323,6 @@ begin
   inherited Create(AOwner);
   FLang := ALang;
   FThreadRuns := False;
-  FExecuteFile := False;
 
   // Init list of listeners
   FListeners := TInterfaceList.Create;
@@ -389,20 +390,17 @@ end;
 
 procedure TUpdate.OnDownloadFinished(Sender: TObject);
 begin
+  FTaskBar.ProgressState := TTaskBarProgressState.Normal;
+  
   // Caption "finished"
   bFinished.Caption := FLang.GetString(8);
   bFinished.SetFocus;
   FThreadRuns := False;
-  FTaskBar.ProgressState := TTaskBarProgressState.None;
 
 {$IFDEF MSWINDOWS}
   // Show dialog to add certificate
   if (ExtractFileExt(FFileName) = '.reg') then
     ShellExecute(0, 'open', PChar('regedit.exe'), PChar(FFileName), nil, SW_SHOWNORMAL);
-
-  // Launch setup?
-  if FExecuteFile then
-    ShellExecute(0, 'open', PChar(FFileName), nil, nil, SW_SHOWNORMAL);
 {$ENDIF}
   FlashWindow(Application.Handle, True);
   bFinished.ModalResult := mrOk;
@@ -428,6 +426,18 @@ begin
   FTaskBar.ProgressMaxValue := AFileSize;
   FTaskBar.ProgressState := TTaskBarProgressState.Normal;
   pbProgress.Max := AFileSize;
+
+  if (Sender as TDownloadThread).TLSEnabled then
+    Caption := Caption +' - TLS';
+end;
+
+{ private TUpdate.OnUnzipArchive
+
+  Event method that is called by TDownloadThread when .zip archive gets unzipped. }
+
+procedure TUpdate.OnUnzipArchive(Sender: TObject);
+begin
+  FTaskBar.ProgressState := TTaskBarProgressState.Indeterminate;
 end;
 
 { private TUpdate.Reset
@@ -460,24 +470,28 @@ begin
     Continue := True
   else
     // Show select directory dialog
-    Continue := SelectDirectory(FLang.GetString(9), '', ADownloadDirectory);
+    Continue := SelectDirectory(FLang.GetString(9), '', FDownloadDirectory);
 
   if Continue then
   begin
     Url := URL_DOWNLOAD + FRemoteFileName;
-    FFileName := IncludeTrailingPathDelimiter(ADownloadDirectory) + FLocalFileName;
+    FFileName := IncludeTrailingPathDelimiter(FDownloadDirectory) + FLocalFileName;
 
     with TDownloadThread.Create(Url, FFileName) do
     begin
-      // Link download events
+      // Link events
       FOnUserCancel := OnUserCancel;
-
-      // Link TProgressBar events and start download thread
       OnDownloading := Self.OnDownloading;
       OnCancel := OnDownloadCancel;
       OnStart := OnDownloadStart;
       OnFinish := OnDownloadFinished;
       OnError := OnDownloadError;
+
+      // Remote file is an .zip archive?
+      if FUnzip then
+        OnUnzip := OnUnzipArchive;
+
+      Unzip := FUnzip;
       Start;
     end;  //of with
 
@@ -510,6 +524,15 @@ begin
     raise EArgumentException.Create('Missing argument: "RemoteFileName" or "LocalFileName"!');
 
   Result := Download(FRemoteFileName, FLocalFileName, FDownloadDirectory);
+end;
+
+{ public TUpdate.LaunchSetup
+
+  Launches the downloaded setup. }
+
+procedure TUpdate.LaunchSetup();
+begin
+  ShellExecute(0, 'open', PChar(FFileName), nil, nil, SW_SHOWNORMAL);
 end;
 
 { public TUpdate.PMCertificateExists

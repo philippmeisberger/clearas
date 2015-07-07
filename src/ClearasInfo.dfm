@@ -334,6 +334,7 @@ object Info: TInfo
         Width = 75
         Height = 25
         Anchors = [akBottom]
+        Cancel = True
         Caption = 'OK'
         Default = True
         ModalResult = 1
@@ -391,6 +392,7 @@ object Info: TInfo
         Width = 75
         Height = 25
         Anchors = [akBottom]
+        Cancel = True
         Caption = 'OK'
         Default = True
         ModalResult = 1
@@ -408,12 +410,12 @@ object Info: TInfo
           'History'
           '--------'
           ''
-          'Version 4.1  [07.07.15]'
+          'Version 4.1  [09.07.15]'
           ''
           
             '- ProgressBar wird nun w'#228'hrend des Exportierens von Kontextmn'#252'-E' +
             'intr'#228'gen '
-          'angezeigt'
+          '  angezeigt'
           
             '- "Abbrechen" w'#228'hrend des Hinzuf'#252'gens von Eintr'#228'gen funktioniert' +
             ' nun korrekt'
@@ -422,6 +424,7 @@ object Info: TInfo
           '- Unterst'#252'tzung von Unicode'
           '- 32/64-Bit Bin'#228'rdateien'
           '- Updater v2.3'
+          '  - SSL Unterst'#252'tzung'
           ''
           '---------------------------------'
           ''
