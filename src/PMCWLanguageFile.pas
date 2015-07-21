@@ -114,7 +114,7 @@ type
 implementation
 
 {$IFDEF MSWINDOWS}
-{$R 'lang.res' 'lang.rc'}
+{$R lang.res}
 {$ENDIF}
 
 { TLanguageFile }

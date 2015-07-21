@@ -1,6 +1,6 @@
 { *********************************************************************** }
 {                                                                         }
-{ PM Code Works Cross Plattform Updater v2.3                              }
+{ PM Code Works Updater v3.0                                              }
 {                                                                         }
 { Copyright (c) 2011-2015 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
@@ -13,12 +13,10 @@ unit PMCWUpdater;
 interface
 
 uses
-  SysUtils, Classes, Dialogs, PMCWUpdateCheckThread, PMCWDownloadThread,
-  PMCWLanguageFile,
-
+  SysUtils, Classes, Dialogs, PMCWUpdateCheckThread, PMCWLanguageFile,
 {$IFDEF MSWINDOWS}
-  Windows, FileCtrl, Forms, StdCtrls, ComCtrls, Controls, System.Win.TaskbarCore,
-  Vcl.Taskbar, Registry, ShellAPI;
+  PMCWDownloadThread, Windows, FileCtrl, Forms, StdCtrls, ComCtrls, Controls,
+  System.Win.TaskbarCore, Vcl.Taskbar, Registry, ShellAPI;
 {$ELSE}
   LCLType, Resource, ElfReader, VersionResource, LResources;
 {$ENDIF}
@@ -26,7 +24,17 @@ uses
 const
   URL_DOWNLOAD = URL_DIR + 'downloader.php?file=';
 
+  { TFileProductVersion indices }
+  VERSION_MAJOR   = 0;
+  VERSION_MINOR   = 1;
+  VERSION_SERVICE = 2;
+  VERSION_BUILD   = 3;
+
 type
+{$IFDEF MSWINDOWS}
+  TFileProductVersion = array[0..3] of Cardinal;
+{$ENDIF}
+
   { IUpdateListener }
   IUpdateListener = interface
   ['{D1CDAE74-717A-4C5E-9152-15FBA4A15552}']
@@ -55,6 +63,8 @@ type
     procedure AddListener(AListener: IUpdateListener);
     procedure CheckForUpdate(AUserUpdate: Boolean; ACurrentBuild: Cardinal = 0);
     class function GetBuildNumber(): Cardinal;
+    class function GetFileVersion(const AFileName: string;
+      var AVersionInfo: TFileProductVersion): Boolean;
     procedure RemoveListener(AListener: IUpdateListener);
   end;
 
@@ -80,11 +90,10 @@ type
     FListeners: TInterfaceList;
     FTaskBar: TTaskbar;
     procedure OnDownloadCancel(Sender: TObject);
-    procedure OnDownloadError(Sender: TThread; AResponseCode: Integer;
-      AResponseText: string);
-    procedure OnDownloadFinished(Sender: TObject);
-    procedure OnDownloading(Sender: TThread; ADownloadSize: Int64);
-    procedure OnDownloadStart(Sender: TThread; AFileSize: Int64);
+    procedure OnDownloadError(Sender: TThread; const AResponseCode: Integer;
+      const AResponseText: string);
+    procedure OnDownloadFinished(Sender: TThread; const AFileName: string);
+    procedure OnDownloading(Sender: TThread; AContentLength, AReadCount: Int64);
     procedure OnUnzipArchive(Sender: TObject);
     procedure Reset();
   protected
@@ -234,72 +243,94 @@ begin
   end;  //of with
 end;
 
-{ TUpdateCheck.GetBuildNumber
+{ TUpdateCheck.GetFileVersion
 
-  Returns build number of current running program. }
+  Returns complete file version information. }
 
-class function TUpdateCheck.GetBuildNumber(): Cardinal;
+class function TUpdateCheck.GetFileVersion(const AFileName: string;
+  var AVersionInfo: TFileProductVersion): Boolean;
 {$IFDEF MSWINDOWS}
 var
-  VerInfoSize, VerValueSize, Dummy: DWord;
+  VerInfoSize, VerValueSize, Dummy: DWORD;
   VerInfo: Pointer;
   VerValue: PVSFixedFileInfo;
 
 begin
-  VerInfoSize := GetFileVersionInfoSize(PChar(ParamStr(0)), Dummy);
+  Result := False;
+  VerInfoSize := GetFileVersionInfoSize(PChar(AFileName), Dummy);
 
   if (VerInfoSize <> 0) then
   begin
     GetMem(VerInfo, VerInfoSize);
 
     try
-      GetFileVersionInfo(PChar(ParamStr(0)), 0, VerInfoSize, VerInfo);
+      GetFileVersionInfo(PChar(AFileName), 0, VerInfoSize, VerInfo);
 
       if VerQueryValue(VerInfo, '\', Pointer(VerValue), VerValueSize) then
-        with VerValue^ do
-          Result := (dwFileVersionLS and $FFFF)
-      else
-        Result := 0;
+      begin
+        AVersionInfo[VERSION_MAJOR] := LongRec(VerValue.dwFileVersionMS).Hi;
+        AVersionInfo[VERSION_MINOR] := LongRec(VerValue.dwFileVersionMS).Lo;
+        AVersionInfo[VERSION_SERVICE] := LongRec(VerValue.dwFileVersionLS).Hi;
+        AVersionInfo[VERSION_BUILD] := LongRec(VerValue.dwFileVersionLS).Lo;
+        Result := True;
+      end;  //of begin
 
     finally
       FreeMem(VerInfo, VerInfoSize);
-    end;   //of try
-  end  //of begin
-  else
-    Result := 0;
+    end;  //of try
+  end;  //of begin
 end;
 {$ELSE}
 var
-  RS : TResources;
-  E : TElfResourceReader;
-  VR : TVersionResource;
-  i : Cardinal;
+  RS: TResources;
+  E: TElfResourceReader;
+  VerValue: TVersionResource;
+  i: Cardinal;
 
 begin
+  Result := False;
   RS := TResources.Create;
-  VR := nil;
+  VerValue := nil;
   i := 0;
 
   try
     E := TElfResourceReader.Create;
-    Rs.LoadFromFile(ParamStr(0), E);
+    Rs.LoadFromFile(AFileName, E);
     E.Free;
 
-    while (VR = nil) and (i < RS.Count) do
+    while (VerValue = nil) and (i < RS.Count) do
     begin
       if RS.Items[i] is TVersionResource then
-        VR := TVersionResource(RS.Items[i]);
+        VerValue := TVersionResource(RS.Items[i]);
       Inc(i);
     end;  //of while
 
-    if Assigned(VR) then
-      Result := VR.FixedInfo.FileVersion[3];
+    if Assigned(VerValue) then
+    begin
+      AVersionInfo := VerValue.FixedInfo.FileVersion;
+      Result := True;
+    end;  //of begin
 
   finally
     RS.FRee;
   end;  //of try
 end;
 {$ENDIF}
+
+{ TUpdateCheck.GetBuildNumber
+
+  Returns build number of current running program. }
+
+class function TUpdateCheck.GetBuildNumber(): Cardinal;
+var
+  VersionInfo: TFileProductVersion;
+
+begin
+  Result := 0;
+
+  if GetFileVersion(Application.ExeName, VersionInfo) then
+    Result := VersionInfo[VERSION_BUILD];
+end;
 
 { public TUpdateCheck.RemoveListener
 
@@ -374,8 +405,8 @@ end;
   Event method that is called by TDownloadThread when an error occurs while
   downloading the update. }
 
-procedure TUpdate.OnDownloadError(Sender: TThread; AResponseCode: Integer;
-  AResponseText: string);
+procedure TUpdate.OnDownloadError(Sender: TThread; const AResponseCode: Integer;
+  const AResponseText: string);
 begin
   FTaskBar.ProgressState := TTaskBarProgressState.Error;
   pbProgress.State := TProgressBarState.pbsError;
@@ -388,10 +419,10 @@ end;
 
   Event method that is called by TDownloadThread when download is finished. }
 
-procedure TUpdate.OnDownloadFinished(Sender: TObject);
+procedure TUpdate.OnDownloadFinished(Sender: TThread; const AFileName: string);
 begin
   FTaskBar.ProgressState := TTaskBarProgressState.Normal;
-  
+
   // Caption "finished"
   bFinished.Caption := FLang.GetString(8);
   bFinished.SetFocus;
@@ -410,25 +441,13 @@ end;
 
   Event method that is called by TDownloadThread when download is in progress. }
 
-procedure TUpdate.OnDownloading(Sender: TThread; ADownloadSize: Int64);
+procedure TUpdate.OnDownloading(Sender: TThread; AContentLength, AReadCount: Int64);
 begin
-  pbProgress.Position := ADownloadSize;
-  FTaskBar.ProgressValue := ADownloadSize;
-  lSize.Caption := Format('%d/%d KB', [ADownloadSize, pbProgress.Max]);
-end;
-
-{ private TUpdate.OnDownloadStart
-
-  Event method that is called by TDownloadThread when download starts. }
-
-procedure TUpdate.OnDownloadStart(Sender: TThread; AFileSize: Int64);
-begin
-  FTaskBar.ProgressMaxValue := AFileSize;
-  FTaskBar.ProgressState := TTaskBarProgressState.Normal;
-  pbProgress.Max := AFileSize;
-
-  if (Sender as TDownloadThread).TLSEnabled then
-    Caption := Caption +' - TLS';
+  pbProgress.Max := AContentLength;
+  pbProgress.Position := AReadCount;
+  FTaskBar.ProgressMaxValue := AContentLength;
+  FTaskBar.ProgressValue := AReadCount;
+  lSize.Caption := Format('%d/%d KB', [AReadCount, AContentLength]);
 end;
 
 { private TUpdate.OnUnzipArchive
@@ -480,10 +499,9 @@ begin
     with TDownloadThread.Create(Url, FFileName) do
     begin
       // Link events
-      FOnUserCancel := OnUserCancel;
+      FOnUserCancel := Cancel;
       OnDownloading := Self.OnDownloading;
       OnCancel := OnDownloadCancel;
-      OnStart := OnDownloadStart;
       OnFinish := OnDownloadFinished;
       OnError := OnDownloadError;
 
@@ -491,8 +509,10 @@ begin
       if FUnzip then
         OnUnzip := OnUnzipArchive;
 
-      Unzip := FUnzip;
-      Start;
+      if TLSEnabled then
+        Caption := Caption +' - TLS';
+
+      Start();
     end;  //of with
 
     FThreadRuns := True;

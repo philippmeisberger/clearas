@@ -14,7 +14,8 @@ uses
   Winapi.Windows, System.SysUtils, System.Classes, Vcl.Controls, Vcl.Forms,
   Vcl.ComCtrls, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Dialogs, Vcl.Menus, Vcl.Graphics,
   Vcl.ClipBrd, Vcl.ImgList, Registry, StrUtils, ClearasAPI, ExportListThread,
-  ClearasInfo, PMCWLanguageFile, PMCWOSUtils, PMCWUpdater, PMCWDialogs;
+  PMCWAbout, PMCWLanguageFile, PMCWOSUtils, PMCWUpdater, PMCWDialogs,
+  System.ImageList;
 
 const
   KEY_RECYCLEBIN = 'CLSID\{645FF040-5081-101B-9F08-00AA002F954E}\shell';
@@ -338,25 +339,23 @@ begin
       with Updater do
       begin
         Title := FLang.GetString(24);
-        FileNameLocal := 'Clearas.zip';
+        FileNameLocal := 'Clearas.exe';
 
       {$IFDEF WIN64}
-        FileNameRemote := 'clearas64.zip';
+        FileNameRemote := 'clearas64.exe';
       {$ELSE}
         // Ask user to permit download of 64-Bit version
         if ((TOSVersion.Architecture = arIntelX64) and (FLang.ShowMessage(
           FLang.Format([34, 35], ['Clearas']), mtConfirmation) = IDYES)) then
-          FileNameRemote := 'clearas64.zip'
+          FileNameRemote := 'clearas64.exe'
         else
-          FileNameRemote := 'clearas.zip';
+          FileNameRemote := 'clearas.exe';
       {$ENDIF}
       end;  //of begin
 
       // Successfully downloaded update?
       if Updater.Execute() then
       begin
-        Updater.Unzip := True;
-
         // Caption "Search for update"
         mmUpdate.Caption := FLang.GetString(15);
         mmUpdate.Enabled := False;
