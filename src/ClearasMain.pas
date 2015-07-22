@@ -327,6 +327,8 @@ var
   Updater: TUpdate;
 
 begin
+  mmUpdate.Caption := FLang.GetString(24);
+
   // Ask user to permit download
   if (FLang.ShowMessage(FLang.Format(21, [ANewBuild]), FLang.GetString(22),
     mtConfirmation) = IDYES) then
@@ -364,9 +366,7 @@ begin
     finally
       Updater.Free;
     end;  //of try
-  end  //of begin
-  else
-    mmUpdate.Caption := FLang.GetString(24);
+  end;  //of begin
 end;
 
 { private TMain.CreateStartupUserBackup
@@ -2431,8 +2431,8 @@ var
 
 begin
   // Certificate already installed?
-  if (TUpdate.PMCertificateExists() and (FLang.ShowMessage(27, 28,
-    mtConfirmation) = IDNO)) then
+  if (TUpdate.CertificateExists(CERTIFICATE_FINGERPRINT_SHA1) and
+    (FLang.ShowMessage(27, 28, mtConfirmation) = IDNO)) then
     Exit;
 
   // Init downloader
@@ -2443,8 +2443,8 @@ begin
     with Updater do
     begin
       Title := FLang.GetString(16);
-      FileNameRemote := 'cert.reg';
-      FileNameLocal := 'PMCW-Certificate.reg';
+      FileNameRemote := 'pmcw.crt';
+      FileNameLocal := 'PMCW.crt';
       DownloadDirectory := GetTempDir();
     end;  //of begin
 

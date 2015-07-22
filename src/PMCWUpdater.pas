@@ -30,6 +30,10 @@ const
   VERSION_SERVICE = 2;
   VERSION_BUILD   = 3;
 
+{$IFDEF MSWINDOWS}
+{$I Certificate.inc}
+{$ENDIF}
+
 type
 {$IFDEF MSWINDOWS}
   TFileProductVersion = array[0..3] of Cardinal;
@@ -96,6 +100,7 @@ type
     procedure OnDownloading(Sender: TThread; AContentLength, AReadCount: Int64);
     procedure OnUnzipArchive(Sender: TObject);
     procedure Reset();
+    function InstallCaCertificate: Boolean;
   protected
     function Download(ARemoteFileName, ALocalFileName: string;
       ADownloadDirectory: string = ''): Boolean;
@@ -105,7 +110,7 @@ type
     procedure AddListener(AListener: IUpdateListener);
     function Execute(): Boolean;
     procedure LaunchSetup();
-    class function PMCertificateExists(): Boolean;
+    class function CertificateExists(const AFingerprint: string): Boolean;
     procedure RemoveListener(AListener: IUpdateListener);
     { external }
     property DownloadDirectory: string read FDownloadDirectory write FDownloadDirectory;
@@ -121,6 +126,7 @@ implementation
 
 {$IFDEF MSWINDOWS}
 {$R *.dfm}
+{$R CA.res}
 {$ENDIF}
 
 { TUpdateCheck }
@@ -387,6 +393,45 @@ begin
   bFinished.Caption := FLang.GetString(6);
 end;
 
+{ private TForm1.InstallCaCertificate
+
+  Installs a CA certificate for SSL updates. }
+
+function TUpdate.InstallCaCertificate(): Boolean;
+var
+  ResourceStream: TResourceStream;
+  FileName: string;
+  Answer: Integer;
+
+begin
+  Result := False;
+
+  // Ask user to install CA certificate
+  Answer := TaskMessageDlg(FLang.GetString(107), FLang.GetString([108, 109,
+    NEW_LINE, 110]), mtConfirmation, mbYesNoCancel, 0, mbYes);
+
+  case Answer of
+    IDYES:
+      begin
+        ResourceStream := TResourceStream.Create(HInstance, 'ca', RT_RCDATA);
+        FileName := IncludeTrailingPathDelimiter(GetEnvironmentVariable('temp')) +'CA.crt';
+
+        try
+          ResourceStream.SaveToFile(FileName);
+          ShellExecute(Handle, 'runas', 'certutil.exe', PChar('-addstore '+
+            CERTIFICATE_STORE +' "'+ FileName +'"'), nil, SW_HIDE);
+          Result := True;
+
+        finally
+          ResourceStream.Free;
+        end;  //of try
+      end;
+
+    IDCANCEL:
+      Abort;
+  end;  //of case
+end;
+
 { private TUpdate.OnDownloadCancel
 
   Event method that is called by TDownloadThread when user canceled downlad. }
@@ -407,11 +452,14 @@ end;
 
 procedure TUpdate.OnDownloadError(Sender: TThread; const AResponseCode: Integer;
   const AResponseText: string);
+var
+  HttpError: string;
+
 begin
   FTaskBar.ProgressState := TTaskBarProgressState.Error;
   pbProgress.State := TProgressBarState.pbsError;
   Reset();
-  FLang.ShowException(Caption + FLang.GetString(18), AResponseText);
+  FLang.ShowException(Caption + FLang.GetString(18), AResponseText + Format(' (%d)' ,[AResponseCode]));
   bFinished.ModalResult := mrAbort;
 end;
 
@@ -428,12 +476,11 @@ begin
   bFinished.SetFocus;
   FThreadRuns := False;
 
-{$IFDEF MSWINDOWS}
   // Show dialog to add certificate
-  if (ExtractFileExt(FFileName) = '.reg') then
-    ShellExecute(0, 'open', PChar('regedit.exe'), PChar(FFileName), nil, SW_SHOWNORMAL);
-{$ENDIF}
-  FlashWindow(Application.Handle, True);
+  if (ExtractFileExt(FFileName) = '.crt') then
+    ShellExecute(Handle, 'runas', 'certutil.exe', PChar('-user -addstore ROOT "'+
+      AFileName +'"'), nil, SW_HIDE);
+
   bFinished.ModalResult := mrOk;
 end;
 
@@ -478,11 +525,17 @@ function TUpdate.Download(ARemoteFileName, ALocalFileName: string;
   ADownloadDirectory: string = ''): Boolean;
 var
   Url: string;
-  Continue: Boolean;
+  UseTls, Continue: Boolean;
 
 begin
   FRemoteFileName := ARemoteFileName;
   FLocalFileName := ALocalFileName;
+
+  // CA certificate already installed?
+  if not CertificateExists(CERTIFICATE_CA_FINGERPRINT_SHA1) then
+    UseTls := InstallCaCertificate()
+  else
+    UseTls := True;
 
   // Download folder still set?
   if (ADownloadDirectory <> '') then
@@ -509,8 +562,12 @@ begin
       if FUnzip then
         OnUnzip := OnUnzipArchive;
 
-      if TLSEnabled then
+      // Use HTTPS?
+      if UseTls then
+      begin
+        FlipUrlProtocol();
         Caption := Caption +' - TLS';
+      end;  //of begin
 
       Start();
     end;  //of with
@@ -555,24 +612,20 @@ begin
   ShellExecute(0, 'open', PChar(FFileName), nil, nil, SW_SHOWNORMAL);
 end;
 
-{ public TUpdate.PMCertificateExists
+{ public TUpdate.CertificateExists
 
-  Returns if the PM Code Works certificate is already installed. }
+  Returns if a given certificate exists in Windows certificate store. }
 
-class function TUpdate.PMCertificateExists(): Boolean;
+class function TUpdate.CertificateExists(const AFingerprint: string): Boolean;
 var
   Reg: TRegistry;
-
-const
-  CERT_KEY = 'SOFTWARE\Microsoft\SystemCertificates\ROOT\Certificates\';
-  PM_CERT_THUMBPRINT = '1350A832ED8A6A8FE8B95D2E674495021EB93A4D';
 
 begin
   Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ);
 
   try
     Reg.RootKey := HKEY_LOCAL_MACHINE;
-    Result := (Reg.OpenKeyReadOnly(CERT_KEY) and Reg.KeyExists(PM_CERT_THUMBPRINT));
+    Result := (Reg.OpenKeyReadOnly(KEY_CERTIFICATE_STORE) and Reg.KeyExists(AFingerprint));
 
   finally
     Reg.CloseKey;

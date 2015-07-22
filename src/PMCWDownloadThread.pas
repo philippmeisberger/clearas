@@ -195,43 +195,9 @@ end;
 
 procedure TDownloadThread.OnValidateServerCertificate(const Sender: TObject;
   const ARequest: TURLRequest; const ACertificate: TCertificate; var AAccepted: Boolean);
-var
-  CommonName: string;
-  CertificateSubject: TStringList;
-  HostnameMatches: Boolean;
-
 begin
+  // Anything went wrong: Do not accept server SSL certificate!
   AAccepted := False;
-  HostnameMatches := False;
-  CertificateSubject := TStringList.Create;
-
-  // Extract common name (CN) from subject
-  try
-    CertificateSubject.Text := ACertificate.Subject;
-    CommonName := CertificateSubject[CertificateSubject.Count - 1];
-
-    // Common name matches hostname?
-    if (CommonName[1] = '*') then
-    begin
-      CommonName := Copy(CommonName, 2, Length(CommonName) - 1);
-      HostnameMatches := AnsiEndsStr(CommonName, (ARequest as IURLRequest).URL.Host);
-    end
-    else
-      HostnameMatches := AnsiSameStr(CommonName, (ARequest as IURLRequest).URL.Host);
-
-  finally
-    CertificateSubject.Free;
-  end;  //of try
-
-  // Common name matches hostname?
-  if not HostnameMatches then
-    raise ENetHTTPCertificateException.Create('Common name does not match hostname!');
-
-  // Certificate not expired?
-  if (ACertificate.Expiry < Now()) then
-    raise ENetHTTPCertificateException.Create('Certificate expired!');
-
-  AAccepted := True;
 end;
 
 { private TDownloadThread.Unzip
@@ -306,7 +272,7 @@ begin
     // Error occured?
     if (Response.StatusCode <> 200) then
     begin
-      FResponseText := Response.StatusText;
+      FResponseText := StrPas(PChar(Response.StatusText));
       raise Exception.Create(FResponseText);
     end;  //of begin
 
@@ -385,4 +351,4 @@ begin
   Result := NewFileName;
 end;
 
-end.
+end.

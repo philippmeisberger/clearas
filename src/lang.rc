@@ -108,6 +108,10 @@ STRINGTABLE
 204, "Pfad bearbeiten"
 205, "Kontextmenü hinzufügen"
 206, "Ort kopieren"
+207, "Sichere Updates"
+208, "Seit kurzem werden sichere Updates über eine verschlüsselte Verbindung "
+209, "zum Update-Server angeboten. Dazu wird ein Zertifikat benötigt."
+210, "Wollen Sie dieses installieren, um sichere Updates zu empfangen?"
 
 //Englisch
 300, "Information"

@@ -1,15 +1,2 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<BorlandProject>
-	<Transactions>
-    <Transaction>1899.12.30 00:00:00.000.560,C:\Users\Phil\PMCW\Projekte\clearas\src\Updater.pas=</Transaction>
-    <Transaction>1899.12.30 00:00:00.000.272,=C:\Users\Phil\PMCW\Projekte\clearas\src\changelog.rc</Transaction>
-    <Transaction>1899.12.30 00:00:00.000.175,=C:\Users\Phil\PMCW\Projekte\clearas\src\lang.rc</Transaction>
-    <Transaction>1899.12.30 00:00:00.000.934,=C:\Users\Phil\PMCW\Projekte\clearas\src\description.rc</Transaction>
-    <Transaction>1899.12.30 00:00:00.000.813,=C:\Users\Phil\PMCW\Projekte\clearas\src\PMCW.Updater.pas</Transaction>
-    <Transaction>2015.07.21 17:10:11.569,C:\Users\Phil\PMCW\Projekte\clearas\src\changelog.rc=</Transaction>
-    <Transaction>2015.07.21 17:11:37.865,=C:\Users\Phil\PMCW\Projekte\clearas\src\changelog.rc</Transaction>
-    <Transaction>2015.07.21 17:14:20.065,C:\Users\Phil\PMCW\Projekte\clearas\src\changelog.rc=</Transaction>
-    <Transaction>2015.07.21 17:14:23.872,C:\Users\Phil\PMCW\Projekte\clearas\src\description.rc=</Transaction>
-    <Transaction>2015.07.21 17:14:26.418,C:\Users\Phil\PMCW\Projekte\clearas\src\lang.rc=</Transaction>
-  </Transactions>
-</BorlandProject>
+<BorlandProject/>
