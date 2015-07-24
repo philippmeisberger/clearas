@@ -112,6 +112,9 @@ STRINGTABLE
 208, "Seit kurzem werden sichere Updates über eine verschlüsselte Verbindung "
 209, "zum Update-Server angeboten. Dazu wird ein Zertifikat benötigt."
 210, "Wollen Sie dieses installieren, um sichere Updates zu empfangen?"
+211, "Sicheres Update nicht möglich"
+212, "Der Server verwendet ein ungültiges SSL-Zertifikat!" 
+213, "Bitte besuchen Sie die %s für weitere Informationen."
 
 //Englisch
 300, "Information"

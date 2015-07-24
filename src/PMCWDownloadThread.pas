@@ -14,6 +14,9 @@ uses
   Classes, SysUtils, System.Net.HttpClientComponent, System.Net.HttpClient,
   System.Net.URLClient, StrUtils, ComObj, ActiveX;
 
+const
+  ERROR_CERTIFICATE_VALIDATION = -2;
+
 type
   { Events }
   TDownloadingEvent = procedure(Sender: TThread; AContentLength, AReadCount: Int64) of object;
@@ -49,13 +52,13 @@ type
     procedure OnValidateServerCertificate(const Sender: TObject;
       const ARequest: TURLRequest; const ACertificate: TCertificate; var AAccepted: Boolean);
     function UnzipArchive(): Boolean;
+    procedure SetTlsEnabled(const AValue: Boolean);
   protected
     procedure Execute; override;
   public
     constructor Create(const AUrl, AFileName: string; AAllowOverwrite: Boolean = False);
     destructor Destroy; override;
     procedure Cancel(Sender: TObject);
-    procedure FlipUrlProtocol();
     function GetUniqueFileName(const AFileName: string): string;
     { external }
     property OnCancel: TNotifyEvent read FOnCancel write FOnCancel;
@@ -63,7 +66,7 @@ type
     property OnError: TRequestErrorEvent read FOnError write FOnError;
     property OnFinish: TDownloadFinishedEvent read FOnFinish write FOnFinish;
     property OnUnzip: TNotifyEvent read FOnUnzip write FOnUnzip;
-    property TLSEnabled: Boolean read FTLSEnabled;
+    property TLSEnabled: Boolean read FTLSEnabled write SetTlsEnabled;
   end;
 
 implementation
@@ -179,6 +182,7 @@ end;
 procedure TDownloadThread.Downloading(const Sender: TObject; AContentLength,
   AReadCount: Int64; var AAbort: Boolean);
 begin
+  // Abort download if user canceled
   AAbort := FAbort;
 
   // Convert Bytes to KB
@@ -191,13 +195,30 @@ end;
 
 { private TDownloadThread.OnValidateServerCertificate
 
-  Event method that is called to validate an unknown peer certicate. }
+  Event method that is called when certificate could not be validated. }
 
 procedure TDownloadThread.OnValidateServerCertificate(const Sender: TObject;
   const ARequest: TURLRequest; const ACertificate: TCertificate; var AAccepted: Boolean);
 begin
   // Anything went wrong: Do not accept server SSL certificate!
   AAccepted := False;
+end;
+
+{ private TDownloadThread.SetTlsEnabled
+
+  Changes the used URL protocol to HTTPS or HTTP. }
+
+procedure TDownloadThread.SetTlsEnabled(const AValue: Boolean);
+begin
+  // Use secure https instead of plain http
+  if (AValue and AnsiStartsStr('http://', FUrl)) then
+    FUrl := 'https://'+ Copy(FUrl, 8, Length(FUrl) - 7)
+  else
+    // Use plain http instead of secure https
+    if (not AValue and AnsiStartsStr('https://', FUrl)) then
+      FUrl := 'http://'+ Copy(FUrl, 9, Length(FUrl) - 8);
+
+  FTLSEnabled := AValue;
 end;
 
 { private TDownloadThread.Unzip
@@ -282,6 +303,7 @@ begin
 
     // Unzip archive?
     if Assigned(FOnUnzip) then
+      // Unzip successful?
       if UnzipArchive() then
         DeleteFile(FFileName);
 
@@ -297,32 +319,15 @@ begin
 
     on E: Exception do
     begin
+      // Certificate error?
+      if (E is ENetHTTPCertificateException) then
+        FResponseCode := ERROR_CERTIFICATE_VALIDATION;
+
       FResponseText := E.Message;
       DeleteFile(FFileName);
       Synchronize(DoNotifyOnError);
     end;
   end;  //of try
-end;
-
-{ public TDownloadThread.FlipUrlProtocol
-
-  Rewrites the URL from HTTP to HTTPS or HTTPS to HTTP. }
-
-procedure TDownloadThread.FlipUrlProtocol();
-begin
-  // Use secure https instead of plain http
-  if AnsiStartsStr('http://', FUrl) then
-  begin
-    FUrl := 'https://'+ Copy(FUrl, 8, Length(FUrl) - 7);
-    FTLSEnabled := True;
-  end  //of begin
-  else
-    // Use plain http instead of secure https
-    if AnsiStartsStr('https://', FUrl) then
-    begin
-      FUrl := 'http://'+ Copy(FUrl, 9, Length(FUrl) - 8);
-      FTLSEnabled := False;
-    end;  //of begin
 end;
 
 { public TDownloadThread.GetUniqueFileName

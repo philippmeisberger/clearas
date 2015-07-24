@@ -103,7 +103,7 @@ type
     function InstallCaCertificate: Boolean;
   protected
     function Download(ARemoteFileName, ALocalFileName: string;
-      ADownloadDirectory: string = ''): Boolean;
+      ADownloadDirectory: string = ''; AUseTls: Boolean = True): Boolean;
   public
     constructor Create(AOwner: TComponent; ALang: TLanguageFile);
     destructor Destroy; override;
@@ -176,7 +176,7 @@ procedure TUpdateCheck.OnCheckError(Sender: TThread; AResponseCode: Integer;
   AResponseText: string);
 begin
   if FUserUpdate then
-    if (AResponseCode <> -1) then
+    if (AResponseCode > 0) then
       FLang.ShowException(FLang.GetString([12, 13]), AResponseText)
     else
       FLang.ShowMessage(12, 13, mtError);
@@ -245,7 +245,7 @@ begin
     OnUpdate := OnUpdateAvailable;
     OnNoUpdate := OnNoUpdateAvailable;
     OnError := OnCheckError;
-    Start;
+    Start();
   end;  //of with
 end;
 
@@ -452,14 +452,20 @@ end;
 
 procedure TUpdate.OnDownloadError(Sender: TThread; const AResponseCode: Integer;
   const AResponseText: string);
-var
-  HttpError: string;
-
 begin
   FTaskBar.ProgressState := TTaskBarProgressState.Error;
   pbProgress.State := TProgressBarState.pbsError;
   Reset();
-  FLang.ShowException(Caption + FLang.GetString(18), AResponseText + Format(' (%d)' ,[AResponseCode]));
+
+  // Certificate validation error?
+  if (AResponseCode = ERROR_CERTIFICATE_VALIDATION) then
+    FLang.ShowException(FLang.GetString(111), FLang.Format([112, NEW_LINE, 113],
+      ['<a href="http://www.pm-codeworks.de/neuigkeiten.html">Website</a>']))
+  else
+    // HTTP error?
+    FLang.ShowException(Caption + FLang.GetString(18), AResponseText +
+      Format(' (%d)', [AResponseCode]));
+
   bFinished.ModalResult := mrAbort;
 end;
 
@@ -478,8 +484,8 @@ begin
 
   // Show dialog to add certificate
   if (ExtractFileExt(FFileName) = '.crt') then
-    ShellExecute(Handle, 'runas', 'certutil.exe', PChar('-user -addstore ROOT "'+
-      AFileName +'"'), nil, SW_HIDE);
+    ShellExecute(Handle, 'open', 'certutil.exe', PChar('-user -addstore '+
+      CERTIFICATE_STORE +' "'+ AFileName +'"'), nil, SW_HIDE);
 
   bFinished.ModalResult := mrOk;
 end;
@@ -522,7 +528,7 @@ end;
   Starts downloading a file. }
 
 function TUpdate.Download(ARemoteFileName, ALocalFileName: string;
-  ADownloadDirectory: string = ''): Boolean;
+  ADownloadDirectory: string = ''; AUseTls: Boolean = True): Boolean;
 var
   Url: string;
   UseTls, Continue: Boolean;
@@ -530,12 +536,11 @@ var
 begin
   FRemoteFileName := ARemoteFileName;
   FLocalFileName := ALocalFileName;
+  UseTls := AUseTls;
 
   // CA certificate already installed?
   if not CertificateExists(CERTIFICATE_CA_FINGERPRINT_SHA1) then
-    UseTls := InstallCaCertificate()
-  else
-    UseTls := True;
+    UseTls := InstallCaCertificate();
 
   // Download folder still set?
   if (ADownloadDirectory <> '') then
@@ -565,8 +570,8 @@ begin
       // Use HTTPS?
       if UseTls then
       begin
-        FlipUrlProtocol();
-        Caption := Caption +' - TLS';
+        TLSEnabled := True;
+        Caption := Caption +' (TLS)';
       end;  //of begin
 
       Start();
@@ -624,8 +629,17 @@ begin
   Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ);
 
   try
-    Reg.RootKey := HKEY_LOCAL_MACHINE;
-    Result := (Reg.OpenKeyReadOnly(KEY_CERTIFICATE_STORE) and Reg.KeyExists(AFingerprint));
+    // Check user root certificate store
+    Reg.RootKey := HKEY_CURRENT_USER;
+    Result := (Reg.OpenKeyReadOnly('spc') and Reg.KeyExists(AFingerprint));
+
+    // Not found: Check system root certificate store
+    if not Result then
+    begin
+      Reg.CloseKey;
+      Reg.RootKey := HKEY_LOCAL_MACHINE;
+      Result := (Reg.OpenKeyReadOnly(KEY_CERTIFICATE_STORE) and Reg.KeyExists(AFingerprint));
+    end;  //of begin
 
   finally
     Reg.CloseKey;
