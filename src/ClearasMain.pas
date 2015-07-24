@@ -81,7 +81,7 @@ type
     mmFre: TMenuItem;
     mmUpdate: TMenuItem;
     N9: TMenuItem;
-    mmDownloadCert: TMenuItem;
+    mmInstallCertificate: TMenuItem;
     N10: TMenuItem;
     pmEdit: TMenuItem;
     mmReport: TMenuItem;
@@ -149,7 +149,7 @@ type
     procedure mmDefaultClick(Sender: TObject);
     procedure mmInfoClick(Sender: TObject);
     procedure mmUpdateClick(Sender: TObject);
-    procedure mmDownloadCertClick(Sender: TObject);
+    procedure mmInstallCertificateClick(Sender: TObject);
     procedure mmReportClick(Sender: TObject);
     procedure PageControlChange(Sender: TObject);
     procedure pmChangeStatusClick(Sender: TObject);
@@ -340,7 +340,6 @@ begin
       // Set updater options
       with Updater do
       begin
-        Title := FLang.GetString(24);
         FileNameLocal := 'Clearas.exe';
 
       {$IFDEF WIN64}
@@ -813,7 +812,7 @@ begin
     // Help menu labels
     mmHelp.Caption := GetString(14);
     mmUpdate.Caption := GetString(15);
-    mmDownloadCert.Caption := GetString(16);
+    mmInstallCertificate.Caption := GetString(16);
     mmReport.Caption := GetString(26);
     mmInfo.Caption := GetString(17);
 
@@ -2412,7 +2411,7 @@ begin
   FLang.ChangeLanguage(LANG_ENGLISH);
 end;
 
-{ TMain.mmFraClick
+{ TMain.mmFreClick
 
   MainMenu entry that allows to change the current language to french. }
 
@@ -2421,36 +2420,23 @@ begin
   FLang.ChangeLanguage(LANG_FRENCH);
 end;
 
-{ TMain.mmDownloadCertClick
+{ TMain.mmInstallCertificateClick
 
   MainMenu entry that allows to download the PM Code Works certificate. }
 
-procedure TMain.mmDownloadCertClick(Sender: TObject);
+procedure TMain.mmInstallCertificateClick(Sender: TObject);
 var
   Updater: TUpdate;
 
 begin
-  // Certificate already installed?
-  if (TUpdate.CertificateExists(CERTIFICATE_FINGERPRINT_SHA1) and
-    (FLang.ShowMessage(27, 28, mtConfirmation) = IDNO)) then
-    Exit;
-
-  // Init downloader
   Updater := TUpdate.Create(Self, FLang);
 
-  // Download certificate
   try
-    with Updater do
-    begin
-      Title := FLang.GetString(16);
-      FileNameRemote := 'pmcw.crt';
-      FileNameLocal := 'PMCW.crt';
-      DownloadDirectory := GetTempDir();
-    end;  //of begin
-
-    // Successfully downloaded certificate?
-    if Updater.Execute() then
-      mmDownloadCert.Enabled := False;
+    // Certificate already installed?
+    if not Updater.CertificateExists() then
+      Updater.InstallCertificate()
+    else
+      FLang.ShowMessage(FLang.GetString(27), mtInformation);
 
   finally
     Updater.Free;

@@ -668,9 +668,9 @@ object Main: TMain
       object N9: TMenuItem
         Caption = '-'
       end
-      object mmDownloadCert: TMenuItem
-        Caption = 'Zertifikat herunterladen'
-        OnClick = mmDownloadCertClick
+      object mmInstallCertificate: TMenuItem
+        Caption = 'Zertifikat installieren'
+        OnClick = mmInstallCertificateClick
       end
       object mmReport: TMenuItem
         Caption = 'Fehler melden'
