@@ -71,6 +71,7 @@ object Main: TMain
         Top = 4
         Width = 21
         Height = 14
+        Alignment = taRightJustify
         Anchors = [akTop, akRight]
         Caption = 'v4.1'
       end
@@ -189,6 +190,10 @@ object Main: TMain
     object tsContext: TTabSheet
       Caption = 'Kontextmen'#252
       ImageIndex = 1
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       DesignSize = (
         535
         284)
@@ -223,6 +228,7 @@ object Main: TMain
         Top = 4
         Width = 21
         Height = 14
+        Alignment = taRightJustify
         Anchors = [akTop, akRight]
         Caption = 'v4.1'
       end
@@ -361,6 +367,10 @@ object Main: TMain
     object tsService: TTabSheet
       Caption = 'Dienste'
       ImageIndex = 2
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       DesignSize = (
         535
         284)
@@ -403,6 +413,7 @@ object Main: TMain
         Top = 4
         Width = 21
         Height = 14
+        Alignment = taRightJustify
         Anchors = [akTop, akRight]
         Caption = 'v4.1'
       end

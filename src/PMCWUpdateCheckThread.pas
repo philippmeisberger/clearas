@@ -1,6 +1,6 @@
 { *********************************************************************** }
 {                                                                         }
-{ PM Code Works Cross Plattform Update Check Thread v2.3                  }
+{ PM Code Works Cross Plattform Update Check Thread v3.0                  }
 {                                                                         }
 { Copyright (c) 2011-2015 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
@@ -43,7 +43,7 @@ type
     constructor Create(ACurrentBuild: Cardinal; ARemoteDirName: string;
       ACreateSuspended: Boolean = True);
     destructor Destroy; override;
-    { Externalized events }
+    { external }
     property OnError: TOnUpdateCheckErrorEvent read FOnError write FOnError;
     property OnNoUpdate: TNotifyEvent read FOnNoUpdate write FOnNoUpdate;
     property OnUpdate: TOnUpdateAvailableEvent read FOnUpdate write FOnUpdate;
@@ -75,7 +75,7 @@ begin
   with FHttp.Request do
   begin
     // Set the user-agent because of some issues with default
-    UserAgent := 'Updater/2.3 (PM Code Works Update Utility)';
+    UserAgent := 'Updater/3.0 (PM Code Works Update Utility)';
 
     // Only accept plain text
     Accept := 'text/plain';

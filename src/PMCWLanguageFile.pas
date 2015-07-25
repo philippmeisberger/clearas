@@ -89,7 +89,7 @@ type
     function GetString(const AIndex: Word): string; overload;
     function GetString(const AIndexes: array of Word): string; overload;
   {$IFDEF LINUX}
-    function GetSystemDefaultLCID(): string;
+    function GetUserDefaultLCID(): string;
   {$ENDIF}
     procedure RemoveLanguage(ALocale: {$IFDEF MSWINDOWS}Word{$ELSE}string{$ENDIF});
     procedure RemoveListener(AListener: IChangeLanguageListener);
@@ -114,7 +114,7 @@ type
 implementation
 
 {$IFDEF MSWINDOWS}
-{$R lang.res}
+{$R 'lang.res' 'lang.rc'}
 {$ENDIF}
 
 { TLanguageFile }
@@ -335,7 +335,7 @@ var
 begin
   // Get user language
   if (ALanguage = LANG_USER) then
-    LocaleId := GetSystemDefaultLCID()
+    LocaleId := GetUserDefaultLCID()
   else
   {$IFDEF MSWINDOWS}
     LocaleId := MAKELANGID(ALanguage, SUBLANG_DEFAULT);
@@ -404,11 +404,11 @@ begin
 end;
 
 {$IFDEF LINUX}
-{ public TLanguageFile.GetLocaleLanguage
+{ public TLanguageFile.GetUserDefaultLCID
 
   Returns a the current used system language. }
 
-function TLanguageFile.GetSystemDefaultLCID(): string;
+function TLanguageFile.GetUserDefaultLCID(): string;
 begin
   Result := Copy(SysUtils.GetEnvironmentVariable('LANG'), 1, 5);
 end;

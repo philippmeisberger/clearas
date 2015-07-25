@@ -418,6 +418,9 @@ end;
 
 procedure TUpdate.OnDownloadError(Sender: TThread; const AResponseCode: Integer;
   const AResponseText: string);
+var
+  MessageText: string;
+
 begin
   FTaskBar.ProgressState := TTaskBarProgressState.Error;
   pbProgress.State := TProgressBarState.pbsError;
@@ -425,14 +428,13 @@ begin
 
   // Certificate validation error?
   if (AResponseCode = ERROR_CERTIFICATE_VALIDATION) then
-    FLang.ShowException(Caption + FLang.GetString(18), AResponseText +'! '+
-      Format('Please visit the %s for additional information.',
-      ['<a href="http://www.pm-codeworks.de/neuigkeiten.html">website</a>']))
+    MessageText := Format(AResponseText +'! Please visit the %s for more information.',
+    ['<a href="http://www.pm-codeworks.de/neuigkeiten.html">website</a>'])
   else
     // HTTP error?
-    FLang.ShowException(Caption + FLang.GetString(18), AResponseText +
-      Format(' (%d)', [AResponseCode]));
+    MessageText := Format('HTTP/1.1 %d '+ AResponseText, [AResponseCode]);
 
+  FLang.ShowException(FLang.GetString([41, 18]), MessageText);
   bFinished.ModalResult := mrAbort;
 end;
 
@@ -497,14 +499,14 @@ begin
   FLocalFileName := ALocalFileName;
   UseTls := AUseTls;
 
-  // CA certificate already installed?
+  // Certificate not installed?
   if not CertificateExists() then
     UseTls := ShowInstallCertificateDialog();
 
-  // Download folder still set?
-  if (ADownloadDirectory <> '') then
-    Continue := True
-  else
+  Continue := True;
+
+  // Download folder not set yet?
+  if (ADownloadDirectory = '') then
     // Show select directory dialog
     Continue := SelectDirectory(FLang.GetString(9), '', FDownloadDirectory);
 
@@ -634,8 +636,8 @@ begin
   Result := False;
 
   // Ask user to install the certificate
-  Answer := TaskMessageDlg(FLang.GetString(107), FLang.GetString([108, 109,
-    NEW_LINE, 110]), mtConfirmation, mbYesNoCancel, 0, mbYes);
+  Answer := TaskMessageDlg(FLang.GetString(37), FLang.GetString([38, 39,
+    NEW_LINE, 40]), mtConfirmation, mbYesNoCancel, 0, mbYes);
 
   case Answer of
     IDYES:

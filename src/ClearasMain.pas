@@ -802,7 +802,7 @@ begin
     mmDelBackup.Caption := GetString(76);
 
     // View menu labels
-    mmView.Caption := GetString(20);
+    mmView.Caption := GetString(10);
     mmRefresh.Caption := GetString(77);
     mmDefault.Caption := GetString(78);
     mmDate.Caption := GetString(80);
@@ -1009,7 +1009,7 @@ begin
   try
     Reg.RootKey := HKEY_CLASSES_ROOT;
     Reg.OpenKey(KEY_RECYCLEBIN, False);
-    ClearasKey := ALangFile.GetString(37);
+    ClearasKey := ALangFile.GetString(107);
 
     // Only update if context menu entry exists
     if Reg.KeyExists(ClearasKey) then
@@ -2051,7 +2051,7 @@ begin
     InitialDir := '%ProgramFiles%';
 
     // Filter .exe and .bat files
-    Filter := FLang.GetString(38);
+    Filter := FLang.GetString(108);
   end;  //of with
 
   try
@@ -2081,7 +2081,7 @@ begin
         0: begin
              // Startup item already exists?
              if not FStartup.Add(OpenDialog.FileName, Args, Name) then
-               raise EWarning.Create(FLang.Format(40, [OpenDialog.FileName]));
+               raise EWarning.Create(FLang.Format(110, [OpenDialog.FileName]));
 
              // Update TListView
              LoadStartupItems(False);
@@ -2114,7 +2114,7 @@ begin
         2: begin
              // Service item already exists?
              if not FService.Add(OpenDialog.FileName, Args, Name) then
-               raise EWarning.Create(FLang.Format(40, [OpenDialog.FileName]));
+               raise EWarning.Create(FLang.Format(110, [OpenDialog.FileName]));
 
              // Update TListView
              LoadServiceItems(False);
@@ -2260,7 +2260,7 @@ begin
     begin
       Title := StripHotkey(mmImport.Caption);
       InitialDir := BackupDir;
-      Filter := Format(FLang.GetString(39), [EXT_USER, EXT_USER, EXT_COMMON, EXT_COMMON]);
+      Filter := Format(FLang.GetString(109), [EXT_USER, EXT_USER, EXT_COMMON, EXT_COMMON]);
     end;  //of with
 
     try
@@ -2327,7 +2327,7 @@ begin
     begin
       // Add recycle bin context menu entry
       Reg.OpenKey(KEY_RECYCLEBIN +'\Clearas', True);
-      Reg.WriteString('', FLang.GetString(37));
+      Reg.WriteString('', FLang.GetString(107));
       Reg.CloseKey();
       Reg.OpenKey(KEY_RECYCLEBIN +'\Clearas\command', True);
       Reg.WriteString('', ParamStr(0));
@@ -2422,7 +2422,7 @@ end;
 
 { TMain.mmInstallCertificateClick
 
-  MainMenu entry that allows to download the PM Code Works certificate. }
+  MainMenu entry that allows to install the PM Code Works certificate. }
 
 procedure TMain.mmInstallCertificateClick(Sender: TObject);
 var
