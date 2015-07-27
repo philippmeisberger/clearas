@@ -784,7 +784,7 @@ begin
   with FLang do
   begin
     // File menu labels
-    mmFile.Caption := GetString(68);
+    mmFile.Caption := GetString(33);
 
     case PageControl.ActivePageIndex of
       0,2: mmAdd.Caption := GetString(69);
@@ -814,7 +814,7 @@ begin
     mmUpdate.Caption := GetString(15);
     mmInstallCertificate.Caption := GetString(16);
     mmReport.Caption := GetString(26);
-    mmInfo.Caption := GetString(17);
+    mmInfo.Caption := Format(17, [Application.Title]);
 
     // "Startup" tab TButton labels
     tsStartup.Caption := GetString(83);
