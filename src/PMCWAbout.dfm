@@ -3,16 +3,16 @@ object Info: TInfo
   Top = 197
   BorderIcons = [biSystemMenu]
   BorderStyle = bsDialog
-  Caption = #220'ber ...'
+  Caption = #220'ber '
   ClientHeight = 257
   ClientWidth = 464
   Color = clBtnFace
-  Font.Charset = ANSI_CHARSET
+  Font.Charset = DEFAULT_CHARSET
   Font.Color = clBlack
   Font.Height = -11
   Font.Name = 'Arial'
   Font.Style = []
-  OldCreateOrder = False
+  OldCreateOrder = True
   Position = poScreenCenter
   OnCreate = FormCreate
   DesignSize = (
@@ -22,39 +22,18 @@ object Info: TInfo
   TextHeight = 14
   object PageControl: TPageControl
     Left = 0
-    Top = -1
+    Top = 0
     Width = 468
     Height = 259
     ActivePage = tsDescription
     Anchors = [akLeft, akTop, akRight, akBottom]
-    Font.Charset = ANSI_CHARSET
-    Font.Color = clBlack
-    Font.Height = -11
-    Font.Name = 'Arial'
-    Font.Style = []
     MultiLine = True
-    ParentFont = False
     TabOrder = 0
     object tsDescription: TTabSheet
       Caption = 'Infos'
       DesignSize = (
         460
         230)
-      object lCopy: TLabel
-        Left = 173
-        Top = 208
-        Width = 112
-        Height = 14
-        Anchors = [akBottom]
-        Caption = #169' P.Meisberger 2015'
-        Font.Charset = ANSI_CHARSET
-        Font.Color = clBlack
-        Font.Height = -11
-        Font.Name = 'Arial'
-        Font.Style = [fsBold]
-        ParentFont = False
-        ExplicitLeft = 169
-      end
       object Image: TImage
         Left = 16
         Top = 16
@@ -67,6 +46,8 @@ object Info: TInfo
         Width = 21
         Height = 14
         Caption = 'v1.0'
+        Color = clBtnFace
+        ParentColor = False
       end
       object lBuild: TLabel
         Left = 14
@@ -74,10 +55,12 @@ object Info: TInfo
         Width = 37
         Height = 14
         Caption = '(Build: )'
+        Color = clBtnFace
+        ParentColor = False
       end
       object bOk: TButton
         Left = 368
-        Top = 200
+        Top = 202
         Width = 75
         Height = 25
         Anchors = [akBottom]
@@ -87,11 +70,11 @@ object Info: TInfo
         ModalResult = 1
         TabOrder = 0
       end
-      object mCopying: TRichEdit
+      object mCopying: TMemo
         Left = 82
         Top = 16
-        Width = 362
-        Height = 177
+        Width = 361
+        Height = 180
         Anchors = [akLeft, akTop, akRight, akBottom]
         Lines.Strings = (
           'Copyright (C) 2011 Philipp Meisberger <team@pm-codeworks.de> '
@@ -104,37 +87,17 @@ object Info: TInfo
           'The License may be obtained under <http://www.d-fsl.org>.')
         ReadOnly = True
         TabOrder = 1
-        Zoom = 100
       end
     end
     object tsChangelog: TTabSheet
       Caption = 'Changelog'
       ImageIndex = 1
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       DesignSize = (
         460
         230)
-      object lCopy2: TLabel
-        Left = 173
-        Top = 208
-        Width = 112
-        Height = 14
-        Anchors = [akBottom]
-        Caption = #169' P.Meisberger 2015'
-        Font.Charset = ANSI_CHARSET
-        Font.Color = clBlack
-        Font.Height = -11
-        Font.Name = 'Arial'
-        Font.Style = [fsBold]
-        ParentFont = False
-        ExplicitLeft = 169
-      end
       object bOk2: TButton
         Left = 368
-        Top = 200
+        Top = 202
         Width = 75
         Height = 25
         Anchors = [akBottom]
@@ -144,18 +107,17 @@ object Info: TInfo
         ModalResult = 1
         TabOrder = 0
       end
-      object mChangelog: TRichEdit
+      object mChangelog: TMemo
         Left = 15
-        Top = 17
+        Top = 16
         Width = 428
-        Height = 177
+        Height = 180
         Anchors = [akLeft, akTop, akRight, akBottom]
         Lines.Strings = (
           'Changelog')
         ReadOnly = True
         ScrollBars = ssVertical
         TabOrder = 1
-        Zoom = 100
       end
     end
   end

@@ -1,4 +1,4 @@
-Clearas
+ï»¿Clearas
 Ein Open-Source Projekt von PM Code Works
 
 Changelog
@@ -6,14 +6,14 @@ Changelog
 
 Version 4.1  [??.08.15]
 
-- ProgressBar wird nun während des Exportierens von Kontextmnü-Einträgen angezeigt
-- "Abbrechen" während des Hinzufügens von Einträgen funktioniert nun korrekt
+- ProgressBar wird nun wÃ¤hrend des Exportierens von KontextmnÃ¼-EintrÃ¤gen angezeigt
+- "Abbrechen" wÃ¤hrend des HinzufÃ¼gens von EintrÃ¤gen funktioniert nun korrekt
 - "Symbole anzeigen" entfernt
 - Icon erneuert
 - Sprache wird benutzerspezifisch geladen
-- Unterstützung von Unicode
-- 32/64-Bit Binärdateien
-- Updater v3.0 mit SSL-Unterstützung
+- UnterstÃ¼tzung von Unicode
+- 32/64-Bit BinÃ¤rdateien
+- Updater v3.0 mit SSL-UnterstÃ¼tzung
 
 ---------------------------------
 
@@ -23,39 +23,39 @@ Version 4.0  [28.03.15]
   - Multi-Threaded
   - Exception Handling stark verbessert
 - Neues Feature "Dienste":
-  - Ermöglicht Bearbeiten von Windows Diensten
+  - ErmÃ¶glicht Bearbeiten von Windows Diensten
 - Nutzung des TaskDialogs (ab Vista)
-- Änderungen im Popup Menü:
-  - Neue Funktion "Pfad bearbeiten" hinzugefügt
-    - Dateipfade sowie Parameter können nach eigenem Ermessen bearbeitet werden
+- Ã„nderungen im Popup MenÃ¼:
+  - Neue Funktion "Pfad bearbeiten" hinzugefÃ¼gt
+    - Dateipfade sowie Parameter kÃ¶nnen nach eigenem Ermessen bearbeitet werden
   - Funktion "Nach Programm suchen" entfernt (durch "Pfad bearbeiten" ersetzt)
-  - Neue Funktion "In RegEdit öffnen" hinzugefügt
-    - Öffnet den Registry Pfad des aktuellen Elements in RegEdit
-  - Neue Funktion "In Explorer öffnen"
-    - Öffnet den Dateipfad des aktuellen Elements im Explorer
+  - Neue Funktion "In RegEdit Ã¶ffnen" hinzugefÃ¼gt
+    - Ã–ffnet den Registry Pfad des aktuellen Elements in RegEdit
+  - Neue Funktion "In Explorer Ã¶ffnen"
+    - Ã–ffnet den Dateipfad des aktuellen Elements im Explorer
   - Neue Funktion "Ort kopieren"
     - Kopiert den Pfad des aktuellen Elements in die Zwischenablage
   - Funktion "Eigenschaften" entfernt (durch "Ort kopieren" ersetzt)
-- Änderungen auf der Seite "Kontextmenü":
-  - Menü:
-    - Neue Funktion "Kontextmenü hinzufügen"
-    - Neue Funktion "Einträge exportieren"
-  - Beschriftungen von Shell-Eintägen werden nun direkt angezeigt
-  - "Quick-Search" hinzugefügt
+- Ã„nderungen auf der Seite "KontextmenÃ¼":
+  - MenÃ¼:
+    - Neue Funktion "KontextmenÃ¼ hinzufÃ¼gen"
+    - Neue Funktion "EintrÃ¤ge exportieren"
+  - Beschriftungen von Shell-EintÃ¤gen werden nun direkt angezeigt
+  - "Quick-Search" hinzugefÃ¼gt
   - "Expertenmodus" verbessert:
     - Suche beschleunigt
     - Mehr Ergebnisse
-- Änderungen auf der Seite "Autostart":
-  - Menü-Eintrag "RunOnce-Einträge" durch Checkbox ersetzt
-  - Menü-Eintrag "Symbole anzeigen" hinzugefügt
-  - Icons von Programmen werden nun standardmäßig angezeigt
-  - 32 Bit Einträge werden nun speziell gekennzeichnet (nur 64 Bit Windows)
-- Auswählen von Elementen in Autostart und Kontextmenü Listen beschleunigt
+- Ã„nderungen auf der Seite "Autostart":
+  - MenÃ¼-Eintrag "RunOnce-EintrÃ¤ge" durch Checkbox ersetzt
+  - MenÃ¼-Eintrag "Symbole anzeigen" hinzugefÃ¼gt
+  - Icons von Programmen werden nun standardmÃ¤ÃŸig angezeigt
+  - 32 Bit EintrÃ¤ge werden nun speziell gekennzeichnet (nur 64 Bit Windows)
+- AuswÃ¤hlen von Elementen in Autostart und KontextmenÃ¼ Listen beschleunigt
 - "Backup importieren" verbessert
 - Registry Dateiexport verbessert (eigener Parser)
 - Bug Fixes: 
-  - Gelöschte Autostart Elemente werden nun korrekt aus Liste gelöscht
-  - RunOnce Einträge werden nun auch in 32 Bit Schlüsseln ausgelesen (nur 64 Bit Windows)
+  - GelÃ¶schte Autostart Elemente werden nun korrekt aus Liste gelÃ¶scht
+  - RunOnce EintrÃ¤ge werden nun auch in 32 Bit SchlÃ¼sseln ausgelesen (nur 64 Bit Windows)
 - Neues Manifest
 - Updater v2.2
 - OSUtils v2.1
@@ -66,16 +66,16 @@ Version 4.0  [28.03.15]
 Version 3.0  [03.10.13]
 
 - API Version 4
-- Bei "Programm hinzufügen" können Parameter angegeben werden
-- "RunOnce"-Einträge können ausgelesen werden
+- Bei "Programm hinzufÃ¼gen" kÃ¶nnen Parameter angegeben werden
+- "RunOnce"-EintrÃ¤ge kÃ¶nnen ausgelesen werden
 - "Personal Edition" eingestellt
 
 ---------------------------------
 
 Version 2.1.2  [07.03.13]
 
-- Änderungen im Fenstermanagement
-- Seltener Fehler bei doppelten Autostarteinträgen behoben
+- Ã„nderungen im Fenstermanagement
+- Seltener Fehler bei doppelten AutostarteintrÃ¤gen behoben
 - sonstige kleine Bug Fixes
 
 ---------------------------------
@@ -83,81 +83,81 @@ Version 2.1.2  [07.03.13]
 Version 2.1.1  [29.12.12]
 
 - Update-Funktion verbessert
-- Batchdateien können nun auch in den Autostart geladen werden
-  - Änderung des Anzeigenamens möglich
-- Fehler mit doppelten Kontextmenü-Einträgen behoben
-- Mutex hinzugefügt
-- wenige GUI Änderungen
+- Batchdateien kÃ¶nnen nun auch in den Autostart geladen werden
+  - Ã„nderung des Anzeigenamens mÃ¶glich
+- Fehler mit doppelten KontextmenÃ¼-EintrÃ¤gen behoben
+- Mutex hinzugefÃ¼gt
+- wenige GUI Ã„nderungen
 
 ---------------------------------
 
 Version 2.1 (Clearas NT Release)  [22.11.12]
 
-- Clearas NT: API Version 3 und nochmals überarbeiteter Source-Code
+- Clearas NT: API Version 3 und nochmals Ã¼berarbeiteter Source-Code
   - verbesserte Speichernutzung
-- Kontextmenü-Einträge können ausgelesen und (wie bei den Autostart-Objekten) bearbeitet werden
-  - Expertenmodus für verfeinerte Suche nach Einträgen verfügbar
-- Sprachunterstützung für "Französisch" hinzugefügt (Danke an Angela Hansen)
-- "nach Programm suchen"-Feature überarbeitet
+- KontextmenÃ¼-EintrÃ¤ge kÃ¶nnen ausgelesen und (wie bei den Autostart-Objekten) bearbeitet werden
+  - Expertenmodus fÃ¼r verfeinerte Suche nach EintrÃ¤gen verfÃ¼gbar
+- SprachunterstÃ¼tzung fÃ¼r "FranzÃ¶sisch" hinzugefÃ¼gt (Danke an Angela Hansen)
+- "nach Programm suchen"-Feature Ã¼berarbeitet
   - User kann Pfad selbst bearbeiten
-    - "Pfad bearbeiten"-Eintrag im Kontextmenü hinzugefügt
-- es können keine Programme mehr doppelt in den Autostart gelangen
+    - "Pfad bearbeiten"-Eintrag im KontextmenÃ¼ hinzugefÃ¼gt
+- es kÃ¶nnen keine Programme mehr doppelt in den Autostart gelangen
 - Reiter "Hilfe" erweitert:
-  - automatische und manuelle Update-Funktion verfügbar
+  - automatische und manuelle Update-Funktion verfÃ¼gbar
   - "PM Code Works" Zertifikat kann installiert werden
   - alternative "Personal Edition" kann heruntergeladen werden
-- Support für Windows 8 sowie 2000
-- Manifest-Skript überarbeitet
-- kleinere Bug fixes, die überwiegend x64 Systeme betreffen
+- Support fÃ¼r Windows 8 sowie 2000
+- Manifest-Skript Ã¼berarbeitet
+- kleinere Bug fixes, die Ã¼berwiegend x64 Systeme betreffen
 
 ---------------------------------
 
 Version 2.0 (Clearas Beta Final Release)  [08.02.11]
 
-- Clearas Beta: Source-Code komplett überarbeitet und größtenteils neu geschrieben
-  - Clearas benötigt noch weniger Resourcen
+- Clearas Beta: Source-Code komplett Ã¼berarbeitet und grÃ¶ÃŸtenteils neu geschrieben
+  - Clearas benÃ¶tigt noch weniger Resourcen
   - verbesserte Fehlererkennung
-- Sprachunterstützung für "Englisch" hinzugefügt (Danke an Angela Hansen)
+- SprachunterstÃ¼tzung fÃ¼r "Englisch" hinzugefÃ¼gt (Danke an Angela Hansen)
 - Main Menu um Reiter "Datei" erweitert
-  - Export der kompletten Liste als *.txt und *.reg möglich
-  - es können beliebige Programme manuell in den Autostart geladen werden
-  - Import von vorhandenen Backups (*.Startup-Dateien) möglich
+  - Export der kompletten Liste als *.txt und *.reg mÃ¶glich
+  - es kÃ¶nnen beliebige Programme manuell in den Autostart geladen werden
+  - Import von vorhandenen Backups (*.Startup-Dateien) mÃ¶glich
 - Falls ein Programm-Pfad fehlt, kann danach gesucht werden
-- von aktivierten Programmen im Autostartordner können manuell Backups
+- von aktivierten Programmen im Autostartordner kÃ¶nnen manuell Backups
     gemacht werden
-  - Beim Löschvorgang wird gefragt, ob Backup (falls vorhanden) auch gelöscht
+  - Beim LÃ¶schvorgang wird gefragt, ob Backup (falls vorhanden) auch gelÃ¶scht
     werden soll
-  - autom. Löschen von Backups nach Aktivierung kann geändert werden
+  - autom. LÃ¶schen von Backups nach Aktivierung kann geÃ¤ndert werden
 - Deaktivierungsdatum kann angezeigt werden
-- "Service-Pack anzeigen" kann geändert werden
+- "Service-Pack anzeigen" kann geÃ¤ndert werden
 - jede Menge Bugfixes
 
 ---------------------------------
 
 Version 1.2.21  [09.11.11]
 
-- volle Abwärtskompatibilität für Windows XP
+- volle AbwÃ¤rtskompatibilitÃ¤t fÃ¼r Windows XP
 - Main Menu um Reiter "Bearbeiten" und "Hilfe" erweitert
-  - unter "Bearbeiten" kann ein Verknüpfung zu Clearas im Papierkorb Kontextmenü eingetragen werden
+  - unter "Bearbeiten" kann ein VerknÃ¼pfung zu Clearas im Papierkorb KontextmenÃ¼ eingetragen werden
 - Beim deaktivieren von Programmen aus dem Autostart-Ordner wird eine Backup *.lnk unter "%WinDir%\pss" erzeugt
-- Anzeige des Betriebssystems einschließlich Service Pack
+- Anzeige des Betriebssystems einschlieÃŸlich Service Pack
 - jede Menge Bugfixes
 
 ---------------------------------
 
 Version 1.2.2  [15.10.11]
 
-- volle Kompatibilität für Windows 7 und Vista (jeweils 32 oder 64bit)
-- Größe des Forms anpassbar
+- volle KompatibilitÃ¤t fÃ¼r Windows 7 und Vista (jeweils 32 oder 64bit)
+- GrÃ¶ÃŸe des Forms anpassbar
 - Bugfixes
 
 ---------------------------------
 
 Version 1.2.1  [07.10.11]
 
-- "Main Menu" eingefügt
-- Funktion "Eigenschaften" zum Popup Menü hinzugefügt
-  - anzeigen des Registrierungsschlüssels möglich
+- "Main Menu" eingefÃ¼gt
+- Funktion "Eigenschaften" zum Popup MenÃ¼ hinzugefÃ¼gt
+  - anzeigen des RegistrierungsschlÃ¼ssels mÃ¶glich
 - Anzeige des Betriebssystems
 - neuer Dialogtyp
 
@@ -165,19 +165,19 @@ Version 1.2.1  [07.10.11]
 
 Version 1.2  [05.10.11]
 
-- Export von REG-Dateien ("*.reg") möglich
-- Popup Menü hinzugefügt
-- Hotkey-Funktion hinzugefügt
-  - "Entf" = selektierten Eintrag löschen
+- Export von REG-Dateien ("*.reg") mÃ¶glich
+- Popup MenÃ¼ hinzugefÃ¼gt
+- Hotkey-Funktion hinzugefÃ¼gt
+  - "Entf" = selektierten Eintrag lÃ¶schen
   - "Strg+C" = selektierten Eintrag exportieren
   - "F5" = aktualisieren
-  - "F6" = Standard Spaltengröße
-  - "F7" = Spaltengröße optimieren 
-- "Speichern-Dialog" vor löschen eingefügt
-- Sortierfunktion hinzugefügt
-- Layout geändert
-  - größeres Form
-  - größere Buttons
+  - "F6" = Standard SpaltengrÃ¶ÃŸe
+  - "F7" = SpaltengrÃ¶ÃŸe optimieren 
+- "Speichern-Dialog" vor lÃ¶schen eingefÃ¼gt
+- Sortierfunktion hinzugefÃ¼gt
+- Layout geÃ¤ndert
+  - grÃ¶ÃŸeres Form
+  - grÃ¶ÃŸere Buttons
 - Bugfixes
 
 ---------------------------------
@@ -186,7 +186,7 @@ Version 1.1  [03.10.11]
 
 - verfeinerte Suche nach Autostart-Programmen ("Startup User")
 - Manifest eingebunden 
-  --> wird nun mit Admin-Rechten ausgeführt
+  --> wird nun mit Admin-Rechten ausgefÃ¼hrt
 - Bugfixes
 - neuer Icon
 
@@ -200,9 +200,9 @@ Features:
 
 - aktivieren, 
 - deaktivieren und
-- löschen von Autostart-Objekten
+- lÃ¶schen von Autostart-Objekten
 
 -------------------------------------------------------------------------------------------------
-Clearas wurde unter der D-FSL-Lizenz veröffentlicht und ist somit Open-Source. Der Quelltext kann auf der Website heruntergeladen werden.
+Clearas wurde unter der D-FSL-Lizenz verÃ¶ffentlicht und ist somit Open-Source. Der Quelltext kann auf der Website heruntergeladen werden.
 
-Soll Clearas auf eine kommerzielle CD-ROM (mit Magazin) gepresst werden, wäre es nett, mir eine Ausgabe dieser CD-ROM (mit Magazin) zu schicken. Meine Adresse erfahren Sie unter team@pm-codeworks.de.
+Soll Clearas auf eine kommerzielle CD-ROM (mit Magazin) gepresst werden, wÃ¤re es nett, mir eine Ausgabe dieser CD-ROM (mit Magazin) zu schicken. Meine Adresse erfahren Sie unter team@pm-codeworks.de.

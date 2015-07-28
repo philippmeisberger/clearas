@@ -7,13 +7,13 @@ object Main: TMain
   Color = clBtnFace
   Constraints.MinHeight = 365
   Constraints.MinWidth = 557
-  Font.Charset = ANSI_CHARSET
+  Font.Charset = DEFAULT_CHARSET
   Font.Color = clBlack
   Font.Height = -11
   Font.Name = 'Arial'
   Font.Style = []
   Menu = MainMenu
-  OldCreateOrder = False
+  OldCreateOrder = True
   Position = poScreenCenter
   OnCreate = FormCreate
   OnDestroy = FormDestroy

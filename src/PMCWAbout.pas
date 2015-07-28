@@ -11,8 +11,13 @@ unit PMCWAbout;
 interface
 
 uses
-  Windows, SysUtils, Classes, Graphics, Controls, Forms, StdCtrls, ExtCtrls,
-  ComCtrls, PMCWUpdater;
+{$IFDEF MSWINDOWS}
+  Windows,
+{$ELSE}
+  VersionTypes, Resource,
+{$ENDIF}
+  SysUtils, Classes, Graphics, Controls, Forms, StdCtrls, ExtCtrls, ComCtrls,
+  PMCWUpdater;
 
 type
   { TInfo }
@@ -21,22 +26,25 @@ type
     tsDescription: TTabSheet;
     tsChangelog: TTabSheet;
     bOk: TButton;
-    lCopy: TLabel;
     bOk2: TButton;
-    lCopy2: TLabel;
     Image: TImage;
     lVersion: TLabel;
     lBuild: TLabel;
-    mCopying: TRichEdit;
-    mChangelog: TRichEdit;
+    mCopying: TMemo;
+    mChangelog: TMemo;
     procedure FormCreate(Sender: TObject);
   private
-    procedure LoadResourceIntoMemo(AResourceName: string; AMemo: TRichEdit);
+    procedure LoadResourceIntoMemo(AResourceName: string; AMemo: TMemo);
   end;
 
 implementation
 
+{$IFDEF MSWINDOWS}
 {$R *.dfm}
+{$ELSE}
+{$R *.lfm}
+{$ENDIF}
+
 {$R changelog.res}
 {$R description.res}
 
@@ -45,7 +53,7 @@ var
   VersionInfo: TFileProductVersion;
 
 begin
-  Caption := 'Über '+ Application.Title;
+  Caption := Caption + Application.Title;
 
   // Show version information
   if TUpdateCheck.GetFileVersion(Application.ExeName, VersionInfo) then
@@ -67,20 +75,28 @@ begin
   LoadResourceIntoMemo('changelog', mChangelog);
 
   // Load application icon into TImage
+{$IFDEF MSWINDOWS}
   Image.Picture.Icon.Handle := LoadImage(HInstance, 'MAINICON', IMAGE_ICON,
     Image.Width, Image.Height, LR_DEFAULTCOLOR);
+{$ELSE}
+  Image.Picture.Icon.LoadFromFile('/usr/share/pixmaps/gamewake.ico');
+{$ENDIF}
 end;
 
 { private TInfo.LoadResourceIntoMemo
 
-  Loads a resource text into a specified TRichEdit. }
+  Loads a resource text into a specified TMemo. }
 
-procedure TInfo.LoadResourceIntoMemo(AResourceName: string; AMemo: TRichEdit);
+procedure TInfo.LoadResourceIntoMemo(AResourceName: string; AMemo: TMemo);
 var
   ResourceStream: TResourceStream;
 
 begin
+{$IFDEF MSWINDOWS}
   ResourceStream := TResourceStream.Create(HInstance, AResourceName, RT_RCDATA);
+{$ELSE}
+  ResourceStream := TResourceStream.Create(HInstance, AResourceName, PChar(RT_RCDATA));
+{$ENDIF}
 
   try
     AMemo.Lines.LoadFromStream(ResourceStream);
@@ -90,4 +106,4 @@ begin
   end;  //of try
 end;
 
-end.
+end.
