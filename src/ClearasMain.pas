@@ -52,8 +52,6 @@ type
     N8: TMenuItem;
     N6: TMenuItem;
     mmLang: TMenuItem;
-    mmGer: TMenuItem;
-    mmEng: TMenuItem;
     PageControl: TPageControl;
     tsStartup: TTabSheet;
     tsContext: TTabSheet;
@@ -78,7 +76,6 @@ type
     cbContextExpert: TCheckBox;
     lWindows2: TLabel;
     lWindows: TLabel;
-    mmFre: TMenuItem;
     mmUpdate: TMenuItem;
     N9: TMenuItem;
     mmInstallCertificate: TMenuItem;
@@ -143,9 +140,6 @@ type
     procedure mmImportClick(Sender: TObject);
     procedure mmRefreshClick(Sender: TObject);
     procedure mmShowIconsClick(Sender: TObject);
-    procedure mmGerClick(Sender: TObject);
-    procedure mmEngClick(Sender: TObject);
-    procedure mmFreClick(Sender: TObject);
     procedure mmDefaultClick(Sender: TObject);
     procedure mmInfoClick(Sender: TObject);
     procedure mmUpdateClick(Sender: TObject);
@@ -209,19 +203,8 @@ implementation
 
 procedure TMain.FormCreate(Sender: TObject);
 begin
-  // German language default
   FLang := TLanguageFile.Create(Self);
-  FLang.AddLanguage(LANG_GERMAN, 100);
-  FLang.AddLanguage(LANG_ENGLISH, 300);
-  FLang.AddLanguage(LANG_FRENCH, 500);
-  FLang.ChangeLanguage(LANG_USER);
-
-  case FLang.Id of
-    300: mmEng.Checked := True;
-    500: mmFre.Checked := True;
-    else
-         mmGer.Checked := True;
-  end;
+  FLang.BuildLanguageMenu(MainMenu, mmLang);
 
   // Init update notificator
   FUpdateCheck := TUpdateCheck.Create(Self, 'Clearas', FLang);
@@ -2391,33 +2374,6 @@ begin
          lwService.Columns[3].Width := 75;
        end;
   end;  //of case
-end;
-
-{ TMain.mmGerClick
-
-  MainMenu entry that allows to change the current language to german. }
-
-procedure TMain.mmGerClick(Sender: TObject);
-begin
-  FLang.ChangeLanguage(LANG_GERMAN);
-end;
-
-{ TMain.mmEngClick
-
-  MainMenu entry that allows to change the current language to english. }
-
-procedure TMain.mmEngClick(Sender: TObject);
-begin
-  FLang.ChangeLanguage(LANG_ENGLISH);
-end;
-
-{ TMain.mmFreClick
-
-  MainMenu entry that allows to change the current language to french. }
-
-procedure TMain.mmFreClick(Sender: TObject);
-begin
-  FLang.ChangeLanguage(LANG_FRENCH);
 end;
 
 { TMain.mmInstallCertificateClick

@@ -13,7 +13,7 @@ unit PMCWLanguageFile;
 interface
 
 uses
-  Classes, SysUtils, Forms, Dialogs, IdURI,
+  Classes, SysUtils, Forms, Dialogs, IdURI, Menus,
 {$IFDEF MSWINDOWS}
   Windows, CommCtrl, System.Generics.Collections, ShellAPI;
 {$ELSE}
@@ -22,17 +22,7 @@ uses
 
 const
   { Flag indicating line feed }
-  NEW_LINE     = 1023;
-
-{$IFDEF MSWINDOWS}
-  { Flag to load user language }
-  LANG_USER    = 0;
-{$ELSE}
-  LANG_USER    = '';
-  LANG_GERMAN  = 'de_DE';
-  LANG_ENGLISH = 'en_EN';
-  LANG_FRENCH  = 'fr_FR';
-{$ENDIF}
+  NEW_LINE = 1023;
 
 type
   { Exception class }
@@ -59,12 +49,12 @@ type
     FIni: TIniFile;
     FLanguages: TStringHashList;
   {$ELSE}
-    FLocale, FLangId: Word;
+    FLocale, FLangId, FInterval: Word;
     FLanguages: TDictionary<Word, Word>;
-    function GetWindowsLanguage(ALCType: Word = LOCALE_ILANGUAGE): string;
-    procedure HyperlinkClicked(Sender: TObject);
+    procedure OnHyperlinkClicked(Sender: TObject);
   {$ENDIF}
     procedure SetLangId(ALangId: {$IFDEF MSWINDOWS}Word{$ELSE}WideString{$ENDIF});
+    procedure OnSelectLanguage(Sender: TObject);
   protected
     FListeners: TInterfaceList;
     procedure DoNotify();
@@ -72,7 +62,7 @@ type
     constructor Create(AOwner: TComponent{$IFDEF LINUX}; AIniFile: string = ''{$ENDIF});
     destructor Destroy; override;
     procedure AddListener(AListener: IChangeLanguageListener);
-    procedure AddLanguage(ALanguage, ALanguageId: {$IFDEF MSWINDOWS}Word{$ELSE}WideString{$ENDIF});
+    procedure BuildLanguageMenu(AMainMenu: TMainMenu; AMenuItem: TMenuItem);
     procedure ChangeLanguage(ALanguage: {$IFDEF MSWINDOWS}Word{$ELSE}WideString{$ENDIF});
     function Format(const AIndex: Word; const AArgs: array of
       {$IFDEF MSWINDOWS}TVarRec{$ELSE}const{$ENDIF}): string; overload;
@@ -83,14 +73,14 @@ type
       AIcon: TBalloonIcon = biInfo): Boolean; overload;
     function EditBalloonTip(AEditHandle: THandle; ATitle, AText: Word;
       AIcon: TBalloonIcon = biInfo): Boolean; overload;
-  {$ELSE}
-    procedure GetLanguages(ASections: TStrings);
+    function GetLanguageName(ALanguage: Word): string;
   {$ENDIF}
     function GetString(const AIndex: Word): string; overload;
     function GetString(const AIndexes: array of Word): string; overload;
   {$IFDEF LINUX}
-    function GetUserDefaultLCID(): string;
+    function GetUserDefaultUILanguage(): string;
   {$ENDIF}
+    procedure Load();
     procedure RemoveLanguage(ALocale: {$IFDEF MSWINDOWS}Word{$ELSE}string{$ENDIF});
     procedure RemoveListener(AListener: IChangeLanguageListener);
     function ShowMessage(AText: string;
@@ -108,13 +98,16 @@ type
       AOptions: TTaskDialogFlags = []{$ENDIF});
     { external }
     property Id: {$IFDEF MSWINDOWS}Word{$ELSE}WideString{$ENDIF} read FLangId write SetLangId;
-    property Locale: {$IFDEF MSWINDOWS}Word{$ELSE}WideString{$ENDIF} read FLocale;
+  {$IFDEF MSWINDOWS}
+    property Interval: Word read FInterval write FInterval;
+  {$ENDIF}
+    property Locale: {$IFDEF MSWINDOWS}Word{$ELSE}WideString{$ENDIF} read FLocale write ChangeLanguage;
   end;
 
 implementation
 
 {$IFDEF MSWINDOWS}
-{$R 'lang.res' 'lang.rc'}
+{$R lang.res}
 {$ENDIF}
 
 { TLanguageFile }
@@ -131,6 +124,8 @@ begin
   FListeners.Add(AOwner);
 {$IFDEF MSWINDOWS}
   FLanguages := TDictionary<Word, Word>.Create;
+  FInterval := 200;
+  FLangId := 0;
 {$ELSE}
   FLanguages := TStringHashList.Create(True);
 
@@ -139,7 +134,7 @@ begin
 
   FIni := TIniFile.Create(AIniFile);
 {$ENDIF}
-  FLocale := LANG_USER;
+  FLocale := GetUserDefaultUILanguage();
 end;
 
 { public TLanguageFile.Destroy
@@ -158,57 +153,29 @@ begin
 end;
 
 {$IFDEF MSWINDOWS}
-{ private TLanguageFile.GetWindowsLanguage
-
-  Returns language information on Windows. }
-
-function TLanguageFile.GetWindowsLanguage(ALCType: Word = LOCALE_ILANGUAGE): string;
-var
-  Buffer: PChar;
-  Size: Integer;
-
-begin
-  Size := GetLocaleInfo(LOCALE_USER_DEFAULT, ALCType, nil, 0);
-  GetMem(Buffer, Size);
-
-  try
-    GetLocaleInfo(LOCALE_USER_DEFAULT, ALCType, Buffer, Size);
-    Result := string(Buffer);
-
-  finally
-    FreeMem(Buffer);
-  end;  //of try
-end;
-
-{ private TLanguageFile.HyperlinkClicked
+{ private TLanguageFile.OnHyperlinkClicked
 
   Event that is called when user clicked on hyperlink. }
 
-procedure TLanguageFile.HyperlinkClicked(Sender: TObject);
+procedure TLanguageFile.OnHyperlinkClicked(Sender: TObject);
 begin
   if (Sender is TTaskDialog) then
     ShellExecute(0, 'open', PChar((Sender as TTaskDialog).URL), nil, nil, SW_SHOWNORMAL);
 end;
-
-{$ELSE}
-{ public TLanguageFile.GetString
-
-  Loads a string from a *.ini file based language file. }
-
-function TLanguageFile.GetString(const AIndex: Word): string;
-begin
-  Result := FIni.ReadString(FLangId, IntToStr(AIndex + 100));
-end;
-
-{ public TLanguageFile.GetLanguages
-
-  Returns a list containing all available languages. }
-
-procedure TLanguageFile.GetLanguages(ASections: TStrings);
-begin
-  FIni.GetSections(ASections);
-end;
 {$ENDIF}
+
+{ private TLanguageFile.OnSelectLanguage
+
+  Event that is called when user selected a language. }
+
+procedure TLanguageFile.OnSelectLanguage(Sender: TObject);
+begin
+{$IFDEF MSWINDOWS}
+  ChangeLanguage((Sender as TMenuItem).Tag);
+{$ELSE}
+  ChangeLanguage((Sender as TMenuItem).Caption);
+{$ENDIF}
+end;
 
 { private TLanguageFile.SetLangId
 
@@ -220,7 +187,7 @@ begin
   DoNotify();
 end;
 
-{ private TLanguageFile.DoNotify
+{ protected TLanguageFile.DoNotify
 
   Notifies all registered listeners. }
 
@@ -265,9 +232,64 @@ begin
   Result := EditBalloonTip(AEditHandle, GetString(ATitle), GetString(AText), AIcon);
 end;
 
+{ public TLanguageFile.GetLanguageName
+
+  Returns the name of a language ID. }
+
+function TLanguageFile.GetLanguageName(ALanguage: Word): string;
+begin
+  SetLength(Result, 255);
+  SetLength(Result, VerLanguageName(MAKELANGID(ALanguage, SUBLANG_DEFAULT),
+    @Result[1], Length(Result)));
+end;
+
+{ public TLanguageFile.Load
+
+  Loads available languages from language file. }
+
+procedure TLanguageFile.Load();
+{$IFDEF MSWINDOWS}
+var
+  Language: Word;
+  Buffer: array[0..5] of Char;
+
+begin
+  Language := 100;
+
+  while (LoadString(HInstance, Language, Buffer, SizeOf(Buffer)) <> 0) do
+  begin
+    FLanguages.Add(StrToInt(Buffer), Language);
+    Inc(Language, FInterval);
+  end;  //of while
+
+  // Set language ID
+  FLangId := FLanguages[FLocale];
+{$ELSE}
+var
+  Language: WideString;
+  Languages: TStringList;
+
+begin
+  Languages := TStringList.Create;
+
+  try
+    FIni.GetSections(Languages);
+
+    for i := 0 to Languages.Count - 1 do
+      FLanguages.Add(Languages[i], Pointer(FIni.ReadString(Languages[i], '100')));
+
+  finally
+    Languages.Free;
+  end;
+
+  // Set language ID
+  FLangId := WideString(FLanguages[FLocale]);
+{$ENDIF}
+end;
+
 { public TLanguageFile.GetString
 
-  Loads a single string from a StringTable file based language file. }
+  Loads a single string from a StringTable resource based language file. }
 
 function TLanguageFile.GetString(const AIndex: Word): string;
 var
@@ -280,6 +302,15 @@ begin
         ERROR_RESOURCE_LANG_NOT_FOUND) +'. ID %d', [AIndex]));
 
   Result := Buffer;
+end;
+{$ELSE}
+{ public TLanguageFile.GetString
+
+  Loads a string from a *.ini file based language file. }
+
+function TLanguageFile.GetString(const AIndex: Word): string;
+begin
+  Result := FIni.ReadString(FLangId, IntToStr(AIndex + 100));
 end;
 {$ENDIF}
 
@@ -311,17 +342,41 @@ begin
   FListeners.Add(AListener);
 end;
 
-{ public TLanguageFile.AddLanguage
+{ public TLanguageFile.BuildLanguageMenu
 
-  Adds a language to the list. }
+  Builds a select language menu based on available languages. }
 
-procedure TLanguageFile.AddLanguage(ALanguage, ALanguageId: {$IFDEF MSWINDOWS}Word{$ELSE}WideString{$ENDIF});
+procedure TLanguageFile.BuildLanguageMenu(AMainMenu: TMainMenu; AMenuItem: TMenuItem);
+var
+  MenuItem: TMenuItem;
+  Language: Word;
+
 begin
-{$IFDEF MSWINDOWS}
-  FLanguages.Add(MAKELANGID(ALanguage, SUBLANG_DEFAULT), ALanguageId);
-{$ELSE}
-  FLanguages.Add(ALanguage, Pointer(ALanguageId));
-{$ENDIF}
+  if (FLangId = 0) then
+    Load();
+
+  // Create submenu
+  for Language in FLanguages.Keys do
+  begin
+    MenuItem := TMenuItem.Create(AMainMenu);
+
+    with MenuItem do
+    begin
+      RadioItem := True;
+      AutoCheck := True;
+    {$IFDEF MSWINDOWS}
+      Tag := Language;
+      Caption := GetLanguageName(Language);
+      Checked := (FLocale = Language);
+    {$ELSE}
+      Caption := Language;
+      Checked := (FLocale = Language);
+    {$ENDIF}
+      OnClick := OnSelectLanguage;
+    end;  //of with
+
+    AMenuItem.Add(MenuItem);
+  end;  //of for
 end;
 
 { public TLanguageFile.ChangeLanguage
@@ -333,36 +388,28 @@ var
   LocaleId: {$IFDEF MSWINDOWS}Word{$ELSE}WideString{$ENDIF};
 
 begin
-  // Get user language
-  if (ALanguage = LANG_USER) then
-    LocaleId := GetUserDefaultLCID()
-  else
-  {$IFDEF MSWINDOWS}
-    LocaleId := MAKELANGID(ALanguage, SUBLANG_DEFAULT);
-  {$ELSE}
-    LocaleId := ALanguage;
-  {$ENDIF}
+  LocaleId := ALanguage;
 
-  // Load default language
+  // Load neutral language
 {$IFDEF MSWINDOWS}
   if not FLanguages.ContainsKey(LocaleId) then
   begin
-    LocaleId := MAKELANGID(LANG_GERMAN, SUBLANG_DEFAULT);
+    LocaleId := MAKELANGID(LANG_ENGLISH, SUBLANG_DEFAULT);
 
-    // Language file contains no default language?
+    // Language file contains no neutral language?
     if not FLanguages.ContainsKey(LocaleId) then
-      raise ELanguageException.Create('No languages not found in language file!');
+      raise ELanguageException.Create('No neutral language found in language file!');
   end;  //of begin
 
   FLangId := FLanguages[LocaleId];
 {$ELSE}
   if (FLanguages.Find(LocaleId) = -1) then
   begin
-    LocaleId := LANG_GERMAN;
+    LocaleId := LANG_ENGLISH;
 
-    // Language file contains no default language?
+    // Language file contains no neutral language?
     if (FLanguages.Find(LocaleId) = -1) then
-      raise ELanguageException.Create('No languages not found in language file!');
+      raise ELanguageException.Create('No neutral language found in language file!');
   end;  //of begin
 
   FLangId := WideString(FLanguages[LocaleId]);
@@ -404,11 +451,11 @@ begin
 end;
 
 {$IFDEF LINUX}
-{ public TLanguageFile.GetUserDefaultLCID
+{ public TLanguageFile.GetUserDefaultUILanguage
 
   Returns a the current used system language. }
 
-function TLanguageFile.GetUserDefaultLCID(): string;
+function TLanguageFile.GetUserDefaultUILanguage(): string;
 begin
   Result := Copy(SysUtils.GetEnvironmentVariable('LANG'), 1, 5);
 end;
@@ -577,7 +624,7 @@ begin
         '&body='+ MailBody +'">'+ GetString(26) +'</a>';
       Flags := [tfExpandFooterArea, tfEnableHyperlinks] + AOptions;
       CommonButtons := [tcbClose];
-      OnHyperlinkClicked := HyperlinkClicked;
+      OnHyperlinkClicked := Self.OnHyperlinkClicked;
     end;  //of with
 
     MessageBeep(MB_ICONERROR);
