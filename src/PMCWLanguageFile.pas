@@ -44,6 +44,7 @@ type
   TLanguageFile = class(TObject)
   private
     FOwner: TComponent;
+    FMenu: TMenuItem;
   {$IFDEF LINUX}
     FLocale, FLangId: WideString;
     FIni: TIniFile;
@@ -53,7 +54,6 @@ type
     FLanguages: TDictionary<Word, Word>;
     procedure OnHyperlinkClicked(Sender: TObject);
   {$ENDIF}
-    procedure SetLangId(ALangId: {$IFDEF MSWINDOWS}Word{$ELSE}WideString{$ENDIF});
     procedure OnSelectLanguage(Sender: TObject);
   protected
     FListeners: TInterfaceList;
@@ -63,7 +63,7 @@ type
     destructor Destroy; override;
     procedure AddListener(AListener: IChangeLanguageListener);
     procedure BuildLanguageMenu(AMainMenu: TMainMenu; AMenuItem: TMenuItem);
-    procedure ChangeLanguage(ALanguage: {$IFDEF MSWINDOWS}Word{$ELSE}WideString{$ENDIF});
+    procedure ChangeLanguage(ALocale: {$IFDEF MSWINDOWS}Word{$ELSE}WideString{$ENDIF});
     function Format(const AIndex: Word; const AArgs: array of
       {$IFDEF MSWINDOWS}TVarRec{$ELSE}const{$ENDIF}): string; overload;
     function Format(const AIndexes: array of Word; const AArgs: array of
@@ -97,7 +97,7 @@ type
     procedure ShowException(AText, AInformation: string{$IFDEF MSWINDOWS};
       AOptions: TTaskDialogFlags = []{$ENDIF});
     { external }
-    property Id: {$IFDEF MSWINDOWS}Word{$ELSE}WideString{$ENDIF} read FLangId write SetLangId;
+    property Id: {$IFDEF MSWINDOWS}Word{$ELSE}WideString{$ENDIF} read FLangId;
   {$IFDEF MSWINDOWS}
     property Interval: Word read FInterval write FInterval;
   {$ENDIF}
@@ -175,16 +175,6 @@ begin
 {$ELSE}
   ChangeLanguage((Sender as TMenuItem).Caption);
 {$ENDIF}
-end;
-
-{ private TLanguageFile.SetLangId
-
-  Setter for the language identifier property }
-
-procedure TLanguageFile.SetLangId(ALangId: {$IFDEF MSWINDOWS}Word{$ELSE}WideString{$ENDIF});
-begin
-  FLangId := ALangId;
-  DoNotify();
 end;
 
 { protected TLanguageFile.DoNotify
@@ -355,6 +345,8 @@ begin
   if (FLangId = 0) then
     Load();
 
+  FMenu := AMenuItem;
+
   // Create submenu
   for Language in FLanguages.Keys do
   begin
@@ -363,7 +355,6 @@ begin
     with MenuItem do
     begin
       RadioItem := True;
-      AutoCheck := True;
     {$IFDEF MSWINDOWS}
       Tag := Language;
       Caption := GetLanguageName(Language);
@@ -383,38 +374,51 @@ end;
 
   Allows users to change the language. }
 
-procedure TLanguageFile.ChangeLanguage(ALanguage: {$IFDEF MSWINDOWS}Word{$ELSE}WideString{$ENDIF});
+procedure TLanguageFile.ChangeLanguage(ALocale: {$IFDEF MSWINDOWS}Word{$ELSE}WideString{$ENDIF});
 var
   LocaleId: {$IFDEF MSWINDOWS}Word{$ELSE}WideString{$ENDIF};
+  i: Integer;
 
 begin
-  LocaleId := ALanguage;
+  LocaleId := ALocale;
 
-  // Load neutral language
+  // Load default language
 {$IFDEF MSWINDOWS}
   if not FLanguages.ContainsKey(LocaleId) then
   begin
     LocaleId := MAKELANGID(LANG_ENGLISH, SUBLANG_DEFAULT);
 
-    // Language file contains no neutral language?
+    // Language file contains no default language?
     if not FLanguages.ContainsKey(LocaleId) then
-      raise ELanguageException.Create('No neutral language found in language file!');
+      raise ELanguageException.Create('No default language found in language file!');
   end;  //of begin
 
   FLangId := FLanguages[LocaleId];
 {$ELSE}
   if (FLanguages.Find(LocaleId) = -1) then
   begin
-    LocaleId := LANG_ENGLISH;
+    LocaleId := 'en_US';
 
-    // Language file contains no neutral language?
+    // Language file contains no default language?
     if (FLanguages.Find(LocaleId) = -1) then
-      raise ELanguageException.Create('No neutral language found in language file!');
+      raise ELanguageException.Create('No default language found in language file!');
   end;  //of begin
 
   FLangId := WideString(FLanguages[LocaleId]);
 {$ENDIF}
   FLocale := LocaleId;
+
+  // Select language visual
+  for i := 0 to FMenu.Count - 1 do
+  {$IFDEF MSWINDOWS}
+    if (FMenu[i].Tag = LocaleId) then
+  {$ELSE}
+    if (FMenu[i].Caption = LocaleId) then
+  {$ENDIF}
+    begin
+      FMenu[i].Checked := True;
+      Break;
+    end;  //of begin
 
   // Notify all listeners
   DoNotify();
