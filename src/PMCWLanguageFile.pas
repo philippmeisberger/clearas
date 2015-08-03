@@ -8,7 +8,7 @@
 
 unit PMCWLanguageFile;
 
-{$IFDEF LINUX} {$mode objfpc}{$H+} {$ENDIF}
+{$IFDEF LINUX} {$mode delphi}{$H+} {$ENDIF}
 
 interface
 
@@ -237,13 +237,12 @@ begin
       Tag := Language;
       Caption := GetLanguageName(Language);
       Checked := (FLocale = Language);
-      OnClick := OnSelectLanguage;
     {$ELSE}
       Hint := FLanguages.Names[i];
       Caption := FLanguages.ValueFromIndex[i];
       Checked := (FLocale = Hint);
-      OnClick := @OnSelectLanguage;
     {$ENDIF}
+      OnClick := OnSelectLanguage;
     end;  //of with
 
     AMenuItem.Add(MenuItem);
@@ -442,7 +441,7 @@ procedure TLanguageFile.Load();
 {$IFDEF MSWINDOWS}
 var
   Language: Word;
-  Buffer: array[0..5] of Char;
+  Buffer: array[0..4] of Char;
 
 begin
   Language := 100;

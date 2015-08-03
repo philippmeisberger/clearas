@@ -203,8 +203,10 @@ implementation
 
 procedure TMain.FormCreate(Sender: TObject);
 begin
+  // Setup languages
   FLang := TLanguageFile.Create(Self);
   FLang.BuildLanguageMenu(MainMenu, mmLang);
+  FLang.Update();
 
   // Init update notificator
   FUpdateCheck := TUpdateCheck.Create(Self, 'Clearas', FLang);

@@ -28,7 +28,6 @@ const
 type
   { Exception classes }
   EInvalidIniFormat = class(Exception);
-  EParserException = class(Exception);
 
   { TIniFile }
   TIniFile = class(TObject)
@@ -675,8 +674,8 @@ end;
 
 function TIniFile.ReadInteger(ASectionName, AKey: string; ADefault: Integer = -1): Integer;
 begin
-  Result := ADefault;
-  TryStrToInt(ReadString(ASectionName, AKey), Result);
+  if not TryStrToInt(ReadString(ASectionName, AKey), Result) then
+    Result := ADefault;
 end;
 
 { public TIniFile.ReadString
