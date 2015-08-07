@@ -178,7 +178,7 @@ procedure TUpdateCheck.OnCheckError(Sender: TThread; AResponseCode: Integer;
 begin
   if FUserUpdate then
     if (AResponseCode > 0) then
-      FLang.ShowException(FLang.GetString([12, 13]), AResponseText)
+      FLang.ShowException(FLang.GetString([12, 13]), AResponseText + Format(' (%d)', [AResponseCode]))
     else
       FLang.ShowMessage(12, 13, mtError);
 end;

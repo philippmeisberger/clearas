@@ -2970,17 +2970,21 @@ end;
 
   Adds a new contextmenu entry. }
 
-function TContextList.Add(AFileName, AArguments, ALocationRoot,
-  ACaption: string): Boolean;
+function TContextList.Add(AFileName, AArguments, ALocationRoot, ACaption: string): Boolean;
 var
-  Name, Ext, FullPath, KeyName: string;
+  Name, Ext, FullPath, LocationRoot, FileType: string;
   Reg: TRegistry;
 
 begin
   Result := False;
+  LocationRoot := Trim(ALocationRoot);
 
-  if ((Trim(ALocationRoot) = '') or (Trim(ACaption) = '')) then
+  if ((LocationRoot = '') or (Trim(ACaption) = '')) then
     raise EArgumentException.Create('Missing argument!');
+
+  // Location must be at least 2 chars, e.g. ".r"
+  if (Length(LocationRoot) < 3) then
+    raise EArgumentException.Create('Invalid location!');
 
   Ext := ExtractFileExt(AFileName);
   Name := ChangeFileExt(ExtractFileName(AFileName), '');
@@ -2996,7 +3000,7 @@ begin
 
   try
     // File path already exists in another item?
-    if (IndexOf(Name, ALocationRoot) <> -1) then
+    if (IndexOf(Name, LocationRoot) <> -1) then
       Exit;
 
     // Escape space char using quotes
@@ -3006,30 +3010,50 @@ begin
     if (AArguments <> '') then
       FullPath := FullPath +' '+ AArguments;
 
-    // Build Registry key name
-    KeyName := ALocationRoot + CM_SHELL +'\'+ Name;
-
-    // Adds new context item to Registry
+    // Init Registry access
     Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_WRITE);
 
     try
       Reg.RootKey := HKEY_CLASSES_ROOT;
 
-      if not Reg.OpenKey(KeyName, True) then
-        raise EContextMenuException.Create('Could not create key!');
+      if not Reg.OpenKey(LocationRoot, True) then
+        raise EContextMenuException.Create('Could not create key: ''+ KeyName +''!');
 
-      // Write caption of item
+      // Location is a file extension?
+      if (LocationRoot[1] = '.') then
+      begin
+        // Read default associated file type
+        FileType := Reg.ReadString('');
+
+        // Associated file type not found?
+        if (FileType = '') then
+        begin
+          // Add new file association
+          FileType := Copy(LocationRoot, 2, Length(LocationRoot)) +'file';
+          Reg.WriteString('', FileType);
+        end;  //of begin
+
+        LocationRoot := FileType;
+      end;  //of begin
+
+      Reg.CloseKey;
+
+      // Adds new context item to Registry
+      if not Reg.OpenKey(LocationRoot + CM_SHELL +'\'+ Name, True) then
+        raise EContextMenuException.Create('Could not open key: ''+ KeyName +''!');
+
+      // Set caption of item
       Reg.WriteString('', ACaption);
       Reg.CloseKey();
 
-      if not Reg.OpenKey(KeyName +'\command', True) then
-        raise EContextMenuException.Create('Could not create ''command'' key!');
+      if not Reg.OpenKey(LocationRoot + CM_SHELL +'\'+ Name +'\command', True) then
+        raise EContextMenuException.Create('Could not create key: ''+ KeyName +''!');
 
       // Write command of item
       Reg.WriteString('', FullPath);
 
       // Adds item to list
-      AddShellItem(Name, ALocationRoot, FullPath, ACaption, True, False);
+      AddShellItem(Name, LocationRoot, FullPath, ACaption, True, False);
       Result := True;
 
     finally

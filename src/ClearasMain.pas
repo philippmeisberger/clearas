@@ -85,7 +85,6 @@ type
     pmOpenRegedit: TMenuItem;
     pmOpenExplorer: TMenuItem;
     IconList: TImageList;
-    eContextSearch: TEdit;
     tsService: TTabSheet;
     lwService: TListView;
     lWindows3: TLabel;
@@ -101,6 +100,8 @@ type
     cbServiceExpert: TCheckBox;
     eServiceSearch: TEdit;
     cbRunOnce: TCheckBox;
+    QuickSearchIconList: TImageList;
+    eContextSearch: TButtonedEdit;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -155,6 +156,7 @@ type
     procedure lCopy1MouseLeave(Sender: TObject);
     procedure lCopy1MouseEnter(Sender: TObject);
     procedure lCopy1Click(Sender: TObject);
+    procedure eContextSearchRightButtonClick(Sender: TObject);
   private
     FColumnToSort: Word;
     FStartup: TStartupList;
@@ -1537,7 +1539,27 @@ end;
 
 procedure TMain.eContextSearchChange(Sender: TObject);
 begin
+  if (eContextSearch.Text = '') then
+  begin
+    eContextSearch.RightButton.ImageIndex := 0;
+    eContextSearch.RightButton.DisabledImageIndex := 0;
+    eContextSearch.RightButton.HotImageIndex := 0;
+    eContextSearch.RightButton.PressedImageIndex := 0;
+  end  //of begin
+  else
+  begin
+    eContextSearch.RightButton.ImageIndex := 1;
+    eContextSearch.RightButton.DisabledImageIndex := 1;
+    eContextSearch.RightButton.HotImageIndex := 1;
+    eContextSearch.RightButton.PressedImageIndex := 1;
+  end;  //of if
+
   LoadContextMenuItems(False);
+end;
+
+procedure TMain.eContextSearchRightButtonClick(Sender: TObject);
+begin
+  (Sender as TButtonedEdit).Clear;
 end;
 
 { TMain.lwContextDblClick
@@ -2081,7 +2103,7 @@ begin
 
                // Show dialog for location selection
                if not InputCombo(Self, FLang.GetString(105), FLang.GetString(90) +':',
-                 List, Location) then
+                 List, Location, False) then
                  Exit;
 
                // Contextmenu item already exists?

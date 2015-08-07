@@ -9,7 +9,8 @@ Version 4.1  [??.08.15]
 - ProgressBar wird nun während des Exportierens von Kontextmnü-Einträgen angezeigt
 - "Abbrechen" während des Hinzufügens von Einträgen funktioniert nun korrekt
 - "Symbole anzeigen" entfernt
-- Icon erneuert
+- Icon erneuert: http://de.divinity.wikia.com/wiki/Datei:Icon_Besen.svg.png
+- Nutzung von Windows spezifischen grafischen Features (ab Vista)
 - Sprache wird benutzerspezifisch geladen
 - Unterstützung von Unicode
 - 32/64-Bit Binärdateien

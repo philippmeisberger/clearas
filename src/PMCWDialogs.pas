@@ -26,7 +26,7 @@ const
   tdiShieldOkBanner      = 65528;
 
 function InputCombo(AOwner: TComponent; ACaption, APrompt: string;
-  AList: TStrings; var AValue: string): Boolean;
+  AList: TStrings; var AValue: string; AReadOnly: Boolean = True): Boolean;
 
 function ShowTaskDialog(AOwner: TComponent; ACaption, ATitle, AText: WideString;
   ACommonButtons: TTaskDialogCommonButtons; AIcon: TTaskDialogIcon;
@@ -43,7 +43,7 @@ implementation
   the InputQuery dialog. }
 
 function InputCombo(AOwner: TComponent; ACaption, APrompt: string;
-  AList: TStrings; var AValue: string): Boolean;
+  AList: TStrings; var AValue: string; AReadOnly: Boolean = True): Boolean;
 var
   Form: TForm;
   Prompt: TLabel;
@@ -63,8 +63,8 @@ var
     for i := 0 to 25 do
       Buffer[i + 26] := Chr(i + Ord('a'));
 
-    GetTextExtentPoint(Canvas.Handle, Buffer, 52, TSize(result));
-    result.X := result.X div 52;
+    GetTextExtentPoint(Canvas.Handle, Buffer, 52, TSize(Result));
+    Result.X := Result.X div 52;
   end;
 
 begin
@@ -103,7 +103,12 @@ begin
     with Combo do
     begin
       Parent := Form;
-      Style := csDropDownList;
+
+      if AReadOnly then
+        Style := csDropDownList
+      else
+        Style := csDropDown;
+
       Items.AddStrings(AList);
       ItemIndex := 0;
       Left := Prompt.Left;
