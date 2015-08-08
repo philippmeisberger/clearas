@@ -6,6 +6,7 @@ Changelog
 
 Version 4.1  [??.08.15]
 
+- "Kontextmenü"-Feature findet nun ShellNew-Einträge, die sich unter "Neu" befinden
 - ProgressBar wird nun während des Exportierens von Kontextmnü-Einträgen angezeigt
 - "Abbrechen" während des Hinzufügens von Einträgen funktioniert nun korrekt
 - "Symbole anzeigen" entfernt

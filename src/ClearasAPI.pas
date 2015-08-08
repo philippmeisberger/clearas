@@ -1,6 +1,6 @@
 { *********************************************************************** }
 {                                                                         }
-{ Clearas API Interface Unit v4.1                                         }
+{ Clearas API Interface Unit                                              }
 {                                                                         }
 { Copyright (c) 2011-2015 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
@@ -31,10 +31,13 @@ const
   KEY_SERVICE_ENABLED = 'SYSTEM\CurrentControlSet\services\';
 
   { Context menu Registry subkeys + values}
-  CM_SHELL = '\shell';
-  CM_SHELL_DISABLE = 'LegacyDisable';
-  CM_SHELLEX = '\shellex\ContextMenuHandlers';
+  CM_SHELL = 'Shell';
+  CM_SHELL_DISABLED = 'LegacyDisable';
+  CM_SHELLEX = 'ShellEx';
+  CM_SHELLEX_HANDLERS = 'ShellEx\ContextMenuHandlers';
   CM_SHELLEX_FILE = 'CLSID\%s\InProcServer32';
+  CM_SHELLNEW = 'ShellNew';
+  CM_SHELLNEW_DISABLED = '_'+ CM_SHELLNEW;
   CM_LOCATIONS_DEFAULT = 'Directory, Folder, *, Drive';
 
   { Extensions of backup files }
@@ -280,6 +283,8 @@ type
   { Exception class }
   EContextMenuException = class(Exception);
 
+  TShellItemType = (stShell, stShellEx, stShellNew);
+
   { TContextListItem }
   TContextListItem = class(TRootRegItem)
   private
@@ -318,6 +323,17 @@ type
     procedure ExportItem(const AFileName: string); override;
   end;
 
+  { TShellExItem }
+  TShellNewItem = class(TContextListItem)
+  private
+    function GetKeyPath(): string; override;
+    function RenameKey(OldKeyName, NewKeyName: string): Boolean;
+  public
+    function Disable(): Boolean; override;
+    function Enable(): Boolean; override;
+    procedure ExportItem(const AFileName: string); override;
+  end;
+
   { TContextList }
   TContextList = class(TRootRegList)
   private
@@ -328,6 +344,8 @@ type
       AEnabled, AWow64: Boolean): Integer;
     function AddShellExItem(const AName, ALocationRoot, AFileName: string;
       AEnabled, AWow64: Boolean): Integer;
+    function AddShellNewItem(const AName, ALocationRoot, ACaption: string;
+      AEnabled, AWow64: Boolean): Integer;
   public
     constructor Create;
     function Add(AFileName, AArguments, ALocationRoot, ACaption: string): Boolean; reintroduce;
@@ -337,7 +355,7 @@ type
       AWow64: Boolean); overload;
     procedure Load(); override;
     procedure LoadContextmenu(const ALocationRoot: string;
-      ASearchForShellItems: Boolean; AWow64: Boolean); overload;
+      AShellItemType: TShellItemType; AWow64: Boolean); overload;
     procedure LoadContextMenus(ALocationRootCommaList: string = '');
     { external }
     property Item: TContextListItem read GetSelectedItem;
@@ -2563,7 +2581,7 @@ end;
 
 function TShellItem.GetKeyPath(): string;
 begin
-  Result := FLocation + CM_SHELL +'\'+ Name;
+  Result := FLocation +'\'+ CM_SHELL +'\'+ Name;
 end;
 
 { public TShellItem.ChangeFilePath
@@ -2621,7 +2639,7 @@ begin
     if not Reg.OpenKey(GetKeyPath(), False) then
       raise EContextMenuException.Create('Key does not exist!');
 
-    Reg.WriteString(CM_SHELL_DISABLE, '');
+    Reg.WriteString(CM_SHELL_DISABLED, '');
 
     // Update status
     FEnabled := False;
@@ -2653,7 +2671,7 @@ begin
       raise EContextMenuException.Create('Key does not exist!');
 
     // Delete disable value, but do not fail if value does not exist!
-    if (Reg.ValueExists(CM_SHELL_DISABLE) and not Reg.DeleteValue(CM_SHELL_DISABLE)) then
+    if (Reg.ValueExists(CM_SHELL_DISABLED) and not Reg.DeleteValue(CM_SHELL_DISABLED)) then
       raise EStartupException.Create('Could not delete value!');
 
     // Update status
@@ -2694,7 +2712,7 @@ end;
 
 function TShellExItem.GetKeyPath(): string;
 begin
-  Result := FLocation + CM_SHELLEX +'\'+ Name;
+  Result := FLocation +'\'+ CM_SHELLEX_HANDLERS +'\'+ Name;
 end;
 
 { public TShellExItem.ChangeFilePath
@@ -2883,6 +2901,99 @@ begin
 end;
 
 
+{ TShellNewItem }
+
+{ private TShellNewItem.GetKeyPath
+
+  Returns the Registry path to a TShellExItem. }
+
+function TShellNewItem.GetKeyPath(): string;
+begin
+  if FEnabled then
+    Result := FLocation +'\'+ CM_SHELLNEW
+  else
+    Result := FLocation +'\'+ CM_SHELLNEW_DISABLED;
+end;
+
+{ private TShellNewItem.RenameKey
+
+  Renames the ShellNew Registry key. }
+
+function TShellNewItem.RenameKey(OldKeyName, NewKeyName: string): Boolean;
+var
+  Reg: TRegistry;
+
+begin
+  Result := False;
+  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
+
+  try
+    Reg.RootKey := HKEY_CLASSES_ROOT;
+
+    // Key does not exist?
+    if not Reg.OpenKey(FLocation, False) then
+      raise EContextMenuException.Create('Key '''+ FLocation +''' does not exist!');
+
+    // ShellNew does not exist?
+    if not Reg.KeyExists(OldKeyName) then
+      raise EContextMenuException.Create(''+ OldKeyName +''' does not exist!');
+
+    // Enable ShellNew item
+    Reg.MoveKey(OldKeyName, NewKeyName, True);
+    Result := True;
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
+  end;  //of try
+end;
+
+{ public TShellNewItem.Disable
+
+  Disables a TShellExItem object and returns True if successful. }
+
+function TShellNewItem.Disable(): Boolean;
+begin
+  Result := RenameKey(CM_SHELLNEW, CM_SHELLNEW_DISABLED);
+
+  // Update status
+  if Result then
+    FEnabled := False;
+end;
+
+{ public TShellNewItem.Enable
+
+  Enables a TShellExItem object and returns True if successful. }
+
+function TShellNewItem.Enable(): Boolean;
+begin
+  Result := RenameKey(CM_SHELLNEW_DISABLED, CM_SHELLNEW);
+
+  // Update status
+  if Result then
+    FEnabled := True;
+end;
+
+{ public TShellNewItem.ExportItem
+
+  Exports a TShellNewItem object as .reg file. }
+
+procedure TShellNewItem.ExportItem(const AFileName: string);
+var
+  RegFile: TRegistryFile;
+
+begin
+  RegFile := TRegistryFile.Create(AFileName, True);
+
+  try
+    RegFile.ExportReg(HKEY_CLASSES_ROOT, GetKeyPath(), True);
+
+  finally
+    RegFile.Free;
+  end;  //of try
+end;
+
+
 { TContextList }
 
 { public TContextList.Create
@@ -2931,7 +3042,7 @@ begin
     LocationRoot := ALocationRoot;
     FileName := AFileName;
     Caption := ACaption;
-    TypeOf := 'Shell';
+    TypeOf := CM_SHELL;
 
     if AEnabled then
       Inc(FActCount);
@@ -2957,7 +3068,33 @@ begin
     Name := AName;
     LocationRoot := ALocationRoot;
     FileName := AFileName;
-    TypeOf := 'ShellEx';
+    TypeOf := CM_SHELLEX;
+
+    if AEnabled then
+      Inc(FActCount);
+  end;  //of with
+
+  Result := inherited Add(Item);
+end;
+
+{ protected TContextList.AddShellItem
+
+  Adds a shell item to list. }
+
+function TContextList.AddShellNewItem(const AName, ALocationRoot, ACaption: string;
+  AEnabled, AWow64: Boolean): Integer;
+var
+  Item: TContextListItem;
+
+begin
+  Item := TShellNewItem.Create(Count, AEnabled, AWow64);
+
+  with Item do
+  begin
+    Name := AName;
+    LocationRoot := ALocationRoot;
+    Caption := ACaption;
+    TypeOf := CM_SHELLNEW;
 
     if AEnabled then
       Inc(FActCount);
@@ -3039,14 +3176,14 @@ begin
       Reg.CloseKey;
 
       // Adds new context item to Registry
-      if not Reg.OpenKey(LocationRoot + CM_SHELL +'\'+ Name, True) then
+      if not Reg.OpenKey(LocationRoot +'\'+ CM_SHELL +'\'+ Name, True) then
         raise EContextMenuException.Create('Could not open key: ''+ KeyName +''!');
 
       // Set caption of item
       Reg.WriteString('', ACaption);
       Reg.CloseKey();
 
-      if not Reg.OpenKey(LocationRoot + CM_SHELL +'\'+ Name +'\command', True) then
+      if not Reg.OpenKey(LocationRoot +'\'+ CM_SHELL +'\'+ Name +'\command', True) then
         raise EContextMenuException.Create('Could not create key: ''+ KeyName +''!');
 
       // Write command of item
@@ -3140,8 +3277,9 @@ end;
 procedure TContextList.LoadContextmenu(const ALocationRoot: string;
   AWow64: Boolean);
 begin
-  LoadContextmenu(ALocationRoot, True, AWow64);
-  LoadContextmenu(ALocationRoot, False, AWow64);
+  LoadContextmenu(ALocationRoot, stShell, AWow64);
+  LoadContextmenu(ALocationRoot, stShellEx, AWow64);
+  LoadContextmenu(ALocationRoot, stShellNew, AWow64);
 end;
 
 { public TContextList.LoadContextmenu
@@ -3150,7 +3288,7 @@ end;
   Registry key and adds them to the list. }
 
 procedure TContextList.LoadContextmenu(const ALocationRoot: string;
-  ASearchForShellItems: Boolean; AWow64: Boolean);
+  AShellItemType: TShellItemType; AWow64: Boolean);
 var
   Reg: TRegistry;
   i: Integer;
@@ -3164,14 +3302,49 @@ begin
   Reg := TRegistry.Create(Access64);
   List := TStringList.Create;
 
-  if ASearchForShellItems then
-    Key := ALocationRoot + CM_SHELL
-  else
-    Key := ALocationRoot + CM_SHELLEX;
+  case AShellItemType of
+    stShell:    Key := ALocationRoot +'\'+ CM_SHELL;
+    stShellEx:  Key := ALocationRoot +'\'+ CM_SHELLEX_HANDLERS;
+    stShellNew: Key := ALocationRoot;
+  end;  //of case
 
   try
     Reg.RootKey := HKEY_CLASSES_ROOT;
-    Reg.OpenKey(Key, False);
+
+    // Skip invalid key
+    if not Reg.OpenKey(Key, False) then
+      Exit;
+
+    // Add ShellNew item?
+    if (AShellItemType = stShellNew) then
+    begin
+      if Reg.KeyExists(CM_SHELLNEW) then
+        Enabled := True
+      else
+        if Reg.KeyExists(CM_SHELLNEW_DISABLED) then
+          Enabled := False
+        else
+          Exit;
+
+      // Get associated key
+      Key := Reg.ReadString('');
+      Reg.CloseKey;
+
+      // Open associated key failed?
+      if not Reg.OpenKey(Key, False) then
+        Exit;
+
+      // Get description of file extension
+      Caption := Reg.ReadString('');
+
+      // Caption can be empty
+      if (Caption = '') then
+        Caption := Key;
+
+      // Add item to list
+      AddShellNewItem(Key, ALocationRoot, Caption, Enabled, AWow64);
+      Exit;
+    end;  //of if
 
     // Read out all keys
     Reg.GetKeyNames(List);
@@ -3188,7 +3361,7 @@ begin
         Continue;
 
       // Search for shell entries?
-      if ASearchForShellItems then
+      if (AShellItemType = stShell) then
       begin
         Caption := Reg.ReadString('');
 
@@ -3197,7 +3370,7 @@ begin
           Continue;
 
         // Get status and caption of Shell item
-        Enabled := not Reg.ValueExists(CM_SHELL_DISABLE);
+        Enabled := not Reg.ValueExists(CM_SHELL_DISABLED);
 
         // Filter Shell items without command
         if not Reg.OpenKey('command', False) then
@@ -3217,51 +3390,52 @@ begin
         AddShellItem(Item, ALocationRoot, FilePath, Caption, Enabled, False);
       end  //of begin
       else
-      begin
-        GuID := Reg.ReadString('');
-
-        // Filter empty and unreadable ShellEx items
-        if ((GuID = '') or (GuID[1] = '@')) then
-          Continue;
-
-        // Get status and GUID of ShellEx item
-        Enabled := (GuID[1] = '{');
-
-        // Disabled ShellEx items got "-" before GUID!
-        if not Enabled then
-          GUID := Copy(GuID, 2, Length(GUID));
-
-        Reg.CloseKey();
-        Wow64 := False;
-
-        // Get file path of command
-        if Reg.OpenKey(Format(CM_SHELLEX_FILE, [GuID]), False) then
+        if (AShellItemType = stShellEx) then
         begin
-          if not (Reg.GetDataType('') in [rdString, rdExpandString]) then
+          GuID := Reg.ReadString('');
+
+          // Filter empty and unreadable ShellEx items
+          if ((GuID = '') or (GuID[1] = '@')) then
             Continue;
 
-          FilePath := Reg.ReadString('');
-        end  //of begin
-        else
-          if AWow64 then
+          // Get status and GUID of ShellEx item
+          Enabled := (GuID[1] = '{');
+
+          // Disabled ShellEx items got "-" before GUID!
+          if not Enabled then
+            GUID := Copy(GuID, 2, Length(GUID));
+
+          Reg.CloseKey();
+          Wow64 := False;
+
+          // Get file path of command
+          if Reg.OpenKey(Format(CM_SHELLEX_FILE, [GuID]), False) then
           begin
-            Reg.Access := KEY_READ;
-            Wow64 := True;
+            if not (Reg.GetDataType('') in [rdString, rdExpandString]) then
+              Continue;
 
-            if Reg.OpenKey(Format(CM_SHELLEX_FILE, [GuID]), False) then
+            FilePath := Reg.ReadString('');
+          end  //of begin
+          else
+            if AWow64 then
             begin
-              if not (Reg.GetDataType('') in [rdString, rdExpandString]) then
-                Continue;
+              Reg.Access := KEY_READ;
+              Wow64 := True;
 
-              FilePath := Reg.ReadString('');
-            end;  //of begin
+              if Reg.OpenKey(Format(CM_SHELLEX_FILE, [GuID]), False) then
+              begin
+                if not (Reg.GetDataType('') in [rdString, rdExpandString]) then
+                  Continue;
 
-            Reg.Access := Access64;
-          end;  //of if
+                FilePath := Reg.ReadString('');
+              end;  //of begin
 
-        // Add item to list
-        AddShellExItem(Item, ALocationRoot, FilePath, Enabled, Wow64);
-      end;  //of if
+              Reg.Access := Access64;
+            end;  //of if
+
+          // Add item to list
+          AddShellExItem(Item, ALocationRoot, FilePath, Enabled, Wow64);
+        end;  //of begin
     end;  //of for
 
   finally

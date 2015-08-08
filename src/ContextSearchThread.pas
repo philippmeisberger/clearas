@@ -11,7 +11,7 @@ unit ContextSearchThread;
 interface
 
 uses
-  Windows, Classes, Registry, SyncObjs, ClearasAPI, PMCWOSUtils;
+  Windows, Classes, Registry, SyncObjs, ClearasAPI;
 
 type
   { TContextSearchThread }
@@ -138,13 +138,17 @@ begin
 
       for i := 0 to Keys.Count - 1 do
       begin
-        // Load ShellEx context menu items?
-        if AnsiSameText(Keys[i], 'shellex') then
-          FContextList.LoadContextmenu(AKeyName, False, FWin64);
-
         // Load Shell context menu items?
-        if AnsiSameText(Keys[i], 'shell') then
-          FContextList.LoadContextmenu(AKeyName, True, FWin64);
+        if AnsiSameText(Keys[i], CM_SHELL) then
+          FContextList.LoadContextmenu(AKeyName, stShell, FWin64);
+
+        // Load ShellEx context menu items?
+        if AnsiSameText(Keys[i], CM_SHELLEX) then
+          FContextList.LoadContextmenu(AKeyName, stShellEx, FWin64);
+
+        // Load ShellNew context menu items?
+        if AnsiContainsStr(Keys[i], CM_SHELLNEW) then
+          FContextList.LoadContextmenu(AKeyName, stShellNew, FWin64);
       end;  //of for
     end;  //of begin
 
@@ -181,6 +185,9 @@ begin
     for i := 0 to Keys.Count - 1 do
     begin
       Synchronize(DoNotifyOnSearching);
+
+      if Keys[i] = '.txt' then
+        FRoot := FRoot;
 
       if (FRoot <> '') then
         SearchSubkey(FRoot +'\'+ Keys[i])
