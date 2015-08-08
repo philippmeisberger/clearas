@@ -98,10 +98,10 @@ type
     lVersion3: TLabel;
     bEnableStartupItem: TButton;
     cbServiceExpert: TCheckBox;
-    eServiceSearch: TEdit;
     cbRunOnce: TCheckBox;
     QuickSearchIconList: TImageList;
     eContextSearch: TButtonedEdit;
+    eServiceSearch: TButtonedEdit;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -1420,7 +1420,7 @@ begin
       lwContextSelectItem(Self, lwContext.ItemFocused, True);
 
       // Warn if file does not exist
-      if not FContext.Selected.FileExists() then
+      if (not (FContext.Selected is TShellNewItem) and not FContext.Selected.FileExists()) then
         raise EWarning.Create(FLang.GetString([45, NEW_LINE, 46]));
     end  //of begin
     else
@@ -1539,23 +1539,30 @@ end;
 
 procedure TMain.eContextSearchChange(Sender: TObject);
 begin
-  if (eContextSearch.Text = '') then
+  if ((Sender as TButtonedEdit).Text = '') then
   begin
-    eContextSearch.RightButton.ImageIndex := 0;
-    eContextSearch.RightButton.DisabledImageIndex := 0;
-    eContextSearch.RightButton.HotImageIndex := 0;
-    eContextSearch.RightButton.PressedImageIndex := 0;
+    (Sender as TButtonedEdit).RightButton.ImageIndex := 0;
+    (Sender as TButtonedEdit).RightButton.DisabledImageIndex := 0;
+    (Sender as TButtonedEdit).RightButton.HotImageIndex := 0;
+    (Sender as TButtonedEdit).RightButton.PressedImageIndex := 0;
   end  //of begin
   else
   begin
-    eContextSearch.RightButton.ImageIndex := 1;
-    eContextSearch.RightButton.DisabledImageIndex := 1;
-    eContextSearch.RightButton.HotImageIndex := 1;
-    eContextSearch.RightButton.PressedImageIndex := 1;
+    (Sender as TButtonedEdit).RightButton.ImageIndex := 1;
+    (Sender as TButtonedEdit).RightButton.DisabledImageIndex := 1;
+    (Sender as TButtonedEdit).RightButton.HotImageIndex := 1;
+    (Sender as TButtonedEdit).RightButton.PressedImageIndex := 1;
   end;  //of if
 
-  LoadContextMenuItems(False);
+  case PageControl.ActivePageIndex of
+    1: LoadContextMenuItems(False);
+    2: LoadServiceItems(False);
+  end;  //of case
 end;
+
+{ TMain.eContextSearchRightButtonClick
+
+  Event method that is called when user clicked on clear. }
 
 procedure TMain.eContextSearchRightButtonClick(Sender: TObject);
 begin

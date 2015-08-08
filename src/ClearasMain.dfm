@@ -199,6 +199,7 @@ object Main: TMain
         Width = 112
         Height = 14
         Hint = 'Zur Website'
+        Anchors = [akBottom]
         Caption = #169' P.Meisberger 2015'
         Font.Charset = ANSI_CHARSET
         Font.Color = clBlack
@@ -354,6 +355,7 @@ object Main: TMain
         Top = 255
         Width = 148
         Height = 22
+        Anchors = [akLeft, akBottom]
         Images = QuickSearchIconList
         RightButton.DisabledImageIndex = 0
         RightButton.HotImageIndex = 0
@@ -519,15 +521,22 @@ object Main: TMain
         TabOrder = 6
         OnClick = mmRefreshClick
       end
-      object eServiceSearch: TEdit
+      object eServiceSearch: TButtonedEdit
         Left = 21
         Top = 255
         Width = 148
         Height = 22
         Anchors = [akLeft, akBottom]
+        Images = QuickSearchIconList
+        RightButton.DisabledImageIndex = 0
+        RightButton.HotImageIndex = 0
+        RightButton.ImageIndex = 0
+        RightButton.PressedImageIndex = 0
+        RightButton.Visible = True
         TabOrder = 7
         TextHint = 'Suchen ...'
-        OnChange = mmShowIconsClick
+        OnChange = eContextSearchChange
+        OnRightButtonClick = eContextSearchRightButtonClick
       end
     end
   end
@@ -682,7 +691,7 @@ object Main: TMain
   object QuickSearchIconList: TImageList
     Left = 256
     Bitmap = {
-      494C0101020008002C0010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C010102000800300010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000001000000001002000000000000010
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
