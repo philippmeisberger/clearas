@@ -1550,8 +1550,8 @@ begin
   begin
     (Sender as TButtonedEdit).RightButton.ImageIndex := 1;
     (Sender as TButtonedEdit).RightButton.DisabledImageIndex := 1;
-    (Sender as TButtonedEdit).RightButton.HotImageIndex := 1;
-    (Sender as TButtonedEdit).RightButton.PressedImageIndex := 1;
+    (Sender as TButtonedEdit).RightButton.HotImageIndex := 2;
+    (Sender as TButtonedEdit).RightButton.PressedImageIndex := 2;
   end;  //of if
 
   case PageControl.ActivePageIndex of
@@ -1566,7 +1566,8 @@ end;
 
 procedure TMain.eContextSearchRightButtonClick(Sender: TObject);
 begin
-  (Sender as TButtonedEdit).Clear;
+  if ((Sender as TButtonedEdit).Text <> '') then
+    (Sender as TButtonedEdit).Clear;
 end;
 
 { TMain.lwContextDblClick
