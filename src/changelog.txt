@@ -11,6 +11,7 @@ Version 4.1  [??.08.15]
 - "Abbrechen" während des Hinzufügens von Einträgen funktioniert nun korrekt
 - "Symbole anzeigen" entfernt
 - Buttons zur "Quick-Search" hinzugefügt
+- Listen können nun auf- und absteigend sortiert werden
 - Icon erneuert: http://de.divinity.wikia.com/wiki/Datei:Icon_Besen.svg.png
 - Nutzung von Windows spezifischen grafischen Features (ab Vista)
 - Sprache wird benutzerspezifisch geladen

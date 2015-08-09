@@ -15,7 +15,7 @@ uses
   Vcl.ComCtrls, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Dialogs, Vcl.Menus, Vcl.Graphics,
   Vcl.ClipBrd, Vcl.ImgList, Registry, StrUtils, ClearasAPI, ExportListThread,
   PMCWAbout, PMCWLanguageFile, PMCWOSUtils, PMCWUpdater, PMCWDialogs,
-  System.ImageList;
+  System.ImageList, Winapi.CommCtrl;
 
 const
   KEY_RECYCLEBIN = 'CLSID\{645FF040-5081-101B-9F08-00AA002F954E}\shell';
@@ -1721,9 +1721,52 @@ end;
   Event method that is called when user clicks on TListView column. }
 
 procedure TMain.lwStartupColumnClick(Sender: TObject; Column: TListColumn);
+var
+  List: TListView;
+  Header: HWND;
+  Item: THDItem;
+  i: Integer;
+
 begin
+  List := (Sender as TListView);
+  Header := ListView_GetHeader(List.Handle);
+  ZeroMemory(@Item, SizeOf(Item));
+  Item.Mask := HDI_FORMAT;
+
+  // Remove the sort ascending flags from columns
+  for i := 0 to List.Columns.Count - 1 do
+  begin
+    // Skip current column!
+    if (i = Column.Index) then
+      Continue;
+
+    Header_GetItem(Header, i, Item);
+    Item.fmt := Item.fmt and not (HDF_SORTUP or HDF_SORTDOWN);
+    Header_SetItem(Header, i, Item);
+    List.Columns[i].Tag := 0;
+  end;  //of begin
+
+  // Current column
+  Header_GetItem(Header, Column.Index, Item);
+
+  // Sorted ascending?
+  if (Item.fmt and HDF_SORTUP <> 0) then
+  begin
+    Item.fmt := Item.fmt and not HDF_SORTUP or HDF_SORTDOWN;
+    Column.Tag := 1;
+  end  //of begin
+  else
+  begin
+    Item.fmt := Item.fmt and not HDF_SORTDOWN or HDF_SORTUP;
+    Column.Tag := 0;
+  end;  //of if
+
+  // Include sort icon
+  Header_SetItem(Header, Column.Index, Item);
+
+  // Do the alphabetically sort
   FColumnToSort := Column.Index;
-  (Sender as TCustomListView).AlphaSort;
+  List.AlphaSort;
 end;
 
 { TMain.lwStartupCompare
@@ -1735,13 +1778,19 @@ procedure TMain.lwStartupCompare(Sender: TObject; Item1, Item2: TListItem;
 begin
   // Status column?
   if (FColumnToSort = 0) then
-    Compare := CompareText(Item1.Caption, Item2.Caption)
+    case (Sender as TListView).Columns[FColumnToSort].Tag of
+      0: Compare := CompareText(Item1.Caption, Item2.Caption);
+      1: Compare := CompareText(Item2.Caption, Item1.Caption);
+    end  //of case
   else
   begin
     Data := FColumnToSort - 1;
 
     if (Data < 3) then
-      Compare := CompareText(Item1.SubItems[Data], Item2.SubItems[Data]);
+      case (Sender as TListView).Columns[FColumnToSort].Tag of
+        0: Compare := CompareText(Item1.SubItems[Data], Item2.SubItems[Data]);
+        1: Compare := CompareText(Item2.SubItems[Data], Item1.SubItems[Data]);
+      end;  //of case
   end;  //of if
 end;
 
