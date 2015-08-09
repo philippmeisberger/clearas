@@ -32,7 +32,7 @@ type
     procedure DoNotifyOnSearching();
     procedure LoadAllContextMenus();
     procedure LoadContextMenus();
-    procedure SearchSubkey(AKeyName: string);
+    procedure SearchSubkey(const AKeyName: string);
   protected
     procedure Execute; override;
   public
@@ -119,13 +119,14 @@ end;
 
   Searches for pattern keys in a Registry subkey. }
 
-procedure TContextSearchThread.SearchSubkey(AKeyName: string);
+procedure TContextSearchThread.SearchSubkey(const AKeyName: string);
 var
-  Keys: TStringList;
+  Keys, Values: TStringList;
   i: Integer;
 
 begin
-  Keys := TStringList.Create();
+  Keys := TStringList.Create;
+  Values := TStringList.Create;
 
   try
     if not FReg.OpenKey(AKeyName, False) then
@@ -135,25 +136,39 @@ begin
     begin
       // Load subkeys
       FReg.GetKeyNames(Keys);
+      FReg.CloseKey();
 
       for i := 0 to Keys.Count - 1 do
       begin
-        // Load Shell context menu items?
+        // Load Shell context menu items
         if AnsiSameText(Keys[i], CM_SHELL) then
           FContextList.LoadContextmenu(AKeyName, stShell, FWin64);
 
-        // Load ShellEx context menu items?
+        // Load ShellEx context menu items
         if AnsiSameText(Keys[i], CM_SHELLEX) then
           FContextList.LoadContextmenu(AKeyName, stShellEx, FWin64);
 
-        // Load ShellNew context menu items?
+        // Load ShellNew context menu items
         if AnsiContainsStr(Keys[i], CM_SHELLNEW) then
-          FContextList.LoadContextmenu(AKeyName, stShellNew, FWin64);
+        begin
+          FReg.OpenKey(AKeyName +'\'+ Keys[i], False);
+          FReg.GetValueNames(Values);
+          FReg.CloseKey();
+
+          // Only valid ShellNew item when there are values inside
+          if (Values.Count > 0) then
+            FContextList.LoadContextmenu(AKeyName, stShellNew, FWin64);
+        end;  //of begin
+
+        // File extension: Search in subkey for ShellNew items
+        if (AKeyName[1] = '.') then
+          SearchSubkey(AKeyName +'\'+ Keys[i]);
       end;  //of for
     end;  //of begin
 
   finally
     FReg.CloseKey();
+    Values.Free;
     Keys.Free;
   end;  //of try
 end;
@@ -185,9 +200,6 @@ begin
     for i := 0 to Keys.Count - 1 do
     begin
       Synchronize(DoNotifyOnSearching);
-
-      if Keys[i] = '.txt' then
-        FRoot := FRoot;
 
       if (FRoot <> '') then
         SearchSubkey(FRoot +'\'+ Keys[i])

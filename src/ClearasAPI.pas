@@ -329,6 +329,7 @@ type
     function GetKeyPath(): string; override;
     function RenameKey(OldKeyName, NewKeyName: string): Boolean;
   public
+    function ChangeFilePath(const ANewFileName: string): Boolean; override;
     function Disable(): Boolean; override;
     function Enable(): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
@@ -2948,6 +2949,16 @@ begin
   end;  //of try
 end;
 
+{ public TShellNewItem.ChangeFilePath
+
+  Changes the file path of an TShellExItem item. }
+
+function TShellNewItem.ChangeFilePath(const ANewFileName: string): Boolean;
+begin
+  // Impossible!
+  Result := False;
+end;
+
 { public TShellNewItem.Disable
 
   Disables a TShellExItem object and returns True if successful. }
@@ -3291,7 +3302,7 @@ procedure TContextList.LoadContextmenu(const ALocationRoot: string;
   AShellItemType: TShellItemType; AWow64: Boolean);
 var
   Reg: TRegistry;
-  i: Integer;
+  i, DelimiterPos: Integer;
   List: TStringList;
   Item, Key, FilePath, GuID, Caption: string;
   Enabled, Wow64: Boolean;
@@ -3325,6 +3336,15 @@ begin
           Enabled := False
         else
           Exit;
+
+      DelimiterPos := AnsiPos(PathDelim, ALocationRoot);
+
+      // ShellNew item inside a subkey?
+      if (DelimiterPos > 0) then
+      begin
+        Reg.CloseKey;
+        Reg.OpenKey(Copy(ALocationRoot, 1, DelimiterPos - 1), False);
+      end;  //of begin
 
       // Get associated key
       Key := Reg.ReadString('');
