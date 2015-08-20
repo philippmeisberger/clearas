@@ -2128,7 +2128,7 @@ begin
       Name := ChangeFileExt(ExtractFileName(OpenDialog.FileName), '');
 
       // User can edit the name
-      if not InputQuery(FLang.GetString(74), FLang.GetString(97), Name) then
+      if not InputQuery(OpenDialog.Title, FLang.GetString(97), Name) then
         Exit;
 
       // Name must not be empty!
@@ -2137,7 +2137,7 @@ begin
         Exit;
 
       // Append optional parameters
-      if not InputQuery(FLang.GetString(99), FLang.GetString(98), Args) then
+      if not InputQuery(OpenDialog.Title, FLang.GetString(98), Args) then
         Exit;
 
       // Add startup item?
