@@ -434,7 +434,7 @@ begin
     // HTTP error?
     MessageText := Format('HTTP/1.1 %d '+ AResponseText, [AResponseCode]);
 
-  FLang.ShowException(FLang.GetString([41, 18]), MessageText);
+  FLang.ShowException(FLang.GetString([24, 18]), MessageText);
   bFinished.ModalResult := mrAbort;
 end;
 
@@ -693,4 +693,4 @@ begin
 end;
 {$ENDIF}
 
-end.
+end.
