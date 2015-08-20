@@ -1,4 +1,4 @@
-﻿"Clearas ist ein Reinigungs-Programm zum Editieren von Diensten, Autostart- und Kontextmenü-Einträgen. Es gibt einige ungewollte Dienste und Autostart-Programme, die die Startzeit des Betriebssystems erheblich beeinträchtigen. Clearas schafft hier Abhilfe."
+﻿Clearas ist ein Reinigungs-Programm zum Editieren von Autostart-Programmen, Kontextmenü-Einträgen sowie Diensten unter Windows. Es gibt viele Programme auf jedem Rechner, die die Startzeit des Betriebssytems erheblich beeinträchtigen. Abhilfe schafft hier Clearas.
 
 Copyright (C) 2011 Philipp Meisberger
 

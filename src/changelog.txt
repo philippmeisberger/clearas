@@ -4,7 +4,7 @@ Ein Open-Source Projekt von PM Code Works
 Changelog
 =========
 
-Version 4.1  [??.08.15]
+Version 4.1  [23.08.15]
 
 - "Kontextmenü"-Feature findet nun ShellNew-Einträge, die sich unter "Neu" befinden
 - ProgressBar wird nun während des Exportierens von Kontextmnü-Einträgen angezeigt

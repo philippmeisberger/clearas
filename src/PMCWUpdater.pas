@@ -13,12 +13,12 @@ unit PMCWUpdater;
 interface
 
 uses
-  SysUtils, Classes, Dialogs, PMCWUpdateCheckThread, PMCWLanguageFile,
+  SysUtils, Classes, Dialogs, PMCWUpdateCheckThread, PMCWLanguageFile, Forms,
 {$IFDEF MSWINDOWS}
-  PMCWDownloadThread, Windows, FileCtrl, Forms, StdCtrls, ComCtrls, Controls,
+  PMCWDownloadThread, Windows, FileCtrl, StdCtrls, ComCtrls, Controls,
   System.Win.TaskbarCore, Vcl.Taskbar, Registry, ShellAPI;
 {$ELSE}
-  LCLType, Resource, ElfReader, VersionResource, LResources;
+  LCLType, Resource, ElfReader, VersionResource, LResources, VersionTypes;
 {$ENDIF}
 
 const
@@ -693,4 +693,4 @@ begin
 end;
 {$ENDIF}
 
-end.
+end.
