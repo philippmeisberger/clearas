@@ -323,13 +323,14 @@ type
     procedure ExportItem(const AFileName: string); override;
   end;
 
-  { TShellExItem }
+  { TShellNewItem }
   TShellNewItem = class(TContextListItem)
   private
     function GetKeyPath(): string; override;
     function RenameKey(OldKeyName, NewKeyName: string): Boolean;
   public
     function ChangeFilePath(const ANewFileName: string): Boolean; override;
+    function Delete(): Boolean; override;
     function Disable(): Boolean; override;
     function Enable(): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
@@ -2957,6 +2958,18 @@ function TShellNewItem.ChangeFilePath(const ANewFileName: string): Boolean;
 begin
   // Impossible!
   Result := False;
+end;
+
+{ public TShellNewItem.Delete
+
+  Deletes a TShellNewItem object and returns True if successful. }
+
+function TShellNewItem.Delete(): Boolean;
+begin
+  if not DeleteKey('HKCR', ExtractFileDir(GetKeyPath()), ExtractFileName(GetKeyPath())) then
+    raise EContextMenuException.Create('Could not delete key!');
+
+  Result := True;
 end;
 
 { public TShellNewItem.Disable

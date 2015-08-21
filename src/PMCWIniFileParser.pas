@@ -1110,7 +1110,7 @@ begin
 
   MakeHeadline();
   ExportKey(AHKey, AKeyPath, ARecursive, AFilter);
-  Save();
+  Save(TEncoding.Unicode);
 
   if Assigned(FOnExportEnd) then
     FOnExportEnd(Self);
@@ -1157,7 +1157,7 @@ begin
     end;  //of case
 
     // Save .reg file
-    Save();
+    Save(TEncoding.Unicode);
 
   finally
     FReg.CloseKey();
