@@ -13,9 +13,9 @@ interface
 uses
   Winapi.Windows, System.SysUtils, System.Classes, Vcl.Controls, Vcl.Forms,
   Vcl.ComCtrls, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Dialogs, Vcl.Menus, Vcl.Graphics,
-  Vcl.ClipBrd, Vcl.ImgList, Registry, StrUtils, ClearasAPI, ExportListThread,
-  PMCWAbout, PMCWLanguageFile, PMCWOSUtils, PMCWUpdater, PMCWDialogs,
-  System.ImageList, Winapi.CommCtrl;
+  Vcl.ClipBrd, Vcl.ImgList, Registry, StrUtils, System.ImageList, Winapi.CommCtrl,
+  ClearasAPI, ExportListThread, PMCWAbout, PMCWLanguageFile, PMCWOSUtils,
+  PMCWUpdater, PMCWDialogs;
 
 const
   KEY_RECYCLEBIN = 'CLSID\{645FF040-5081-101B-9F08-00AA002F954E}\shell';
@@ -125,11 +125,11 @@ type
     procedure lwServiceDblClick(Sender: TObject);
     procedure lwServiceSelectItem(Sender: TObject; Item: TListItem;
       Selected: Boolean);
-    procedure lwStartupColumnClick(Sender: TObject; Column: TListColumn);
-    procedure lwStartupCompare(Sender: TObject; Item1, Item2: TListItem;
+    procedure ListViewColumnClick(Sender: TObject; Column: TListColumn);
+    procedure ListViewCompare(Sender: TObject; Item1, Item2: TListItem;
       Data: Integer; var Compare: Integer);
     procedure lwStartupDblClick(Sender: TObject);
-    procedure lwStartupKeyPress(Sender: TObject; var Key: Char);
+    procedure ListViewKeyPress(Sender: TObject; var Key: Char);
     procedure lwStartupSelectItem(Sender: TObject; Item: TListItem;
       Selected: Boolean);
     procedure mmAddClick(Sender: TObject);
@@ -158,7 +158,6 @@ type
     procedure lCopy1Click(Sender: TObject);
     procedure eContextSearchRightButtonClick(Sender: TObject);
   private
-    FColumnToSort: Word;
     FStartup: TStartupList;
     FContext: TContextList;
     FService: TServiceList;
@@ -583,6 +582,9 @@ begin
   mmLang.Enabled := True;
   cbContextExpert.Enabled := True;
   lwContext.Cursor := crDefault;
+
+  // Sort!
+  lwContext.AlphaSort();
 end;
 
 { private TMain.OnContextItemChanged
@@ -686,6 +688,9 @@ begin
   mmLang.Enabled := True;
   cbRunOnce.Enabled := True;
   lwStartup.Cursor := crDefault;
+
+  // Sort!
+  lwStartup.AlphaSort();
 end;
 
 { private TMain.OnStartupItemChanged
@@ -750,6 +755,9 @@ begin
   mmLang.Enabled := True;
   cbServiceExpert.Enabled := True;
   lwService.Cursor := crDefault;
+
+  // Sort!
+  lwService.AlphaSort();
 end;
 
 { private TMain.OnServiceItemChanged
@@ -1716,11 +1724,11 @@ begin
     PopupMenu.AutoPopup := False;
 end;
 
-{ TMain.lwStartupColumnClick
+{ TMain.ListViewColumnClick
 
   Event method that is called when user clicks on TListView column. }
 
-procedure TMain.lwStartupColumnClick(Sender: TObject; Column: TListColumn);
+procedure TMain.ListViewColumnClick(Sender: TObject; Column: TListColumn);
 var
   List: TListView;
   Header: HWND;
@@ -1740,6 +1748,7 @@ begin
     if (i = Column.Index) then
       Continue;
 
+    Item.Mask := HDI_FORMAT;
     Header_GetItem(Header, i, Item);
     Item.fmt := Item.fmt and not (HDF_SORTUP or HDF_SORTDOWN);
     Header_SetItem(Header, i, Item);
@@ -1765,29 +1774,34 @@ begin
   Header_SetItem(Header, Column.Index, Item);
 
   // Do the alphabetically sort
-  FColumnToSort := Column.Index;
-  List.AlphaSort;
+  List.Tag := Column.Index;
+  List.AlphaSort();
 end;
 
-{ TMain.lwStartupCompare
+{ TMain.ListViewCompare
 
   Sorts a TListView column alphabetically. }
 
-procedure TMain.lwStartupCompare(Sender: TObject; Item1, Item2: TListItem;
+procedure TMain.ListViewCompare(Sender: TObject; Item1, Item2: TListItem;
   Data: Integer; var Compare: Integer);
+var
+  ColumnToSort: Byte;
+
 begin
+  ColumnToSort := (Sender as TListView).Tag;
+
   // Status column?
-  if (FColumnToSort = 0) then
-    case (Sender as TListView).Columns[FColumnToSort].Tag of
+  if (ColumnToSort = 0) then
+    case (Sender as TListView).Columns[ColumnToSort].Tag of
       0: Compare := CompareText(Item1.Caption, Item2.Caption);
       1: Compare := CompareText(Item2.Caption, Item1.Caption);
     end  //of case
   else
   begin
-    Data := FColumnToSort - 1;
+    Data := ColumnToSort - 1;
 
     if (Data < 3) then
-      case (Sender as TListView).Columns[FColumnToSort].Tag of
+      case (Sender as TListView).Columns[ColumnToSort].Tag of
         0: Compare := CompareText(Item1.SubItems[Data], Item2.SubItems[Data]);
         1: Compare := CompareText(Item2.SubItems[Data], Item1.SubItems[Data]);
       end;  //of case
@@ -1812,11 +1826,11 @@ begin
         FLang.ShowMessage(FLang.GetString(53), mtWarning);
 end;
 
-{ TMain.lwStartupKeyPress
+{ TMain.ListViewKeyPress
 
   Event method that is called when user pushes a button inside TListView. }
 
-procedure TMain.lwStartupKeyPress(Sender: TObject; var Key: Char);
+procedure TMain.ListViewKeyPress(Sender: TObject; var Key: Char);
 var
   i, StartIndex: Integer;
   SelectedList: TListView;
