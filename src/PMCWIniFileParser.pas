@@ -70,7 +70,7 @@ type
     function ReadString(ASectionName, AKey: string; ADefault: string = ''): string;
     function Remove(ASectionName, AKey: string): Boolean; overload;
     function RemoveSection(ASectionName: string): Boolean;
-    procedure Save(); overload;
+    procedure Save(); overload; virtual;
 {$IFDEF MSWINDOWS}
     procedure Save(AEncoding: TEncoding); overload;
 {$ENDIF}
@@ -125,6 +125,7 @@ type
     function ReadInteger(ASection, AIdent: string): Integer;
     function ReadString(ASection, AIdent: string): string;
     function Remove(ASection, AIdent: string): Boolean;
+    procedure Save(); override;
     function UnescapePathDelimiter(const APath: string): string;
     procedure WriteBinary(ASection, AIdent: string; AValue: TBytes); overload;
     procedure WriteBoolean(ASection, AIdent: string; AValue: Boolean);
@@ -1110,7 +1111,7 @@ begin
 
   MakeHeadline();
   ExportKey(AHKey, AKeyPath, ARecursive, AFilter);
-  Save(TEncoding.Unicode);
+  Save();
 
   if Assigned(FOnExportEnd) then
     FOnExportEnd(Self);
@@ -1157,7 +1158,7 @@ begin
     end;  //of case
 
     // Save .reg file
-    Save(TEncoding.Unicode);
+    Save();
 
   finally
     FReg.CloseKey();
@@ -1307,6 +1308,15 @@ begin
   Result := inherited Remove(ASection, EscapeIdentifier(AIdent));
 end;
 
+{ public TRegistryFile.Save
+
+  Writes current .reg file to disk. }
+
+procedure TRegistryFile.Save();
+begin
+  inherited Save(TEncoding.Unicode);
+end;
+
 { public TRegistryFile.UnescapePathDelimiter
 
  Deletes escape chars from a string. }
@@ -1385,4 +1395,4 @@ begin
 end;
 {$ENDIF}
 
-end.
+end.
