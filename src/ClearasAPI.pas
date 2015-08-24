@@ -3143,8 +3143,9 @@ begin
   Result := False;
   LocationRoot := Trim(ALocationRoot);
 
-  if (LocationRoot = '') then
-    raise EArgumentException.Create('Invalid location: Expected at least one character!');
+  // Valid location?
+  if ((LocationRoot <> '*') and (Length(LocationRoot) <= 2)) then
+    raise EArgumentException.Create('Invalid location: Expected at least two characters or ''*''!');
 
   Ext := ExtractFileExt(AFileName);
   Name := ChangeFileExt(ExtractFileName(AFileName), '');

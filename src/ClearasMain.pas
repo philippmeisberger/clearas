@@ -933,15 +933,26 @@ begin
 
       // Set a default file name
       case PageControl.ActivePageIndex of
-        0: FileName := FStartup.Selected.Name + DefaultExt;
-        1: FileName := FContext.Selected.Name +'_'+ FContext.Selected.Location + DefaultExt;
-        2: FileName := FService.Selected.Name + DefaultExt;
+        0: FileName := FStartup.Selected.Name;
+        1: begin
+             if (FContext.Selected.Location = '*') then
+               FileName := FContext.Selected.Name
+             else
+               if (FContext.Selected is TShellNewItem) then
+                 FileName := FContext.Selected.Name +'_'+ CM_SHELLNEW
+               else
+                 FileName := FContext.Selected.Name +'_'+ FContext.Selected.Location;
+           end;
+        2: FileName := FService.Selected.Name;
       end;  //of case
+
+      // Append default extension
+      FileName := FileName + DefaultExt
     end;  //of with
 
     try
       // User clicked "save"?
-      if SaveDialog.Execute then
+      if SaveDialog.Execute() then
       begin
         GetSelectedList().ExportItem(SaveDialog.FileName);
         Result := True;
@@ -2178,7 +2189,7 @@ begin
 
              try
                // Init location ComboBox
-               List.CommaText := CM_LOCATIONS_DEFAULT;
+               List.CommaText := CM_LOCATIONS_DEFAULT +', .txt, .zip';
 
                // Show dialog for location selection
                if not InputCombo(Self, FLang.GetString(105), FLang.GetString(90) +':',
@@ -2218,6 +2229,10 @@ begin
     on E: EWarning do
       FLang.ShowMessage(StripHotKey(mmAdd.Caption) + FLang.GetString(18),
         E.Message, mtWarning);
+
+    on E: EArgumentException do
+      FLang.ShowMessage(StripHotKey(mmAdd.Caption) + FLang.GetString(18),
+        E.Message, mtError);
 
     on E: Exception do
       FLang.ShowException(StripHotKey(mmAdd.Caption) + FLang.GetString(18),
