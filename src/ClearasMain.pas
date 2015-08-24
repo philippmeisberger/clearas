@@ -2140,7 +2140,14 @@ begin
         Exit;
 
       // Set default name
-      Name := '&'+ ChangeFileExt(ExtractFileName(OpenDialog.FileName), '');
+      Name := ChangeFileExt(ExtractFileName(OpenDialog.FileName), '');
+
+      // Setup special default values for new contextmenu items
+      if (PageControl.ActivePageIndex = 1) then
+      begin
+        Name := '&'+ Name;
+        Args := '"%1"';
+      end;  //of begin
 
       // User can edit the name
       if not InputQuery(OpenDialog.Title, FLang.GetString(97), Name) then
@@ -2152,8 +2159,6 @@ begin
         Exit;
 
       // Append optional parameters
-      Args := '"%1"';
-
       if not InputQuery(OpenDialog.Title, FLang.GetString(98), Args) then
         Exit;
 
