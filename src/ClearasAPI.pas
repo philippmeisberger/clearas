@@ -1577,7 +1577,7 @@ begin
     Reg.WriteString('inimapping', '0');
 
     // Windows >= Vista?
-    if (Win32MajorVersion >= 6) then
+    if TOSVersion.Check(6) then
       // Save deactivation timestamp
       FTime := WriteTimestamp(Reg);
 
@@ -1670,12 +1670,12 @@ begin
     Reg.Access := Access64 or KEY_WRITE;
     Reg.RootKey := HKEY_LOCAL_MACHINE;
 
-    if not Reg.OpenKey(KEY_STARTUP_DISABLED, False) then
-      raise EStartupException.Create('Key ''startupreg'' does not exist!');
+    if not Reg.OpenKey(KEY_STARTUP_DISABLED, True) then
+      raise EStartupException.Create('Could not open Key '''+ KEY_STARTUP_DISABLED +'''!');
 
     // Do not abort if old key does not exist!
     if (Reg.KeyExists(Name) and not Reg.DeleteKey(Name)) then
-      raise EStartupException.Create('Could not delete old key!');
+      raise EStartupException.Create('Could not delete old key '''+ Name +'''!');
 
     // Update information
     FRootKey := StrToHKey(NewHKey);
@@ -1792,7 +1792,7 @@ begin
 
   // .lnk does not exist
   if not FLnkFile.Exists() then
-    raise EStartupException.Create('Lnk file does not exist!');
+    raise EStartupException.Create('Lnk file '''+ FLnkFile.FileName +''' does not exist!');
 
   // Create backup by copying original .lnk
   if not FLnkFile.CreateBackup() then
@@ -1805,7 +1805,8 @@ begin
     KeyName := AddCircumflex(FLocation);
 
     if not Reg.OpenKey(KEY_STARTUP_USER_DISABLED + KeyName, True) then
-      raise EStartupException.Create('Could not create key!');
+      raise EStartupException.Create('Could not create key'''+
+        KEY_STARTUP_USER_DISABLED + KeyName +'''!');
 
     Reg.WriteString('path', FLocation);
     Reg.WriteString('item', ChangeFileExt(ExtractFileName(Name), ''));
@@ -1813,7 +1814,7 @@ begin
     Reg.WriteString('backup', FLnkFile.BackupLnk);
 
     // Special Registry entries only for Windows >= Vista
-    if (Win32MajorVersion >= 6) then
+    if TOSVersion.Check(6) then
     begin
       Reg.WriteString('backupExtension', FLnkFile.BackupExt);
       Reg.WriteString('location', ExtractFileDir(FLocation));
@@ -1824,7 +1825,7 @@ begin
 
     // Delete original .lnk
     if not FLnkFile.Delete() then
-      raise EStartupException.Create('Could not delete .lnk file!');
+      raise EStartupException.Create('Could not delete .lnk file '''+ FLnkFile.FileName +'''!');
 
     // Update information
     FLocation := KEY_STARTUP_USER_DISABLED + KeyName;
@@ -1936,7 +1937,7 @@ var
 
 begin
   // Windows >= Vista?
-  if (Win32MajorVersion >= 6) then
+  if TOSVersion.Check(6) then
   begin
     StartupType := AReg.ReadString('backupExtension');
 
@@ -1956,7 +1957,7 @@ end;
 function TStartupList.GetStartupUserType(AAllUsers: Boolean): string;
 begin
   // Windows >= Vista?
-  if (Win32MajorVersion >= 6) then
+  if TOSVersion.Check(6) then
   begin
     if AAllUsers then
       Result := TYPE_COMMON
@@ -2074,7 +2075,7 @@ begin
 
   // Link file created successfully?
   if not LnkFile.WriteLnkFile(LnkFile.FileName, AFilePath, AArguments) then
-    raise EStartupException.Create('Could not create .lnk file!');
+    raise EStartupException.Create('Could not create .lnk file '''+ LnkFile.FileName +'''!');
 
   // Add item to list
   Result := (AddUserItemEnabled(LnkFile, AAllUsers) <> -1);
@@ -2335,7 +2336,7 @@ begin
   // Check invalid extension
   if ((Ext <> EXT_COMMON) and (Ext <> EXT_USER)) then
     raise EArgumentException.Create('Invalid backup file extension! Must be '''
-      + EXT_COMMON +''' or '''+ EXT_USER+'''!');
+      + EXT_COMMON +''' or '''+ EXT_USER +'''!');
 
   // List locked?
   if not FLock.TryEnter() then
@@ -3133,19 +3134,15 @@ end;
 
 function TContextList.Add(AFileName, AArguments, ALocationRoot, ACaption: string): Boolean;
 var
-  Name, Ext, FullPath, LocationRoot, FileType: string;
+  Name, Ext, FullPath, LocationRoot, FileType, KeyPath: string;
   Reg: TRegistry;
 
 begin
   Result := False;
   LocationRoot := Trim(ALocationRoot);
 
-  if ((LocationRoot = '') or (Trim(ACaption) = '')) then
-    raise EArgumentException.Create('Missing argument!');
-
-  // Location must be at least 2 chars, e.g. ".r"
-  if (Length(LocationRoot) < 3) then
-    raise EArgumentException.Create('Invalid location!');
+  if (LocationRoot = '') then
+    raise EArgumentException.Create('Invalid location: Expected at least one character!');
 
   Ext := ExtractFileExt(AFileName);
   Name := ChangeFileExt(ExtractFileName(AFileName), '');
@@ -3178,7 +3175,7 @@ begin
       Reg.RootKey := HKEY_CLASSES_ROOT;
 
       if not Reg.OpenKey(LocationRoot, True) then
-        raise EContextMenuException.Create('Could not create key: ''+ KeyName +''!');
+        raise EContextMenuException.Create('Could not create key: '''+ LocationRoot +'''!');
 
       // Location is a file extension?
       if (LocationRoot[1] = '.') then
@@ -3197,18 +3194,22 @@ begin
         LocationRoot := FileType;
       end;  //of begin
 
-      Reg.CloseKey;
+      Reg.CloseKey();
+      KeyPath := LocationRoot +'\'+ CM_SHELL +'\'+ Name;
 
       // Adds new context item to Registry
-      if not Reg.OpenKey(LocationRoot +'\'+ CM_SHELL +'\'+ Name, True) then
-        raise EContextMenuException.Create('Could not open key: ''+ KeyName +''!');
+      if not Reg.OpenKey(KeyPath, True) then
+        raise EContextMenuException.Create('Could not open key: '''+ KeyPath +'''!');
 
       // Set caption of item
-      Reg.WriteString('', ACaption);
-      Reg.CloseKey();
+      if (Trim(ACaption) <> '') then
+        Reg.WriteString('', ACaption);
 
-      if not Reg.OpenKey(LocationRoot +'\'+ CM_SHELL +'\'+ Name +'\command', True) then
-        raise EContextMenuException.Create('Could not create key: ''+ KeyName +''!');
+      Reg.CloseKey();
+      KeyPath := KeyPath +'\command';
+
+      if not Reg.OpenKey(KeyPath, True) then
+        raise EContextMenuException.Create('Could not create key: '''+ KeyPath +'''!');
 
       // Write command of item
       Reg.WriteString('', FullPath);
@@ -3619,7 +3620,7 @@ begin
       Reg.OpenKey(KEY_SERVICE_DISABLED, False);
 
       // Windows >= Vista?
-      if (Win32MajorVersion >= 6) then
+      if TOSVersion.Check(6) then
         Result := Reg.DeleteKey(Name)
       else
         Result := Reg.DeleteValue(Name);
@@ -3658,7 +3659,7 @@ begin
     Reg.RootKey := HKEY_LOCAL_MACHINE;
 
     // Windows >= Vista?
-    if (Win32MajorVersion >= 6) then
+    if TOSVersion.Check(6) then
     begin
       // Write disable key
       if not Reg.OpenKey(KEY_SERVICE_DISABLED +'\'+ Name, True) then
@@ -3702,7 +3703,7 @@ begin
     Reg.RootKey := HKEY_LOCAL_MACHINE;
 
     // Winodows >= Vista?
-    if (Win32MajorVersion >= 6) then
+    if TOSVersion.Check(6) then
     begin
       if not Reg.OpenKey(KEY_SERVICE_DISABLED +'\'+ Name, False) then
         EServiceException.Create('Disable key does not exist!');
@@ -3720,7 +3721,7 @@ begin
       raise EServiceException.Create(SysErrorMessage(GetLastError()));
 
     // Winodows >= Vista?
-    if (Win32MajorVersion >= 6) then
+    if TOSVersion.Check(6) then
     begin
       Reg.CloseKey();
       Reg.OpenKey(KEY_SERVICE_DISABLED, True);
@@ -3763,7 +3764,7 @@ begin
     if not FEnabled then
     begin
       // Windows >= Vista?
-      if (Win32MajorVersion >= 6) then
+      if TOSVersion.Check(6) then
       begin
         RegFile.ExportKey(HKEY_LOCAL_MACHINE, KEY_SERVICE_DISABLED +'\'+ Name, False);
         RegFile.ExportKey(HKEY_LOCAL_MACHINE, GetLocation(), True);
@@ -4080,7 +4081,7 @@ begin
         Reg.RootKey := HKEY_LOCAL_MACHINE;
 
         // Windows >= Vista?
-        if (Win32MajorVersion >= 6) then
+        if TOSVersion.Check(6) then
           Reg.OpenKey(KEY_SERVICE_DISABLED +'\'+ AName, False)
         else
           Reg.OpenKey(KEY_SERVICE_DISABLED, False);

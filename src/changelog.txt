@@ -6,7 +6,7 @@ Changelog
 
 Version 4.1  [23.08.15]
 
-- "Kontextmenü"-Feature findet nun ShellNew-Einträge, die sich unter "Neu" befinden
+- Kontextmenü-Einträge "ShellNew", die sich unter "Neu" befinden, werden nun gefunden
 - ProgressBar wird nun während des Exportierens von Kontextmnü-Einträgen angezeigt
 - "Abbrechen" während des Hinzufügens von Einträgen funktioniert nun korrekt
 - "Symbole anzeigen" entfernt
@@ -53,13 +53,13 @@ Version 4.0  [28.03.15]
   - Menü-Eintrag "RunOnce-Einträge" durch Checkbox ersetzt
   - Menü-Eintrag "Symbole anzeigen" hinzugefügt
   - Icons von Programmen werden nun standardmäßig angezeigt
-  - 32 Bit Einträge werden nun speziell gekennzeichnet (nur 64 Bit Windows)
+  - 32-Bit Einträge werden nun speziell gekennzeichnet (nur 64-Bit Windows)
 - Auswählen von Elementen in Autostart und Kontextmenü Listen beschleunigt
 - "Backup importieren" verbessert
 - Registry Dateiexport verbessert (eigener Parser)
 - Bug Fixes: 
   - Gelöschte Autostart Elemente werden nun korrekt aus Liste gelöscht
-  - RunOnce Einträge werden nun auch in 32 Bit Schlüsseln ausgelesen (nur 64 Bit Windows)
+  - RunOnce Einträge werden nun auch in 32-Bit Schlüsseln ausgelesen (nur 64-Bit Windows)
 - Neues Manifest
 - Updater v2.2
 - OSUtils v2.1
