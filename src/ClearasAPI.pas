@@ -1134,19 +1134,22 @@ begin
   if not FLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
 
-  // Invalid item?
-  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
-    raise EInvalidItem.Create('No item selected!');
+  try
+    // Invalid item?
+    if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
+      raise EInvalidItem.Create('No item selected!');
 
-  // Change item file path
-  Changed := FItem.ChangeFilePath(ANewFilePath);
+    // Change item file path
+    Changed := FItem.ChangeFilePath(ANewFilePath);
 
-  // Notify changed
-  if (Changed and Assigned(FOnChanged)) then
-    FOnChanged(Self);
+    // Notify changed
+    if (Changed and Assigned(FOnChanged)) then
+      FOnChanged(Self);
 
-  FLock.Release;
-  Result := Changed;
+  finally
+    FLock.Release;
+    Result := Changed;
+  end;  //of try
 end;
 
 { public TRootList.ChangeItemStatus
@@ -1162,28 +1165,31 @@ begin
   if not FLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
 
-  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
-    raise EInvalidItem.Create('No item selected!');
+  try
+    if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
+      raise EInvalidItem.Create('No item selected!');
 
-  // Change the status
-  Changed := FItem.ChangeStatus();
+    // Change the status
+    Changed := FItem.ChangeStatus();
 
-  // Successful?
-  if Changed then
-  begin
-    // Item has been enabled?
-    if FItem.Enabled then
-      Inc(FActCount)
-    else
-      Dec(FActCount);
+    // Successful?
+    if Changed then
+    begin
+      // Item has been enabled?
+      if FItem.Enabled then
+        Inc(FActCount)
+      else
+        Dec(FActCount);
 
-    // Notify changed
-    if Assigned(FOnChanged) then
-      FOnChanged(Self);
-  end;  //of begin
+      // Notify changed
+      if Assigned(FOnChanged) then
+        FOnChanged(Self);
+    end;  //of begin
 
-  FLock.Release;
-  Result := Changed;
+  finally
+    FLock.Release;
+    Result := Changed;
+  end;  //of try
 end;
 
 { public TRootList.DeleteItem
@@ -1199,31 +1205,34 @@ begin
   if not FLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
 
-  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
-    raise EInvalidItem.Create('No item selected!');
+  try
+    if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
+      raise EInvalidItem.Create('No item selected!');
 
-  // Delete task from filesystem
-  Deleted := FItem.Delete();
+    // Delete task from filesystem
+    Deleted := FItem.Delete();
 
-  // Successful?
-  if Deleted then
-  begin
-    // Item was enabled
-    if FItem.Enabled then
-      // Update active counter
-      Dec(FActCount);
+    // Successful?
+    if Deleted then
+    begin
+      // Item was enabled
+      if FItem.Enabled then
+        // Update active counter
+        Dec(FActCount);
 
-    // Remove item from list
-    Remove(FItem);
-    FItem := nil;
+      // Remove item from list
+      Remove(FItem);
+      FItem := nil;
 
-    // Notify delete
-    if Assigned(FOnChanged) then
-      FOnChanged(Self);
-  end;  //of begin
+      // Notify delete
+      if Assigned(FOnChanged) then
+        FOnChanged(Self);
+    end;  //of begin
 
-  FLock.Release;
-  Result := Deleted;
+  finally
+    FLock.Release;
+    Result := Deleted;
+  end;  //of try
 end;
 
 { public TRootList.DisableItem
@@ -1239,27 +1248,30 @@ begin
   if not FLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
 
-  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
-    raise EInvalidItem.Create('No item selected!');
+  try
+    if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
+      raise EInvalidItem.Create('No item selected!');
 
-  if not FItem.Enabled then
-    raise EWarning.Create('Item already disabled!');
+    if not FItem.Enabled then
+      raise EWarning.Create('Item already disabled!');
 
-  // Disable item
-  Disabled := FItem.Disable();
+    // Disable item
+    Disabled := FItem.Disable();
 
-  if Disabled then
-  begin
-    // Update active counter
-    Dec(FActCount);
+    if Disabled then
+    begin
+      // Update active counter
+      Dec(FActCount);
 
-    // Notify disable
-    if Assigned(FOnChanged) then
-      FOnChanged(Self);
-  end;  //of begin
+      // Notify disable
+      if Assigned(FOnChanged) then
+        FOnChanged(Self);
+    end;  //of begin
 
-  FLock.Release;
-  Result := Disabled;
+  finally
+    FLock.Release;
+    Result := Disabled;
+  end;  //of try
 end;
 
 { public TRootList.EnableItem
@@ -1275,27 +1287,30 @@ begin
   if not FLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
 
-  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
-    raise EInvalidItem.Create('No item selected!');
+  try
+    if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
+      raise EInvalidItem.Create('No item selected!');
 
-  if FItem.Enabled then
-    raise EWarning.Create('Item already enabled!');
+    if FItem.Enabled then
+      raise EWarning.Create('Item already enabled!');
 
-  // Enable item
-  Enabled := FItem.Enable();
+    // Enable item
+    Enabled := FItem.Enable();
 
-  if Enabled then
-  begin
-    // Update active counter
-    Inc(FActCount);
+    if Enabled then
+    begin
+      // Update active counter
+      Inc(FActCount);
 
-    // Notify enable
-    if Assigned(FOnChanged) then
-      FOnChanged(Self);
-  end;  //of begin
+      // Notify enable
+      if Assigned(FOnChanged) then
+        FOnChanged(Self);
+    end;  //of begin
 
-  FLock.Release;
-  Result := Enabled;
+  finally
+    FLock.Release;
+    Result := Enabled;
+  end;  //of try
 end;
 
 { public TRootList.ExportItem
@@ -1397,9 +1412,13 @@ begin
   // List locked?
   if not FLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
-  
-  Result := inherited Remove(ARootItem);
-  FLock.Release;
+
+  try
+    Result := inherited Remove(ARootItem);
+
+  finally
+    FLock.Release;
+  end;  //of try
 end;
 
 
