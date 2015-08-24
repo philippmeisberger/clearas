@@ -22,7 +22,7 @@ const
   KEY_STARTUP_RUN = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Run';
   KEY_STARTUP_RUNONCE = 'SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce';
 
-  { Virtualized WOW64 keys }
+  { Redirected 32-Bit Registry keys by WOW64 }
   KEY_STARTUP_RUN32 = 'SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Run';
   KEY_STARTUP_RUNONCE32 = 'SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnce';
 
@@ -327,7 +327,7 @@ type
   TShellNewItem = class(TContextListItem)
   private
     function GetKeyPath(): string; override;
-    function RenameKey(OldKeyName, NewKeyName: string): Boolean;
+    function RenameKey(AOldKeyName, ANewKeyName: string): Boolean;
   public
     function ChangeFilePath(const ANewFileName: string): Boolean; override;
     function Delete(): Boolean; override;
@@ -2923,7 +2923,7 @@ end;
 
   Renames the ShellNew Registry key. }
 
-function TShellNewItem.RenameKey(OldKeyName, NewKeyName: string): Boolean;
+function TShellNewItem.RenameKey(AOldKeyName, ANewKeyName: string): Boolean;
 var
   Reg: TRegistry;
 
@@ -2938,12 +2938,16 @@ begin
     if not Reg.OpenKey(FLocation, False) then
       raise EContextMenuException.Create('Key '''+ FLocation +''' does not exist!');
 
-    // ShellNew does not exist?
-    if not Reg.KeyExists(OldKeyName) then
-      raise EContextMenuException.Create(''+ OldKeyName +''' does not exist!');
+    // Old key does not exist?
+    if not Reg.KeyExists(AOldKeyName) then
+      raise EContextMenuException.Create('Key '''+ AOldKeyName +''' does not exist!');
 
-    // Enable ShellNew item
-    Reg.MoveKey(OldKeyName, NewKeyName, True);
+    // New key already exists?
+    if Reg.KeyExists(ANewKeyName) then
+      raise EContextMenuException.Create('Key '''+ ANewKeyName +''' already exists!');
+
+    // Rename key
+    Reg.MoveKey(AOldKeyName, ANewKeyName, True);
     Result := True;
 
   finally
@@ -3326,7 +3330,7 @@ var
   i, DelimiterPos: Integer;
   List: TStringList;
   Item, Key, FilePath, GuID, Caption: string;
-  Enabled, Wow64: Boolean;
+  ShellNewFound, Enabled, Wow64: Boolean;
   Access64: Cardinal;
 
 begin
@@ -3350,6 +3354,7 @@ begin
     // Add ShellNew item?
     if (AShellItemType = stShellNew) then
     begin
+      // TODO: "ShellNew" and "_ShellNew" in same key are possible!
       if Reg.KeyExists(CM_SHELLNEW) then
         Enabled := True
       else
