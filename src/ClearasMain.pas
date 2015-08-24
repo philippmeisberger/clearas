@@ -2118,6 +2118,7 @@ var
   OpenDialog: TOpenDialog;
   Name, Args, Location: string;
   List: TStringList;
+  Extended: Boolean;
 
 begin
   OpenDialog := TOpenDialog.Create(Self);
@@ -2176,11 +2177,11 @@ begin
 
                // Show dialog for location selection
                if not InputCombo(Self, FLang.GetString(105), FLang.GetString(90) +':',
-                 List, Location, False) then
+                 List, Location, FLang.GetString(68), Extended, False) then
                  Exit;
 
                // Contextmenu item already exists?
-               if not FContext.Add(OpenDialog.FileName, Args, Location, Name) then
+               if not FContext.Add(OpenDialog.FileName, Args, Location, Name, Extended) then
                  raise EWarning.Create(FLang.Format(41, [OpenDialog.FileName]));
 
                // Update TListView

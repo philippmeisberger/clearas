@@ -4,12 +4,16 @@ Ein Open-Source Projekt von PM Code Works
 Changelog
 =========
 
-Version 4.1  [23.08.15]
+Version 4.1  [25.08.15]
 
-- Kontextmenü-Einträge "ShellNew", die sich unter "Neu" befinden, werden nun gefunden
-- ProgressBar wird nun während des Exportierens von Kontextmnü-Einträgen angezeigt
+- Änderungen auf der Seite "Kontextmenü":
+  - Kontextmenü-Einträge "ShellNew", die sich unter "Neu" befinden, werden nun gefunden
+  - "Kontextmenü hinzufügen" verbessert:
+    - Es können beliebige Datei-Typen bzw. Dateiendungen benutzt werden
+    - Einträge können versteckt werden (nur durch Shift + Rechtsklick sichtbar)
+  - ProgressBar wird nun während des Exportierens von Kontextmnü-Einträgen angezeigt
+- "Symbole anzeigen" im Menü unter Autostart entfernt
 - "Abbrechen" während des Hinzufügens von Einträgen funktioniert nun korrekt
-- "Symbole anzeigen" entfernt
 - Buttons zur "Quick-Search" hinzugefügt
 - Listen können nun auf- und absteigend sortiert werden
 - Icon erneuert: http://de.divinity.wikia.com/wiki/Datei:Icon_Besen.svg.png

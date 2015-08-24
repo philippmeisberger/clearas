@@ -26,7 +26,11 @@ const
   tdiShieldOkBanner      = 65528;
 
 function InputCombo(AOwner: TComponent; ACaption, APrompt: string;
-  AList: TStrings; var AValue: string; AReadOnly: Boolean = True): Boolean;
+  AList: TStrings; var AValue: string; AReadOnly: Boolean = True): Boolean; overload;
+
+function InputCombo(AOwner: TComponent; ACaption, APrompt: string;
+  AList: TStrings; var AValue: string; ACheckBoxCaption: string;
+  var ACheckBoxChecked: Boolean; AReadOnly: Boolean = True): Boolean; overload;
 
 function ShowTaskDialog(AOwner: TComponent; ACaption, ATitle, AText: WideString;
   ACommonButtons: TTaskDialogCommonButtons; AIcon: TTaskDialogIcon;
@@ -45,11 +49,27 @@ implementation
 function InputCombo(AOwner: TComponent; ACaption, APrompt: string;
   AList: TStrings; var AValue: string; AReadOnly: Boolean = True): Boolean;
 var
+  Checked: Boolean;
+
+begin
+  Result := InputCombo(AOwner, ACaption, APrompt, AList, AValue, '', Checked, AReadOnly);
+end;
+
+{ InputCombo
+
+  Shows a dialog with a pre defined TComboBox list item selection. Similar to
+  the InputQuery dialog with optional verification TCheckBox. }
+
+function InputCombo(AOwner: TComponent; ACaption, APrompt: string;
+  AList: TStrings; var AValue: string; ACheckBoxCaption: string;
+  var ACheckBoxChecked: Boolean; AReadOnly: Boolean = True): Boolean;
+var
   Form: TForm;
   Prompt: TLabel;
   Combo: TComboBox;
   DialogUnits: TPoint;
   ButtonTop, ButtonWidth, ButtonHeight: Integer;
+  CheckBox: TCheckBox;
 
   function GetCharSize(Canvas: TCanvas): TPoint;
   var
@@ -120,6 +140,24 @@ begin
     ButtonWidth := MulDiv(50, DialogUnits.X, 4);
     ButtonHeight := MulDiv(14, DialogUnits.Y, 8);
 
+    // Init TCheckbox
+    if (ACheckBoxCaption <> '') then
+    begin
+      CheckBox := TCheckBox.Create(Form);
+
+      with CheckBox do
+      begin
+        Parent := Form;
+        Caption := ACheckBoxCaption;
+        Checked := ACheckBoxChecked;
+        Left := Combo.Left;
+        Top := Combo.Top + Combo.Height + 5;
+        Width := MulDiv(164, DialogUnits.X, 4);
+      end;  //of with
+
+      ButtonTop := CheckBox.Top + CheckBox.Height + 10;
+    end;  //of begin
+
     // Init "OK" TButton
     with TButton.Create(Form) do
     begin
@@ -137,8 +175,7 @@ begin
       Caption := SMsgDlgCancel;
       ModalResult := IDCANCEL;
       Cancel := True;
-      SetBounds(MulDiv(92, DialogUnits.X, 4), Combo.Top + Combo.Height + 15,
-        ButtonWidth, ButtonHeight);
+      SetBounds(MulDiv(92, DialogUnits.X, 4), ButtonTop, ButtonWidth, ButtonHeight);
       Form.ClientHeight := Top + Height + 13;
     end;  //of with
 
@@ -146,6 +183,10 @@ begin
     if (Form.ShowModal = IDOK) then
     begin
       AValue := Combo.Text;
+
+      if Assigned(CheckBox) then
+        ACheckBoxChecked := CheckBox.Checked;
+
       Result := True;
     end;  //of begin
 

@@ -350,7 +350,8 @@ type
       AEnabled, AWow64: Boolean): Integer;
   public
     constructor Create;
-    function Add(AFileName, AArguments, ALocationRoot, ACaption: string): Boolean; reintroduce;
+    function Add(AFileName, AArguments, ALocationRoot, ACaption: string;
+      AExtended: Boolean = False): Boolean; reintroduce;
     procedure ExportList(const AFileName: string); override;
     function IndexOf(AName, ALocationRoot: string): Integer; overload;
     procedure LoadContextmenu(const ALocationRoot: string;
@@ -3132,7 +3133,8 @@ end;
 
   Adds a new contextmenu entry. }
 
-function TContextList.Add(AFileName, AArguments, ALocationRoot, ACaption: string): Boolean;
+function TContextList.Add(AFileName, AArguments, ALocationRoot, ACaption: string;
+  AExtended: Boolean = False): Boolean;
 var
   Name, Ext, FullPath, LocationRoot, FileType, KeyPath: string;
   Reg: TRegistry;
@@ -3204,6 +3206,10 @@ begin
       // Set caption of item
       if (Trim(ACaption) <> '') then
         Reg.WriteString('', ACaption);
+
+      // Extended: Item is only visible with shift + right click
+      if AExtended then
+        Reg.WriteString('Extended', '');
 
       Reg.CloseKey();
       KeyPath := KeyPath +'\command';
