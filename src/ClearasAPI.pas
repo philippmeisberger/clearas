@@ -732,14 +732,18 @@ end;
 function TRootItem.GetIcon(): HICON;
 var
   FileInfo: SHFILEINFO;
+{$IFDEF WIN32}
   Win64: Boolean;
+{$ENDIF}
 
 begin
+{$IFDEF WIN32}
   Win64 := (TOSVersion.Architecture = arIntelX64);
 
   // Deny WOW64 redirection only on 64bit Windows
   if Win64 then
     Wow64FsRedirection(True);
+{$ENDIF}
 
   if Succeeded(SHGetFileInfo(PChar(GetFileNameOnly()), 0, FileInfo, SizeOf(FileInfo),
     SHGFI_ICON or SHGFI_SMALLICON)) then
@@ -747,9 +751,11 @@ begin
   else
     Result := 0;
 
+{$IFDEF WIN32}
   // Allow WOW64 redirection only on 64bit Windows
   if Win64 then
     Wow64FsRedirection(False);
+{$ENDIF}
 end;
 
 { protected TRootItem.DeleteQuoteChars
@@ -825,22 +831,28 @@ end;
   Returns True if the file exists. }
 
 function TRootItem.FileExists(): Boolean;
+{$IFDEF WIN32}
 var
   Win64: Boolean;
+{$ENDIF}
 
 begin
+{$IFDEF WIN32}
   // 64bit Windows?
   Win64 := (TOSVersion.Architecture = arIntelX64);
 
   // Deny WOW64 redirection only on 64bit Windows
   if Win64 then
     Wow64FsRedirection(True);
+{$ENDIF}
 
   Result := SysUtils.FileExists(GetFileNameOnly());
 
+{$IFDEF WIN32}
   // Allow WOW64 redirection only on 64bit Windows
   if Win64 then
     Wow64FsRedirection(False);
+{$ENDIF}
 end;
 
 { public TRootItem.GetStatus
@@ -862,18 +874,22 @@ end;
 procedure TRootItem.OpenInExplorer();
 var
   PreparedFileName: string;
+{$IFDEF WIN32}
   Win64: Boolean;
+{$ENDIF}
 
 begin
   // Extract the file path only (without arguments and quote chars)
   PreparedFileName := GetFileNameOnly();
 
+{$IFDEF WIN32}
   // 64bit Windows?
   Win64 := (TOSVersion.Architecture = arIntelX64);
 
   // Deny WOW64 redirection only on 64bit Windows
   if Win64 then
     Wow64FsRedirection(True);
+{$ENDIF}
 
   // Open file in explorer
   if ((PreparedFileName <> '') and SysUtils.FileExists(PreparedFileName)) then
@@ -881,9 +897,11 @@ begin
   else
     raise EWarning.Create('File "'+ PreparedFileName +'" does not exist!');
 
+{$IFDEF WIN32}
   // Allow WOW64 redirection only on 64bit Windows
   if Win64 then
     Wow64FsRedirection(False);
+{$ENDIF}
 end;
 
 
@@ -1000,6 +1018,7 @@ const
 
 var
   Reg: TRegistry;
+  SystemWOW64: string;
 
 begin
   if FWow64 then
@@ -1022,7 +1041,11 @@ begin
       Wow64FsRedirection(False);
     end  //of begin
     else
-      ExecuteProgram('regedit.exe');
+    begin
+      // Retrieve WOW64 filesystem and execute 32-Bit RegEdit
+      GetSystemWow64Directory(SystemWOW64);
+      ExecuteProgram(SystemWOW64 +'regedit.exe');
+    end;  //of if
 
   finally
     Reg.CloseKey();

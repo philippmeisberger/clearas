@@ -1,6 +1,6 @@
 { *********************************************************************** }
 {                                                                         }
-{ PM Code Works Operating System Utilities Unit v2.2                      }
+{ PM Code Works Operating System Utilities Unit v2.2.1                    }
 {                                                                         }
 { Copyright (c) 2011-2015 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
@@ -42,6 +42,7 @@ type
   function ExecuteProgram(const AProgram: string;
     AArguments: string = ''; ARunAsAdmin: Boolean = False): Boolean;
   function ExpandEnvironmentVar(var AVariable: string): Boolean;
+  function GetSystemWow64Directory(var ASystemWow64Directory: string): Boolean;
   function GetTempDir(): string;
   function GetUserAppDataDir(): string;
   function GetWinDir(): string;
@@ -112,6 +113,57 @@ begin
       Result := True;
     end;  //of begin
   end;  //of begin
+end;
+
+{ GetSystemWow64Directory
+
+  Retrieves the path of the system directory used by WOW64. This directory is
+  not present on 32-bit Windows. }
+
+function GetSystemWow64Directory(var ASystemWow64Directory: string): Boolean;
+{$IFDEF WIN64}
+type
+  TGetSystemWow64Directory = function(lpBuffer: LPTSTR; uSize: UINT): UINT; stdcall;
+
+var
+  LibraryHandle: HMODULE;
+  GetSystemWow64Directory: TGetSystemWow64Directory;
+  Directory: string;
+  Length: Cardinal;
+
+begin
+  Result := False;
+
+  // Init handle
+  LibraryHandle := GetModuleHandle(kernel32);
+
+  if (LibraryHandle <> 0) then
+  begin
+  {$IFDEF UNICODE}
+    GetSystemWow64Directory := GetProcAddress(LibraryHandle, 'GetSystemWow64DirectoryW');
+  {$ELSE}
+    GetSystemWow64Directory := GetProcAddress(LibraryHandle, 'GetSystemWow64DirectoryA');
+  {$ENDIF}
+
+    // Loading of GetSystemWow64Directory successful?
+    if Assigned(GetSystemWow64Directory) then
+    begin
+      SetLength(Directory, MAX_PATH);
+      Length := GetSystemWow64Directory(PChar(Directory), MAX_PATH);
+
+      if (Length > 0) then
+      begin
+        SetLength(Directory, Length);
+        ASystemWow64Directory := IncludeTrailingBackslash(Directory);
+        Result := True;
+      end;  //of begin
+    end;  //of begin
+  end;  //of begin
+{$ELSE}
+begin
+  // Not present on 32-bit Windows
+  Result := False;
+{$ENDIF}
 end;
 
 { GetTempDir

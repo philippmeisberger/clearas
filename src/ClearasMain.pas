@@ -1393,7 +1393,7 @@ begin
 
       // Warn if file does not exist
       if not FStartup.Selected.FileExists() then
-        raise EWarning.Create(FLang.GetString([45, NEW_LINE, 46]));
+        FLang.ShowMessage(45, 46, mtWarning);
     end  //of begin
     else
       raise Exception.Create('Unknown error!');
@@ -1406,7 +1406,7 @@ begin
       FLang.ShowMessage(100, 101, mtWarning);
 
     on E: EWarning do
-      FLang.ShowMessage(E.Message, mtWarning);
+      FLang.ShowMessage(FLang.GetString([93, 18]), E.Message, mtWarning);
 
     on E: Exception do
       FLang.ShowException(FLang.GetString([93, 18]), E.Message);
@@ -1440,7 +1440,7 @@ begin
 
       // Warn if file does not exist
       if (not (FContext.Selected is TShellNewItem) and not FContext.Selected.FileExists()) then
-        raise EWarning.Create(FLang.GetString([45, NEW_LINE, 46]));
+        FLang.ShowMessage(45, 46, mtWarning);
     end  //of begin
     else
       raise Exception.Create('Unknown error!');
@@ -1453,7 +1453,7 @@ begin
       FLang.ShowMessage(100, 101, mtWarning);
 
     on E: EWarning do
-      FLang.ShowMessage(E.Message, mtWarning);
+      FLang.ShowMessage(FLang.GetString([93, 18]), E.Message, mtWarning);
 
     on E: Exception do
       FLang.ShowException(FLang.GetString([93, 18]), E.Message);
@@ -1491,7 +1491,7 @@ begin
 
       // Warn if file does not exist
       if not FService.Selected.FileExists() then
-        raise EWarning.Create(FLang.GetString([45, NEW_LINE, 46]));
+        FLang.ShowMessage(45, 46, mtWarning);
     end  //of begin
     else
       raise Exception.Create('Unknown error!');
@@ -1504,7 +1504,7 @@ begin
       FLang.ShowMessage(100, 101, mtWarning);
 
     on E: EWarning do
-      FLang.ShowMessage(E.Message, mtWarning);
+      FLang.ShowMessage(FLang.GetString([93, 18]), E.Message, mtWarning);
 
     on E: Exception do
       FLang.ShowException(FLang.GetString([93, 18]), E.Message);
