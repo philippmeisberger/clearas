@@ -562,7 +562,10 @@ begin
   end;  //of case
 
 {$IFDEF MSWINDOWS}
-  Result := TaskMessageDlg(ATitle, AText, AMessageType, Buttons, 0, DefaultButton);
+  if (Win32MajorVersion >= 6) then
+    Result := TaskMessageDlg(ATitle, AText, AMessageType, Buttons, 0, DefaultButton)
+  else
+    Result := MessageDlg(ATitle + sLineBreak + AText, AMessageType, Buttons, 0);
 {$ELSE}
   if (ATitle <> '') then
     Result := MessageDlg(ATitle + sLineBreak + AText, AMessageType, Buttons, 0)

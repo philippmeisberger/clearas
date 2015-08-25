@@ -3402,9 +3402,13 @@ begin
       // Get description of file extension
       Caption := Reg.ReadString('');
 
-      // Caption can be empty
-      if (Caption = '') then
-        Caption := Key;
+      // Caption can be empty!
+      // Fallback 1: associated key
+      if ((Caption = '') and (Key <> '')) then
+        Caption := ExtractFileName(Key)
+      else
+        // Fallback 2: subkey
+        Caption := ExtractFileName(ALocationRoot);
 
       // Add item to list
       AddShellNewItem(Key, ALocationRoot, Caption, Enabled, AWow64);
