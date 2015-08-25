@@ -74,7 +74,7 @@ end;
 function ExecuteProgram(const AProgram: string;
   AArguments: string = ''; ARunAsAdmin: Boolean = False): Boolean;
 var
-  Operation: PWideChar;
+  Operation: PChar;
 
 begin
   // Run as administrator?

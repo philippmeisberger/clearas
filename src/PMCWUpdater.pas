@@ -615,9 +615,11 @@ begin
     ResourceStream.SaveToFile(FileName);
 
     // Install certificate
-    ShellExecute(Handle, 'open', 'certutil.exe', PChar('-user -addstore ROOT "'+
-      FileName +'"'), nil, SW_HIDE);
-    Result := True;
+    if (ShellExecute(Handle, 'open', 'certutil.exe', PChar('-user '+
+      '-addstore ROOT "'+ FileName +'"'), nil, SW_HIDE) > 32) then
+      Result := True
+    else
+      FLang.ShowMessage(FLang.GetString([16, 18]), FLang.GetString(28), mtError);
 
   finally
     ResourceStream.Free;
