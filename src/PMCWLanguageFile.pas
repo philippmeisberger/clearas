@@ -383,12 +383,18 @@ end;
 function TLanguageFile.GetString(const AIndex: Word): string;
 var
   Buffer: array[0..80] of Char;
+  Error: Cardinal;
 
 begin
   if (LoadString(HInstance, FLangId + AIndex, Buffer, SizeOf(Buffer)) = 0) then
-    if (GetLastError() <> 0) then
+  begin
+    Error := GetLastError();
+
+    // ERROR_INVALID_WINDOW_HANDLE will be raised on Windows XP
+    if ((Error <> ERROR_SUCCESS) and (Error <> ERROR_INVALID_WINDOW_HANDLE)) then
       raise ELanguageException.Create(SysUtils.Format(SysErrorMessage(
-        ERROR_RESOURCE_LANG_NOT_FOUND) +'. ID %d', [AIndex]));
+        ERROR_RESOURCE_LANG_NOT_FOUND) +'. ID %d (Error %d)', [AIndex, Error]));
+  end;  //of begin
 
   Result := Buffer;
 end;
