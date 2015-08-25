@@ -4,7 +4,7 @@ Ein Open-Source Projekt von PM Code Works
 Changelog
 =========
 
-Version 4.1  [25.08.15]
+Version 4.1  [26.08.15]
 
 - Änderungen auf der Seite "Kontextmenü":
   - Kontextmenü-Einträge "ShellNew", die sich unter "Neu" befinden, werden nun gefunden
