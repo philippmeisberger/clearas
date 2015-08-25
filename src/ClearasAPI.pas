@@ -3404,10 +3404,11 @@ begin
 
       // Caption can be empty!
       // Fallback 1: associated key
-      if ((Caption = '') and (Key <> '')) then
-        Caption := ExtractFileName(Key)
-      else
-        // Fallback 2: subkey
+      if (Caption = '') then
+        Caption := ExtractFileName(Key);
+
+      // Fallback 2: subkey
+      if (Caption = '') then
         Caption := ExtractFileName(ALocationRoot);
 
       // Add item to list
