@@ -17,38 +17,38 @@ uses
 
 const
   { Startup Registry keys }
-  KEY_STARTUP_DISABLED = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\startupreg\';
+  KEY_STARTUP_DISABLED      = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\startupreg\';
   KEY_STARTUP_USER_DISABLED = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\startupfolder\';
-  KEY_STARTUP_RUN = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Run';
-  KEY_STARTUP_RUNONCE = 'SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce';
+  KEY_STARTUP_RUN           = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Run';
+  KEY_STARTUP_RUNONCE       = 'SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce';
 
   { Redirected 32-Bit Registry keys by WOW64 }
-  KEY_STARTUP_RUN32 = 'SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Run';
-  KEY_STARTUP_RUNONCE32 = 'SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnce';
+  KEY_STARTUP_RUN32         = 'SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Run';
+  KEY_STARTUP_RUNONCE32     = 'SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnce';
 
   { Service Registry keys }
-  KEY_SERVICE_DISABLED = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\services';
-  KEY_SERVICE_ENABLED = 'SYSTEM\CurrentControlSet\services\';
+  KEY_SERVICE_DISABLED      = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\services';
+  KEY_SERVICE_ENABLED       = 'SYSTEM\CurrentControlSet\services\';
 
   { Context menu Registry subkeys + values}
-  CM_SHELL = 'Shell';
-  CM_SHELL_DISABLED = 'LegacyDisable';
-  CM_SHELLEX = 'ShellEx';
-  CM_SHELLEX_HANDLERS = 'ShellEx\ContextMenuHandlers';
-  CM_SHELLEX_FILE = 'CLSID\%s\InProcServer32';
-  CM_SHELLNEW = 'ShellNew';
-  CM_SHELLNEW_DISABLED = '_'+ CM_SHELLNEW;
-  CM_LOCATIONS_DEFAULT = 'Directory, Folder, *, Drive';
+  CM_SHELL                  = 'Shell';
+  CM_SHELL_DISABLED         = 'LegacyDisable';
+  CM_SHELLEX                = 'ShellEx';
+  CM_SHELLEX_HANDLERS       = CM_SHELLEX +'\ContextMenuHandlers';
+  CM_SHELLEX_FILE           = 'CLSID\%s\InProcServer32';
+  CM_SHELLNEW               = 'ShellNew';
+  CM_SHELLNEW_DISABLED      = '_'+ CM_SHELLNEW;
+  CM_LOCATIONS_DEFAULT      = 'Directory, Folder, *, Drive';
 
   { Extensions of backup files }
-  EXT_COMMON = '.CommonStartup';
-  EXT_USER = '.Startup';
+  EXT_COMMON                = '.CommonStartup';
+  EXT_USER                  = '.Startup';
 
   { Description type of startup user items }
-  TYPE_COMMON = 'Startup Common';
-  TYPE_COMMON_XP = 'Common Startup';
-  TYPE_USER = 'Startup User';
-  TYPE_USER_XP = 'Startup';
+  TYPE_COMMON               = 'Startup Common';
+  TYPE_COMMON_XP            = 'Common Startup';
+  TYPE_USER                 = 'Startup User';
+  TYPE_USER_XP              = 'Startup';
 
 type
   { TLnkFile }
@@ -315,6 +315,7 @@ type
   { TShellExItem }
   TShellExItem = class(TContextListItem)
   private
+    function ChangeStatus(ANewStatus: Boolean): Boolean;
     function GetKeyPath(): string; override;
   public
     function ChangeFilePath(const ANewFileName: string): Boolean; override;
@@ -326,8 +327,8 @@ type
   { TShellNewItem }
   TShellNewItem = class(TContextListItem)
   private
+    function ChangeStatus(ANewStatus: Boolean): Boolean;
     function GetKeyPath(): string; override;
-    function RenameKey(AOldKeyName, ANewKeyName: string): Boolean;
   public
     function ChangeFilePath(const ANewFileName: string): Boolean; override;
     function Delete(): Boolean; override;
@@ -1130,6 +1131,8 @@ var
   Changed: Boolean;
 
 begin
+  Result := False;
+
   // List locked?
   if not FLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
@@ -1146,9 +1149,10 @@ begin
     if (Changed and Assigned(FOnChanged)) then
       FOnChanged(Self);
 
-  finally
-    FLock.Release;
     Result := Changed;
+
+  finally
+    FLock.Release();
   end;  //of try
 end;
 
@@ -1161,6 +1165,8 @@ var
   Changed: Boolean;
 
 begin
+  Result := False;
+
   // List locked?
   if not FLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
@@ -1186,9 +1192,10 @@ begin
         FOnChanged(Self);
     end;  //of begin
 
-  finally
-    FLock.Release;
     Result := Changed;
+
+  finally
+    FLock.Release();
   end;  //of try
 end;
 
@@ -1201,6 +1208,8 @@ var
   Deleted: Boolean;
 
 begin
+  Result := False;
+
   // List locked?
   if not FLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
@@ -1229,9 +1238,10 @@ begin
         FOnChanged(Self);
     end;  //of begin
 
-  finally
-    FLock.Release;
     Result := Deleted;
+
+  finally
+    FLock.Release();
   end;  //of try
 end;
 
@@ -1244,6 +1254,8 @@ var
   Disabled: Boolean;
 
 begin
+  Result := False;
+
   // List locked?
   if not FLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
@@ -1268,9 +1280,10 @@ begin
         FOnChanged(Self);
     end;  //of begin
 
-  finally
-    FLock.Release;
     Result := Disabled;
+
+  finally
+    FLock.Release();
   end;  //of try
 end;
 
@@ -1283,6 +1296,8 @@ var
   Enabled: Boolean;
 
 begin
+  Result := False;
+
   // List locked?
   if not FLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
@@ -1307,9 +1322,10 @@ begin
         FOnChanged(Self);
     end;  //of begin
 
-  finally
-    FLock.Release;
     Result := Enabled;
+
+  finally
+    FLock.Release();
   end;  //of try
 end;
 
@@ -1398,7 +1414,7 @@ begin
   Entered := FLock.TryEnter();
 
   if Entered then
-    FLock.Release;
+    FLock.Release();
 
   Result := not Entered;
 end;
@@ -1417,7 +1433,7 @@ begin
     Result := inherited Remove(ARootItem);
 
   finally
-    FLock.Release;
+    FLock.Release();
   end;  //of try
 end;
 
@@ -2248,7 +2264,7 @@ begin
     end;  //of begin
 
   finally
-    FLock.Release;
+    FLock.Release();
   end;  //of try
 end;
 
@@ -2335,7 +2351,7 @@ begin
 
   finally
     RegFile.Free;
-    FLock.Release;
+    FLock.Release();
   end;  //of try
 end;
 
@@ -2388,7 +2404,7 @@ begin
 
   finally
     LnkFile.Free;
-    FLock.Release;
+    FLock.Release();
   end;  //of try
 end;
 
@@ -2729,6 +2745,59 @@ end;
 
 { TShellExItem }
 
+{ private TShellExItem.ChangeStatus
+
+  Enables or disables a ShellEx item. }
+
+function TShellExItem.ChangeStatus(ANewStatus: Boolean): Boolean;
+var
+  Reg: TRegistry;
+  OldValue, NewValue: string;
+
+begin
+  Result := False;
+  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
+
+  try
+    Reg.RootKey := HKEY_CLASSES_ROOT;
+
+    // Key does not exist?
+    if not Reg.OpenKey(GetKeyPath(), False) then
+      raise EContextMenuException.Create('Key does not exist!');
+
+    // Value does not exist?
+    if not Reg.ValueExists('') then
+      raise EContextMenuException.Create('Value does not exist!');
+
+    OldValue := Reg.ReadString('');
+
+    if (Trim(OldValue) = '') then
+      raise EContextMenuException.Create('Value must not be empty!');
+
+    // Item disabled?
+    if (ANewStatus and (OldValue[1] <> '{')) then
+    begin
+      NewValue := Copy(OldValue, 2, Length(OldValue));
+      Reg.WriteString('', NewValue);
+    end  //of begin
+    else
+      // Item enabled?
+      if (OldValue[1] = '{') then
+      begin
+        NewValue := '-'+ OldValue;
+        Reg.WriteString('', NewValue);
+      end;  //of if
+
+    // Update status
+    FEnabled := ANewStatus;
+    Result := True;
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
+  end;  //of try
+end;
+
 { private TShellExItem.GetKeyPath
 
   Returns the Registry path to a TShellExItem. }
@@ -2793,46 +2862,8 @@ end;
   Disables a TShellExItem object and returns True if successful. }
 
 function TShellExItem.Disable(): Boolean;
-var
-  Reg: TRegistry;
-  OldValue, NewValue: string;
-
 begin
-  Result := False;
-  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
-
-  try
-    Reg.RootKey := HKEY_CLASSES_ROOT;
-
-    // Key does not exist?
-    if not Reg.OpenKey(GetKeyPath(), False) then
-      raise EContextMenuException.Create('Key does not exist!');
-
-    // Value does not exist?
-    if not Reg.ValueExists('') then
-      raise EContextMenuException.Create('Value does not exist!');
-
-    OldValue := Reg.ReadString('');
-
-    if (Trim(OldValue) = '') then
-      raise EContextMenuException.Create('Value must not be empty!');
-
-      // Item enabled?
-    if (OldValue[1] = '{') then
-    begin
-      // Set up new value and write it
-      NewValue := '-'+ OldValue;
-      Reg.WriteString('', NewValue);
-    end;  //of begin
-
-    // Update status
-    FEnabled := False;
-    Result := True;
-
-  finally
-    Reg.CloseKey();
-    Reg.Free;
-  end;  //of try
+  Result := ChangeStatus(False);
 end;
 
 { public TShellExItem.Enable
@@ -2840,46 +2871,8 @@ end;
   Enables a TShellExItem object and returns True if successful. }
 
 function TShellExItem.Enable(): Boolean;
-var
-  Reg: TRegistry;
-  OldValue, NewValue: string;
-
 begin
-  Result := False;
-  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
-
-  try
-    Reg.RootKey := HKEY_CLASSES_ROOT;
-
-    // Key does not exist?
-    if not Reg.OpenKey(GetKeyPath(), False) then
-      raise EContextMenuException.Create('Key does not exist!');
-
-    // Value does not exist?
-    if not Reg.ValueExists('') then
-      raise EContextMenuException.Create('Value does not exist!');
-
-    OldValue := Reg.ReadString('');
-
-    if (Trim(OldValue) = '') then
-      raise EContextMenuException.Create('Value must not be empty!');
-
-    // Item really disabled?
-    if (OldValue[1] <> '{') then
-    begin
-      // Set up new value and write it
-      NewValue := Copy(OldValue, 2, Length(OldValue));
-      Reg.WriteString('', NewValue);
-    end;  //of begin
-
-    // Update status
-    FEnabled := True;
-    Result := True;
-
-  finally
-    Reg.CloseKey();
-    Reg.Free;
-  end;  //of try
+  Result := ChangeStatus(True);
 end;
 
 { public TShellExItem.ExportItem
@@ -2926,25 +2919,14 @@ end;
 
 { TShellNewItem }
 
-{ private TShellNewItem.GetKeyPath
+{ private TShellNewItem.ChangeStatus
 
-  Returns the Registry path to a TShellExItem. }
+  Enables or disables a ShellNew item. }
 
-function TShellNewItem.GetKeyPath(): string;
-begin
-  if FEnabled then
-    Result := FLocation +'\'+ CM_SHELLNEW
-  else
-    Result := FLocation +'\'+ CM_SHELLNEW_DISABLED;
-end;
-
-{ private TShellNewItem.RenameKey
-
-  Renames the ShellNew Registry key. }
-
-function TShellNewItem.RenameKey(AOldKeyName, ANewKeyName: string): Boolean;
+function TShellNewItem.ChangeStatus(ANewStatus: Boolean): Boolean;
 var
   Reg: TRegistry;
+  OldKeyName, NewKeyName: string;
 
 begin
   Result := False;
@@ -2957,22 +2939,48 @@ begin
     if not Reg.OpenKey(FLocation, False) then
       raise EContextMenuException.Create('Key '''+ FLocation +''' does not exist!');
 
+    if ANewStatus then
+    begin
+      OldKeyName := CM_SHELLNEW_DISABLED;
+      NewKeyName := CM_SHELLNEW;
+    end  //of begin
+    else
+    begin
+      OldKeyName := CM_SHELLNEW;
+      NewKeyName := CM_SHELLNEW_DISABLED;
+    end;  //of if
+
     // Old key does not exist?
-    if not Reg.KeyExists(AOldKeyName) then
-      raise EContextMenuException.Create('Key '''+ AOldKeyName +''' does not exist!');
+    if not Reg.KeyExists(OldKeyName) then
+      raise EContextMenuException.Create('Key '''+ OldKeyName +''' does not exist!');
 
     // New key already exists?
-    if Reg.KeyExists(ANewKeyName) then
-      raise EContextMenuException.Create('Key '''+ ANewKeyName +''' already exists!');
+    if Reg.KeyExists(NewKeyName) then
+      raise EContextMenuException.Create('Key '''+ NewKeyName +''' already exists!');
 
     // Rename key
-    Reg.MoveKey(AOldKeyName, ANewKeyName, True);
+    Reg.MoveKey(OldKeyName, NewKeyName, True);
+
+    // Update status
+    FEnabled := ANewStatus;
     Result := True;
 
   finally
     Reg.CloseKey();
     Reg.Free;
   end;  //of try
+end;
+
+{ private TShellNewItem.GetKeyPath
+
+  Returns the Registry path to a TShellExItem. }
+
+function TShellNewItem.GetKeyPath(): string;
+begin
+  if FEnabled then
+    Result := FLocation +'\'+ CM_SHELLNEW
+  else
+    Result := FLocation +'\'+ CM_SHELLNEW_DISABLED;
 end;
 
 { public TShellNewItem.ChangeFilePath
@@ -3003,11 +3011,7 @@ end;
 
 function TShellNewItem.Disable(): Boolean;
 begin
-  Result := RenameKey(CM_SHELLNEW, CM_SHELLNEW_DISABLED);
-
-  // Update status
-  if Result then
-    FEnabled := False;
+  Result := ChangeStatus(False);
 end;
 
 { public TShellNewItem.Enable
@@ -3016,11 +3020,7 @@ end;
 
 function TShellNewItem.Enable(): Boolean;
 begin
-  Result := RenameKey(CM_SHELLNEW_DISABLED, CM_SHELLNEW);
-
-  // Update status
-  if Result then
-    FEnabled := True;
+  Result := ChangeStatus(True);
 end;
 
 { public TShellNewItem.ExportItem
@@ -3254,7 +3254,7 @@ begin
     end;  //of try
 
   finally
-    FLock.Release;
+    FLock.Release();
   end;  //of try
 end;
 
@@ -3286,7 +3286,7 @@ begin
 
   finally
     RegFile.Free;
-    FLock.Release;
+    FLock.Release();
   end;  //of try
 end;
 
@@ -3349,7 +3349,7 @@ var
   i, DelimiterPos: Integer;
   List: TStringList;
   Item, Key, FilePath, GuID, Caption: string;
-  ShellNewFound, Enabled, Wow64: Boolean;
+  Enabled, Wow64: Boolean;
   Access64: Cardinal;
 
 begin
@@ -3700,7 +3700,9 @@ begin
       FTime := WriteTimestamp(Reg);
     end  //of begin
     else
-      Reg.OpenKey(KEY_SERVICE_DISABLED, True);
+      // Write disable key
+      if not Reg.OpenKey(KEY_SERVICE_DISABLED, True) then
+        raise EServiceException.Create('Could not create disable key!');
 
     // Write last status
     Reg.WriteInteger(Name, Ord(Start));
@@ -3733,7 +3735,7 @@ begin
   try
     Reg.RootKey := HKEY_LOCAL_MACHINE;
 
-    // Winodows >= Vista?
+    // Windows >= Vista?
     if TOSVersion.Check(6) then
     begin
       if not Reg.OpenKey(KEY_SERVICE_DISABLED +'\'+ Name, False) then
@@ -3751,7 +3753,7 @@ begin
       SERVICE_NO_CHANGE, nil, nil, nil, nil, nil, nil, nil) then
       raise EServiceException.Create(SysErrorMessage(GetLastError()));
 
-    // Winodows >= Vista?
+    // Windows >= Vista?
     if TOSVersion.Check(6) then
     begin
       Reg.CloseKey();
@@ -3987,7 +3989,7 @@ begin
     Result := (AddServiceEnabled(Name, ACaption, AFileName, ssAutomatic) <> -1);
 
   finally
-    FLock.Release;
+    FLock.Release();
   end;  //of try
 end;
 
@@ -4023,7 +4025,7 @@ begin
 
   finally
     RegFile.Free;
-    FLock.Release;
+    FLock.Release();
   end;  //of try
 end;
 
