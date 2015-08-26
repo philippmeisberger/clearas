@@ -102,7 +102,10 @@ end;
 procedure TContextSearchThread.DoNotifyOnSearching();
 begin
   if Assigned(FOnSearching) then
+  begin
+    Inc(FProgress);
     FOnSearching(Self, FProgress);
+  end;  //of begin
 end;
 
 { private TContextSearchThread.DoNotifyOnStart
@@ -199,7 +202,6 @@ begin
 
     for i := 0 to Keys.Count - 1 do
     begin
-      Inc(FProgress);
       Synchronize(DoNotifyOnSearching);
 
       if (FRoot <> '') then
@@ -231,7 +233,6 @@ begin
   // Search ...
   for i := 0 to FLocations.Count - 1 do
   begin
-    Inc(FProgress);
     Synchronize(DoNotifyOnSearching);
     FContextList.LoadContextmenu(FLocations[i], FWin64);
   end;  //of for

@@ -11,12 +11,17 @@ Version 4.1  [26.08.15]
   - "Kontextmenü hinzufügen" verbessert:
     - Es können beliebige Datei-Typen bzw. Dateiendungen benutzt werden
     - Einträge können versteckt werden (nur durch Shift + Rechtsklick sichtbar)
-  - ProgressBar wird nun während des Exportierens von Kontextmnü-Einträgen angezeigt
+  - Änderungen an der ProgressBar: 
+    - wird nun während des Exportierens von Kontextmenü-Einträgen angezeigt
+    - Benutzung ausschließlich als Ladeindikator
+- ProgressBar zu Diensten hinzugefügt
 - "Symbole anzeigen" im Menü unter Autostart entfernt
 - "Abbrechen" während des Hinzufügens von Einträgen funktioniert nun korrekt
 - Buttons zur "Quick-Search" hinzugefügt
 - Listen können nun auf- und absteigend sortiert werden
-- Bug fix: Nachdem schwerwiegener Fehler aufgetreten ist kann Liste trotzdem aktualisiert werden
+- Bug fixes: 
+  - Nachdem schwerwiegener Fehler aufgetreten ist, können die Listen trotzdem aktualisiert werden
+  - Nachdem neuer Dienst hinzugefügt wurde, wird der korrekte Pfad (mit Argumenten) angezeigt
 - Icon erneuert: http://de.divinity.wikia.com/wiki/Datei:Icon_Besen.svg.png
 - Nutzung von Windows spezifischen grafischen Features (ab Vista)
 - Sprache wird benutzerspezifisch geladen

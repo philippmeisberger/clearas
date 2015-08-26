@@ -135,11 +135,12 @@ type
       AFailIfNotExists: Boolean = True): Boolean;
     function GetRootKey(): HKEY; virtual; abstract;
     function GetWow64Key(): string;
+    procedure OpenInRegEdit(AWow64: Boolean); overload;
     function WriteTimestamp(AReg: TRegistry): string;
   public
     constructor Create(AIndex: Word; AEnabled, AWow64: Boolean);
     function GetTimestamp(AReg: TRegistry): string;
-    procedure OpenInRegEdit(); virtual;
+    procedure OpenInRegEdit(); overload; virtual;
     { external }
     property RootKey: HKEY read GetRootKey;
     property Wow64: Boolean read FWow64;
@@ -208,6 +209,7 @@ type
   public
     function ChangeFilePath(const ANewFileName: string): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
+    procedure OpenInRegEdit(); override;
     { external }
     property RootKey: HKEY read GetRootKey write FRootKey;
     property Time: string read FTime write FTime;
@@ -967,6 +969,58 @@ begin
     Result := FLocation;
 end;
 
+{ protected TRootRegItem.OpenInRegEdit
+
+  Opens a TRootRegItem object in either 32- or 64-Bit RegEdit. }
+
+procedure TRootRegItem.OpenInRegEdit(AWow64: Boolean);
+const
+  KEY_REGEDIT = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Regedit';
+
+var
+  Reg: TRegistry;
+{$IFDEF WIN64}
+  SystemWOW64: string;
+{$ENDIF}
+
+begin
+  if AWow64 then
+    Reg := TRegistry.Create(KEY_WOW64_32KEY or KEY_WRITE)
+  else
+    Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_WRITE);
+
+  try
+    Reg.RootKey := HKEY_CURRENT_USER;
+    Reg.OpenKey(KEY_REGEDIT, True);
+
+    // Set the Registry key to show
+    Reg.WriteString('LastKey', 'Computer\'+ GetFullLocation());
+
+    // Redirected 32-Bit item?
+    if AWow64 then
+    begin
+      // Execute 32-Bit RegEdit
+    {$IFDEF WIN64}
+      GetSystemWow64Directory(SystemWOW64);
+      ExecuteProgram(SystemWOW64 +'regedit.exe');
+    {$ELSE}
+      ExecuteProgram('regedit.exe');
+    {$ENDIF}
+    end  //of begin
+    else
+    begin
+      // Execute 64-Bit RegEdit
+      Wow64FsRedirection(True);
+      ExecuteProgram('regedit.exe');
+      Wow64FsRedirection(False);
+    end;  //of if
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
+  end;  //of try
+end;
+
 { protected TRootRegItem.WriteTimestamp
 
   Writes the deactivation timestamp. }
@@ -1013,44 +1067,8 @@ end;
   Opens a TRootRegItem object in RegEdit. }
 
 procedure TRootRegItem.OpenInRegEdit();
-const
-  KEY_REGEDIT = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Regedit';
-
-var
-  Reg: TRegistry;
-  SystemWOW64: string;
-
 begin
-  if FWow64 then
-    Reg := TRegistry.Create(KEY_WOW64_32KEY or KEY_WRITE)
-  else
-    Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_WRITE);
-
-  try
-    Reg.RootKey := HKEY_CURRENT_USER;
-    Reg.OpenKey(KEY_REGEDIT, True);
-
-    // Set the Registry key to show
-    Reg.WriteString('LastKey', 'Computer\'+ GetFullLocation());
-
-    // 64-Bit OS?
-    if (TOSVersion.Architecture = arIntelX64) then
-    begin
-      // Execute 32-Bit RegEdit.exe for WOW64 items
-      if (FEnabled and FWow64) then
-        GetSystemWow64Directory(SystemWOW64);
-
-      Wow64FsRedirection(True);
-      ExecuteProgram(SystemWOW64 +'regedit.exe');
-      Wow64FsRedirection(False);
-    end  //of begin
-    else
-      ExecuteProgram('regedit.exe');
-
-  finally
-    Reg.CloseKey();
-    Reg.Free;
-  end;  //of try
+  OpenInRegEdit(FWow64);
 end;
 
 { public TRootRegItem.GetTimestamp
@@ -2601,6 +2619,19 @@ begin
   end;  // of with
 end;
 
+{ public TStartupListItem.OpenInRegEdit
+
+  Opens a TStartupListItem object in RegEdit. }
+
+procedure TStartupListItem.OpenInRegEdit();
+begin
+  // Disabled items are in 64-Bit Registry!
+  if not Enabled then
+    OpenInRegEdit(False)
+  else
+    inherited OpenInRegEdit();
+end;
+
 
 { TContextListItem }
 
@@ -3362,8 +3393,7 @@ end;
 
 { public TContextList.LoadContextmenu
 
-  Searches for either Shell or ShellEx context menu entries in specific
-  Registry key and adds them to the list. }
+  Searches for context menu items in Registry key and adds them to the list. }
 
 procedure TContextList.LoadContextmenu(const ALocationRoot: string;
   AShellItemType: TShellItemType; AWow64: Boolean);
@@ -3435,7 +3465,7 @@ begin
         Caption := ExtractFileName(ALocationRoot);
 
       // Add item to list
-      AddShellNewItem(Key, ALocationRoot, Caption, Enabled, AWow64);
+      AddShellNewItem(Key, ALocationRoot, Caption, Enabled, False);
       Exit;
     end;  //of if
 
@@ -4014,7 +4044,7 @@ begin
     CloseServiceHandle(Service);
 
     // Adds service to list
-    Result := (AddServiceEnabled(Name, ACaption, AFileName, ssAutomatic) <> -1);
+    Result := (AddServiceEnabled(Name, ACaption, FullPath, ssAutomatic) <> -1);
 
   finally
     FLock.Release();

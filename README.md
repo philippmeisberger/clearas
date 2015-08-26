@@ -1,6 +1,6 @@
 Clearas
 =======
 
-Clearas is a cleaning programm for the Windows autostart. It is possible to enable, disable, delete, add and export autostart entries.
+Clearas is a cleansing program to edit autostart, context menu and service items.
 
 [Homepage](http://www.pm-codeworks.de/clearas.html)

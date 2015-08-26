@@ -108,7 +108,6 @@ object Main: TMain
             MaxWidth = 105
             Width = 75
           end>
-        GridLines = True
         ReadOnly = True
         RowSelect = True
         PopupMenu = PopupMenu
@@ -317,7 +316,6 @@ object Main: TMain
             MinWidth = 65
             Width = 65
           end>
-        GridLines = True
         HideSelection = False
         ReadOnly = True
         RowSelect = True
@@ -454,7 +452,6 @@ object Main: TMain
             MinWidth = 75
             Width = 75
           end>
-        GridLines = True
         HideSelection = False
         ReadOnly = True
         RowSelect = True
@@ -701,7 +698,7 @@ object Main: TMain
   object QuickSearchIconList: TImageList
     Left = 256
     Bitmap = {
-      494C010103000800F80010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C010103000800FC0010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000001000000001002000000000000010
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
