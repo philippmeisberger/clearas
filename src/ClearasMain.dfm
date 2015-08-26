@@ -330,13 +330,13 @@ object Main: TMain
         OnKeyPress = ListViewKeyPress
         OnSelectItem = lwContextSelectItem
       end
-      object pbContextLoad: TProgressBar
+      object pbContextProgress: TProgressBar
         Left = 21
         Top = 255
         Width = 148
         Height = 18
         Anchors = [akLeft, akBottom]
-        Smooth = True
+        Style = pbstMarquee
         TabOrder = 7
         Visible = False
       end
@@ -416,6 +416,16 @@ object Main: TMain
         Alignment = taRightJustify
         Anchors = [akTop, akRight]
         Caption = 'v4.1'
+      end
+      object pbServiceProgress: TProgressBar
+        Left = 21
+        Top = 255
+        Width = 148
+        Height = 18
+        Anchors = [akLeft, akBottom]
+        Style = pbstMarquee
+        TabOrder = 8
+        Visible = False
       end
       object lwService: TListView
         Left = 21
@@ -691,7 +701,7 @@ object Main: TMain
   object QuickSearchIconList: TImageList
     Left = 256
     Bitmap = {
-      494C010103000800EC0010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C010103000800F80010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000001000000001002000000000000010
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000

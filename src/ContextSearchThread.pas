@@ -111,7 +111,7 @@ end;
 
 procedure TContextSearchThread.DoNotifyOnStart();
 begin
-  if Assigned(FOnSearching) then
+  if Assigned(FOnStart) then
     FOnStart(Self, FProgressMax);
 end;
 
@@ -199,14 +199,13 @@ begin
 
     for i := 0 to Keys.Count - 1 do
     begin
+      Inc(FProgress);
       Synchronize(DoNotifyOnSearching);
 
       if (FRoot <> '') then
         SearchSubkey(FRoot +'\'+ Keys[i])
       else
         SearchSubkey(Keys[i]);
-
-      Inc(FProgress);
     end;  //of for
 
   finally
@@ -232,9 +231,9 @@ begin
   // Search ...
   for i := 0 to FLocations.Count - 1 do
   begin
+    Inc(FProgress);
     Synchronize(DoNotifyOnSearching);
     FContextList.LoadContextmenu(FLocations[i], FWin64);
-    Inc(FProgress);
   end;  //of for
 end;
 

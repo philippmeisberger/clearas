@@ -1033,21 +1033,19 @@ begin
     // Set the Registry key to show
     Reg.WriteString('LastKey', 'Computer\'+ GetFullLocation());
 
-    case TOSVersion.Architecture of
-      arIntelX64:
-        begin
-          // Execute 32-Bit RegEdit.exe for WOW64 items
-          if (FEnabled and FWow64) then
-            GetSystemWow64Directory(SystemWOW64);
+    // 64-Bit OS?
+    if (TOSVersion.Architecture = arIntelX64) then
+    begin
+      // Execute 32-Bit RegEdit.exe for WOW64 items
+      if (FEnabled and FWow64) then
+        GetSystemWow64Directory(SystemWOW64);
 
-          Wow64FsRedirection(True);
-          ExecuteProgram(SystemWOW64 +'regedit.exe');
-          Wow64FsRedirection(False);
-        end;
-
-      else
-        ExecuteProgram('regedit.exe');
-    end;  //of case
+      Wow64FsRedirection(True);
+      ExecuteProgram(SystemWOW64 +'regedit.exe');
+      Wow64FsRedirection(False);
+    end  //of begin
+    else
+      ExecuteProgram('regedit.exe');
 
   finally
     Reg.CloseKey();

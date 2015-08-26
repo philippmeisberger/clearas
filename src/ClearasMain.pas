@@ -72,7 +72,7 @@ type
     lContext: TLabel;
     lVersion2: TLabel;
     lVersion: TLabel;
-    pbContextLoad: TProgressBar;
+    pbContextProgress: TProgressBar;
     cbContextExpert: TCheckBox;
     lWindows2: TLabel;
     lWindows: TLabel;
@@ -102,6 +102,7 @@ type
     QuickSearchIconList: TImageList;
     eContextSearch: TButtonedEdit;
     eServiceSearch: TButtonedEdit;
+    pbServiceProgress: TProgressBar;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -169,16 +170,15 @@ type
     procedure LoadContextMenuItems(ATotalRefresh: Boolean = True);
     procedure LoadStartupItems(ATotalRefresh: Boolean = True);
     procedure LoadServiceItems(ATotalRefresh: Boolean = True);
-    procedure OnContextSearchStart(Sender: TObject; const AWorkCountMax: Cardinal);
-    procedure OnContextSearching(Sender: TObject; const AProgress: Cardinal);
+    procedure OnContextSearchStart(Sender: TObject; const AMax: Cardinal);
     procedure OnContextSearchEnd(Sender: TObject);
     procedure OnContextItemChanged(Sender: TObject);
     procedure OnExportListStart(Sender: TObject; const APageControlIndex: Cardinal);
     procedure OnExportListEnd(Sender: TObject; const APageControlIndex: Cardinal);
-    procedure OnStartupSearchStart(Sender: TObject; const AWorkCountMax: Cardinal);
+    procedure OnStartupSearchStart(Sender: TObject; const AMax: Cardinal);
     procedure OnStartupSearchEnd(Sender: TObject);
     procedure OnStartupItemChanged(Sender: TObject);
-    procedure OnServiceSearchStart(Sender: TObject; const AWorkCountMax: Cardinal);
+    procedure OnServiceSearchStart(Sender: TObject; const AMax: Cardinal);
     procedure OnServiceSearchEnd(Sender: TObject);
     procedure OnServiceItemChanged(Sender: TObject);
     procedure OnUpdate(Sender: TObject; const ANewBuild: Cardinal);
@@ -233,7 +233,6 @@ begin
   begin
     OnChanged := OnContextItemChanged;
     OnSearchStart := OnContextSearchStart;
-    OnSearching := OnContextSearching;
     OnSearchFinish := OnContextSearchEnd;
   end;  //of with
 
@@ -274,25 +273,6 @@ begin
   lWindows.Caption := TOSVersion.Name +' '+ Win32CSDVersion;
   lWindows2.Caption := lWindows.Caption;
   lWindows3.Caption := lWindows.Caption;
-
-  // At least Windows 2000!
-  if not TOSVersion.Check(5) then
-  begin
-    FLang.ShowMessage(FLang.Format([64, 65], [TOSVersion.Name]), mtError);
-    mmExportList.Enabled := False;
-    mmRefresh.Enabled := False;
-    mmContext.Enabled := False;
-    mmDate.Enabled := False;
-    lwStartup.Enabled := False;
-    cbRunOnce.Enabled := False;
-    lwContext.Enabled := False;
-    cbContextExpert.Enabled := False;
-    eContextSearch.Enabled := False;
-    lwService.Enabled := False;
-    cbServiceExpert.Enabled := False;
-    eServiceSearch.Enabled := False;
-    Exit;
-  end;  //of if
 
   // Show "date of deactivation" only on Vista and later
   mmDate.Enabled := TOSVersion.Check(6);
@@ -516,28 +496,18 @@ end;
 
   Event that is called when search starts. }
 
-procedure TMain.OnContextSearchStart(Sender: TObject;
-  const AWorkCountMax: Cardinal);
+procedure TMain.OnContextSearchStart(Sender: TObject; const AMax: Cardinal);
 begin
   mmLang.Enabled := False;
   cbContextExpert.Enabled := False;
   lwContext.Cursor := crHourGlass;
 
-  if (AWorkCountMax > 0) then
+  // Show progress bar
+  if cbContextExpert.Checked then
   begin
     eContextSearch.Visible := False;
-    pbContextLoad.Visible := True;
-    pbContextLoad.Max := AWorkCountMax;
+    pbContextProgress.Visible := True;
   end;  //of begin
-end;
-
-{ private TMain.OnContextSearching
-
-  Event that is called when search is in progress. }
-
-procedure TMain.OnContextSearching(Sender: TObject; const AProgress: Cardinal);
-begin
-  pbContextLoad.Position := AProgress;
 end;
 
 { private TMain.OnContextSearchEnd
@@ -576,12 +546,16 @@ begin
   OnContextItemChanged(Sender);
 
   // Update some VCL
-  pbContextLoad.Visible := False;
-  pbContextLoad.Position := 0;
-  eContextSearch.Visible := True;
   mmLang.Enabled := True;
   cbContextExpert.Enabled := True;
   lwContext.Cursor := crDefault;
+
+  // Hide progress bar
+  if cbContextExpert.Checked then
+  begin
+    pbContextProgress.Visible := False;
+    eContextSearch.Visible := True;
+  end;  //of begin
 
   // Sort!
   lwContext.AlphaSort();
@@ -603,15 +577,22 @@ end;
 
 procedure TMain.OnExportListStart(Sender: TObject; const APageControlIndex: Cardinal);
 begin
-  eContextSearch.Visible := False;
-  pbContextLoad.Visible := True;
-  pbContextLoad.Style := pbstMarquee;
   PageControl.Pages[APageControlIndex].Cursor := crHourGlass;
 
   case APageControlIndex of
     0: lwStartup.Cursor := crHourGlass;
-    1: lwContext.Cursor := crHourGlass;
-    2: lwService.Cursor := crHourGlass;
+
+    1: begin
+         eContextSearch.Visible := False;
+         pbContextProgress.Visible := True;
+         lwContext.Cursor := crHourGlass;
+       end;
+
+    2: begin
+         eServiceSearch.Visible := False;
+         pbServiceProgress.Visible := True;
+         lwService.Cursor := crHourGlass;
+       end;
   end;  //of case
 end;
 
@@ -621,15 +602,22 @@ end;
 
 procedure TMain.OnExportListEnd(Sender: TObject; const APageControlIndex: Cardinal);
 begin
-  eContextSearch.Visible := True;
-  pbContextLoad.Visible := False;
-  pbContextLoad.Style := pbstNormal;
   PageControl.Pages[APageControlIndex].Cursor := crDefault;
 
   case APageControlIndex of
     0: lwStartup.Cursor := crDefault;
-    1: lwContext.Cursor := crDefault;
-    2: lwService.Cursor := crDefault;
+
+    1: begin
+         pbContextProgress.Visible := False;
+         eContextSearch.Visible := True;
+         lwContext.Cursor := crDefault;
+       end;
+
+    2: begin
+         pbServiceProgress.Visible := False;
+         eServiceSearch.Visible := True;
+         lwService.Cursor := crDefault;
+       end;
   end;  //of case
 end;
 
@@ -637,8 +625,7 @@ end;
 
   Event that is called when search starts. }
 
-procedure TMain.OnStartupSearchStart(Sender: TObject;
-  const AWorkCountMax: Cardinal);
+procedure TMain.OnStartupSearchStart(Sender: TObject; const AMax: Cardinal);
 begin
   mmLang.Enabled := False;
   mmImport.Enabled := False;
@@ -707,12 +694,18 @@ end;
 
   Event that is called when search starts. }
 
-procedure TMain.OnServiceSearchStart(Sender: TObject;
-  const AWorkCountMax: Cardinal);
+procedure TMain.OnServiceSearchStart(Sender: TObject; const AMax: Cardinal);
 begin
   mmLang.Enabled := False;
   cbServiceExpert.Enabled := False;
   lwService.Cursor := crHourGlass;
+
+  // Show progress bar
+  if cbServiceExpert.Checked then
+  begin
+    eServiceSearch.Visible := False;
+    pbServiceProgress.Visible := True;
+  end;  //of begin
 end;
 
 { private TMain.OnServiceSearchEnd
@@ -755,6 +748,13 @@ begin
   mmLang.Enabled := True;
   cbServiceExpert.Enabled := True;
   lwService.Cursor := crDefault;
+
+  // Hide progress bar
+  if cbServiceExpert.Checked then
+  begin
+    pbServiceProgress.Visible := False;
+    eServiceSearch.Visible := True;
+  end;  //of begin
 
   // Sort!
   lwService.AlphaSort();
