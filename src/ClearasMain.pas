@@ -2192,7 +2192,7 @@ begin
                List.CommaText := CM_LOCATIONS_DEFAULT +', .txt, .zip';
 
                // Show dialog for location selection
-               if not InputCombo(Self, FLang.GetString(105), FLang.GetString(90) +':',
+               if not InputCombo(FLang.GetString(105), FLang.GetString(90) +':',
                  List, Location, FLang.GetString(68), Extended, False) then
                  Exit;
 
