@@ -11,22 +11,19 @@ unit TaskSearchThread;
 interface
 
 uses
-  Classes, ActiveX, Variants, SyncObjs, Taskschd, Task, ClearasAPI;
+  SysUtils, Classes, ActiveX, Variants, SyncObjs, Taskschd, Task, ClearasAPI,
+  ClearasSearchThread;
 
 type
   { TTaskSearchThread }
-  TTaskSearchThread = class(TThread)
+  TTaskSearchThread = class(TClearasSearchThread)
   private
     FTaskList: TTaskList;
     FTaskService: ITaskService;
     FPath: string;
-    FIncludeHidden, FIncludeSubFolders, FWin64: Boolean;
-    FOnSearching, FOnStart: TSearchEvent;
-    FOnFinish: TNotifyEvent;
-    FLock: TCriticalSection;
-    procedure DoNotifyOnFinish();
-    procedure DoNotifyOnSearching();
-    procedure DoNotifyOnStart();
+    FIncludeHidden,
+    FIncludeSubFolders,
+    FWin64: Boolean;
     procedure LoadTasks(APath: string);
   protected
     procedure Execute; override;
@@ -36,9 +33,6 @@ type
     { external }
     property IncludeSubFolders: Boolean read FIncludeSubFolders write FIncludeSubFolders;
     property IncludeHidden: Boolean read FIncludeHidden write FIncludeHidden;
-    property OnFinish: TNotifyEvent read FOnFinish write FOnFinish;
-    property OnSearching: TSearchEvent read FOnSearching write FOnSearching;
-    property OnStart: TSearchEvent read FOnStart write FOnStart;
     property Path: string read FPath write FPath default '\';
     property Win64: Boolean read FWin64 write FWin64;
   end;
@@ -54,41 +48,9 @@ implementation
 constructor TTaskSearchThread.Create(ATaskList: TTaskList;
   ATaskService: ITaskService; ALock: TCriticalSection);
 begin
-  inherited Create(True);
-  FreeOnTerminate := True;
+  inherited Create(ALock);
   FTaskList := ATaskList;
   FTaskService := ATaskService;
-  FLock := ALock;
-end;
-
-{ private TTaskSearchThread.DoNotifyOnFinish
-
-  Synchronizable event method that is called when search has finished. }
-
-procedure TTaskSearchThread.DoNotifyOnFinish();
-begin
-  if Assigned(FOnFinish) then
-    FOnFinish(Self);
-end;
-
-{ private TTaskSearchThread.DoNotifyOnSearching
-
-  Synchronizable event method that is called when search is in progress. }
-
-procedure TTaskSearchThread.DoNotifyOnSearching();
-begin
-  if Assigned(FOnSearching) then
-    FOnSearching(Self, 1);
-end;
-
-{ private TTaskSearchThread.DoNotifyOnStart
-
-  Synchronizable event method that is called when search has started. }
-
-procedure TTaskSearchThread.DoNotifyOnStart();
-begin
-  if Assigned(FOnStart) then
-    FOnStart(Self, 1);
 end;
 
 { private TTaskList.LoadTasks
@@ -137,19 +99,31 @@ procedure TTaskSearchThread.Execute;
 begin
   FLock.Acquire;
 
-  // Clear data
-  FTaskList.Clear;
+  try
+    try
+      // Clear data
+      FTaskList.Clear;
 
-  // Notify start of search
-  Synchronize(DoNotifyOnStart);
-  Synchronize(DoNotifyOnSearching);
+      // Notify start of search
+      Synchronize(DoNotifyOnStart);
+      Synchronize(DoNotifyOnSearching);
 
-  // Start searching for tasks
-  LoadTasks(FPath);
+      // Start searching for tasks
+      LoadTasks(FPath);
 
-  // Notify end of search
-  Synchronize(DoNotifyOnFinish);
-  FLock.Release;
+    finally
+      // Notify end of search
+      Synchronize(DoNotifyOnFinish);
+      FLock.Release;
+    end;  //of try
+
+  except
+    on E: Exception do
+    begin
+      FErrorMessage := Format('%s: %s', [ToString(), E.Message]);
+      Synchronize(DoNotifyOnError);
+    end;
+  end;  //of try
 end;
 
 end.

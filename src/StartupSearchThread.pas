@@ -11,21 +11,15 @@ unit StartupSearchThread;
 interface
 
 uses
-  Windows, Classes, SyncObjs, ClearasAPI;
+  Windows, Classes, SysUtils, SyncObjs, ClearasSearchThread, ClearasAPI;
 
 type
   { TStartupSearchThread }
-  TStartupSearchThread = class(TThread)
+  TStartupSearchThread = class(TClearasSearchThread)
   private
     FStartupList: TStartupList;
-    FIncludeRunOnce, FWin64: Boolean;
-    FProgress, FProgressMax: Byte;
-    FOnSearching, FOnStart: TSearchEvent;
-    FOnFinish: TNotifyEvent;
-    FLock: TCriticalSection;
-    procedure DoNotifyOnFinish();
-    procedure DoNotifyOnSearching();
-    procedure DoNotifyOnStart();
+    FIncludeRunOnce,
+    FWin64: Boolean;
     procedure LoadEnabled(AAllUsers: Boolean); overload;
     procedure LoadEnabled(AHKey: HKEY; ARunOnce: Boolean = False;
       AWow64: Boolean = False); overload;
@@ -36,9 +30,6 @@ type
     constructor Create(AStartupList: TStartupList; ALock: TCriticalSection);
     { external }
     property IncludeRunOnce: Boolean read FIncludeRunOnce write FIncludeRunOnce;
-    property OnFinish: TNotifyEvent read FOnFinish write FOnFinish;
-    property OnSearching: TSearchEvent read FOnSearching write FOnSearching;
-    property OnStart: TSearchEvent read FOnStart write FOnStart;
     property Win64: Boolean read FWin64 write FWin64;
   end;
 
@@ -53,43 +44,8 @@ implementation
 constructor TStartupSearchThread.Create(AStartupList: TStartupList;
   ALock: TCriticalSection);
 begin
-  inherited Create(True);
-  FreeOnTerminate := True;
+  inherited Create(ALock);
   FStartupList := AStartupList;
-  FLock := ALock;
-end;
-
-{ private TStartupSearchThread.DoNotifyOnFinish
-
-  Synchronizable event method that is called when search has finished. }
-
-procedure TStartupSearchThread.DoNotifyOnFinish();
-begin
-  if Assigned(FOnFinish) then
-    FOnFinish(Self);
-end;
-
-{ private TStartupSearchThread.DoNotifyOnSearching
-
-  Synchronizable event method that is called when search is in progress. }
-
-procedure TStartupSearchThread.DoNotifyOnSearching();
-begin
-  if Assigned(FOnSearching) then
-  begin
-    Inc(FProgress);
-    FOnSearching(Self, FProgress);
-  end;  //of begin
-end;
-
-{ private TStartupSearchThread.DoNotifyOnStart
-
-  Synchronizable event method that is called when search has started. }
-
-procedure TStartupSearchThread.DoNotifyOnStart();
-begin
-  if Assigned(FOnStart) then
-    FOnStart(Self, FProgressMax);
 end;
 
 { public TStartupList.LoadEnabled
@@ -135,53 +91,64 @@ const
 begin
   FLock.Acquire;
 
-  // Clear data
-  FStartupList.Clear;
+  try
+    try
+      // Clear data
+      FStartupList.Clear;
 
-  // Calculate key count for events
-  if FWin64 then
-    FProgressMax := KEYS_COUNT_MAX
-  else
-    FProgressMax := KEYS_COUNT_MAX - 3;
+      // Calculate key count for events
+      if FWin64 then
+        FProgressMax := KEYS_COUNT_MAX
+      else
+        FProgressMax := KEYS_COUNT_MAX - 3;
 
-  if not FIncludeRunOnce then
-    FProgressMax := FProgressMax - 2;
+      if not FIncludeRunOnce then
+        FProgressMax := FProgressMax - 2;
 
-  // Notify start of search
-  Synchronize(DoNotifyOnStart);
-  FProgress := 0;
+      // Notify start of search
+      Synchronize(DoNotifyOnStart);
 
-  // Start loading...
-  LoadEnabled(HKEY_LOCAL_MACHINE);
+      // Start loading...
+      LoadEnabled(HKEY_LOCAL_MACHINE);
 
-  // Load WOW6432 Registry key only on 64bit Windows
-  if FWin64 then
-    LoadEnabled(HKEY_LOCAL_MACHINE, False, True);
+      // Load WOW6432 Registry key only on 64bit Windows
+      if FWin64 then
+        LoadEnabled(HKEY_LOCAL_MACHINE, False, True);
 
-  LoadEnabled(HKEY_CURRENT_USER);
+      LoadEnabled(HKEY_CURRENT_USER);
 
-  // Read RunOnce entries?
-  if FIncludeRunOnce then
-  begin
-    LoadEnabled(HKEY_LOCAL_MACHINE, True);
-    LoadEnabled(HKEY_CURRENT_USER, True);
+      // Read RunOnce entries?
+      if FIncludeRunOnce then
+      begin
+        LoadEnabled(HKEY_LOCAL_MACHINE, True);
+        LoadEnabled(HKEY_CURRENT_USER, True);
 
-    // Load WOW6432 Registry keys only on 64bit Windows
-    if FWin64 then
-      LoadEnabled(HKEY_LOCAL_MACHINE, True, True);
-  end;  //of begin
+        // Load WOW6432 Registry keys only on 64bit Windows
+        if FWin64 then
+          LoadEnabled(HKEY_LOCAL_MACHINE, True, True);
+      end;  //of begin
 
-  // Load WOW6432 Registry key only on 64bit Windows
-  LoadDisabled(False, FWin64);
-  LoadDisabled(True, FWin64);
+      // Load WOW6432 Registry key only on 64bit Windows
+      LoadDisabled(False, FWin64);
+      LoadDisabled(True, FWin64);
 
-  // Load startup user items
-  LoadEnabled(True);
-  LoadEnabled(False);
+      // Load startup user items
+      LoadEnabled(True);
+      LoadEnabled(False);
 
-  // Notify end of search
-  Synchronize(DoNotifyOnFinish);
-  FLock.Release;
+    finally
+      // Notify end of search
+      Synchronize(DoNotifyOnFinish);
+      FLock.Release;
+    end;  //of try
+
+  except
+    on E: Exception do
+    begin
+      FErrorMessage := Format('%s: %s', [ToString(), E.Message]);
+      Synchronize(DoNotifyOnError);
+    end;
+  end;  //of try
 end;
 
 end.

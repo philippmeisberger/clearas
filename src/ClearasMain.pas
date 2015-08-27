@@ -175,6 +175,7 @@ type
     procedure OnContextItemChanged(Sender: TObject);
     procedure OnExportListStart(Sender: TObject; const APageControlIndex: Cardinal);
     procedure OnExportListEnd(Sender: TObject; const APageControlIndex: Cardinal);
+    procedure OnSearchError(Sender: TObject; AErrorMessage: string);
     procedure OnStartupSearchStart(Sender: TObject; const AMax: Cardinal);
     procedure OnStartupSearchEnd(Sender: TObject);
     procedure OnStartupItemChanged(Sender: TObject);
@@ -222,8 +223,9 @@ begin
   with FStartup do
   begin
     OnChanged := OnStartupItemChanged;
-    OnSearchStart := OnStartupSearchStart;
+    OnSearchError := Self.OnSearchError;
     OnSearchFinish := OnStartupSearchEnd;
+    OnSearchStart := OnStartupSearchStart;
   end;  //of with
 
   FContext := TContextList.Create;
@@ -232,8 +234,9 @@ begin
   with FContext do
   begin
     OnChanged := OnContextItemChanged;
-    OnSearchStart := OnContextSearchStart;
+    OnSearchError := Self.OnSearchError;
     OnSearchFinish := OnContextSearchEnd;
+    OnSearchStart := OnContextSearchStart;
   end;  //of with
 
   FService := TServiceList.Create;
@@ -241,9 +244,10 @@ begin
   // Link search events
   with FService do
   begin
-    OnSearchStart := OnServiceSearchStart;
-    OnSearchFinish := OnServiceSearchEnd;
     OnChanged := OnServiceItemChanged;
+    OnSearchError := Self.OnSearchError;
+    OnSearchFinish := OnServiceSearchEnd;
+    OnSearchStart := OnServiceSearchStart;
   end;  //of with
 
   // Set title
@@ -758,6 +762,15 @@ begin
 
   // Sort!
   lwService.AlphaSort();
+end;
+
+{ private TMain.OnSearchError
+
+  Event method that is called when search thread has failed. }
+
+procedure TMain.OnSearchError(Sender: TObject; AErrorMessage: string);
+begin
+  FLang.ShowException(FLang.GetString([77, 18]), AErrorMessage);
 end;
 
 { private TMain.OnServiceItemChanged

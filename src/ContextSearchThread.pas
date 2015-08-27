@@ -11,25 +11,18 @@ unit ContextSearchThread;
 interface
 
 uses
-  Windows, Classes, Registry, SyncObjs, ClearasAPI;
+  Windows, Classes, Registry, SyncObjs, ClearasSearchThread, ClearasAPI;
 
 type
   { TContextSearchThread }
-  TContextSearchThread = class(TThread)
+  TContextSearchThread = class(TClearasSearchThread)
   private
     FReg: TRegistry;
     FLocations: TStringList;
-    FProgress, FProgressMax: Cardinal;
     FContextList: TContextList;
-    FOnStart, FOnSearching: TSearchEvent;
-    FOnFinish: TNotifyEvent;
-    FLock: TCriticalSection;
     FWin64: Boolean;
     FRoot: string;
     FRootKey: HKEY;
-    procedure DoNotifyOnFinish();
-    procedure DoNotifyOnStart();
-    procedure DoNotifyOnSearching();
     procedure LoadAllContextMenus();
     procedure LoadContextMenus();
     procedure SearchSubkey(const AKeyName: string);
@@ -40,9 +33,6 @@ type
     destructor Destroy(); override;
     { external }
     property Locations: TStringList read FLocations;
-    property OnSearching: TSearchEvent read FOnSearching write FOnSearching;
-    property OnStart: TSearchEvent read FOnStart write FOnStart;
-    property OnFinish: TNotifyEvent read FOnFinish write FOnFinish;
     property Root: string read FRoot write FRoot;
     property RootKey: HKEY read FRootKey write FRootKey;
     property Win64: Boolean read FWin64 write FWin64;
@@ -61,10 +51,8 @@ uses StrUtils, SysUtils;
 constructor TContextSearchThread.Create(AContextList: TContextList;
   ALock: TCriticalSection);
 begin
-  inherited Create(True);
-  FreeOnTerminate := True;
+  inherited Create(ALock);
   FContextList := AContextList;
-  FLock := ALock;
   FLocations := TStringList.Create;
 
   // Init Registry access with read-only
@@ -83,39 +71,6 @@ begin
   FReg.Free;
   FLocations.Free;
   inherited Destroy;
-end;
-
-{ private TContextSearchThread.DoNotifyOnFinish
-
-  Synchronizable event method that is called when search has finished. }
-
-procedure TContextSearchThread.DoNotifyOnFinish();
-begin
-  if Assigned(FOnFinish) then
-    FOnFinish(Self);
-end;
-
-{ private TContextSearchThread.DoNotifyOnSearching
-
-  Synchronizable event method that is called when search is in progress. }
-
-procedure TContextSearchThread.DoNotifyOnSearching();
-begin
-  if Assigned(FOnSearching) then
-  begin
-    Inc(FProgress);
-    FOnSearching(Self, FProgress);
-  end;  //of begin
-end;
-
-{ private TContextSearchThread.DoNotifyOnStart
-
-  Synchronizable event method that is called when search has started. }
-
-procedure TContextSearchThread.DoNotifyOnStart();
-begin
-  if Assigned(FOnStart) then
-    FOnStart(Self, FProgressMax);
 end;
 
 { private TContextSearchThread.SearchSubkey
@@ -194,10 +149,8 @@ begin
     FReg.GetKeyNames(Keys);
     FReg.CloseKey();
 
-    FProgressMax := Keys.Count;
-    FProgress := 0;
-
     // Notify start of search
+    FProgressMax := Keys.Count;
     Synchronize(DoNotifyOnStart);
 
     for i := 0 to Keys.Count - 1 do
@@ -224,10 +177,8 @@ var
   i: Integer;
 
 begin
-  FProgressMax := FLocations.Count;
-  FProgress := 0;
-
   // Notify start of search
+  FProgressMax := FLocations.Count;
   Synchronize(DoNotifyOnStart);
 
   // Search ...
@@ -246,18 +197,30 @@ procedure TContextSearchThread.Execute;
 begin
   FLock.Acquire;
 
-  // Clear data
-  FContextList.Clear;
+  try
+    try
+      // Clear data
+      FContextList.Clear;
 
-  // Load specific menus or search for all?
-  if (FLocations.Count > 0) then
-    LoadContextMenus()
-  else
-    LoadAllContextMenus();
+      // Load specific menus or search for all?
+      if (FLocations.Count > 0) then
+        LoadContextMenus()
+      else
+        LoadAllContextMenus();
 
-  // Notify end of search
-  Synchronize(DoNotifyOnFinish);
-  FLock.Release;
+    finally
+      // Notify end of search
+      Synchronize(DoNotifyOnFinish);
+      FLock.Release;
+    end;  //of try
+
+  except
+    on E: Exception do
+    begin
+      FErrorMessage := Format('%s: %s', [ToString(), E.Message]);
+      Synchronize(DoNotifyOnError);
+    end;
+  end;  //of try
 end;
 
 end.

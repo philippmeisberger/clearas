@@ -150,13 +150,16 @@ type
 
   { Search event }
   TSearchEvent = procedure(Sender: TObject; const ACount: Cardinal) of object;
+  TSearchErrorEvent = procedure(Sender: TObject; AErrorMessage: string) of object;
 
   { TRootList }
   TRootList = class(TObjectList)
   private
     FItem: TRootItem;
-    FOnSearchStart, FOnSearching: TSearchEvent;
+    FOnSearchStart,
+    FOnSearching: TSearchEvent;
     FOnSearchFinish: TNotifyEvent;
+    FOnSearchError: TSearchErrorEvent;
     FOnChanged: TNotifyEvent;
   protected
     FActCount: Word;
@@ -185,8 +188,9 @@ type
     property Items[AIndex: Word]: TRootItem read RootItemAt; default;
     property OnChanged: TNotifyEvent read FOnChanged write FOnChanged;
     property OnSearching: TSearchEvent read FOnSearching write FOnSearching;
-    property OnSearchStart: TSearchEvent read FOnSearchStart write FOnSearchStart;
+    property OnSearchError: TSearchErrorEvent read FOnSearchError write FOnSearchError;
     property OnSearchFinish: TNotifyEvent read FOnSearchFinish write FOnSearchFinish;
+    property OnSearchStart: TSearchEvent read FOnSearchStart write FOnSearchStart;
     property Selected: TRootItem read FItem write FItem;
   end;
 
@@ -2615,9 +2619,10 @@ begin
   begin
     Win64 := (TOSVersion.Architecture = arIntelX64);
     IncludeRunOnce := AIncludeRunOnce;
-    OnStart := FOnSearchStart;
-    OnSearching := FOnSearching;
-    OnFinish := FOnSearchFinish;
+    OnError := OnSearchError;
+    OnFinish := OnSearchFinish;
+    OnStart := OnSearchStart;
+    OnSearching := OnSearching;
     Start;
   end;  // of with
 end;
@@ -3611,9 +3616,10 @@ begin
   begin
     Locations.CommaText := ALocationRootCommaList;
     Win64 := (TOSVersion.Architecture = arIntelX64);
-    OnStart := FOnSearchStart;
-    OnSearching := FOnSearching;
-    OnFinish := FOnSearchFinish;
+    OnError := OnSearchError;
+    OnFinish := OnSearchFinish;
+    OnStart := OnSearchStart;
+    OnSearching := OnSearching;
     Start;
   end;  // of with
 end;
@@ -3923,10 +3929,6 @@ begin
   inherited Create;
   FManager := OpenSCManager(nil, SERVICES_ACTIVE_DATABASE,
     SC_MANAGER_ENUMERATE_SERVICE or SC_MANAGER_CREATE_SERVICE);
-
-  // Error occured?
-  if (FManager = 0) then
-    raise EServiceException.Create(SysErrorMessage(GetLastError()));
 end;
 
 { public TServiceList.Destroy
@@ -4156,7 +4158,7 @@ function TServiceList.LoadService(AName: string; AService: SC_HANDLE;
   AIncludeDemand: Boolean = False): Integer;
 var
   ServiceConfig: LPQUERY_SERVICE_CONFIG;
-  BytesNeeded, LastError: DWORD;
+  BytesNeeded, LastError: Cardinal;
   ServiceStart: TServiceStart;
   Reg: TRegistry;
 
@@ -4245,9 +4247,10 @@ begin
   with SearchThread do
   begin
     IncludeShared := AIncludeShared;
+    OnError := OnSearchError;
+    OnFinish := OnSearchFinish;
     OnStart := OnSearchStart;
     OnSearching := OnSearching;
-    OnFinish := OnSearchFinish;
     Start;
   end;  //of with
 end;

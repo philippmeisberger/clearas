@@ -11,22 +11,16 @@ unit ServiceSearchThread;
 interface
 
 uses
-  Windows, Classes, SysUtils, SyncObjs, WinSvc, ClearasAPI;
+  Windows, Classes, SysUtils, SyncObjs, WinSvc, ClearasSearchThread, ClearasAPI;
 
 type
   { TServiceSearchThread }
-  TServiceSearchThread = class(TThread)
+  TServiceSearchThread = class(TClearasSearchThread)
   private
     FServiceList: TServiceList;
     FManager: SC_HANDLE;
-    FProgress, FProgressMax: Word;
-    FOnSearching, FOnStart: TSearchEvent;
     FOnFinish: TNotifyEvent;
-    FLock: TCriticalSection;
     FIncludeShared: Boolean;
-    procedure DoNotifyOnFinish();
-    procedure DoNotifyOnSearching();
-    procedure DoNotifyOnStart();
   protected
     procedure Execute; override;
   public
@@ -34,9 +28,6 @@ type
       ALock: TCriticalSection);
     { external }
     property IncludeShared: Boolean read FIncludeShared write FIncludeShared;
-    property OnFinish: TNotifyEvent read FOnFinish write FOnFinish;
-    property OnSearching: TSearchEvent read FOnSearching write FOnSearching;
-    property OnStart: TSearchEvent read FOnStart write FOnStart;
   end;
 
 implementation
@@ -50,44 +41,9 @@ implementation
 constructor TServiceSearchThread.Create(AServiceList: TServiceList;
   AManager: SC_HANDLE; ALock: TCriticalSection);
 begin
-  inherited Create(True);
-  FreeOnTerminate := True;
+  inherited Create(ALock);
   FServiceList := AServiceList;
   FManager := AManager;
-  FLock := ALock;
-end;
-
-{ private TServiceSearchThread.DoNotifyOnFinish
-
-  Synchronizable event method that is called when search has finished. }
-
-procedure TServiceSearchThread.DoNotifyOnFinish();
-begin
-  if Assigned(FOnFinish) then
-    FOnFinish(Self);
-end;
-
-{ private TServiceSearchThread.DoNotifyOnSearching
-
-  Synchronizable event method that is called when search is in progress. }
-
-procedure TServiceSearchThread.DoNotifyOnSearching();
-begin
-  if Assigned(FOnSearching) then
-  begin
-    Inc(FProgress);
-    FOnSearching(Self, FProgress);
-  end;  //of begin
-end;
-
-{ private TServiceSearchThread.DoNotifyOnStart
-
-  Synchronizable event method that is called when search has started. }
-
-procedure TServiceSearchThread.DoNotifyOnStart();
-begin
-  if Assigned(FOnStart) then
-    FOnStart(Self, FProgressMax);
 end;
 
 { protected TServiceSearchThread.Execute
@@ -104,63 +60,72 @@ var
 begin
   FLock.Acquire;
 
-  // Clear data
-  FServiceList.Clear;
-  ServicesReturned := 0;
-  ResumeHandle := 0;
-  Services := nil;
-
-  // Include services that are shared with other processes?
-  if FIncludeShared then
-    ServiceType := SERVICE_WIN32
-  else
-    ServiceType := SERVICE_WIN32_OWN_PROCESS;
-
-  // Determine the required size for buffer
-  EnumServicesStatus(FManager, ServiceType, SERVICE_STATE_ALL, Services^, 0,
-    BytesNeeded, ServicesReturned, ResumeHandle);
-
-  LastError := GetLastError();
-
-  // ERROR_MORE_DATA will be fired normally
-  if (LastError <> ERROR_MORE_DATA) then
-    raise EServiceException.Create(SysErrorMessage(LastError));
-
-  GetMem(Services, BytesNeeded);
-
   try
+    // Clear data
+    FServiceList.Clear;
     ServicesReturned := 0;
     ResumeHandle := 0;
-    ServicesCopy := Services;
+    Services := nil;
 
-    // Read all services matching
-    if not EnumServicesStatus(FManager, ServiceType, SERVICE_STATE_ALL,
-      Services^, BytesNeeded, BytesNeeded, ServicesReturned, ResumeHandle) then
-      raise EServiceException.Create(SysErrorMessage(GetLastError()));
+    // Include services that are shared with other processes?
+    if FIncludeShared then
+      ServiceType := SERVICE_WIN32
+    else
+      ServiceType := SERVICE_WIN32_OWN_PROCESS;
 
-    // Notify start of search
-    FProgressMax := ServicesReturned;
-    Synchronize(DoNotifyOnStart);
+    // Determine the required size for buffer
+    EnumServicesStatus(FManager, ServiceType, SERVICE_STATE_ALL, Services^, 0,
+      BytesNeeded, ServicesReturned, ResumeHandle);
 
-    // Add services to list
-    for i := 0 to ServicesReturned - 1 do
+    LastError := GetLastError();
+
+    // ERROR_MORE_DATA will be fired normally
+    if (LastError <> ERROR_MORE_DATA) then
+      raise EServiceException.Create(SysErrorMessage(LastError));
+
+    GetMem(Services, BytesNeeded);
+
+    try
+      ServicesReturned := 0;
+      ResumeHandle := 0;
+      ServicesCopy := Services;
+
+      // Read all services matching
+      if not EnumServicesStatus(FManager, ServiceType, SERVICE_STATE_ALL,
+        Services^, BytesNeeded, BytesNeeded, ServicesReturned, ResumeHandle) then
+        raise EServiceException.Create(SysErrorMessage(GetLastError()));
+
+      // Notify start of search
+      FProgressMax := ServicesReturned;
+      Synchronize(DoNotifyOnStart);
+
+      // Add services to list
+      for i := 0 to ServicesReturned - 1 do
+      begin
+        Synchronize(DoNotifyOnSearching);
+        Service := OpenService(FManager, ServicesCopy^.lpServiceName, SERVICE_QUERY_CONFIG);
+
+        // Skip corrupted service
+        if (Service <> 0) then
+          FServiceList.LoadService(ServicesCopy^.lpServiceName, Service, FIncludeShared);
+
+        Inc(ServicesCopy);
+      end;  //of for
+
+    finally
+      FreeMem(Services);
+
+      // Notify end of search
+      Synchronize(DoNotifyOnFinish);
+      FLock.Release;
+    end;  //of try
+
+  except
+    on E: Exception do
     begin
-      Synchronize(DoNotifyOnSearching);
-      Service := OpenService(FManager, ServicesCopy^.lpServiceName, SERVICE_QUERY_CONFIG);
-
-      // Skip corrupted service
-      if (Service <> 0) then
-        FServiceList.LoadService(ServicesCopy^.lpServiceName, Service, FIncludeShared);
-
-      Inc(ServicesCopy);
-    end;  //of for
-
-  finally
-    FreeMem(Services);
-
-    // Notify end of search
-    Synchronize(DoNotifyOnFinish);
-    FLock.Release;
+      FErrorMessage := Format('%s: %s', [ToString(), E.Message]);
+      Synchronize(DoNotifyOnError);
+    end;
   end;  //of try
 end;
 
