@@ -1,0 +1,5 @@
+Clearas v4.2
+
+- Kontextmenü Bild ändern
+- Kontextmenü Beschriftung ändern
+- Taskscheduler
