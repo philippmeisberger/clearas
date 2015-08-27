@@ -2200,6 +2200,12 @@ begin
                if not FContext.Add(OpenDialog.FileName, Args, Location, Name, Extended) then
                  raise EWarning.Create(FLang.Format(41, [OpenDialog.FileName]));
 
+               // User choice exists for selected file extension?
+               if (FContext.Last as TContextListItem).UserChoiceExists(Location) then
+                 // Delete user choice?
+                 if (FLang.ShowMessage(111, [112, 113], mtConfirmation) = ID_YES) then
+                   (FContext.Last as TContextListItem).DeleteUserChoice(Location);
+
                // Update TListView
                LoadContextMenuItems(False);
 

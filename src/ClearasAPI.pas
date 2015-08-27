@@ -31,6 +31,7 @@ const
   KEY_SERVICE_ENABLED       = 'SYSTEM\CurrentControlSet\services\';
 
   { Context menu Registry subkeys + values}
+  KEY_USERCHOICE            = 'Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\%s\UserChoice';
   CM_SHELL                  = 'Shell';
   CM_SHELL_DISABLED         = 'LegacyDisable';
   CM_SHELLEX                = 'ShellEx';
@@ -297,6 +298,8 @@ type
     function GetRootKey(): HKEY; override;
   public
     function Delete(): Boolean; override;
+    function DeleteUserChoice(AFileExtension: string): Boolean;
+    function UserChoiceExists(AFileExtension: string): Boolean;
     { external }
     property Caption: string read FCaption write FCaption;
     property Location: string read GetKeyPath;
@@ -2665,6 +2668,30 @@ begin
   Result := True;
 end;
 
+{ public TContextListItem.DeleteUserChoice
+
+  Deletes a user defined program association and returns True if successful. }
+
+function TContextListItem.DeleteUserChoice(AFileExtension: string): Boolean;
+begin
+  Result := (RegDeleteKey(HKEY_CURRENT_USER, PChar(Format(KEY_USERCHOICE,
+    [AFileExtension]))) = ERROR_SUCCESS);
+end;
+
+{ public TContextListItem.UserChoiceExists
+
+  Returns True if a user defined program association exists. }
+
+function TContextListItem.UserChoiceExists(AFileExtension: string): Boolean;
+var
+  UserChoice: string;
+
+begin
+  UserChoice := GetRegStringValue(Format(KEY_USERCHOICE, [AFileExtension]),
+    'ProgID', HKEY_CURRENT_USER);
+  Result := AnsiStartsText('Applications\', UserChoice);
+end;
+
 
 { TShellItem }
 
@@ -3213,7 +3240,7 @@ end;
 function TContextList.Add(AFileName, AArguments, ALocationRoot, ACaption: string;
   AExtended: Boolean = False): Boolean;
 var
-  Name, Ext, FullPath, LocationRoot, FileType, KeyPath: string;
+  Name, Ext, FullPath, LocationRoot, FileType, KeyPath, UserChoice: string;
   Reg: TRegistry;
 
 begin
@@ -3270,12 +3297,12 @@ begin
           FileType := Copy(LocationRoot, 2, Length(LocationRoot)) +'file';
           Reg.WriteString('', FileType);
         end;  //of begin
-
-        LocationRoot := FileType;
-      end;  //of begin
+      end  //of begin
+      else
+        FileType := LocationRoot;
 
       Reg.CloseKey();
-      KeyPath := LocationRoot +'\'+ CM_SHELL +'\'+ Name;
+      KeyPath := FileType +'\'+ CM_SHELL +'\'+ Name;
 
       // Adds new context item to Registry
       if not Reg.OpenKey(KeyPath, True) then
@@ -3299,7 +3326,7 @@ begin
       Reg.WriteString('', FullPath);
 
       // Adds item to list
-      AddShellItem(Name, LocationRoot, FullPath, ACaption, True, False);
+      AddShellItem(Name, FileType, FullPath, ACaption, True, False);
       Result := True;
 
     finally

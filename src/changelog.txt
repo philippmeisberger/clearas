@@ -4,10 +4,11 @@ Ein Open-Source Projekt von PM Code Works
 Changelog
 =========
 
-Version 4.1  [26.08.15]
+Version 4.1  [27.08.15]
 
 - Änderungen auf der Seite "Kontextmenü":
   - Kontextmenü-Einträge "ShellNew", die sich unter "Neu" befinden, werden nun gefunden
+  - Falls Benutzer-definiertes Programm für Dateityp existiert, erscheint Meldung, nachdem neuer Eintrag hinzugefügt wurde
   - "Kontextmenü hinzufügen" verbessert:
     - Es können beliebige Datei-Typen bzw. Dateiendungen benutzt werden
     - Einträge können versteckt werden (nur durch Shift + Rechtsklick sichtbar)
@@ -16,10 +17,10 @@ Version 4.1  [26.08.15]
     - Benutzung ausschließlich als Ladeindikator
 - ProgressBar zu Diensten hinzugefügt
 - "Symbole anzeigen" im Menü unter Autostart entfernt
-- "Abbrechen" während des Hinzufügens von Einträgen funktioniert nun korrekt
 - Buttons zur "Quick-Search" hinzugefügt
 - Listen können nun auf- und absteigend sortiert werden
-- Bug fixes: 
+- Bug fixes:
+  - "Abbrechen" während des Hinzufügens von Einträgen funktioniert nun korrekt 
   - Nachdem schwerwiegener Fehler aufgetreten ist, können die Listen trotzdem aktualisiert werden
   - Nachdem neuer Dienst hinzugefügt wurde, wird der korrekte Pfad (mit Argumenten) angezeigt
 - Icon erneuert: http://de.divinity.wikia.com/wiki/Datei:Icon_Besen.svg.png

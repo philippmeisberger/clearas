@@ -111,6 +111,9 @@ BEGIN
   208, "Anwendung *.exe|*.exe|Batch-Datei *.bat|*.bat"
   209, "STARTUP-Dateien *%s|*%s|COMMONSTARTUP-Dateien *%s|*%s"
   210, "Anwendung \"%s\" existiert bereits!"
+  211, "Es existiert ein Benutzer-definiertes Programm für diesen Dateityp! "
+  212, "Solange diese Auswahl existiert, ist der aktuelle Eintrag nicht sichtbar. "
+  213, "Möchten Sie die Auswahl zurücksetzen?"
 END
 
 STRINGTABLE VERSION 1033 // english
@@ -226,6 +229,9 @@ BEGIN
   408, "Application *.exe|*.exe|Batch file *.bat|*.bat"
   409, "STARTUP-files *%s|*%s|COMMONSTARTUP-files *%s|*%s"
   410, "Application \"%s\" already exists!"
+  411, "A user defined program choice exists for this file type! "
+  412, "Item will not be visible until user choice has been deleted. "
+  413, "Reset user choice now?"
 END
 
 STRINGTABLE VERSION 1036 // français
@@ -341,4 +347,7 @@ BEGIN
   608, "Application *.exe|*.exe|Fichier batch *.bat|*.bat"
   609, "Fichiers STARTUP *%s|*%s|Fichiers COMMONSTARTUP-files *%s|*%s"
   610, "L'application \"%s\" existe déjà!"
+  611, "Il existe un choix défini par l'utilisateur du programme pour ce type de fichier"
+  612, "Point ne sera pas visible jusqu'au choix de l'utilisateur a été supprimé. "
+  613, "Réinitialiser choix de l'utilisateur maintenant?"
 END
