@@ -11,8 +11,8 @@ unit TaskSearchThread;
 interface
 
 uses
-  SysUtils, Classes, ActiveX, Variants, SyncObjs, Taskschd, Task, ClearasAPI,
-  ClearasSearchThread;
+  SysUtils, ActiveX, Variants, SyncObjs, Taskschd, ClearasSearchThread,
+  ClearasAPI;
 
 type
   { TTaskSearchThread }
@@ -33,7 +33,7 @@ type
     { external }
     property IncludeSubFolders: Boolean read FIncludeSubFolders write FIncludeSubFolders;
     property IncludeHidden: Boolean read FIncludeHidden write FIncludeHidden;
-    property Path: string read FPath write FPath default '\';
+    property Path: string read FPath write FPath;
     property Win64: Boolean read FWin64 write FWin64;
   end;
 
@@ -51,9 +51,10 @@ begin
   inherited Create(ALock);
   FTaskList := ATaskList;
   FTaskService := ATaskService;
+  FPath := '\';
 end;
 
-{ private TTaskList.LoadTasks
+{ private TTaskSearchThread.LoadTasks
 
   Searches for task items in specific folder and adds them to the list. }
 

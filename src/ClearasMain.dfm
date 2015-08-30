@@ -546,6 +546,175 @@ object Main: TMain
         OnRightButtonClick = eContextSearchRightButtonClick
       end
     end
+    object tsTasks: TTabSheet
+      Caption = 'Tasks'
+      ImageIndex = 3
+      DesignSize = (
+        535
+        284)
+      object lCopy4: TLabel
+        Left = 211
+        Top = 262
+        Width = 112
+        Height = 14
+        Hint = 'Zur Website'
+        Anchors = [akBottom]
+        Caption = #169' P.Meisberger 2015'
+        Font.Charset = ANSI_CHARSET
+        Font.Color = clBlack
+        Font.Height = -11
+        Font.Name = 'Arial'
+        Font.Style = [fsBold]
+        ParentFont = False
+        ParentShowHint = False
+        ShowHint = True
+        OnClick = lCopy1Click
+        OnMouseEnter = lCopy1MouseEnter
+        OnMouseLeave = lCopy1MouseLeave
+      end
+      object lTasks: TLabel
+        Left = 21
+        Top = 32
+        Width = 309
+        Height = 14
+        Caption = 'Eintr'#228'ge dieser Liste werden beim Start von Windows gestartet.'
+      end
+      object Label3: TLabel
+        Left = 506
+        Top = 4
+        Width = 21
+        Height = 14
+        Alignment = taRightJustify
+        Anchors = [akTop, akRight]
+        Caption = 'v4.1'
+      end
+      object lWin4: TLabel
+        Left = 21
+        Top = 4
+        Width = 46
+        Height = 14
+        Caption = 'Windows'
+      end
+      object bCloseTasks: TButton
+        Left = 428
+        Top = 216
+        Width = 91
+        Height = 33
+        Anchors = [akTop, akRight]
+        Caption = 'Beenden'
+        TabOrder = 0
+        OnClick = bCloseStartupClick
+      end
+      object bDeleteTaskItem: TButton
+        Left = 428
+        Top = 176
+        Width = 91
+        Height = 33
+        Anchors = [akTop, akRight]
+        Caption = 'l'#246'schen'
+        Enabled = False
+        TabOrder = 1
+        OnClick = bDeleteServiceItemClick
+      end
+      object bDisableTaskitem: TButton
+        Left = 428
+        Top = 96
+        Width = 91
+        Height = 33
+        Anchors = [akTop, akRight]
+        Caption = 'deaktivieren'
+        Enabled = False
+        TabOrder = 2
+        OnClick = bDisableServiceItemClick
+      end
+      object bEnableTaskItem: TButton
+        Left = 428
+        Top = 56
+        Width = 91
+        Height = 33
+        Anchors = [akTop, akRight]
+        Caption = 'aktivieren'
+        Enabled = False
+        TabOrder = 3
+        OnClick = bEnableServiceItemClick
+      end
+      object bExportTaskItem: TButton
+        Left = 428
+        Top = 136
+        Width = 91
+        Height = 33
+        Anchors = [akTop, akRight]
+        Caption = 'exportieren'
+        Enabled = False
+        TabOrder = 4
+        OnClick = bExportServiceItemClick
+      end
+      object cbTaskExpert: TCheckBox
+        Left = 414
+        Top = 258
+        Width = 105
+        Height = 17
+        Anchors = [akRight, akBottom]
+        Caption = 'Expertenmodus'
+        TabOrder = 5
+        OnClick = mmRefreshClick
+      end
+      object eTaskSearch: TButtonedEdit
+        Left = 21
+        Top = 254
+        Width = 148
+        Height = 22
+        Anchors = [akLeft, akBottom]
+        Images = QuickSearchIconList
+        RightButton.DisabledImageIndex = 0
+        RightButton.HotImageIndex = 0
+        RightButton.ImageIndex = 0
+        RightButton.PressedImageIndex = 0
+        RightButton.Visible = True
+        TabOrder = 6
+        TextHint = 'Suchen ...'
+        OnChange = eContextSearchChange
+        OnRightButtonClick = eContextSearchRightButtonClick
+      end
+      object lwTasks: TListView
+        Left = 21
+        Top = 56
+        Width = 396
+        Height = 193
+        Anchors = [akLeft, akTop, akRight, akBottom]
+        Columns = <
+          item
+            Caption = 'Aktiviert'
+            MaxWidth = 53
+            MinWidth = 53
+            Width = 53
+          end
+          item
+            Caption = 'Task (0/0)'
+            Width = 125
+          end
+          item
+            Caption = 'Datei'
+            Width = 122
+          end
+          item
+            Caption = 'Typ'
+            MaxWidth = 75
+            MinWidth = 75
+            Width = 75
+          end>
+        HideSelection = False
+        ReadOnly = True
+        RowSelect = True
+        PopupMenu = PopupMenu
+        TabOrder = 7
+        ViewStyle = vsReport
+        OnColumnClick = ListViewColumnClick
+        OnCompare = ListViewCompare
+        OnKeyPress = ListViewKeyPress
+        OnSelectItem = lwTasksSelectItem
+      end
+    end
   end
   object PopupMenu: TPopupMenu
     AutoPopup = False
@@ -698,7 +867,7 @@ object Main: TMain
   object QuickSearchIconList: TImageList
     Left = 256
     Bitmap = {
-      494C0101030008000C0110001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C010103000800180110001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000001000000001002000000000000010
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000

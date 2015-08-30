@@ -103,6 +103,19 @@ type
     eContextSearch: TButtonedEdit;
     eServiceSearch: TButtonedEdit;
     pbServiceProgress: TProgressBar;
+    tsTasks: TTabSheet;
+    bCloseTasks: TButton;
+    bDeleteTaskItem: TButton;
+    bDisableTaskitem: TButton;
+    bEnableTaskItem: TButton;
+    bExportTaskItem: TButton;
+    cbTaskExpert: TCheckBox;
+    eTaskSearch: TButtonedEdit;
+    lCopy4: TLabel;
+    lTasks: TLabel;
+    Label3: TLabel;
+    lWin4: TLabel;
+    lwTasks: TListView;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -158,10 +171,13 @@ type
     procedure lCopy1MouseEnter(Sender: TObject);
     procedure lCopy1Click(Sender: TObject);
     procedure eContextSearchRightButtonClick(Sender: TObject);
+    procedure lwTasksSelectItem(Sender: TObject; Item: TListItem;
+      Selected: Boolean);
   private
     FStartup: TStartupList;
     FContext: TContextList;
     FService: TServiceList;
+    FTasks: TTaskList;
     FLang: TLanguageFile;
     FUpdateCheck: TUpdateCheck;
     function CreateStartupUserBackup(): Boolean;
@@ -170,6 +186,7 @@ type
     procedure LoadContextMenuItems(ATotalRefresh: Boolean = True);
     procedure LoadStartupItems(ATotalRefresh: Boolean = True);
     procedure LoadServiceItems(ATotalRefresh: Boolean = True);
+    procedure LoadTaskItems(ATotalRefresh: Boolean = True);
     procedure OnContextSearchStart(Sender: TObject; const AMax: Cardinal);
     procedure OnContextSearchEnd(Sender: TObject);
     procedure OnContextItemChanged(Sender: TObject);
@@ -182,6 +199,9 @@ type
     procedure OnServiceSearchStart(Sender: TObject; const AMax: Cardinal);
     procedure OnServiceSearchEnd(Sender: TObject);
     procedure OnServiceItemChanged(Sender: TObject);
+    procedure OnTaskSearchStart(Sender: TObject; const AMax: Cardinal);
+    procedure OnTaskSearchEnd(Sender: TObject);
+    procedure OnTaskItemChanged(Sender: TObject);
     procedure OnUpdate(Sender: TObject; const ANewBuild: Cardinal);
     procedure SetLanguage(Sender: TObject);
     function ShowRegistryExportDialog(): Boolean;
@@ -248,6 +268,17 @@ begin
     OnSearchError := Self.OnSearchError;
     OnSearchFinish := OnServiceSearchEnd;
     OnSearchStart := OnServiceSearchStart;
+  end;  //of with
+
+  FTasks := TTaskList.Create;
+
+  // Link search events
+  with FTasks do
+  begin
+    OnChanged := OnTaskItemChanged;
+    OnSearchError := Self.OnSearchError;
+    OnSearchFinish := OnTaskSearchEnd;
+    OnSearchStart := OnTaskSearchStart;
   end;  //of with
 
   // Set title
@@ -496,6 +527,29 @@ begin
     OnServiceSearchEnd(Self);
 end;
 
+{ private TMain.LoadTaskItems
+
+  Loads task items and brings them into a TListView. }
+
+procedure TMain.LoadTaskItems(ATotalRefresh: Boolean = True);
+begin
+  // Clear all visual data
+  lwTasks.Clear;
+
+  // Disable VCL
+  bDisableTaskitem.Enabled := False;
+  bEnableTaskItem.Enabled := False;
+  bDeleteTaskItem.Enabled := False;
+  bExportTaskItem.Enabled := False;
+
+  // Make a total refresh or just use cached items
+  if ATotalRefresh then
+    // Load tasks (threaded!)
+    FTasks.LoadTasks('\', cbTaskExpert.Checked, cbTaskExpert.Checked)
+  else
+    OnTaskSearchEnd(Self);
+end;
+
 { private TMain.OnContextSearchStart
 
   Event that is called when search starts. }
@@ -635,6 +689,73 @@ begin
   mmImport.Enabled := False;
   cbRunOnce.Enabled := False;
   lwStartup.Cursor := crHourGlass;
+end;
+
+{ private TMain.OnTaskItemChanged
+
+  Refreshs the counter label of task items. }
+
+procedure TMain.OnTaskItemChanged(Sender: TObject);
+begin
+  lwTasks.Columns[1].Caption := FLang.Format(87, [FTasks.Enabled, FTasks.Count]);
+end;
+
+{ private TMain.OnTaskSearchEnd
+
+  Event that is called when export list ends. }
+
+procedure TMain.OnTaskSearchEnd(Sender: TObject);
+var
+  i: Integer;
+  Text: string;
+
+begin
+  // Print all information about task items
+  for i := 0 to FTasks.Count - 1 do
+  begin
+    Text := FTasks[i].Name;
+
+    // Filter items
+    if ((eTaskSearch.Text = '') or
+      (AnsiContainsText(Text, eTaskSearch.Text))) then
+      with lwTasks.Items.Add do
+      begin
+        Caption := FTasks[i].GetStatus(FLang);
+        SubItems.Append(Text);
+        SubItems.Append(FTasks[i].FileName);
+        SubItems.Append(FTasks[i].Location);
+      end; //of with
+  end;  //of for
+
+  // Refresh counter label
+  OnTaskItemChanged(Sender);
+
+  // Update some VCL
+  mmLang.Enabled := True;
+  cbTaskExpert.Enabled := True;
+  lwTasks.Cursor := crDefault;
+
+  // Hide progress bar
+  if cbTaskExpert.Checked then
+  begin
+    //pbTaskProgress.Visible := False;
+    eTaskSearch.Visible := True;
+  end;  //of begin
+
+  // Sort!
+  lwTasks.AlphaSort();
+end;
+
+{ private TMain.OnTaskSearchStart
+
+  Event that is called when search starts. }
+
+procedure TMain.OnTaskSearchStart(Sender: TObject; const AMax: Cardinal);
+begin
+  mmLang.Enabled := False;
+  mmImport.Enabled := False;
+  cbTaskExpert.Enabled := False;
+  lwTasks.Cursor := crHourGlass;
 end;
 
 { private TMain.OnStartupSearchEnd
@@ -1748,6 +1869,17 @@ begin
     PopupMenu.AutoPopup := False;
 end;
 
+{ TMain.lwTasksSelectItem
+
+  Event method that is called when user selects an item in list. }
+
+procedure TMain.lwTasksSelectItem(Sender: TObject; Item: TListItem;
+  Selected: Boolean);
+begin
+  if (Assigned(Item) and Selected) then
+    FTasks.Selected := FTasks[FTasks.IndexOf(Item.SubItems[0])];
+end;
+
 { TMain.ListViewColumnClick
 
   Event method that is called when user clicks on TListView column. }
@@ -2642,6 +2774,16 @@ begin
          // Load context menu entries dynamically
          if (FService.Count = 0) then
            LoadServiceItems();
+       end;
+
+    3: begin
+         mmAdd.Caption := FLang.GetString(57);
+         mmImport.Visible := False;
+         lwTasksSelectItem(Sender, lwTasks.ItemFocused, True);
+
+         // Load task items dynamically
+         if (FTasks.Count = 0) then
+           LoadTaskItems();
        end;
   end;  //of case
 end;

@@ -1,6 +1,6 @@
 { *********************************************************************** }
 {                                                                         }
-{ PM Code Works Operating System Utilities Unit v2.2.1                    }
+{ PM Code Works Operating System Utilities Unit v2.2.3                    }
 {                                                                         }
 { Copyright (c) 2011-2015 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
@@ -14,7 +14,7 @@ interface
 
 uses
 {$IFDEF MSWINDOWS}
-  Windows, Classes, Registry, ShellAPI,
+  Windows, Classes, Registry, ShellAPI, ShlObj,
 {$ELSE}
   Process,
 {$ENDIF}
@@ -29,6 +29,7 @@ const
 {$ELSE}
   PLATFORM_ARCH = ' [32-Bit]';
 {$ENDIF}
+  FOLDERID_System: TGUID = '{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}';
 
 type
 {$IFDEF LINUX}
@@ -42,6 +43,7 @@ type
   function ExecuteProgram(const AProgram: string;
     AArguments: string = ''; ARunAsAdmin: Boolean = False): Boolean;
   function ExpandEnvironmentVar(var AVariable: string): Boolean;
+  function GetKnownFolderPath(AFolderId: TGUID; var AFolderPath: string): Boolean;
   function GetSystemWow64Directory(var ASystemWow64Directory: string): Boolean;
   function GetTempDir(): string;
   function GetUserAppDataDir(): string;
@@ -112,6 +114,25 @@ begin
       AVariable := StrPas(PChar(Buffer));
       Result := True;
     end;  //of begin
+  end;  //of begin
+end;
+
+{ GetKnownFolderPath
+
+  Retrieves the path of known folders identified by a GUID. }
+
+function GetKnownFolderPath(AFolderId: TGUID; var AFolderPath: string): Boolean;
+var
+  Path: PChar;
+
+begin
+  if (Win32MajorVersion < 6) then
+    Exit;
+
+  if Succeeded(SHGetKnownFolderPath(AFolderId, 0, 0, Path)) then
+  begin
+    AFolderPath := IncludeTrailingBackslash(string(Path));
+    Result := True;
   end;  //of begin
 end;
 
