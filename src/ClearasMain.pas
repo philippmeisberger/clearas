@@ -113,9 +113,10 @@ type
     eTaskSearch: TButtonedEdit;
     lCopy4: TLabel;
     lTasks: TLabel;
-    Label3: TLabel;
-    lWin4: TLabel;
+    lVersion4: TLabel;
+    lWindows4: TLabel;
     lwTasks: TListView;
+    pbTaskProgress: TProgressBar;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -132,7 +133,7 @@ type
     procedure bExportStartupItemClick(Sender: TObject);
     procedure bExportContextItemClick(Sender: TObject);
     procedure bExportServiceItemClick(Sender: TObject);
-    procedure eContextSearchChange(Sender: TObject);
+    procedure eSearchChange(Sender: TObject);
     procedure lwContextDblClick(Sender: TObject);
     procedure lwContextSelectItem(Sender: TObject; Item: TListItem;
       Selected: Boolean);
@@ -154,7 +155,6 @@ type
     procedure mmExportClick(Sender: TObject);
     procedure mmImportClick(Sender: TObject);
     procedure mmRefreshClick(Sender: TObject);
-    procedure mmShowIconsClick(Sender: TObject);
     procedure mmDefaultClick(Sender: TObject);
     procedure mmInfoClick(Sender: TObject);
     procedure mmUpdateClick(Sender: TObject);
@@ -173,6 +173,9 @@ type
     procedure eContextSearchRightButtonClick(Sender: TObject);
     procedure lwTasksSelectItem(Sender: TObject; Item: TListItem;
       Selected: Boolean);
+    procedure lwTasksDblClick(Sender: TObject);
+    procedure tsStartupContextPopup(Sender: TObject; MousePos: TPoint;
+      var Handled: Boolean);
   private
     FStartup: TStartupList;
     FContext: TContextList;
@@ -182,7 +185,7 @@ type
     FUpdateCheck: TUpdateCheck;
     function CreateStartupUserBackup(): Boolean;
     function GetSelectedItem(): TRootItem;
-    function GetSelectedList(): TRootList;
+    function GetSelectedList(): TRootList<TRootItem>;
     procedure LoadContextMenuItems(ATotalRefresh: Boolean = True);
     procedure LoadStartupItems(ATotalRefresh: Boolean = True);
     procedure LoadServiceItems(ATotalRefresh: Boolean = True);
@@ -308,6 +311,7 @@ begin
   lWindows.Caption := TOSVersion.Name +' '+ Win32CSDVersion;
   lWindows2.Caption := lWindows.Caption;
   lWindows3.Caption := lWindows.Caption;
+  lWindows4.Caption := lWindows.Caption;
 
   // Show "date of deactivation" only on Vista and later
   mmDate.Enabled := TOSVersion.Check(6);
@@ -416,7 +420,7 @@ end;
 function TMain.GetSelectedItem(): TRootItem;
 var
   Item: TRootItem;
-  List: TRootList;
+  List: TRootList<TRootItem>;
 
 begin
   List := GetSelectedList();
@@ -432,17 +436,18 @@ end;
 
   Returns the current selected TRootList. }
 
-function TMain.GetSelectedList(): TRootList;
+function TMain.GetSelectedList(): TRootList<TRootItem>;
 var
-  List: TRootList;
+  List: TRootList<TRootItem>;
 
 begin
   List := nil;
 
   case PageControl.ActivePageIndex of
-    0: List := FStartup;
-    1: List := FContext;
-    2: List := FService;
+    0: List := TRootList<TRootItem>(FStartup);
+    1: List := TRootList<TRootItem>(FContext);
+    2: List := TRootList<TRootItem>(FService);
+    3: List := TRootList<TRootItem>(FTasks);
   end;  //of case
 
   if not Assigned(List) then
@@ -582,7 +587,7 @@ begin
   for i := 0 to FContext.Count - 1 do
   begin
     // Show name or caption of item?
-    if (FContext[i].Caption <> '') then
+    if (FContext.Items[i].Caption <> '') then
       Text := FContext[i].Caption
     else
       Text := FContext[i].Name;
@@ -679,6 +684,16 @@ begin
   end;  //of case
 end;
 
+{ private TMain.OnStartupItemChanged
+
+  Refreshs the counter label of startup items. }
+
+procedure TMain.OnStartupItemChanged(Sender: TObject);
+begin
+  lwStartup.Columns[1].Caption := FLang.Format(88, [FStartup.Enabled,
+    FStartup.Count]);
+end;
+
 { private TMain.OnStartupSearchStart
 
   Event that is called when search starts. }
@@ -689,73 +704,6 @@ begin
   mmImport.Enabled := False;
   cbRunOnce.Enabled := False;
   lwStartup.Cursor := crHourGlass;
-end;
-
-{ private TMain.OnTaskItemChanged
-
-  Refreshs the counter label of task items. }
-
-procedure TMain.OnTaskItemChanged(Sender: TObject);
-begin
-  lwTasks.Columns[1].Caption := FLang.Format(87, [FTasks.Enabled, FTasks.Count]);
-end;
-
-{ private TMain.OnTaskSearchEnd
-
-  Event that is called when export list ends. }
-
-procedure TMain.OnTaskSearchEnd(Sender: TObject);
-var
-  i: Integer;
-  Text: string;
-
-begin
-  // Print all information about task items
-  for i := 0 to FTasks.Count - 1 do
-  begin
-    Text := FTasks[i].Name;
-
-    // Filter items
-    if ((eTaskSearch.Text = '') or
-      (AnsiContainsText(Text, eTaskSearch.Text))) then
-      with lwTasks.Items.Add do
-      begin
-        Caption := FTasks[i].GetStatus(FLang);
-        SubItems.Append(Text);
-        SubItems.Append(FTasks[i].FileName);
-        SubItems.Append(FTasks[i].Location);
-      end; //of with
-  end;  //of for
-
-  // Refresh counter label
-  OnTaskItemChanged(Sender);
-
-  // Update some VCL
-  mmLang.Enabled := True;
-  cbTaskExpert.Enabled := True;
-  lwTasks.Cursor := crDefault;
-
-  // Hide progress bar
-  if cbTaskExpert.Checked then
-  begin
-    //pbTaskProgress.Visible := False;
-    eTaskSearch.Visible := True;
-  end;  //of begin
-
-  // Sort!
-  lwTasks.AlphaSort();
-end;
-
-{ private TMain.OnTaskSearchStart
-
-  Event that is called when search starts. }
-
-procedure TMain.OnTaskSearchStart(Sender: TObject; const AMax: Cardinal);
-begin
-  mmLang.Enabled := False;
-  mmImport.Enabled := False;
-  cbTaskExpert.Enabled := False;
-  lwTasks.Cursor := crHourGlass;
 end;
 
 { private TMain.OnStartupSearchEnd
@@ -805,14 +753,14 @@ begin
   lwStartup.AlphaSort();
 end;
 
-{ private TMain.OnStartupItemChanged
+{ private TMain.OnServiceItemChanged
 
-  Refreshs the counter label of startup items. }
+  Refreshs the counter label of service items. }
 
-procedure TMain.OnStartupItemChanged(Sender: TObject);
+procedure TMain.OnServiceItemChanged(Sender: TObject);
 begin
-  lwStartup.Columns[1].Caption := FLang.Format(88, [FStartup.Enabled,
-    FStartup.Count]);
+  lwService.Columns[1].Caption := FLang.Format(56, [FService.Enabled,
+    FService.Count]);
 end;
 
 { private TMain.OnServiceSearchStart
@@ -894,14 +842,78 @@ begin
   FLang.ShowException(FLang.GetString([77, 18]), AErrorMessage);
 end;
 
-{ private TMain.OnServiceItemChanged
+{ private TMain.OnTaskItemChanged
 
-  Refreshs the counter label of service items. }
+  Refreshs the counter label of task items. }
 
-procedure TMain.OnServiceItemChanged(Sender: TObject);
+procedure TMain.OnTaskItemChanged(Sender: TObject);
 begin
-  lwService.Columns[1].Caption := FLang.Format(56, [FService.Enabled,
-    FService.Count]);
+  lwTasks.Columns[1].Caption := FLang.Format(116, [FTasks.Enabled, FTasks.Count]);
+end;
+
+{ private TMain.OnTaskSearchEnd
+
+  Event that is called when export list ends. }
+
+procedure TMain.OnTaskSearchEnd(Sender: TObject);
+var
+  i: Integer;
+  Text: string;
+
+begin
+  // Print all information about task items
+  for i := 0 to FTasks.Count - 1 do
+  begin
+    Text := FTasks[i].Name;
+
+    // Filter items
+    if ((eTaskSearch.Text = '') or
+      (AnsiContainsText(Text, eTaskSearch.Text))) then
+      with lwTasks.Items.Add do
+      begin
+        Caption := FTasks[i].GetStatus(FLang);
+        SubItems.Append(Text);
+        SubItems.Append(FTasks[i].FileName);
+        SubItems.Append(FTasks[i].Location);
+      end; //of with
+  end;  //of for
+
+  // Refresh counter label
+  OnTaskItemChanged(Sender);
+
+  // Update some VCL
+  mmLang.Enabled := True;
+  cbTaskExpert.Enabled := True;
+  lwTasks.Cursor := crDefault;
+
+  // Hide progress bar
+  if cbTaskExpert.Checked then
+  begin
+    pbTaskProgress.Visible := False;
+    eTaskSearch.Visible := True;
+  end;  //of begin
+
+  // Sort!
+  lwTasks.AlphaSort();
+end;
+
+{ private TMain.OnTaskSearchStart
+
+  Event that is called when search starts. }
+
+procedure TMain.OnTaskSearchStart(Sender: TObject; const AMax: Cardinal);
+begin
+  mmLang.Enabled := False;
+  mmImport.Enabled := False;
+  cbTaskExpert.Enabled := False;
+  lwTasks.Cursor := crHourGlass;
+
+  // Show progress bar
+  if cbTaskExpert.Checked then
+  begin
+    eTaskSearch.Visible := False;
+    pbTaskProgress.Visible := True;
+  end;  //of begin
 end;
 
 { private TMain.SetLanguage
@@ -968,8 +980,6 @@ begin
     bDeleteContextItem.Caption := bDeleteStartupItem.Caption;
     bCloseContext.Caption := bCloseStartup.Caption;
     cbContextExpert.Caption := GetString(89);
-
-    // Set placeholder text for search
     eContextSearch.TextHint := GetString(63);
 
     // "Context menu" tab TListView labels
@@ -994,9 +1004,24 @@ begin
     lwService.Columns[2].Caption := lwStartup.Columns[2].Caption;
     lwService.Columns[3].Caption := GetString(59);
     lCopy3.Hint := lCopy1.Hint;
-
-    // Set placeholder text for search
     eServiceSearch.TextHint := eContextSearch.TextHint;
+
+    // "Tasks" tab TButton labels
+    tsTasks.Caption := GetString(114);
+    lTasks.Caption := GetString(115);
+    bEnableTaskItem.Caption := bEnableStartupItem.Caption;
+    bDisableTaskitem.Caption := bDisableStartupItem.Caption;
+    bExportTaskItem.Caption := bExportStartupItem.Caption;
+    bDeleteTaskItem.Caption := bDeleteStartupItem.Caption;
+    bCloseTasks.Caption := bCloseStartup.Caption;
+    cbTaskExpert.Caption := cbContextExpert.Caption;
+
+    // "Tasks" tab TListView labels
+    lwTasks.Columns[0].Caption := lwStartup.Columns[0].Caption;
+    lwTasks.Columns[2].Caption := lwStartup.Columns[2].Caption;
+    lwTasks.Columns[3].Caption := lwContext.Columns[2].Caption;
+    lCopy4.Hint := lCopy1.Hint;
+    eTaskSearch.TextHint := eContextSearch.TextHint;
 
     // Popup menu labels
     pmChangeStatus.Caption := bDisableStartupItem.Caption;
@@ -1014,6 +1039,7 @@ begin
     LoadStartupItems(False);
     LoadContextMenuItems(False);
     LoadServiceItems(False);
+    LoadTaskItems(False);
   end;  //of begin
 end;
 
@@ -1035,7 +1061,7 @@ begin
       begin
         Caption := FLang.GetString(80);
         Width := 120;
-        mmShowIconsClick(Self);
+        // TODO: Update lists
       end;  //of with
 end;
 
@@ -1078,6 +1104,8 @@ begin
                  FileName := FContext.Selected.Name +'_'+ FContext.Selected.Location;
            end;
         2: FileName := FService.Selected.Name;
+        // TODO
+        //3:
       end;  //of case
 
       // Append default extension
@@ -1103,6 +1131,12 @@ begin
     on E: Exception do
       FLang.ShowException(FLang.GetString([95, 18]), E.Message);
   end;  //of try
+end;
+
+procedure TMain.tsStartupContextPopup(Sender: TObject; MousePos: TPoint;
+  var Handled: Boolean);
+begin
+
 end;
 
 { public TMain.UpdateContextPath
@@ -1381,7 +1415,7 @@ begin
 
       // Show deactivation timestamp?
       if mmDate.Checked then
-        lwStartup.ItemFocused.SubItems[3] := FStartup.Item.Time;
+        lwStartup.ItemFocused.SubItems[3] := FStartup.Selected.Time;
 
       // Update TListView
       lwStartupSelectItem(Self, lwStartup.ItemFocused, True);
@@ -1471,7 +1505,7 @@ begin
 
       // Show deactivation timestamp?
       if mmDate.Checked then
-        lwService.ItemFocused.SubItems[3] := FService.Item.Time;
+        lwService.ItemFocused.SubItems[3] := FService.Selected.Time;
 
       // Update TListView
       lwServiceSelectItem(Self, lwService.ItemFocused, True);
@@ -1686,11 +1720,11 @@ begin
   ShowRegistryExportDialog();
 end;
 
-{ TMain.eContextSearchChange
+{ TMain.eSearchChange
 
   Event method that is called when user changes the search string. }
 
-procedure TMain.eContextSearchChange(Sender: TObject);
+procedure TMain.eSearchChange(Sender: TObject);
 begin
   if ((Sender as TButtonedEdit).Text = '') then
   begin
@@ -1710,6 +1744,7 @@ begin
   case PageControl.ActivePageIndex of
     1: LoadContextMenuItems(False);
     2: LoadServiceItems(False);
+    3: LoadTaskItems(False);
   end;  //of case
 end;
 
@@ -1869,15 +1904,77 @@ begin
     PopupMenu.AutoPopup := False;
 end;
 
+{ TMain.lwTasksDblClick
+
+  Event method that is called when user double clicks on TListView item. }
+
+procedure TMain.lwTasksDblClick(Sender: TObject);
+begin
+  if bEnableTaskItem.Enabled then
+    bEnableTaskItem.Click
+  else
+    if bDisableTaskitem.Enabled then
+      bDisableTaskitem.Click
+    else
+      if bDeleteTaskItem.Enabled then
+        bDeleteTaskItem.Click
+      else
+        FLang.ShowMessage(FLang.GetString(53), mtWarning);
+end;
+
 { TMain.lwTasksSelectItem
 
   Event method that is called when user selects an item in list. }
 
 procedure TMain.lwTasksSelectItem(Sender: TObject; Item: TListItem;
   Selected: Boolean);
+var
+  Index: Integer;
+
 begin
-  if (Assigned(Item) and Selected) then
-    FTasks.Selected := FTasks[FTasks.IndexOf(Item.SubItems[0])];
+  // Item selected?
+  if (Selected and Assigned(Item)) then
+  begin
+    // Find index of currently selected item in backend
+    Index := FTasks.IndexOf(Item.SubItems[0]);
+
+    // Item not found?
+    if (Index = -1) then
+    begin
+      PopupMenu.AutoPopup := False;
+      FLang.ShowMessage(FLang.GetString(53), mtWarning);
+      Exit;
+    end;  //of begin
+
+    // Load item into cache
+    FTasks.Selected := FTasks.Items[Index];
+
+    // Change button states
+    bEnableTaskItem.Enabled := not FTasks.Selected.Enabled;
+    bDisableTaskitem.Enabled := not bEnableTaskItem.Enabled;
+
+    // Change text of "change status" button
+    if bDisableTaskitem.Enabled then
+      pmChangeStatus.Caption := bDisableTaskitem.Caption
+    else
+      pmChangeStatus.Caption := bEnableTaskItem.Caption;
+
+    pmChangeStatus.Enabled := True;
+    bDeleteTaskItem.Enabled := True;
+    pmDelete.Enabled := True;
+    pmOpenRegedit.Enabled := False;
+    bExportTaskItem.Enabled := True;
+    pmExport.Enabled := True;
+
+    // Enable "edit path" only if file path is present
+    pmEdit.Enabled := (FTasks.Selected.FileName <> '');
+
+    // Show popup menu
+    PopupMenu.AutoPopup := True;
+  end  //of begin
+  else
+    // Nothing selected: Hide popup menu!
+    PopupMenu.AutoPopup := False;
 end;
 
 { TMain.ListViewColumnClick
@@ -2429,20 +2526,24 @@ begin
     0: bExportStartupItem.Click();
     1: bExportContextItem.Click();
     2: bExportServiceItem.Click();
+    3: bExportTaskItem.Click();
   end;  //of case
 end;
 
 { TMain.mmExportListClick
 
-  MainMenu entry to export the complete autostart as .reg (backup) file. }
+  MainMenu entry to export the complete list as .reg (backup) file. }
 
 procedure TMain.mmExportListClick(Sender: TObject);
 var
-  SaveDialog: TSaveDialog;
-  SelectedList: TRootRegList;
+  SelectedList: TRootList<TRootItem>;
+  FileName: string;
 
 begin
-  SelectedList := (GetSelectedList() as TRootRegList);
+  SelectedList := GetSelectedList();
+
+  if not (SelectedList is TRootRegList<TRootItem>) then
+    Exit;
 
   // Operation pending?
   if SelectedList.IsLocked() then
@@ -2451,42 +2552,20 @@ begin
     Exit;
   end;  //of begin
 
-  SaveDialog := TSaveDialog.Create(Self);
+  // Sets default file name
+  FileName := PageControl.ActivePage.Caption + '.reg';
 
-  try
-    // Set TSaveDialog options
-    with SaveDialog do
+  // Show save dialog
+  if PromptForFileName(FileName, FLang.GetString(36), '.reg',
+    StripHotkey(mmExportList.Caption), '%HOMEPATH%', True) then
+    // Export list (threaded!)
+    with TExportListThread.Create((SelectedList as TRootRegList<TRootItem>), FileName,
+      PageControl.ActivePageIndex) do
     begin
-      Title := StripHotkey(mmExportList.Caption);
-      InitialDir := '%HOMEPATH%';
-      
-      // Confirm overwrite
-      Options := Options + [ofOverwritePrompt];
-
-      // Filter .reg files only
-      Filter := FLang.GetString(36);
-      DefaultExt := '.reg';
-
-      // Sets default file name
-      FileName := PageControl.ActivePage.Caption + DefaultExt;
+      OnStart := OnExportListStart;
+      OnFinish := OnExportListEnd;
+      Start;
     end;  //of with
-
-    // User clicked "save"?
-    if SaveDialog.Execute then
-    begin
-      // Export list (threaded!)
-      with TExportListThread.Create(SelectedList, SaveDialog.FileName,
-        PageControl.ActivePageIndex) do
-      begin
-        OnStart := OnExportListStart;
-        OnFinish := OnExportListEnd;
-        Start;
-      end;  //of with
-    end;  //of begin
-
-  finally
-    SaveDialog.Free;
-  end;  //of try
 end;
 
 { TMain.mmImportClick
@@ -2495,41 +2574,44 @@ end;
 
 procedure TMain.mmImportClick(Sender: TObject);
 var
-  OpenDialog: TOpenDialog;
-  BackupDir: string;
+  BackupDir, Filter, FileName: string;
 
 begin
-  BackupDir := TLnkFile.GetBackupDir();
-  OpenDialog := TOpenDialog.Create(Self);
-
   try
-    // Create Backup directory if not exists
-    if not DirectoryExists(BackupDir) then
-      ForceDirectories(BackupDir);
+    case PageControl.ActivePageIndex of
+      0: begin
+           BackupDir := TLnkFile.GetBackupDir();
 
-    // Set TOpenDialog options
-    with OpenDialog do
-    begin
-      Title := StripHotkey(mmImport.Caption);
-      InitialDir := BackupDir;
-      Filter := Format(FLang.GetString(109), [EXT_USER, EXT_USER, EXT_COMMON, EXT_COMMON]);
-    end;  //of with
+           // Create Backup directory if not exists
+           if not DirectoryExists(BackupDir) then
+             ForceDirectories(BackupDir);
 
-    try
-      // User clicked "open"?
-      if OpenDialog.Execute then
-      begin
-        // Item already exists?
-        if not FStartup.ImportBackup(OpenDialog.FileName) then
-          raise EWarning.Create(FLang.GetString(41));
+           Filter := Format(FLang.GetString(109), [EXT_USER, EXT_USER, EXT_COMMON, EXT_COMMON]);
+         end;
 
-        // Update TListView
-        LoadStartupItems(False);
-      end;  //of begin
+      3: Filter := 'XML-Datei *.xml|*.xml';
 
-    finally
-      OpenDialog.Free;
-    end;  //of try
+      else
+         Exit;
+    end;  //of case
+
+    // Show select file dialog
+    if PromptForFileName(FileName, Filter, '', StripHotkey(mmImport.Caption), BackupDir) then
+      case PageControl.ActivePageIndex of
+        0: begin
+             if not FStartup.ImportBackup(FileName) then
+               raise EWarning.Create(FLang.GetString(41));
+
+             LoadStartupItems(False);
+           end;
+
+        3: begin
+             if not FStartup.ImportBackup(FileName) then
+               raise EWarning.Create(FLang.GetString(41));
+
+             LoadTaskItems(False);
+           end;
+      end;  //of case
 
   except
     on E: EListBlocked do
@@ -2602,19 +2684,7 @@ begin
     0: LoadStartupItems();
     1: LoadContextMenuItems();
     2: LoadServiceItems();
-  end;  //of case
-end;
-
-{ TMain.mmShowIconsClick
-
-  MainMenu entry to show/hide program icons in TListView. }
-
-procedure TMain.mmShowIconsClick(Sender: TObject);
-begin
-  case PageControl.ActivePageIndex of
-    0: LoadStartupItems(False);
-    1: LoadContextMenuItems(False);
-    2: LoadServiceItems(False);
+    3: LoadTaskItems();
   end;  //of case
 end;
 
@@ -2641,6 +2711,12 @@ begin
          lwService.Columns[1].Width := 125;
          lwService.Columns[2].Width := 122;
          lwService.Columns[3].Width := 75;
+       end;
+
+    3: begin
+         lwTasks.Columns[1].Width := 125;
+         lwTasks.Columns[2].Width := 122;
+         lwTasks.Columns[3].Width := 75;
        end;
   end;  //of case
 end;
@@ -2778,7 +2854,8 @@ begin
 
     3: begin
          mmAdd.Caption := FLang.GetString(57);
-         mmImport.Visible := False;
+         mmImport.Visible := True;
+         mmDate.Visible := False;
          lwTasksSelectItem(Sender, lwTasks.ItemFocused, True);
 
          // Load task items dynamically

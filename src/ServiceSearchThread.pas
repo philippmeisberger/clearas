@@ -19,7 +19,6 @@ type
   private
     FServiceList: TServiceList;
     FManager: SC_HANDLE;
-    FOnFinish: TNotifyEvent;
     FIncludeShared: Boolean;
   protected
     procedure Execute; override;

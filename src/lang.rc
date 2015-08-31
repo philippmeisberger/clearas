@@ -114,6 +114,9 @@ BEGIN
   211, "Es existiert ein Benutzer-definiertes Programm für diesen Dateityp! "
   212, "Solange diese Auswahl existiert, ist der aktuelle Eintrag nicht sichtbar. "
   213, "Möchten Sie die Auswahl zurücksetzen?"
+  214, "Aufgaben"
+  215, "Folgende Aufgaben werden wie geplant ausgeführt."
+  216, "Aufgabe (%d/%d)"
 END
 
 STRINGTABLE VERSION 1033 // english
@@ -232,6 +235,9 @@ BEGIN
   411, "A user defined program choice exists for this file type! "
   412, "Item will not be visible until user choice has been deleted. "
   413, "Reset user choice now?"
+  414, "Tasks"
+  415, "The following tasks are executed as scheduled."
+  416, "Task (%d/%d)"
 END
 
 STRINGTABLE VERSION 1036 // français
@@ -350,4 +356,7 @@ BEGIN
   611, "Il existe un choix défini par l'utilisateur du programme pour ce type de fichier"
   612, "Point ne sera pas visible jusqu'au choix de l'utilisateur a été supprimé. "
   613, "Réinitialiser choix de l'utilisateur maintenant?"
+  614, "Tâches"
+  615, "Les tâches suivantes sont exécutées comme prévues."
+  616, "Tâche (%d/%d)"
 END

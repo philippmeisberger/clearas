@@ -34,6 +34,7 @@ object Main: TMain
     OnChange = PageControlChange
     object tsStartup: TTabSheet
       Caption = 'Autostart'
+      OnContextPopup = tsStartupContextPopup
       DesignSize = (
         535
         284)
@@ -73,7 +74,7 @@ object Main: TMain
         Height = 14
         Alignment = taRightJustify
         Anchors = [akTop, akRight]
-        Caption = 'v4.1'
+        Caption = 'v4.2'
       end
       object lWindows: TLabel
         Left = 21
@@ -226,7 +227,7 @@ object Main: TMain
         Height = 14
         Alignment = taRightJustify
         Anchors = [akTop, akRight]
-        Caption = 'v4.1'
+        Caption = 'v4.2'
       end
       object lWindows2: TLabel
         Left = 21
@@ -362,7 +363,7 @@ object Main: TMain
         RightButton.Visible = True
         TabOrder = 8
         TextHint = 'Suchen ...'
-        OnChange = eContextSearchChange
+        OnChange = eSearchChange
         OnRightButtonClick = eContextSearchRightButtonClick
       end
     end
@@ -413,7 +414,7 @@ object Main: TMain
         Height = 14
         Alignment = taRightJustify
         Anchors = [akTop, akRight]
-        Caption = 'v4.1'
+        Caption = 'v4.2'
       end
       object pbServiceProgress: TProgressBar
         Left = 21
@@ -542,7 +543,7 @@ object Main: TMain
         RightButton.Visible = True
         TabOrder = 7
         TextHint = 'Suchen ...'
-        OnChange = eContextSearchChange
+        OnChange = eSearchChange
         OnRightButtonClick = eContextSearchRightButtonClick
       end
     end
@@ -575,25 +576,35 @@ object Main: TMain
       object lTasks: TLabel
         Left = 21
         Top = 32
-        Width = 309
+        Width = 253
         Height = 14
-        Caption = 'Eintr'#228'ge dieser Liste werden beim Start von Windows gestartet.'
+        Caption = 'Folgende Aufgaben werden wie geplant ausgef'#252'hrt.'
       end
-      object Label3: TLabel
-        Left = 506
+      object lVersion4: TLabel
+        Left = 510
         Top = 4
         Width = 21
         Height = 14
         Alignment = taRightJustify
         Anchors = [akTop, akRight]
-        Caption = 'v4.1'
+        Caption = 'v4.2'
       end
-      object lWin4: TLabel
+      object lWindows4: TLabel
         Left = 21
         Top = 4
         Width = 46
         Height = 14
         Caption = 'Windows'
+      end
+      object pbTaskProgress: TProgressBar
+        Left = 21
+        Top = 255
+        Width = 148
+        Height = 18
+        Anchors = [akLeft, akBottom]
+        Style = pbstMarquee
+        TabOrder = 8
+        Visible = False
       end
       object bCloseTasks: TButton
         Left = 428
@@ -661,7 +672,7 @@ object Main: TMain
       end
       object eTaskSearch: TButtonedEdit
         Left = 21
-        Top = 254
+        Top = 255
         Width = 148
         Height = 22
         Anchors = [akLeft, akBottom]
@@ -673,7 +684,7 @@ object Main: TMain
         RightButton.Visible = True
         TabOrder = 6
         TextHint = 'Suchen ...'
-        OnChange = eContextSearchChange
+        OnChange = eSearchChange
         OnRightButtonClick = eContextSearchRightButtonClick
       end
       object lwTasks: TListView
@@ -690,7 +701,7 @@ object Main: TMain
             Width = 53
           end
           item
-            Caption = 'Task (0/0)'
+            Caption = 'Aufgabe (0/0)'
             Width = 125
           end
           item
@@ -698,7 +709,7 @@ object Main: TMain
             Width = 122
           end
           item
-            Caption = 'Typ'
+            Caption = 'Ort'
             MaxWidth = 75
             MinWidth = 75
             Width = 75
@@ -711,6 +722,7 @@ object Main: TMain
         ViewStyle = vsReport
         OnColumnClick = ListViewColumnClick
         OnCompare = ListViewCompare
+        OnDblClick = lwTasksDblClick
         OnKeyPress = ListViewKeyPress
         OnSelectItem = lwTasksSelectItem
       end
@@ -867,7 +879,7 @@ object Main: TMain
   object QuickSearchIconList: TImageList
     Left = 256
     Bitmap = {
-      494C010103000800180110001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C010103000800200110001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000001000000001002000000000000010
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000

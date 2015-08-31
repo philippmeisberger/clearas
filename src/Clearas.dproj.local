@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <BorlandProject>
 	<Transactions>
-    <Transaction>1899.12.30 00:00:00.000.501,C:\Users\Phil\PMCW\Projekte\clearas\src\ClearasSearchThread.pas=C:\Users\Phil\PMCW\Projekte\clearas\src\Unit1.pas</Transaction>
     <Transaction>1899.12.30 00:00:00.000.775,=C:\Users\Phil\PMCW\Projekte\clearas\src\Unit1.pas</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.501,C:\Users\Phil\PMCW\Projekte\clearas\src\Unit1.pas=C:\Users\Phil\PMCW\Projekte\clearas\src\ClearasSearchThread.pas</Transaction>
   </Transactions>
 </BorlandProject>

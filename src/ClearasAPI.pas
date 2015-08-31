@@ -12,8 +12,8 @@ interface
 
 uses
   Windows, WinSvc, Classes, SysUtils, Registry, ShlObj, ActiveX, ComObj,
-  CommCtrl, ShellAPI, Contnrs, SyncObjs, StrUtils, Variants, Taskschd,
-  PMCWOSUtils, PMCWLanguageFile, PMCWIniFileParser;
+  CommCtrl, ShellAPI, SyncObjs, StrUtils, Variants, System.Generics.Collections,
+  Taskschd, PMCWOSUtils, PMCWLanguageFile, PMCWIniFileParser;
 
 const
   { Startup Registry keys }
@@ -153,50 +153,57 @@ type
   TSearchErrorEvent = procedure(Sender: TObject; AErrorMessage: string) of object;
 
   { TRootList }
-  TRootList = class(TObjectList)
+  TRootList<T: TRootItem> = class(TObjectList<T>, IInterface)
   private
-    FItem: TRootItem;
+    FItem: T;
     FOnSearchStart,
     FOnSearching: TSearchEvent;
+    FOnChanged,
     FOnSearchFinish: TNotifyEvent;
     FOnSearchError: TSearchErrorEvent;
-    FOnChanged: TNotifyEvent;
   protected
     FActCount: Word;
     FLock: TCriticalSection;
-    function RootItemAt(AIndex: Word): TRootItem;
+    function QueryInterface(const IID: TGUID; out Obj): HResult; stdcall;
+    function _AddRef: Integer; stdcall;
+    function _Release: Integer; stdcall;
   public
     constructor Create;
     destructor Destroy; override;
-    function Add(ARootItem: TRootItem): Integer; virtual;
     function ChangeItemFilePath(const ANewFilePath: string): Boolean; virtual;
     function ChangeItemStatus(): Boolean; virtual;
-    procedure Clear; override;
+    procedure Clear;
     function DeleteItem(): Boolean; virtual;
     function DisableItem(): Boolean; virtual;
     function EnableItem(): Boolean; virtual;
     procedure ExportItem(const AFileName: string); virtual;
-    function First(): TRootItem; virtual;
     function IndexOf(AItemName: string): Integer; overload;
     function IndexOf(AItemName: string; AEnabled: Boolean): Integer; overload;
     function IsLocked(): Boolean;
-    function Remove(ARootItem: TRootItem): Integer; virtual;
-    function Last(): TRootItem; virtual;
+    function Remove(ARootItem: T): Integer; virtual;
     procedure Load(); virtual; abstract;
     { external }
     property Enabled: Word read FActCount;
-    property Items[AIndex: Word]: TRootItem read RootItemAt; default;
     property OnChanged: TNotifyEvent read FOnChanged write FOnChanged;
     property OnSearching: TSearchEvent read FOnSearching write FOnSearching;
     property OnSearchError: TSearchErrorEvent read FOnSearchError write FOnSearchError;
     property OnSearchFinish: TNotifyEvent read FOnSearchFinish write FOnSearchFinish;
     property OnSearchStart: TSearchEvent read FOnSearchStart write FOnSearchStart;
-    property Selected: TRootItem read FItem write FItem;
+    property Selected: T read FItem write FItem;
+  end;
+
+  { IExportableList }
+  IExportableList = interface
+    procedure ExportList(const AFileName: string);
+  end;
+
+  { IImportableList }
+  IImportableList = interface
+    function ImportBackup(const AFileName: string): Boolean;
   end;
 
   { TRootRegList }
-  TRootRegList = class(TRootList)
-  public
+  TRootRegList<T: TRootItem> = class(TRootList<T>, IExportableList)
     procedure ExportList(const AFileName: string); virtual; abstract;
   end;
 
@@ -247,12 +254,10 @@ type
   end;
 
   { TStartupList }
-  TStartupList = class(TRootRegList)
+  TStartupList = class(TRootRegList<TStartupListItem>, IImportableList)
   private
     FDeleteBackup: Boolean;
     function DeleteBackupFile(): Boolean;
-    function ItemAt(AIndex: Word): TStartupListItem;
-    function GetSelectedItem(): TStartupListItem;
     function GetStartupUserType(AReg: TRegistry): string; overload;
     function GetStartupUserType(AAllUsers: Boolean): string; overload;
   protected
@@ -280,8 +285,6 @@ type
     procedure LoadStartup(AIncludeRunOnce: Boolean);
     { external }
     property DeleteBackup: Boolean read FDeleteBackup write FDeleteBackup;
-    property Item: TStartupListItem read GetSelectedItem;
-    property Items[AIndex: Word]: TStartupListItem read ItemAt; default;
   end;
 
   { Alias class }
@@ -347,10 +350,7 @@ type
   end;
 
   { TContextList }
-  TContextList = class(TRootRegList)
-  private
-    function GetSelectedItem(): TContextListItem;
-    function ItemAt(AIndex: Word): TContextListItem;
+  TContextList = class(TRootRegList<TContextListItem>)
   protected
     function AddShellItem(const AName, ALocationRoot, AFileName, ACaption: string;
       AEnabled, AWow64: Boolean): Integer;
@@ -370,9 +370,6 @@ type
     procedure LoadContextmenu(const ALocationRoot: string;
       AShellItemType: TShellItemType; AWow64: Boolean); overload;
     procedure LoadContextMenus(ALocationRootCommaList: string = '');
-    { external }
-    property Item: TContextListItem read GetSelectedItem;
-    property Items[AIndex: Word]: TContextListItem read ItemAt; default;
   end;
 
   { Exception class }
@@ -410,11 +407,9 @@ type
   end;
 
   { TServiceList }
-  TServiceList = class(TRootRegList)
+  TServiceList = class(TRootRegList<TServiceListItem>)
   private
     FManager: SC_HANDLE;
-    function ItemAt(AIndex: Word): TServiceListItem;
-    function GetSelectedItem(): TServiceListItem;
   protected
     function AddServiceDisabled(AName, ACaption, AFileName: string;
       AReg: TRegistry): Integer;
@@ -430,9 +425,6 @@ type
     function LoadService(AName: string; AService: SC_HANDLE;
       AIncludeDemand: Boolean = False): Integer;
     procedure LoadServices(AIncludeShared: Boolean);
-    { external }
-    property Item: TServiceListItem read GetSelectedItem;
-    property Items[AIndex: Word]: TServiceListItem read ItemAt; default;
   end;
 
   { Exception }
@@ -458,23 +450,19 @@ type
   end;
 
   { TTaskList }
-  TTaskList = class(TRootRegList)
+  TTaskList = class(TRootList<TTaskListItem>, IImportableList)
   private
     FTaskService: ITaskService;
-    function GetSelectedItem(): TTaskListItem;
-    function ItemAt(AIndex: Word): TTaskListItem;
   protected
     function AddTaskItem(ATask: IRegisteredTask; ATaskFolder: ITaskFolder): Integer;
   public
     constructor Create;
     destructor Destroy; override;
     function ImportBackup(const AFileName: string): Boolean;
+    procedure Load(); override;
     procedure LoadTasks(ATaskFolder: ITaskFolder; AIncludeHidden: Boolean); overload;
-    procedure LoadTasks(APath: string = '\'; ARecursive: Boolean = False;
+    procedure LoadTasks(APath: string; ARecursive: Boolean = False;
       AIncludeHidden: Boolean = False); overload;
-    { external }
-    property Item: TTaskListItem read GetSelectedItem;
-    property Items[AIndex: Word]: TTaskListItem read ItemAt; default;
   end;
 
 
@@ -1165,7 +1153,7 @@ end;
 
   General constructor for creating a TRootList instance. }
 
-constructor TRootList.Create;
+constructor TRootList<T>.Create;
 begin
   inherited Create;
   FActCount := 0;
@@ -1176,47 +1164,59 @@ end;
 
   General destructor for destroying a TRootList instance. }
 
-destructor TRootList.Destroy;
+destructor TRootList<T>.Destroy;
 begin
   FLock.Free;
   Clear();
   inherited Destroy;
 end;
 
-{ protected TRootList.RootItemAt
+{ protected RootList.QueryInterface
 
-  Returns a TRootItem object at index. }
+  Returns the pointer to an implemention of an interface specified by a GUID. }
 
-function TRootList.RootItemAt(AIndex: Word): TRootItem;
+function TRootList<T>.QueryInterface(const IID: TGUID; out Obj): HResult;
 begin
-  Result := TRootItem(inherited Items[AIndex]);
+  if GetInterface(IID, Obj) then
+    Result:= S_OK
+  else
+    Result:= E_NOINTERFACE;
+end;
+
+{ protected TRootList._AddRef
+
+  Increments the reference count for this interface. }
+
+function TRootList<T>._AddRef(): Integer;
+begin
+  Result := -1;
+end;
+
+{ protected TRootList._Release
+
+  Decrements the reference count for this interface. }
+
+function TRootList<T>._Release(): Integer;
+begin
+  Result := -1;
 end;
 
 { public TRootList.Clear
 
   Deletes all items in the list. }
 
-procedure TRootList.Clear;
+procedure TRootList<T>.Clear;
 begin
   inherited Clear;
   FActCount := 0;
   FItem := nil;
 end;
 
-{ public TRootList.Add
-
-  Adds a TRootItem to the list. }
-
-function TRootList.Add(ARootItem: TRootItem): Integer;
-begin
-  Result := inherited Add(ARootItem);
-end;
-
 { public TRootList.ChangeItemFilePath
 
   Changes the file path of an item. }
 
-function TRootList.ChangeItemFilePath(const ANewFilePath: string): Boolean;
+function TRootList<T>.ChangeItemFilePath(const ANewFilePath: string): Boolean;
 var
   Changed: Boolean;
 
@@ -1250,7 +1250,7 @@ end;
 
   Changes the item status. }
 
-function TRootList.ChangeItemStatus(): Boolean;
+function TRootList<T>.ChangeItemStatus(): Boolean;
 var
   Changed: Boolean;
 
@@ -1293,7 +1293,7 @@ end;
 
   Deletes an item from location and list. }
 
-function TRootList.DeleteItem(): Boolean;
+function TRootList<T>.DeleteItem(): Boolean;
 var
   Deleted: Boolean;
 
@@ -1339,7 +1339,7 @@ end;
 
   Disables the current selected item. }
 
-function TRootList.DisableItem(): Boolean;
+function TRootList<T>.DisableItem(): Boolean;
 var
   Disabled: Boolean;
 
@@ -1381,7 +1381,7 @@ end;
 
   Enables the current selected item. }
 
-function TRootList.EnableItem(): Boolean;
+function TRootList<T>.EnableItem(): Boolean;
 var
   Enabled: Boolean;
 
@@ -1423,7 +1423,7 @@ end;
 
   Exports an item as file. }
 
-procedure TRootList.ExportItem(const AFileName: string);
+procedure TRootList<T>.ExportItem(const AFileName: string);
 begin
   if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
     raise EInvalidItem.Create('No item selected!');
@@ -1431,20 +1431,11 @@ begin
   FItem.ExportItem(AFileName);
 end;
 
-{ public TRootList.First
-
-  Returns the first TRootItem object in list. }
-
-function TRootList.First(): TRootItem;
-begin
-  Result := TRootItem(inherited First());
-end;
-
 { public TRootList.IndexOf
 
   Returns the index of an item checking name only. }
 
-function TRootList.IndexOf(AItemName: string): Integer;
+function TRootList<T>.IndexOf(AItemName: string): Integer;
 var
   i: Integer;
 
@@ -1452,7 +1443,7 @@ begin
   Result := -1;
 
   for i := 0 to Count -1 do
-    if (RootItemAt(i).Name = AItemName) then
+    if (Items[i].Name = AItemName) then
     begin
       Result := i;
       Break;
@@ -1463,7 +1454,7 @@ end;
 
   Returns the index of an item checking name and status. }
 
-function TRootList.IndexOf(AItemName: string; AEnabled: Boolean): Integer;
+function TRootList<T>.IndexOf(AItemName: string; AEnabled: Boolean): Integer;
 var
   i: Integer;
   Item: TRootItem;
@@ -1473,7 +1464,7 @@ begin
 
   for i := 0 to Count - 1 do
   begin
-    Item := RootItemAt(i);
+    Item := Items[i];
 
     if ((Item.Name = AItemName) and (Item.Enabled = AEnabled)) then
     begin
@@ -1483,20 +1474,11 @@ begin
   end;  //of for
 end;
 
-{ public TRootList.Last
-
-  Returns the last item of list. }
-
-function TRootList.Last(): TRootItem;
-begin
-  Result := TRootItem(inherited Last());
-end;
-
 { public TRootList.IsLocked
 
   Checks if the list is currently locked. }
 
-function TRootList.IsLocked(): Boolean;
+function TRootList<T>.IsLocked(): Boolean;
 var
   Entered: Boolean;
 
@@ -1513,7 +1495,7 @@ end;
 
   Removes a TRootItem object from the list. }
 
-function TRootList.Remove(ARootItem: TRootItem): Integer;
+function TRootList<T>.Remove(ARootItem: T): Integer;
 begin
   // List locked?
   if not FLock.TryEnter() then
@@ -2035,24 +2017,6 @@ begin
     Result := (Selected as TStartupUserItem).LnkFile.DeleteBackup();
 end;
 
-{ private TStartupList.ItemAt
-
-  Returns a TStartupListItem object at index. }
-
-function TStartupList.ItemAt(AIndex: Word): TStartupListItem;
-begin
-  Result := TStartupListItem(RootItemAt(AIndex));
-end;
-
-{ private TStartupList.GetSelectedItem
-
-  Returns the current selected item as TStartupListItem. }
-
-function TStartupList.GetSelectedItem(): TStartupListItem;
-begin
-  Result := TStartupListItem(Selected);
-end;
-
 { private TStartupList.GetStartupUserType
 
   Returns the startup item type. }
@@ -2312,7 +2276,7 @@ begin
   try
     // File path already exists in another item?
     for i := 0 to Count - 1 do
-      if AnsiContainsStr(ItemAt(i).FileName, AFileName) then
+      if AnsiContainsStr(Items[i].FileName, AFileName) then
         Exit;
 
     // Add new startup user item?
@@ -2427,7 +2391,7 @@ begin
   try
     for i := 0 to Count - 1 do
     begin
-      Item := ItemAt(i);
+      Item := TStartupListItem(Items[i]);
 
       // Skip enabled startup user items (not in Registry)!
       if ((Item is TStartupUserItem) and Item.Enabled) then
@@ -2485,7 +2449,7 @@ begin
 
     // File path already exists in another item?
     for i := 0 to Count - 1 do
-      if (ItemAt(i).FileName = LnkFile.ExeFileName) then
+      if (Items[i].FileName = LnkFile.ExeFileName) then
         Exit;
 
     // Create .lnk file and add it to list
@@ -3183,24 +3147,6 @@ begin
   FActCount := 0;
 end;
 
-{ private TContextList.GetSelectedItem
-
-  Returns the current selected item as TContextListItem. }
-
-function TContextList.GetSelectedItem(): TContextListItem;
-begin
-  Result := TContextListItem(Selected);
-end;
-
-{ private TContextList.ItemAt
-
-  Returns a TContextListItem object at index. }
-
-function TContextList.ItemAt(AIndex: Word): TContextListItem;
-begin
-  Result := TContextListItem(RootItemAt(AIndex));
-end;
-
 { protected TContextList.AddShellItem
 
   Adds a shell item to list. }
@@ -3287,7 +3233,7 @@ end;
 function TContextList.Add(AFileName, AArguments, ALocationRoot, ACaption: string;
   AExtended: Boolean = False): Boolean;
 var
-  Name, Ext, FullPath, LocationRoot, FileType, KeyPath, UserChoice: string;
+  Name, Ext, FullPath, LocationRoot, FileType, KeyPath: string;
   Reg: TRegistry;
 
 begin
@@ -3405,7 +3351,7 @@ begin
   try
     for i := 0 to Count - 1 do
     begin
-      Item := ItemAt(i);
+      Item := TContextListItem(Items[i]);
       RegFile.ExportKey(HKEY_CLASSES_ROOT, Item.Location, True);
     end;  //of for
 
@@ -3432,7 +3378,7 @@ begin
 
   for i := 0 to Count - 1 do
   begin
-    Item := ItemAt(i);
+    Item := TContextListItem(Items[i]);
 
     if (((Item.Name = AName) or (Item.Caption = AName)) and
       (Item.LocationRoot = ALocationRoot)) then
@@ -3983,24 +3929,6 @@ begin
   inherited Destroy;
 end;
 
-{ private TServiceList.ItemAt
-
-  Returns a TServiceListItem object at index. }
-
-function TServiceList.ItemAt(AIndex: Word): TServiceListItem;
-begin
-  Result := TServiceListItem(RootItemAt(AIndex));
-end;
-
-{ private TServiceList.GetSelectedItem
-
-  Returns the current selected item as TServiceListItem. }
-
-function TServiceList.GetSelectedItem(): TServiceListItem;
-begin
-  Result := TServiceListItem(Selected);
-end;
-
 { protected TServiceList.AddServiceDisabled
 
   Adds a disabled service item to list. }
@@ -4142,7 +4070,7 @@ begin
     // Export enabled services
     for i := 0 to Count - 1 do
     begin
-      Item := ItemAt(i);
+      Item := TServiceListItem(Items[i]);
       RegFile.ExportKey(HKEY_LOCAL_MACHINE, Item.Location, True);
     end;  //of for
 
@@ -4172,7 +4100,7 @@ begin
 
   for i := 0 to Count - 1 do
   begin
-    Item := ItemAt(i);
+    Item := TServiceListItem(Items[i]);
 
     // Item name or caption matches?
     if ((Item.Caption = ACaptionOrName) or (Item.Name = ACaptionOrName)) then
@@ -4481,24 +4409,6 @@ begin
   inherited Destroy;
 end;
 
-{ private TTaskList.GetSelectedItem
-
-  Returns the current selected item as TTaskListItem. }
-
-function TTaskList.GetSelectedItem(): TTaskListItem;
-begin
-  Result := TTaskListItem(Selected);
-end;
-
-{ private TTaskList.ItemAt
-
-  Returns a TTaskList object at index. }
-
-function TTaskList.ItemAt(AIndex: Word): TTaskListItem;
-begin
-  Result := TTaskListItem(RootItemAt(AIndex));
-end;
-
 { protected TTaskList.AddTaskItem
 
   Adds a task item to the list. }
@@ -4651,11 +4561,20 @@ begin
     end;  //of try
 end;
 
+{ public TTaskList.Load
+
+  Uses default settings to load items into list. }
+
+procedure TTaskList.Load();
+begin
+  LoadTasks('\');
+end;
+
 { public TTaskList.LoadTasks
 
   Searches for task items in specific folder and adds them to the list. }
 
-procedure TTaskList.LoadTasks(APath: string = '\'; ARecursive: Boolean = False;
+procedure TTaskList.LoadTasks(APath: string; ARecursive: Boolean = False;
   AIncludeHidden: Boolean = False);
 var
   SearchThread: TTaskSearchThread;
