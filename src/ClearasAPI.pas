@@ -11,7 +11,7 @@ unit ClearasAPI;
 interface
 
 uses
-  Windows, WinSvc, Classes, SysUtils, Registry, ShlObj, ActiveX, ComObj,
+  Windows, WinSvc, Classes, SysUtils, Registry, ShlObj, ActiveX, ComObj, Zip,
   CommCtrl, ShellAPI, SyncObjs, StrUtils, Variants, System.Generics.Collections,
   Taskschd, PMCWOSUtils, PMCWLanguageFile, PMCWIniFileParser;
 
@@ -128,8 +128,8 @@ type
     property TypeOf: string read FType write FType;
   end;
 
-  { TRootRegItem }
-  TRootRegItem = class(TRootItem)
+  { TRegistryItem }
+  TRegistryItem = class(TRootItem)
   protected
     FWow64: Boolean;
     function DeleteKey(ARootKey: TRootKey; AKeyPath, AKeyName: string;
@@ -202,8 +202,8 @@ type
     function ImportBackup(const AFileName: string): Boolean;
   end;
 
-  { TRootRegList }
-  TRootRegList<T: TRootItem> = class(TRootList<T>, IExportableList)
+  { TExportablelist }
+  TExportablelist<T: TRootItem> = class(TRootList<T>, IExportableList)
     procedure ExportList(const AFileName: string); virtual; abstract;
   end;
 
@@ -211,7 +211,7 @@ type
   EStartupException = class(Exception);
 
   { TStartupListItem }
-  TStartupListItem = class(TRootRegItem)
+  TStartupListItem = class(TRegistryItem)
   private
     FRootKey: HKEY;
     FTime: string;
@@ -254,7 +254,7 @@ type
   end;
 
   { TStartupList }
-  TStartupList = class(TRootRegList<TStartupListItem>, IImportableList)
+  TStartupList = class(TExportablelist<TStartupListItem>, IImportableList)
   private
     FDeleteBackup: Boolean;
     function DeleteBackupFile(): Boolean;
@@ -296,7 +296,7 @@ type
   TShellItemType = (stShell, stShellEx, stShellNew);
 
   { TContextListItem }
-  TContextListItem = class(TRootRegItem)
+  TContextListItem = class(TRegistryItem)
   private
     FCaption: string;
     function GetKeyPath(): string; virtual; abstract;
@@ -350,7 +350,7 @@ type
   end;
 
   { TContextList }
-  TContextList = class(TRootRegList<TContextListItem>)
+  TContextList = class(TExportablelist<TContextListItem>)
   protected
     function AddShellItem(const AName, ALocationRoot, AFileName, ACaption: string;
       AEnabled, AWow64: Boolean): Integer;
@@ -379,7 +379,7 @@ type
   TServiceStart = (ssBoot, ssSystem, ssAutomatic, ssManual, ssDisabled);
 
   { TServiceListItem }
-  TServiceListItem = class(TRootRegItem)
+  TServiceListItem = class(TRegistryItem)
   private
     FServiceManager: SC_HANDLE;
     FCaption, FTime: string;
@@ -407,7 +407,7 @@ type
   end;
 
   { TServiceList }
-  TServiceList = class(TRootRegList<TServiceListItem>)
+  TServiceList = class(TExportablelist<TServiceListItem>)
   private
     FManager: SC_HANDLE;
   protected
@@ -450,7 +450,7 @@ type
   end;
 
   { TTaskList }
-  TTaskList = class(TRootList<TTaskListItem>, IImportableList)
+  TTaskList = class(TExportablelist<TTaskListItem>, IImportableList)
   private
     FTaskService: ITaskService;
   protected
@@ -458,6 +458,7 @@ type
   public
     constructor Create;
     destructor Destroy; override;
+    procedure ExportList(const AFileName: string); override;
     function ImportBackup(const AFileName: string): Boolean;
     procedure Load(); override;
     procedure LoadTasks(ATaskFolder: ITaskFolder; AIncludeHidden: Boolean); overload;
@@ -944,23 +945,23 @@ begin
 end;
 
 
-{ TRootRegItem }
+{ TRegistryItem }
 
-{ public TRootRegItem.Create
+{ public TRegistryItem.Create
 
   General constructor for creating a TRootRegItem instance. }
 
-constructor TRootRegItem.Create(AIndex: Word; AEnabled, AWow64: Boolean);
+constructor TRegistryItem.Create(AIndex: Word; AEnabled, AWow64: Boolean);
 begin
   inherited Create(AIndex, AEnabled);
   FWow64 := AWow64;
 end;
 
-{ protected TRootRegItem.DeleteKey
+{ protected TRegistryItem.DeleteKey
 
   Deletes a Registry key. }
 
-function TRootRegItem.DeleteKey(ARootKey: TRootKey; AKeyPath, AKeyName: string;
+function TRegistryItem.DeleteKey(ARootKey: TRootKey; AKeyPath, AKeyName: string;
   AFailIfNotExists: Boolean = True): Boolean;
 var
   Reg: TRegistry;
@@ -989,11 +990,11 @@ begin
   end;  //of try
 end;
 
-{ protected TRootRegItem.GetWow64Key
+{ protected TRegistryItem.GetWow64Key
 
   Returns the virtualized Registry key by WOW64. }
 
-function TRootRegItem.GetWow64Key(): string;
+function TRegistryItem.GetWow64Key(): string;
 begin
   if (FEnabled and FWow64) then
   begin
@@ -1006,11 +1007,11 @@ begin
     Result := FLocation;
 end;
 
-{ protected TRootRegItem.OpenInRegEdit
+{ protected TRegistryItem.OpenInRegEdit
 
-  Opens a TRootRegItem object in either 32- or 64-Bit RegEdit. }
+  Opens a TRegistryItem object in either 32- or 64-Bit RegEdit. }
 
-procedure TRootRegItem.OpenInRegEdit(AWow64: Boolean);
+procedure TRegistryItem.OpenInRegEdit(AWow64: Boolean);
 const
   KEY_REGEDIT = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Regedit';
 
@@ -1058,11 +1059,11 @@ begin
   end;  //of try
 end;
 
-{ protected TRootRegItem.WriteTimestamp
+{ protected TRegistryItem.WriteTimestamp
 
   Writes the deactivation timestamp. }
 
-function TRootRegItem.WriteTimestamp(AReg: TRegistry): string;
+function TRegistryItem.WriteTimestamp(AReg: TRegistry): string;
 var
   Year, Month, Day, Hour, Min, Sec, MSec: Word;
   TimeNow: TDateTime;
@@ -1099,20 +1100,20 @@ begin
   end;  //of try
 end;
 
-{ public TRootRegItem.OpenInRegEdit
+{ public TRegistryItem.OpenInRegEdit
 
-  Opens a TRootRegItem object in RegEdit. }
+  Opens a TRegistryItem object in RegEdit. }
 
-procedure TRootRegItem.OpenInRegEdit();
+procedure TRegistryItem.OpenInRegEdit();
 begin
   OpenInRegEdit(FWow64);
 end;
 
-{ public TRootRegItem.GetTimestamp
+{ public TRegistryItem.GetTimestamp
 
   Returns the deactivation timestamp. }
 
-function TRootRegItem.GetTimestamp(AReg: TRegistry): string;
+function TRegistryItem.GetTimestamp(AReg: TRegistry): string;
 var
   Year, Month, Day, Hour, Min, Sec: Word;
   Date, Time: string;
@@ -4262,7 +4263,8 @@ end;
 
 function TTaskListItem.GetFullLocation(): string;
 begin
-  Result := FileName;
+  if GetKnownFolderPath(FOLDERID_System, Result) then
+    Result := IncludeTrailingBackslash(Result +'Tasks'+ Location) + Name;
 end;
 
 { public TTaskListItem.ChangeFilePath
@@ -4458,6 +4460,42 @@ begin
     Inc(FActCount);
 
   Result := Add(Item);
+end;
+
+{ public TTaskList.ExportList
+
+  Exports the complete list as .zip file. }
+
+procedure TTaskList.ExportList(const AFileName: string);
+var
+  ZipFile: TZipFile;
+  i: Integer;
+  Item: TTaskListItem;
+  Path, ZipLocation: string;
+
+begin
+  FLock.Acquire;
+  ZipFile := TZipFile.Create;
+
+  try
+    ZipFile.Open(AFileName, zmWrite);
+    Path := IncludeTrailingPathDelimiter(Path);
+
+    for i := 0 to Count - 1 do
+    begin
+      Item := Items[i];
+      ZipLocation := IncludeTrailingPathDelimiter(Item.Location);
+      ZipLocation := Copy(ZipLocation, 2, Length(Item.Location));
+      ZipLocation := StringReplace(ZipLocation + Item.Name, '\', '/', [rfReplaceAll]);
+      ZipFile.Add(Item.LocationFull, ZipLocation, zcDeflate);
+    end;  //of for
+
+    ZipFile.Close();
+
+  finally
+    ZipFile.Free;
+    FLock.Release;
+  end;  //of try
 end;
 
 { public TTaskList.ImportBackup

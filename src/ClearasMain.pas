@@ -744,6 +744,8 @@ begin
 
   // Refresh counter label
   OnStartupItemChanged(Sender);
+
+  // Update some VCL
   mmImport.Enabled := True;
   mmLang.Enabled := True;
   cbRunOnce.Enabled := True;
@@ -882,6 +884,7 @@ begin
   OnTaskItemChanged(Sender);
 
   // Update some VCL
+  mmImport.Enabled := True;
   mmLang.Enabled := True;
   cbTaskExpert.Enabled := True;
   lwTasks.Cursor := crDefault;
@@ -2268,8 +2271,8 @@ begin
   try
     Item := GetSelectedItem();
 
-    if (Item is TRootRegItem) then
-      (Item as TRootRegItem).OpenInRegEdit();
+    if (Item is TRegistryItem) then
+      (Item as TRegistryItem).OpenInRegEdit();
 
   except
     on E: EInvalidItem do
@@ -2536,14 +2539,11 @@ end;
 
 procedure TMain.mmExportListClick(Sender: TObject);
 var
-  SelectedList: TRootList<TRootItem>;
+  SelectedList: TExportablelist<TRootItem>;
   FileName: string;
 
 begin
-  SelectedList := GetSelectedList();
-
-  if not (SelectedList is TRootRegList<TRootItem>) then
-    Exit;
+  SelectedList := TExportablelist<TRootItem>(GetSelectedList());
 
   // Operation pending?
   if SelectedList.IsLocked() then
@@ -2559,8 +2559,7 @@ begin
   if PromptForFileName(FileName, FLang.GetString(36), '.reg',
     StripHotkey(mmExportList.Caption), '%HOMEPATH%', True) then
     // Export list (threaded!)
-    with TExportListThread.Create((SelectedList as TRootRegList<TRootItem>), FileName,
-      PageControl.ActivePageIndex) do
+    with TExportListThread.Create(SelectedList, FileName, PageControl.ActivePageIndex) do
     begin
       OnStart := OnExportListStart;
       OnFinish := OnExportListEnd;
@@ -2853,7 +2852,8 @@ begin
        end;
 
     3: begin
-         mmAdd.Caption := FLang.GetString(57);
+         //mmAdd.Caption := FLang.GetString(57);
+         mmAdd.Enabled := False;
          mmImport.Visible := True;
          mmDate.Visible := False;
          lwTasksSelectItem(Sender, lwTasks.ItemFocused, True);
