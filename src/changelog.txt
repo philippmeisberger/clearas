@@ -4,6 +4,18 @@ Ein Open-Source Projekt von PM Code Works
 Changelog
 =========
 
+Version 4.2  [??.??.15]
+
+- Neues Feature "Aufgaben":
+  - Ermöglicht Bearbeiten von geplanten Aufgaben
+  - "Einträge exportieren" speichert alle Aufgaben als ZIP-Datei
+  - "Backup importieren" importiert eine zuvor exportierte Aufgabe als XML-Datei
+  - "Expertenmodus" findet versteckte Aufgaben
+- Event-System verbessert
+- Nutzung von generischen Container-Klassen (Generics)
+
+---------------------------------
+
 Version 4.1  [27.08.15]
 
 - Änderungen auf der Seite "Kontextmenü":

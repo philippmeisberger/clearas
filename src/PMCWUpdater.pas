@@ -1,6 +1,6 @@
 { *********************************************************************** }
 {                                                                         }
-{ PM Code Works Updater v3.0                                              }
+{ PM Code Works Updater v3.0.1                                            }
 {                                                                         }
 { Copyright (c) 2011-2015 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
@@ -523,10 +523,6 @@ begin
       OnCancel := OnDownloadCancel;
       OnFinish := OnDownloadFinished;
       OnError := OnDownloadError;
-
-      // Remote file is an .zip archive?
-      if FUnzip then
-        OnUnzip := OnUnzipArchive;
 
       // Use HTTPS?
       if UseTls then

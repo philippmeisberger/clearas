@@ -607,7 +607,7 @@ begin
   end;  //of case
 
   if not Assigned(List) then
-    raise EInvalidItem.Create('No list selected!');
+    raise EInvalidItem.Create('No TRootList selected!');
 
   Result := List;
 end;
@@ -784,9 +784,6 @@ begin
         SubItems.Append(FContext[i].TypeOf);
       end; //of with
   end;  //of for
-
-  // Refresh counter label
-  OnContextItemChanged(Sender, stNone);
 
   // Update some VCL
   mmLang.Enabled := True;
@@ -988,9 +985,6 @@ begin
     Icon.Free;
   end;  //of try
 
-  // Refresh counter label
-  OnStartupItemChanged(Sender, stNone);
-
   // Update some VCL
   mmImport.Enabled := True;
   mmLang.Enabled := True;
@@ -1090,8 +1084,6 @@ begin
       end;  //of with
     end;  //of for
 
-  // Refresh counter label
-  OnServiceItemChanged(Sender, stNone);
   mmLang.Enabled := True;
   cbServiceExpert.Enabled := True;
   lwService.Cursor := crDefault;
@@ -1559,7 +1551,7 @@ end;
 
 procedure TMain.bDeleteTaskItemClick(Sender: TObject);
 begin
-  DeleteItem(58);
+  DeleteItem(120);
 end;
 
 { TMain.bDisableStartupItemClick
@@ -2552,15 +2544,11 @@ begin
         0: begin
              if not FStartup.ImportBackup(FileName) then
                raise EWarning.Create(FLang.GetString(41));
-
-             LoadStartupItems(False);
            end;
 
         3: begin
              if not FTasks.ImportBackup(FileName) then
                raise EWarning.Create(FLang.GetString(41));
-
-             LoadTaskItems(False);
            end;
       end;  //of case
 

@@ -1,6 +1,6 @@
 { *********************************************************************** }
 {                                                                         }
-{ PM Code Works Download Thread v3.0                                      }
+{ PM Code Works Download Thread v3.0.1                                    }
 {                                                                         }
 { Copyright (c) 2011-2015 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
@@ -12,7 +12,7 @@ interface
 
 uses
   Classes, SysUtils, System.Net.HttpClientComponent, System.Net.HttpClient,
-  System.Net.URLClient, StrUtils, ComObj, ActiveX;
+  System.Net.URLClient, StrUtils;
 
 const
   ERROR_CERTIFICATE_VALIDATION = -2;
@@ -31,7 +31,6 @@ type
     FOnDownloading: TDownloadingEvent;
     FOnError: TRequestErrorEvent;
     FOnFinish: TDownloadFinishedEvent;
-    FOnUnzip,
     FOnCancel: TNotifyEvent;
     FContentLength,
     FReadCount: Int64;
@@ -46,12 +45,10 @@ type
     procedure DoNotifyOnDownloading;
     procedure DoNotifyOnError;
     procedure DoNotifyOnFinish;
-    procedure DoNotifyOnUnzip;
     procedure Downloading(const Sender: TObject; AContentLength, AReadCount: Int64;
       var AAbort: Boolean);
     procedure OnValidateServerCertificate(const Sender: TObject;
       const ARequest: TURLRequest; const ACertificate: TCertificate; var AAccepted: Boolean);
-    function UnzipArchive(): Boolean;
     procedure SetTlsEnabled(const AValue: Boolean);
   protected
     procedure Execute; override;
@@ -65,7 +62,6 @@ type
     property OnDownloading: TDownloadingEvent read FOnDownloading write FOnDownloading;
     property OnError: TRequestErrorEvent read FOnError write FOnError;
     property OnFinish: TDownloadFinishedEvent read FOnFinish write FOnFinish;
-    property OnUnzip: TNotifyEvent read FOnUnzip write FOnUnzip;
     property TLSEnabled: Boolean read FTLSEnabled write SetTlsEnabled;
   end;
 
@@ -165,16 +161,6 @@ begin
     OnFinish(Self, FFileName);
 end;
 
-{ private TDownloadThread.DoNotifyOnUnzip
-
-  Synchronizable event method that is called when zip file gets unzipped. }
-
-procedure TDownloadThread.DoNotifyOnUnzip;
-begin
-  if Assigned(FOnUnzip) then
-    OnUnzip(Self);
-end;
-
 { private TDownloadThread.Downloading
 
   Event method that is called when download is in progress. }
@@ -221,51 +207,6 @@ begin
   FTLSEnabled := AValue;
 end;
 
-{ private TDownloadThread.Unzip
-
-  Unzips the downloaded .zip archive. }
-
-function TDownloadThread.UnzipArchive(): Boolean;
-const
-  SHCONTCH_NOPROGRESSBOX   = 4;
-  SHCONTCH_AUTORENAME      = 8;
-  SHCONTCH_RESPONDYESTOALL = 16;
-  SHCONTF_FOLDERS          = 32;
-  SHCONTF_NONFOLDERS       = 64;
-
-var
-  ShellObj, Source, Destination, Items: OleVariant;
-  Flags: Byte;
-
-  function GetNameSpace(Ole: OleVariant): OleVariant;
-  begin
-    Result := ShellObj.NameSpace(Ole);
-  end;
-
-begin
-  Result := False;
-  Synchronize(DoNotifyOnUnzip);
-  CoInitialize(nil);
-
-  try
-    ShellObj := CreateOleObject('Shell.Application');
-
-    Source := GetNameSpace(FFileName);
-    Destination := GetNameSpace(ExtractFileDir(FFileName));
-    Items := Source.Items;
-
-    // Setup flags
-    Flags := SHCONTCH_NOPROGRESSBOX;
-
-    // Unzip files
-    Destination.CopyHere(Items, Flags);
-    Result := True;
-
-  finally
-    CoUninitialize();
-  end;  //of try
-end;
-
 { protected TDownloadThread.Execute
 
   Thread main method that downloads a file from an HTTP source. }
@@ -300,12 +241,6 @@ begin
     // User canceled?
     if FAbort then
       Abort;
-
-    // Unzip archive?
-    if Assigned(FOnUnzip) then
-      // Unzip successful?
-      if UnzipArchive() then
-        DeleteFile(FFileName);
 
     // Download successful!
     Synchronize(DoNotifyOnFinish);

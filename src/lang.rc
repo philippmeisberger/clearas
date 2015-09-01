@@ -120,6 +120,7 @@ BEGIN
   217, "Aufgabe hinzufügen"
   218, "XML-Datei *.xml|*.xml"
   219, "ZIP-Datei *.zip|*.zip"
+  220, "Wollen Sie die Aufgabe \"%s\" wirklich löschen?"
 END
 
 STRINGTABLE VERSION 1033 // english
@@ -244,6 +245,7 @@ BEGIN
   417, "Add task"
   418, "XML file *.xml|*.xml"
   419, "ZIP file *.zip|*.zip"
+  420, "Are you sure you want to delete the task \"%s\"?"
 END
 
 STRINGTABLE VERSION 1036 // français
@@ -368,4 +370,5 @@ BEGIN
   617, "Ajouter tâche"
   618, "Fichier XML *.xml|*.xml"
   619, "Fichier ZIP *.zip|*.zip"
+  620, "Voulez-vous vraiment supprimer la tâche \"%s\"?"
 END

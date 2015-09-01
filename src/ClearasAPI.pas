@@ -1197,6 +1197,8 @@ procedure TRootList<T>.DoNotifyOnFinished();
 begin
   if Assigned(FOnSearchFinish) then
     FOnSearchFinish(Self);
+
+  DoNotifyOnChanged(stNone);
 end;
 
 { protected RootList.QueryInterface
@@ -1473,8 +1475,8 @@ var
 begin
   Result := -1;
 
-  for i := 0 to Count -1 do
-    if (Items[i].Name = AItemName) then
+  for i := 0 to Count - 1 do
+    if (TRootItem(Items[i]).Name = AItemName) then
     begin
       Result := i;
       Break;
@@ -4326,7 +4328,7 @@ begin
   Actions := FTaskDefinition.Actions._NewEnum as IEnumVariant;
 
   // Try to find executable command in task
-  while Succeeded(Actions.Next(1, ActionItem, Fetched)) do
+  if (Actions.Next(1, ActionItem, Fetched) = S_OK) then
   begin
     Action := IDispatch(ActionItem) as IAction;
 
@@ -4342,7 +4344,6 @@ begin
       // Update task
       Result := UpdateTask(FTaskDefinition);
       FileName := ANewFilePath;
-      Break;
     end;  //of begin
   end;  //of while
 end;
@@ -4401,7 +4402,7 @@ begin
   if not GetKnownFolderPath(FOLDERID_System, FsLocation) then
     raise Exception.Create('SHGetKnownFolderPath: Could not get system directory!');
 
-  FsLocation := FsLocation + IncludeTrailingPathDelimiter(Location) + Name;
+  FsLocation := FsLocation +'Tasks'+ IncludeTrailingPathDelimiter(Location) + Name;
 
   // Deny WOW64 redirection on 64 Bit Windows
   if Win64 then
@@ -4478,7 +4479,7 @@ begin
     // Try to find executable command in task
     Actions := Definition.Actions._NewEnum as IEnumVariant;
 
-    if Succeeded(Actions.Next(1, ActionItem, Fetched)) then
+    if (Actions.Next(1, ActionItem, Fetched) = S_OK) then
     begin
       Action := IDispatch(ActionItem) as IAction;
 
@@ -4549,7 +4550,9 @@ var
   Ext, Path: string;
   TaskFile: TStringList;
   TaskFolder: ITaskFolder;
+  TaskDefinition: ITaskDefinition;
   NewTask: IRegisteredTask;
+
 {$IFDEF WIN32}
   Win64: Boolean;
 {$ENDIF}
@@ -4582,17 +4585,17 @@ begin
     if Failed(FTaskService.GetFolder('\', TaskFolder)) then
       raise ETaskException.Create('Could not open task folder!');
 
-    Path := '\'+ ChangeFileExt(ExtractFileName(AFileName), '');
+    Path := TaskFolder.Path + ChangeFileExt(ExtractFileName(AFileName), '');
 
     // Task exists?
     if Succeeded(TaskFolder.GetTask(PChar(Path), NewTask)) then
       Exit;
 
     // Read .xml task file
-    TaskFile.LoadFromFile(AFileName);
+    TaskFile.LoadFromFile(AFileName, TEncoding.Unicode);
 
     // Register new task
-    if Failed(TaskFolder.RegisterTask(PChar(Path), PChar(TaskFile.Text),
+    if Failed(TaskFolder.RegisterTask(PChar(Path), TaskFile.GetText(),
       Ord(TASK_CREATE), Null, Null, TASK_LOGON_INTERACTIVE_TOKEN, Null, NewTask)) then
       raise ETaskException.Create('Could not register task!');
 

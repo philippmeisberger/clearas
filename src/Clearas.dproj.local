@@ -2,8 +2,8 @@
 <BorlandProject>
 	<Transactions>
     <Transaction>1899.12.30 00:00:00.000.527,C:\Users\Phil\PMCW\Projekte\clearas\src\ContextSearchThread.pas=</Transaction>
-    <Transaction>1899.12.30 00:00:00.000.501,C:\Users\Phil\PMCW\Projekte\clearas\src\ClearasSearchThread.pas=C:\Users\Phil\PMCW\Projekte\clearas\src\Unit1.pas</Transaction>
-    <Transaction>1899.12.30 00:00:00.000.775,=C:\Users\Phil\PMCW\Projekte\clearas\src\Unit1.pas</Transaction>
     <Transaction>1899.12.30 00:00:00.000.629,C:\Users\Phil\PMCW\Projekte\clearas\src\StartupSearchThread.pas=</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.501,C:\Users\Phil\PMCW\Projekte\clearas\src\Unit1.pas=C:\Users\Phil\PMCW\Projekte\clearas\src\ClearasSearchThread.pas</Transaction>
+    <Transaction>1899.12.30 00:00:00.000.775,=C:\Users\Phil\PMCW\Projekte\clearas\src\Unit1.pas</Transaction>
   </Transactions>
 </BorlandProject>
