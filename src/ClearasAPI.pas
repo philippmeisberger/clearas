@@ -165,6 +165,7 @@ type
     FActCount: Word;
     FLock: TCriticalSection;
     procedure DoNotifyOnChanged();
+    procedure DoNotifyOnFinished();
     function QueryInterface(const IID: TGUID; out Obj): HResult; stdcall;
     function _AddRef: Integer; stdcall;
     function _Release: Integer; stdcall;
@@ -1181,6 +1182,16 @@ procedure TRootList<T>.DoNotifyOnChanged();
 begin
   if Assigned(FOnChanged) then
     FOnChanged(Self);
+end;
+
+{ protected RootList.DoNotifyOnFinished
+
+  Notifies if a item has been changed. }
+
+procedure TRootList<T>.DoNotifyOnFinished();
+begin
+  if Assigned(FOnSearchFinish) then
+    FOnSearchFinish(Self);
 end;
 
 { protected RootList.QueryInterface
@@ -2306,7 +2317,7 @@ begin
         Reg.RootKey := HKEY_CURRENT_USER;
         Reg.OpenKey(KEY_STARTUP_RUN, True);
 
-        // Escape space char using quotes
+        // Escape space chars using quotes
         FullPath := '"'+ AFileName +'"';
 
         // Append arguments if used
@@ -2324,6 +2335,9 @@ begin
         Reg.Free;
       end;  //of try
     end;  //of begin
+
+    // Refresh TListView
+    DoNotifyOnFinished();
 
   finally
     FLock.Release();
@@ -2463,6 +2477,9 @@ begin
     // Create .lnk file and add it to list
     Result := AddNewStartupUserItem(Name, LnkFile.ExeFileName, LnkFile.Arguments,
       (Ext = EXT_COMMON));
+
+    // Refresh TListView
+    DoNotifyOnFinished();
 
   finally
     LnkFile.Free;
@@ -3253,7 +3270,6 @@ begin
     raise EArgumentException.Create('Invalid location: Expected at least two characters or ''*''!');
 
   Ext := ExtractFileExt(AFileName);
-  Name := ChangeFileExt(ExtractFileName(AFileName), '');
 
   // Check invalid extension
   if ((Ext <> '.exe') and (Ext <> '.bat')) then
@@ -3265,6 +3281,8 @@ begin
     raise EListBlocked.Create('Another operation is pending. Please wait!');
 
   try
+    Name := ChangeFileExt(ExtractFileName(AFileName), '');
+
     // File path already exists in another item?
     if (IndexOf(Name, LocationRoot) <> -1) then
       Exit;
@@ -3327,8 +3345,10 @@ begin
       Reg.WriteString('', FullPath);
 
       // Adds item to list
-      AddShellItem(Name, FileType, FullPath, ACaption, True, False);
-      Result := True;
+      Result := (AddShellItem(Name, FileType, FullPath, ACaption, True, False) <> -1);
+
+      // Refresh TListView
+      DoNotifyOnFinished();
 
     finally
       Reg.CloseKey();
@@ -3378,7 +3398,7 @@ end;
 
 function TContextList.IndexOf(AName, ALocationRoot: string): Integer;
 var
-  i: Word;
+  i: Integer;
   Item: TContextListItem;
 
 begin
@@ -3386,7 +3406,7 @@ begin
 
   for i := 0 to Count - 1 do
   begin
-    Item := TContextListItem(Items[i]);
+    Item := Items[i];
 
     if (((Item.Name = AName) or (Item.Caption = AName)) and
       (Item.LocationRoot = ALocationRoot)) then
@@ -4053,6 +4073,9 @@ begin
     // Adds service to list
     Result := (AddServiceEnabled(Name, ACaption, FullPath, ssAutomatic) <> -1);
 
+    // Refresh TListView
+    DoNotifyOnFinished();
+
   finally
     FLock.Release();
   end;  //of try
@@ -4108,7 +4131,7 @@ begin
 
   for i := 0 to Count - 1 do
   begin
-    Item := TServiceListItem(Items[i]);
+    Item := Items[i];
 
     // Item name or caption matches?
     if ((Item.Caption = ACaptionOrName) or (Item.Name = ACaptionOrName)) then
@@ -4564,8 +4587,8 @@ begin
     // Add new task to list
     Result := (AddTaskItem(NewTask, TaskFolder) <> -1);
 
-    // Notify import
-    DoNotifyOnChanged();
+    // Refresh TListView
+    DoNotifyOnFinished();
 
   finally
     TaskFile.Free;

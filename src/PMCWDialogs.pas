@@ -85,7 +85,6 @@ var
 
   function GetMaxPromptWidth(Canvas: TCanvas): Integer;
   var
-    I: Integer;
     LLabel: TLabel;
 
   begin

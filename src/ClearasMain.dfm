@@ -363,7 +363,7 @@ object Main: TMain
         TabOrder = 8
         TextHint = 'Suchen ...'
         OnChange = eSearchChange
-        OnRightButtonClick = eContextSearchRightButtonClick
+        OnRightButtonClick = eSearchRightButtonClick
       end
     end
     object tsService: TTabSheet
@@ -543,7 +543,7 @@ object Main: TMain
         TabOrder = 7
         TextHint = 'Suchen ...'
         OnChange = eSearchChange
-        OnRightButtonClick = eContextSearchRightButtonClick
+        OnRightButtonClick = eSearchRightButtonClick
       end
     end
     object tsTasks: TTabSheet
@@ -684,7 +684,7 @@ object Main: TMain
         TabOrder = 6
         TextHint = 'Suchen ...'
         OnChange = eSearchChange
-        OnRightButtonClick = eContextSearchRightButtonClick
+        OnRightButtonClick = eSearchRightButtonClick
       end
       object lwTasks: TListView
         Left = 21
@@ -878,7 +878,7 @@ object Main: TMain
   object QuickSearchIconList: TImageList
     Left = 256
     Bitmap = {
-      494C0101030008002C0110001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C010103000800340110001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000001000000001002000000000000010
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000

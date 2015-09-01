@@ -169,7 +169,7 @@ type
     procedure lCopy1MouseLeave(Sender: TObject);
     procedure lCopy1MouseEnter(Sender: TObject);
     procedure lCopy1Click(Sender: TObject);
-    procedure eContextSearchRightButtonClick(Sender: TObject);
+    procedure eSearchRightButtonClick(Sender: TObject);
     procedure lwTasksSelectItem(Sender: TObject; Item: TListItem;
       Selected: Boolean);
     procedure lwTasksDblClick(Sender: TObject);
@@ -206,8 +206,7 @@ type
     procedure SetLanguage(Sender: TObject);
     function ShowExportItemDialog(): Boolean;
     procedure ShowColumnDate(AListView: TListView; AShow: Boolean = True);
-    function UpdateContextPath(): Boolean; overload;
-    function UpdateContextPath(ALangFile: TLanguageFile): Boolean; overload; deprecated;
+    function UpdateContextPath(): Boolean;
   end;
 
 var
@@ -1046,7 +1045,8 @@ begin
   end;  //of with
 
   // Update TListView captions
-  if Assigned(FStartup) and Assigned(FContext) and Assigned(FService) then
+  if Assigned(FStartup) and Assigned(FContext) and Assigned(FService) and
+    Assigned(FTasks) then
   begin
     LoadStartupItems(False);
     LoadContextMenuItems(False);
@@ -1167,38 +1167,6 @@ begin
   finally
     Reg.CloseKey();
     Reg.Free;
-  end;  //of try
-end;
-
-{ public TMain.UpdateContextPath
-
-  Updates "Open Clearas" in recycle bin context menu. }
-
-function TMain.UpdateContextPath(ALangFile: TLanguageFile): Boolean;
-var
-  Reg: TRegistry;
-  ClearasKey: string;
-
-begin
-  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
-
-  try
-    Reg.RootKey := HKEY_CLASSES_ROOT;
-    Reg.OpenKey(KEY_RECYCLEBIN, False);
-    ClearasKey := ALangFile.GetString(107);
-
-    // Only update if context menu entry exists
-    if Reg.KeyExists(ClearasKey) then
-    begin
-      // Delete old context menu key
-      if not Reg.DeleteKey(ClearasKey) then
-        raise Exception.Create('Could not delete key: '+ ClearasKey);
-    end;  //of begin
-
-  finally
-    Reg.CloseKey();
-    Reg.Free;
-    Result := UpdateContextPath();
   end;  //of try
 end;
 
@@ -1727,18 +1695,15 @@ begin
     (Sender as TButtonedEdit).RightButton.PressedImageIndex := 2;
   end;  //of if
 
-  case PageControl.ActivePageIndex of
-    1: LoadContextMenuItems(False);
-    2: LoadServiceItems(False);
-    3: LoadTaskItems(False);
-  end;  //of case
+  // Refresh TListView
+  GetSelectedList().OnSearchFinish(Self);
 end;
 
-{ TMain.eContextSearchRightButtonClick
+{ TMain.eSearchRightButtonClick
 
   Event method that is called when user clicked on clear. }
 
-procedure TMain.eContextSearchRightButtonClick(Sender: TObject);
+procedure TMain.eSearchRightButtonClick(Sender: TObject);
 begin
   if ((Sender as TButtonedEdit).Text <> '') then
     (Sender as TButtonedEdit).Clear;
@@ -2024,14 +1989,16 @@ end;
 procedure TMain.ListViewCompare(Sender: TObject; Item1, Item2: TListItem;
   Data: Integer; var Compare: Integer);
 var
+  List: TListView;
   ColumnToSort: Byte;
 
 begin
-  ColumnToSort := (Sender as TListView).Tag;
+  List := (Sender as TListView);
+  ColumnToSort := List.Tag;
 
   // Status column?
   if (ColumnToSort = 0) then
-    case (Sender as TListView).Columns[ColumnToSort].Tag of
+    case List.Columns[ColumnToSort].Tag of
       0: Compare := CompareText(Item1.Caption, Item2.Caption);
       1: Compare := CompareText(Item2.Caption, Item1.Caption);
     end  //of case
@@ -2040,7 +2007,7 @@ begin
     Data := ColumnToSort - 1;
 
     if (Data < 3) then
-      case (Sender as TListView).Columns[ColumnToSort].Tag of
+      case List.Columns[ColumnToSort].Tag of
         0: Compare := CompareText(Item1.SubItems[Data], Item2.SubItems[Data]);
         1: Compare := CompareText(Item2.SubItems[Data], Item1.SubItems[Data]);
       end;  //of case
@@ -2072,25 +2039,25 @@ end;
 procedure TMain.ListViewKeyPress(Sender: TObject; var Key: Char);
 var
   i, StartIndex: Integer;
-  SelectedList: TListView;
+  List: TListView;
 
 begin
   StartIndex := 0;
-  SelectedList := (Sender as TListView);
+  List := (Sender as TListView);
 
-  if not Assigned(SelectedList.ItemFocused) then
+  if not Assigned(List.ItemFocused) then
     Exit;
 
   // Current selected item already starts with key?
-  if AnsiStartsText(Key, SelectedList.ItemFocused.SubItems[0]) then
-    StartIndex := SelectedList.ItemFocused.Index + 1;
+  if AnsiStartsText(Key, List.ItemFocused.SubItems[0]) then
+    StartIndex := List.ItemFocused.Index + 1;
 
   // Find next item whose first char starts with key
-  for i := StartIndex to SelectedList.Items.Count - 1 do
-    if AnsiStartsText(Key, SelectedList.Items[i].SubItems[0]) then
+  for i := StartIndex to List.Items.Count - 1 do
+    if AnsiStartsText(Key, List.Items[i].SubItems[0]) then
     begin
-      SelectedList.ItemIndex := i;
-      SelectedList.ItemFocused := SelectedList.Items[i];
+      List.ItemIndex := i;
+      List.ItemFocused := List.Items[i];
       Break;
     end;  //of begin
 end;
@@ -2350,12 +2317,11 @@ end;
 
 { TMain.mmAddClick
 
-  MainMenu entry to add a application to autostart. }
+  MainMenu entry to add a new item to the current selected list. }
 
 procedure TMain.mmAddClick(Sender: TObject);
 var
-  OpenDialog: TOpenDialog;
-  Name, Args, Location: string;
+  FileName, Name, Args, Location: string;
   List: TStringList;
   Extended: Boolean;
 
@@ -2366,101 +2332,75 @@ begin
     Exit;
   end;  //of begin
 
-  OpenDialog := TOpenDialog.Create(Self);
-
-  // Set TOpenDialog options
-  with OpenDialog do
-  begin
-    Title := StripHotKey(mmAdd.Caption);
-    InitialDir := '%ProgramFiles%';
-
-    // Filter .exe and .bat files
-    Filter := FLang.GetString(108);
-  end;  //of with
+  // Show open dialog
+  if not PromptForFileName(FileName, FLang.GetString(108), '',
+    StripHotKey(mmAdd.Caption), '%ProgramFiles%') then
+    Exit;
 
   try
-    try
-      // User clicked "open"?
-      if not OpenDialog.Execute then
-        Exit;
+    // Set default name
+    Name := ChangeFileExt(ExtractFileName(FileName), '');
 
-      // Set default name
-      Name := ChangeFileExt(ExtractFileName(OpenDialog.FileName), '');
+    // Setup special default values for new contextmenu items
+    if (PageControl.ActivePageIndex = 1) then
+    begin
+      Name := '&'+ Name;
+      Args := '"%1"';
+    end;  //of begin
 
-      // Setup special default values for new contextmenu items
-      if (PageControl.ActivePageIndex = 1) then
-      begin
-        Name := '&'+ Name;
-        Args := '"%1"';
-      end;  //of begin
+    // User can edit the name
+    if not InputQuery(StripHotKey(mmAdd.Caption), FLang.GetString(97), Name) then
+      Exit;
 
-      // User can edit the name
-      if not InputQuery(OpenDialog.Title, FLang.GetString(97), Name) then
-        Exit;
+    // Name must not be empty!
+    if (Name = '') then
+      raise EArgumentException.Create('Name must not be empty!');
 
-      // Name must not be empty!
-      if (Name = '') then
-        // TODO: Show abort message
-        Exit;
+    // Append optional parameters
+    if not InputQuery(StripHotKey(mmAdd.Caption), FLang.GetString(98), Args) then
+      Exit;
 
-      // Append optional parameters
-      if not InputQuery(OpenDialog.Title, FLang.GetString(98), Args) then
-        Exit;
+    // Add startup item?
+    case PageControl.ActivePageIndex of
+      0: begin
+           // Startup item already exists?
+           if not FStartup.Add(FileName, Args, Name) then
+             raise EWarning.Create(FLang.Format(110, [FileName]));
+         end;
 
-      // Add startup item?
-      case PageControl.ActivePageIndex of
-        0: begin
-             // Startup item already exists?
-             if not FStartup.Add(OpenDialog.FileName, Args, Name) then
-               raise EWarning.Create(FLang.Format(110, [OpenDialog.FileName]));
+      1: begin
+           List := TStringList.Create;
 
-             // Update TListView
-             LoadStartupItems(False);
-           end;
+           try
+             // Init location ComboBox
+             List.CommaText := CM_LOCATIONS_DEFAULT +', .txt, .zip';
 
-        1: begin
-             List := TStringList.Create;
+             // Show dialog for location selection
+             if not InputCombo(FLang.GetString(105), FLang.GetString(90) +':',
+               List, Location, FLang.GetString(68), Extended, False) then
+               Exit;
 
-             try
-               // Init location ComboBox
-               List.CommaText := CM_LOCATIONS_DEFAULT +', .txt, .zip';
+             // Contextmenu item already exists?
+             if not FContext.Add(FileName, Args, Location, Name, Extended) then
+               raise EWarning.Create(FLang.Format(41, [FileName]));
 
-               // Show dialog for location selection
-               if not InputCombo(FLang.GetString(105), FLang.GetString(90) +':',
-                 List, Location, FLang.GetString(68), Extended, False) then
-                 Exit;
+             // User choice exists for selected file extension?
+             if FContext.Last.UserChoiceExists(Location) then
+               // Delete user choice?
+               if (FLang.ShowMessage(111, [112, 113], mtConfirmation) = ID_YES) then
+                 FContext.Last.DeleteUserChoice(Location);
 
-               // Contextmenu item already exists?
-               if not FContext.Add(OpenDialog.FileName, Args, Location, Name, Extended) then
-                 raise EWarning.Create(FLang.Format(41, [OpenDialog.FileName]));
+           finally
+             List.Free;
+           end;  //of try
+         end;  //of if
 
-               // User choice exists for selected file extension?
-               if (FContext.Last as TContextListItem).UserChoiceExists(Location) then
-                 // Delete user choice?
-                 if (FLang.ShowMessage(111, [112, 113], mtConfirmation) = ID_YES) then
-                   (FContext.Last as TContextListItem).DeleteUserChoice(Location);
-
-               // Update TListView
-               LoadContextMenuItems(False);
-
-             finally
-               List.Free;
-             end;  //of try
-           end;  //of if
-
-        2: begin
-             // Service item already exists?
-             if not FService.Add(OpenDialog.FileName, Args, Name) then
-               raise EWarning.Create(FLang.Format(110, [OpenDialog.FileName]));
-
-             // Update TListView
-             LoadServiceItems(False);
-           end;
-      end;  //of case
-
-    finally
-      OpenDialog.Free;
-    end;  //of try
+      2: begin
+           // Service item already exists?
+           if not FService.Add(FileName, Args, Name) then
+             raise EWarning.Create(FLang.Format(110, [FileName]));
+         end;
+    end;  //of case
 
   except
     on E: EListBlocked do
@@ -2658,7 +2598,7 @@ begin
         mmContext.Checked := False;
     end  //of begin
     else
-    begin
+    try
       // Add recycle bin context menu entry
       Reg.OpenKey(KEY_RECYCLEBIN +'\Clearas', True);
       Reg.WriteString('', FLang.GetString(107));
@@ -2666,11 +2606,15 @@ begin
       Reg.OpenKey(KEY_RECYCLEBIN +'\Clearas\command', True);
       Reg.WriteString('', ParamStr(0));
       mmContext.Checked := True;
-    end;  //of if
 
-  finally
-    Reg.CloseKey();
-    Reg.Free;
+    finally
+      Reg.CloseKey();
+      Reg.Free;
+    end;  //of try
+
+  except
+    on E: Exception do
+      FLang.ShowException('Add Clearas to recycle bin context menu failed!', E.Message);
   end;  //of try
 end;
 
