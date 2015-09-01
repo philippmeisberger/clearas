@@ -148,9 +148,14 @@ type
     property Wow64Location: string read GetWow64Key;
   end;
 
-  { Search event }
+  TItemStatus = (
+    stNone, stEnabled, stDisabled, stDeleted
+  );
+
+  { Events }
   TSearchEvent = procedure(Sender: TObject; const ACount: Cardinal) of object;
   TSearchErrorEvent = procedure(Sender: TObject; AErrorMessage: string) of object;
+  TChangeEvent = procedure(Sender: TObject; ANewStatus: TItemStatus) of object;
 
   { TRootList }
   TRootList<T: TRootItem> = class(TObjectList<T>, IInterface)
@@ -158,13 +163,13 @@ type
     FItem: T;
     FOnSearchStart,
     FOnSearching: TSearchEvent;
-    FOnChanged,
+    FOnChanged: TChangeEvent;
     FOnSearchFinish: TNotifyEvent;
     FOnSearchError: TSearchErrorEvent;
   protected
     FActCount: Word;
     FLock: TCriticalSection;
-    procedure DoNotifyOnChanged();
+    procedure DoNotifyOnChanged(ANewStatus: TItemStatus);
     procedure DoNotifyOnFinished();
     function QueryInterface(const IID: TGUID; out Obj): HResult; stdcall;
     function _AddRef: Integer; stdcall;
@@ -186,7 +191,7 @@ type
     procedure Load(); virtual; abstract;
     { external }
     property Enabled: Word read FActCount;
-    property OnChanged: TNotifyEvent read FOnChanged write FOnChanged;
+    property OnChanged: TChangeEvent read FOnChanged write FOnChanged;
     property OnSearching: TSearchEvent read FOnSearching write FOnSearching;
     property OnSearchError: TSearchErrorEvent read FOnSearchError write FOnSearchError;
     property OnSearchFinish: TNotifyEvent read FOnSearchFinish write FOnSearchFinish;
@@ -1178,10 +1183,10 @@ end;
 
   Notifies if a item has been changed. }
 
-procedure TRootList<T>.DoNotifyOnChanged();
+procedure TRootList<T>.DoNotifyOnChanged(ANewStatus: TItemStatus);
 begin
   if Assigned(FOnChanged) then
-    FOnChanged(Self);
+    FOnChanged(Self, ANewStatus);
 end;
 
 { protected RootList.DoNotifyOnFinished
@@ -1260,7 +1265,7 @@ begin
 
     // Notify changed
     if Changed then
-      DoNotifyOnChanged();
+      DoNotifyOnChanged(stNone);
 
     Result := Changed;
 
@@ -1276,6 +1281,7 @@ end;
 function TRootList<T>.ChangeItemStatus(): Boolean;
 var
   Changed: Boolean;
+  NewStatus: TItemStatus;
 
 begin
   Result := False;
@@ -1296,12 +1302,18 @@ begin
     begin
       // Item has been enabled?
       if FItem.Enabled then
-        Inc(FActCount)
+      begin
+        NewStatus := stEnabled;
+        Inc(FActCount);
+      end  //of begin
       else
+      begin
+        NewStatus := stDisabled;
         Dec(FActCount);
+      end;  //of if
 
       // Notify status change
-      DoNotifyOnChanged();
+      DoNotifyOnChanged(NewStatus);
     end;  //of begin
 
     Result := Changed;
@@ -1346,7 +1358,7 @@ begin
       FItem := nil;
 
       // Notify delete
-      DoNotifyOnChanged();
+      DoNotifyOnChanged(stDeleted);
     end;  //of begin
 
     Result := Deleted;
@@ -1387,7 +1399,7 @@ begin
       Dec(FActCount);
 
       // Notify disable
-      DoNotifyOnChanged();
+      DoNotifyOnChanged(stDisabled);
     end;  //of begin
 
     Result := Disabled;
@@ -1428,7 +1440,7 @@ begin
       Inc(FActCount);
 
       // Notify enable
-      DoNotifyOnChanged();
+      DoNotifyOnChanged(stEnabled);
     end;  //of begin
 
     Result := Enabled;

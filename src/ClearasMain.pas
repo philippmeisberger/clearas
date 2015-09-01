@@ -124,12 +124,15 @@ type
     procedure bDeleteStartupItemClick(Sender: TObject);
     procedure bDeleteContextItemClick(Sender: TObject);
     procedure bDeleteServiceItemClick(Sender: TObject);
+    procedure bDeleteTaskItemClick(Sender: TObject);
     procedure bEnableStartupItemClick(Sender: TObject);
     procedure bEnableContextItemClick(Sender: TObject);
     procedure bEnableServiceItemClick(Sender: TObject);
+    procedure bEnableTaskItemClick(Sender: TObject);
     procedure bDisableStartupItemClick(Sender: TObject);
     procedure bDisableContextItemClick(Sender: TObject);
     procedure bDisableServiceItemClick(Sender: TObject);
+    procedure bDisableTaskitemClick(Sender: TObject);
     procedure bExportStartupItemClick(Sender: TObject);
     procedure bExportItemClick(Sender: TObject);
     procedure eSearchChange(Sender: TObject);
@@ -181,27 +184,31 @@ type
     FLang: TLanguageFile;
     FUpdateCheck: TUpdateCheck;
     function CreateStartupUserBackup(): Boolean;
+    function DeleteItem(AConfirmMessageId: Word): Boolean;
+    function DisableItem(): Boolean;
+    function EnableItem(): Boolean;
     function GetSelectedItem(): TRootItem;
     function GetSelectedList(): TRootList<TRootItem>;
+    function GetSelectedListView(): TListView;
     procedure LoadContextMenuItems(ATotalRefresh: Boolean = True);
     procedure LoadStartupItems(ATotalRefresh: Boolean = True);
     procedure LoadServiceItems(ATotalRefresh: Boolean = True);
     procedure LoadTaskItems(ATotalRefresh: Boolean = True);
     procedure OnContextSearchStart(Sender: TObject; const AMax: Cardinal);
     procedure OnContextSearchEnd(Sender: TObject);
-    procedure OnContextItemChanged(Sender: TObject);
+    procedure OnContextItemChanged(Sender: TObject; ANewStatus: TItemStatus);
     procedure OnExportListStart(Sender: TObject; const APageControlIndex: Cardinal);
     procedure OnExportListEnd(Sender: TObject; const APageControlIndex: Cardinal);
     procedure OnSearchError(Sender: TObject; AErrorMessage: string);
     procedure OnStartupSearchStart(Sender: TObject; const AMax: Cardinal);
     procedure OnStartupSearchEnd(Sender: TObject);
-    procedure OnStartupItemChanged(Sender: TObject);
+    procedure OnStartupItemChanged(Sender: TObject; ANewStatus: TItemStatus);
     procedure OnServiceSearchStart(Sender: TObject; const AMax: Cardinal);
     procedure OnServiceSearchEnd(Sender: TObject);
-    procedure OnServiceItemChanged(Sender: TObject);
+    procedure OnServiceItemChanged(Sender: TObject; ANewStatus: TItemStatus);
     procedure OnTaskSearchStart(Sender: TObject; const AMax: Cardinal);
     procedure OnTaskSearchEnd(Sender: TObject);
-    procedure OnTaskItemChanged(Sender: TObject);
+    procedure OnTaskItemChanged(Sender: TObject; ANewStatus: TItemStatus);
     procedure OnUpdate(Sender: TObject; const ANewBuild: Cardinal);
     procedure SetLanguage(Sender: TObject);
     function ShowExportItemDialog(): Boolean;
@@ -409,6 +416,159 @@ begin
   end;  //of try
 end;
 
+{ private TMain.DeleteItem
+
+  Deletes the current selected item. }
+
+function TMain.DeleteItem(AConfirmMessageId: Word): Boolean;
+var
+  Answer: Integer;
+  ListView: TListView;
+  RootList: TRootList<TRootItem>;
+
+begin
+  Result := False;
+
+  try
+    ListView := GetSelectedListView();
+    RootList := GetSelectedList();
+
+    // Nothing selected?
+    if (not Assigned(ListView.ItemFocused) or not Assigned(RootList.Selected)) then
+      raise EInvalidItem.Create('No item selected!');
+
+    // Confirm deletion of item
+    if (FLang.ShowMessage(FLang.Format([AConfirmMessageId],
+      [ListView.ItemFocused.SubItems[0]]), FLang.GetString([49, 50]), mtCustom) = IDYES) then
+    begin
+      // Ask user to export item
+      Answer := FLang.ShowMessage(FLang.GetString(52), mtConfirmation);
+
+      // Abort if user clicks cancel!
+      if (((Answer = IDYES) and ShowExportItemDialog()) or (Answer = IDNO)) then
+        // Successfully deleted item physically?
+        if RootList.DeleteItem() then
+        begin
+          // Delete item from TListView
+          ListView.DeleteSelected();
+          ListView.ItemFocused := nil;
+          Result := True;
+        end  //of begin
+        else
+          raise Exception.Create('Unknown error!');
+    end;  //of begin
+
+  except
+    on E: EInvalidItem do
+      FLang.ShowMessage(FLang.GetString([96, 18]), FLang.GetString(53), mtWarning);
+
+    on E: EListBlocked do
+      FLang.ShowMessage(100, 101, mtWarning);
+
+    on E: EWarning do
+      FLang.ShowMessage(FLang.GetString([96, 18]), E.Message, mtWarning);
+
+    on E: Exception do
+      FLang.ShowException(FLang.GetString([96, 18]), E.Message);
+  end;  //of try
+end;
+
+{ private TMain.DisableItem
+
+  Disables the current selected item. }
+
+function TMain.DisableItem(): Boolean;
+var
+  ListView: TListView;
+  RootList: TRootList<TRootItem>;
+
+begin
+  Result := False;
+
+  try
+    ListView := GetSelectedListView();
+    RootList := GetSelectedList();
+
+    // Nothing selected?
+    if not Assigned(ListView.ItemFocused) then
+      raise EInvalidItem.Create('No item selected!');
+
+    // Successfully disabled item?
+    if RootList.DisableItem() then
+    begin
+      // Change item visual status
+      ListView.ItemFocused.Caption := RootList.Selected.GetStatus(FLang);
+
+      // Update TListView
+      ListView.OnSelectItem(Self, ListView.ItemFocused, True);
+      Result := True;
+    end  //of begin
+    else
+      raise Exception.Create('Unknown error!');
+
+  except
+    on E: EInvalidItem do
+      FLang.ShowMessage(FLang.GetString([94, 18]), FLang.GetString(53), mtWarning);
+
+    on E: EListBlocked do
+      FLang.ShowMessage(100, 101, mtWarning);
+
+    on E: EWarning do
+      FLang.ShowMessage(FLang.GetString([94, 18]), E.Message, mtWarning);
+
+    on E: Exception do
+      FLang.ShowException(FLang.GetString([94, 18]), E.Message);
+  end;  //of try
+end;
+
+{ private TMain.EnableItem
+
+  Enables the current selected item. }
+
+function TMain.EnableItem(): Boolean;
+var
+  ListView: TListView;
+  RootList: TRootList<TRootItem>;
+
+begin
+  Result := False;
+
+  try
+    ListView := GetSelectedListView();
+    RootList := GetSelectedList();
+
+    // Nothing selected?
+    if not Assigned(ListView.ItemFocused) then
+      raise EInvalidItem.Create('No item selected!');
+
+    // Successfully activated item?
+    if RootList.EnableItem() then
+    begin
+      // Change item visual status
+      ListView.ItemFocused.Caption := RootList.Selected.GetStatus(FLang);
+
+      // Update TListView
+      ListView.OnSelectItem(Self, ListView.ItemFocused, True);
+      Result := True;
+    end  //of begin
+    else
+      raise Exception.Create('Unknown error!');
+
+  except
+    on E: EInvalidItem do
+      FLang.ShowMessage(FLang.GetString([93, 18]), FLang.GetString(53), mtWarning);
+
+    on E: EListBlocked do
+      FLang.ShowMessage(100, 101, mtWarning);
+
+    on E: EWarning do
+      FLang.ShowMessage(FLang.GetString([93, 18]), E.Message, mtWarning);
+
+    on E: Exception do
+      FLang.ShowException(FLang.GetString([93, 18]), E.Message);
+  end;  //of try
+end;
+
 { private TMain.GetSelectedItem
 
   Returns the current selected TRootItem. }
@@ -448,6 +608,30 @@ begin
 
   if not Assigned(List) then
     raise EInvalidItem.Create('No list selected!');
+
+  Result := List;
+end;
+
+{ private TMain.GetSelectedListView
+
+  Returns the current selected TListView. }
+
+function TMain.GetSelectedListView(): TListView;
+var
+  List: TListView;
+
+begin
+  List := nil;
+
+  case PageControl.ActivePageIndex of
+    0: List := lwStartup;
+    1: List := lwContext;
+    2: List := lwService;
+    3: List := lwTasks;
+  end;  //of case
+
+  if not Assigned(List) then
+    raise EInvalidItem.Create('No TListView selected!');
 
   Result := List;
 end;
@@ -602,7 +786,7 @@ begin
   end;  //of for
 
   // Refresh counter label
-  OnContextItemChanged(Sender);
+  OnContextItemChanged(Sender, stNone);
 
   // Update some VCL
   mmLang.Enabled := True;
@@ -622,12 +806,38 @@ end;
 
 { private TMain.OnContextItemChanged
 
-  Refreshs the counter label of context menu items. }
+  Event method that is called when item status has been changed. }
 
-procedure TMain.OnContextItemChanged(Sender: TObject);
+procedure TMain.OnContextItemChanged(Sender: TObject; ANewStatus: TItemStatus);
 begin
+  // Refresh counter label
   lwContext.Columns[1].Caption := FLang.Format(87, [FContext.Enabled,
     FContext.Count]);
+
+  // Change button states
+  case ANewStatus of
+    stEnabled:
+      begin
+        bEnableContextItem.Enabled := False;
+        bDisableContextItem.Enabled := True;
+        pmChangeStatus.Caption := bDisableContextItem.Caption;
+      end;
+
+    stDisabled:
+      begin
+        bEnableContextItem.Enabled := True;
+        bDisableContextItem.Enabled := False;
+        pmChangeStatus.Caption := bEnableContextItem.Caption;
+      end;
+
+    stDeleted:
+      begin
+        bEnableContextItem.Enabled := False;
+        bDisableContextItem.Enabled := False;
+        bDeleteContextItem.Enabled := False;
+        bExportContextItem.Enabled := False;
+      end;
+  end;  //of case
 end;
 
 { private TMain.OnExportListStart
@@ -694,12 +904,40 @@ end;
 
 { private TMain.OnStartupItemChanged
 
-  Refreshs the counter label of startup items. }
+  Event method that is called when item status has been changed. }
 
-procedure TMain.OnStartupItemChanged(Sender: TObject);
+procedure TMain.OnStartupItemChanged(Sender: TObject; ANewStatus: TItemStatus);
 begin
+  // Refresh counter label
   lwStartup.Columns[1].Caption := FLang.Format(88, [FStartup.Enabled,
     FStartup.Count]);
+
+  // Change button states
+  case ANewStatus of
+    stEnabled:
+      begin
+        bEnableStartupItem.Enabled := False;
+        bDisableStartupItem.Enabled := True;
+        bExportStartupItem.Enabled := not FStartup.BackupExists;
+        pmExport.Enabled := bExportStartupItem.Enabled;
+        pmChangeStatus.Caption := bDisableStartupItem.Caption;
+      end;
+
+    stDisabled:
+      begin
+        bEnableStartupItem.Enabled := True;
+        bDisableStartupItem.Enabled := False;
+        pmChangeStatus.Caption := bEnableStartupItem.Caption;
+      end;
+
+    stDeleted:
+      begin
+        bEnableStartupItem.Enabled := False;
+        bDisableStartupItem.Enabled := False;
+        bDeleteStartupItem.Enabled := False;
+        bExportStartupItem.Enabled := False;
+      end;
+  end;  //of case
 end;
 
 { private TMain.OnStartupSearchStart
@@ -751,7 +989,7 @@ begin
   end;  //of try
 
   // Refresh counter label
-  OnStartupItemChanged(Sender);
+  OnStartupItemChanged(Sender, stNone);
 
   // Update some VCL
   mmImport.Enabled := True;
@@ -765,12 +1003,38 @@ end;
 
 { private TMain.OnServiceItemChanged
 
-  Refreshs the counter label of service items. }
+  Event method that is called when item status has been changed. }
 
-procedure TMain.OnServiceItemChanged(Sender: TObject);
+procedure TMain.OnServiceItemChanged(Sender: TObject; ANewStatus: TItemStatus);
 begin
+  // Refresh counter label
   lwService.Columns[1].Caption := FLang.Format(56, [FService.Enabled,
     FService.Count]);
+
+  // Change button states
+  case ANewStatus of
+    stEnabled:
+      begin
+        bEnableServiceItem.Enabled := False;
+        bDisableServiceItem.Enabled := True;
+        pmChangeStatus.Caption := bDisableServiceItem.Caption;
+      end;
+
+    stDisabled:
+      begin
+        bEnableServiceItem.Enabled := True;
+        bDisableServiceItem.Enabled := False;
+        pmChangeStatus.Caption := bEnableServiceItem.Caption;
+      end;
+
+    stDeleted:
+      begin
+        bEnableServiceItem.Enabled := False;
+        bDisableServiceItem.Enabled := False;
+        bDeleteServiceItem.Enabled := False;
+        bExportServiceItem.Enabled := False;
+      end;
+  end;  //of case
 end;
 
 { private TMain.OnServiceSearchStart
@@ -827,7 +1091,7 @@ begin
     end;  //of for
 
   // Refresh counter label
-  OnServiceItemChanged(Sender);
+  OnServiceItemChanged(Sender, stNone);
   mmLang.Enabled := True;
   cbServiceExpert.Enabled := True;
   lwService.Cursor := crDefault;
@@ -854,11 +1118,37 @@ end;
 
 { private TMain.OnTaskItemChanged
 
-  Refreshs the counter label of task items. }
+  Event method that is called when item status has been changed. }
 
-procedure TMain.OnTaskItemChanged(Sender: TObject);
+procedure TMain.OnTaskItemChanged(Sender: TObject; ANewStatus: TItemStatus);
 begin
+  // Refresh counter label
   lwTasks.Columns[1].Caption := FLang.Format(116, [FTasks.Enabled, FTasks.Count]);
+
+  // Change button states
+  case ANewStatus of
+    stEnabled:
+      begin
+        bEnableTaskItem.Enabled := False;
+        bDisableTaskitem.Enabled := True;
+        pmChangeStatus.Caption := bDisableTaskitem.Caption;
+      end;
+
+    stDisabled:
+      begin
+        bEnableTaskItem.Enabled := True;
+        bDisableTaskitem.Enabled := False;
+        pmChangeStatus.Caption := bEnableTaskItem.Caption;
+      end;
+
+    stDeleted:
+      begin
+        bEnableTaskItem.Enabled := False;
+        bDisableTaskitem.Enabled := False;
+        bDeleteTaskItem.Enabled := False;
+        bExportTaskItem.Enabled := False;
+      end;
+  end;  //of case
 end;
 
 { private TMain.OnTaskSearchEnd
@@ -888,7 +1178,7 @@ begin
   end;  //of for
 
   // Refresh counter label
-  OnTaskItemChanged(Sender);
+  OnTaskItemChanged(Sender, stNone);
 
   // Update some VCL
   mmImport.Enabled := True;
@@ -1111,13 +1401,13 @@ begin
     // Set a default file name
     if (PageControl.ActivePageIndex = 1) then
     begin
-      if (FContext.Selected.Location = '*') then
+      if (FContext.Selected.LocationRoot = '*') then
         FileName := FContext.Selected.Name
       else
         if (FContext.Selected is TShellNewItem) then
           FileName := FContext.Selected.Name +'_'+ CM_SHELLNEW
         else
-          FileName := FContext.Selected.Name +'_'+ FContext.Selected.Location;
+          FileName := FContext.Selected.Name +'_'+ FContext.Selected.LocationRoot;
     end  //of begin
     else
       FileName := SelectedList.Selected.Name;
@@ -1167,61 +1457,6 @@ begin
   finally
     Reg.CloseKey();
     Reg.Free;
-  end;  //of try
-end;
-
-{ TMain.bDeleteServiceItemClick
-
-  Deletes currently selected service item. }
-
-procedure TMain.bDeleteServiceItemClick(Sender: TObject);
-var
-  Answer: Integer;
-
-begin
-  try
-    // Nothing selected?
-    if (not Assigned(lwService.ItemFocused) or not Assigned(FService.Selected)) then
-      raise EInvalidItem.Create('No item selected!');
-
-    // Confirm deletion of item
-    if (FLang.ShowMessage(FLang.Format([58], [lwService.ItemFocused.SubItems[0]]),
-      FLang.GetString([49, 50]), mtCustom) = IDYES) then
-    begin
-      // Ask user to export item
-      Answer := FLang.ShowMessage(FLang.GetString(52), mtConfirmation);
-
-      // Abort if user clicks cancel!
-      if (((Answer = IDYES) and ShowExportItemDialog()) or (Answer = IDNO)) then
-        // Successfully deleted item physically?
-        if FService.DeleteItem() then
-        begin
-          // Delete item from TListView
-          lwService.DeleteSelected();
-          lwService.ItemFocused := nil;
-
-          // Disable VCL buttons
-          bEnableServiceItem.Enabled := False;
-          bDisableServiceItem.Enabled := False;
-          bDeleteServiceItem.Enabled := False;
-          bExportServiceItem.Enabled := False;
-        end  //of begin
-        else
-          raise Exception.Create('Unknown error!');
-    end;  //of begin
-
-  except
-    on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([96, 18]), FLang.GetString(53), mtWarning);
-
-    on E: EListBlocked do
-      FLang.ShowMessage(100, 101, mtWarning);
-
-    on E: EWarning do
-      FLang.ShowMessage(FLang.GetString([96, 18]), E.Message, mtWarning);
-
-    on E: Exception do
-      FLang.ShowException(FLang.GetString([96, 18]), E.Message);
   end;  //of try
 end;
 
@@ -1276,12 +1511,6 @@ begin
         // Delete item from TListView
         lwStartup.DeleteSelected();
         lwStartup.ItemFocused := nil;
-
-        // Disable VCL buttons
-        bEnableStartupItem.Enabled := False;
-        bDisableStartupItem.Enabled := False;
-        bDeleteStartupItem.Enabled := False;
-        bExportStartupItem.Enabled := False;
       end  //of begin
       else
         raise Exception.Create('Unknown error!');
@@ -1311,54 +1540,26 @@ end;
   Deletes currently selected context menu item. }
 
 procedure TMain.bDeleteContextItemClick(Sender: TObject);
-var
-  Answer: Integer;
-
 begin
-  try
-    // Nothing selected?
-    if (not Assigned(lwContext.ItemFocused) or not Assigned(FContext.Selected)) then
-      raise EInvalidItem.Create('No item selected!');
+  DeleteItem(85);
+end;
 
-    // Confirm deletion of item
-    if (FLang.ShowMessage(FLang.Format([85], [lwContext.ItemFocused.SubItems[0]]),
-      FLang.GetString([49, 50]), mtCustom) = IDYES) then
-    begin
-      // Ask user to export item
-      Answer := FLang.ShowMessage(FLang.GetString(52), mtConfirmation);
+{ TMain.bDeleteServiceItemClick
 
-      // Abort if user clicks cancel!
-      if (((Answer = IDYES) and ShowExportItemDialog()) or (Answer = IDNO)) then
-        // Successfully deleted item physically?
-        if FContext.DeleteItem() then
-        begin
-          // Delete item from TListView
-          lwContext.DeleteSelected();
-          lwContext.ItemFocused := nil;
+  Deletes currently selected service item. }
 
-          // Disable VCL buttons
-          bEnableContextItem.Enabled := False;
-          bDisableContextItem.Enabled := False;
-          bDeleteContextItem.Enabled := False;
-          bExportContextItem.Enabled := False;
-        end  //of begin
-        else
-          raise Exception.Create('Unknown error!');
-    end;  //of begin
+procedure TMain.bDeleteServiceItemClick(Sender: TObject);
+begin
+  DeleteItem(58);
+end;
 
-  except
-    on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([96, 18]), FLang.GetString(53), mtWarning);
+{ TMain.bDeleteTaskItemClick
 
-    on E: EListBlocked do
-      FLang.ShowMessage(100, 101, mtWarning);
+  Deletes currently selected task item. }
 
-    on E: EWarning do
-      FLang.ShowMessage(FLang.GetString([96, 18]), E.Message, mtWarning);
-
-    on E: Exception do
-      FLang.ShowException(FLang.GetString([96, 18]), E.Message);
-  end;  //of try
+procedure TMain.bDeleteTaskItemClick(Sender: TObject);
+begin
+  DeleteItem(58);
 end;
 
 { TMain.bDisableStartupItemClick
@@ -1367,45 +1568,7 @@ end;
 
 procedure TMain.bDisableStartupItemClick(Sender: TObject);
 begin
-  try
-    // Nothing selected?
-    if not Assigned(lwStartup.ItemFocused) then
-      raise EInvalidItem.Create('No item selected!');
-
-    // Successfully deactivated item?
-    if FStartup.DisableItem() then
-    begin
-      // Change item visual status
-      lwStartup.ItemFocused.Caption := FStartup.Selected.GetStatus(FLang);
-
-      // Change button states
-      bDisableStartupItem.Enabled := False;
-      bEnableStartupItem.Enabled := True;
-      pmChangeStatus.Caption := bEnableStartupItem.Caption;
-
-      // Show deactivation timestamp?
-      if mmDate.Checked then
-        lwStartup.ItemFocused.SubItems[3] := FStartup.Selected.Time;
-
-      // Update TListView
-      lwStartupSelectItem(Self, lwStartup.ItemFocused, True);
-    end  //of begin
-    else
-      raise Exception.Create('Unknown error!');
-
-  except
-    on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([94, 18]), FLang.GetString(53), mtWarning);
-
-    on E: EListBlocked do
-      FLang.ShowMessage(100, 101, mtWarning);
-
-    on E: EWarning do
-      FLang.ShowMessage(FLang.GetString([94, 18]), E.Message, mtWarning);
-
-    on E: Exception do
-      FLang.ShowException(FLang.GetString([94, 18]), E.Message);
-  end;  //of try
+  DisableItem();
 end;
 
 { TMain.bDisableContextItemClick
@@ -1414,41 +1577,7 @@ end;
 
 procedure TMain.bDisableContextItemClick(Sender: TObject);
 begin
-  try
-    // Nothing selected?
-    if not Assigned(lwContext.ItemFocused) then
-      raise EInvalidItem.Create('No item selected!');
-
-    // Successfully deactivated item?
-    if FContext.DisableItem() then
-    begin
-      // Change item visual status
-      lwContext.ItemFocused.Caption := FContext.Selected.GetStatus(FLang);
-
-      // Change button states
-      bDisableStartupItem.Enabled := False;
-      bEnableContextItem.Enabled := True;
-      pmChangeStatus.Caption := bEnableContextItem.Caption;
-
-      // Update TListView
-      lwContextSelectItem(Self, lwContext.ItemFocused, True);
-    end  //of begin
-    else
-      raise Exception.Create('Unknown error!');
-
-  except
-    on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([94, 18]), FLang.GetString(53), mtWarning);
-
-    on E: EListBlocked do
-      FLang.ShowMessage(100, 101, mtWarning);
-
-    on E: EWarning do
-      FLang.ShowMessage(FLang.GetString([94, 18]), E.Message, mtWarning);
-
-    on E: Exception do
-      FLang.ShowException(FLang.GetString([94, 18]), E.Message);
-  end;  //of try
+  DisableItem();
 end;
 
 { TMain.bDisableServiceItemClick
@@ -1457,45 +1586,16 @@ end;
 
 procedure TMain.bDisableServiceItemClick(Sender: TObject);
 begin
-  try
-    // Nothing selected?
-    if not Assigned(lwService.ItemFocused) then
-      raise EInvalidItem.Create('No item selected!');
+  DisableItem();
+end;
 
-    // Successfully deactivated item?
-    if FService.DisableItem() then
-    begin
-      // Change item visual status
-      lwService.ItemFocused.Caption := FService.Selected.GetStatus(FLang);
+{ TMain.bDisableTaskitemClick
 
-      // Change button states
-      bDisableServiceItem.Enabled := False;
-      bEnableServiceItem.Enabled := True;
-      pmChangeStatus.Caption := bEnableServiceItem.Caption;
+  Disables currently selected task item. }
 
-      // Show deactivation timestamp?
-      if mmDate.Checked then
-        lwService.ItemFocused.SubItems[3] := FService.Selected.Time;
-
-      // Update TListView
-      lwServiceSelectItem(Self, lwService.ItemFocused, True);
-    end  //of begin
-    else
-      raise Exception.Create('Unknown error!');
-
-  except
-    on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([94, 18]), FLang.GetString(53), mtWarning);
-
-    on E: EListBlocked do
-      FLang.ShowMessage(100, 101, mtWarning);
-
-    on E: EWarning do
-      FLang.ShowMessage(FLang.GetString([94, 18]), E.Message, mtWarning);
-
-    on E: Exception do
-      FLang.ShowException(FLang.GetString([94, 18]), E.Message);
-  end;  //of try
+procedure TMain.bDisableTaskitemClick(Sender: TObject);
+begin
+  DisableItem();
 end;
 
 { TMain.bEnableStartupItemClick
@@ -1504,51 +1604,17 @@ end;
 
 procedure TMain.bEnableStartupItemClick(Sender: TObject);
 begin
-  try
-    // Nothing selected?
-    if not Assigned(lwStartup.ItemFocused) then
-      raise EInvalidItem.Create('No item selected!');
+  // Successfully enabled item?
+  if EnableItem() then
+  begin
+    // Delete deactivation timestamp if necassary
+    if mmDate.Checked then
+      lwStartup.ItemFocused.SubItems[3] := '';
 
-    // Successfully activated item?
-    if FStartup.EnableItem() then
-    begin
-      // Change item visual status
-      lwStartup.ItemFocused.Caption := FStartup.Selected.GetStatus(FLang);
-
-      // Change button states
-      bEnableStartupItem.Enabled := False;
-      bDisableStartupItem.Enabled := True;
-      bExportStartupItem.Enabled := not FStartup.BackupExists;
-      pmExport.Enabled := bExportStartupItem.Enabled;
-      pmChangeStatus.Caption := bDisableStartupItem.Caption;
-
-      // Delete deactivation timestamp if necassary
-      if mmDate.Checked then
-        lwStartup.ItemFocused.SubItems[3] := '';
-
-      // Update TListView
-      lwStartupSelectItem(Self, lwStartup.ItemFocused, True);
-
-      // Warn if file does not exist
-      if not FStartup.Selected.FileExists() then
-        FLang.ShowMessage(45, 46, mtWarning);
-    end  //of begin
-    else
-      raise Exception.Create('Unknown error!');
-
-  except
-    on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([93, 18]), FLang.GetString(53), mtWarning);
-
-    on E: EListBlocked do
-      FLang.ShowMessage(100, 101, mtWarning);
-
-    on E: EWarning do
-      FLang.ShowMessage(FLang.GetString([93, 18]), E.Message, mtWarning);
-
-    on E: Exception do
-      FLang.ShowException(FLang.GetString([93, 18]), E.Message);
-  end;  //of try
+    // Warn if file does not exist
+    if not FStartup.Selected.FileExists() then
+      FLang.ShowMessage(45, 46, mtWarning);
+  end;  //of begin
 end;
 
 { TMain.bEnableContextItemClick
@@ -1557,45 +1623,13 @@ end;
 
 procedure TMain.bEnableContextItemClick(Sender: TObject);
 begin
-  try
-    // Nothing selected?
-    if not Assigned(lwContext.ItemFocused) then
-      raise EInvalidItem.Create('No item selected!');
-
-    // Successfully activated item?
-    if FContext.EnableItem() then
-    begin
-      // Change item visual status
-      lwContext.ItemFocused.Caption := FContext.Selected.GetStatus(FLang);
-
-      // Change button states
-      bEnableContextItem.Enabled := False;
-      bDisableContextItem.Enabled := True;
-      pmChangeStatus.Caption := bDisableStartupItem.Caption;
-
-      // Update TListView
-      lwContextSelectItem(Self, lwContext.ItemFocused, True);
-
-      // Warn if file does not exist
-      if (not (FContext.Selected is TShellNewItem) and not FContext.Selected.FileExists()) then
-        FLang.ShowMessage(45, 46, mtWarning);
-    end  //of begin
-    else
-      raise Exception.Create('Unknown error!');
-
-  except
-    on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([93, 18]), FLang.GetString(53), mtWarning);
-
-    on E: EListBlocked do
-      FLang.ShowMessage(100, 101, mtWarning);
-
-    on E: EWarning do
-      FLang.ShowMessage(FLang.GetString([93, 18]), E.Message, mtWarning);
-
-    on E: Exception do
-      FLang.ShowException(FLang.GetString([93, 18]), E.Message);
-  end;  //of try
+  // Successfully enabled item?
+  if EnableItem() then
+  begin
+    // Warn if file does not exist
+    if (not (FContext.Selected is TShellNewItem) and not FContext.Selected.FileExists()) then
+      FLang.ShowMessage(45, 46, mtWarning);
+  end;  //of begin
 end;
 
 { TMain.bEnableServiceItemClick
@@ -1604,49 +1638,26 @@ end;
 
 procedure TMain.bEnableServiceItemClick(Sender: TObject);
 begin
-  try
-    // Nothing selected?
-    if not Assigned(lwService.ItemFocused) then
-      raise EInvalidItem.Create('No item selected!');
+  // Successfully enabled item?
+  if EnableItem() then
+  begin
+    // Delete deactivation timestamp if necassary
+    if mmDate.Checked then
+      lwService.ItemFocused.SubItems[3] := '';
 
-    // Successfully activated item?
-    if FService.EnableItem() then
-    begin
-      // Change item visual status
-      lwService.ItemFocused.Caption := FService.Selected.GetStatus(FLang);
+    // Warn if file does not exist
+    if not FService.Selected.FileExists() then
+      FLang.ShowMessage(45, 46, mtWarning);
+  end;  //of begin
+end;
 
-      // Change button states
-      bEnableServiceItem.Enabled := False;
-      bDisableServiceItem.Enabled := True;
-      pmChangeStatus.Caption := bDisableServiceItem.Caption;
+{ TMain.bEnableTaskItemClick
 
-      // Delete deactivation timestamp if necassary
-      if mmDate.Checked then
-        lwService.ItemFocused.SubItems[3] := '';
+  Enables currently selected task item. }
 
-      // Update TListView
-      lwServiceSelectItem(Self, lwService.ItemFocused, True);
-
-      // Warn if file does not exist
-      if not FService.Selected.FileExists() then
-        FLang.ShowMessage(45, 46, mtWarning);
-    end  //of begin
-    else
-      raise Exception.Create('Unknown error!');
-
-  except
-    on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([93, 18]), FLang.GetString(53), mtWarning);
-
-    on E: EListBlocked do
-      FLang.ShowMessage(100, 101, mtWarning);
-
-    on E: EWarning do
-      FLang.ShowMessage(FLang.GetString([93, 18]), E.Message, mtWarning);
-
-    on E: Exception do
-      FLang.ShowException(FLang.GetString([93, 18]), E.Message);
-  end;  //of try
+procedure TMain.bEnableTaskItemClick(Sender: TObject);
+begin
+  EnableItem();
 end;
 
 { TMain.bExportStartupItemClick

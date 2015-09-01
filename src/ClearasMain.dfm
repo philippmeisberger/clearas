@@ -40,11 +40,9 @@ object Main: TMain
       object lStartup: TLabel
         Left = 21
         Top = 32
-        Width = 367
+        Width = 275
         Height = 14
-        Caption = 
-          'Programme aus dieser Liste (mit einem "ja") werden bei jedem Sta' +
-          'rt geladen.'
+        Caption = 'Folgende Programme werden bei jedem Start ausgef'#252'hrt.'
       end
       object lCopy1: TLabel
         Left = 211
@@ -547,7 +545,7 @@ object Main: TMain
       end
     end
     object tsTasks: TTabSheet
-      Caption = 'Tasks'
+      Caption = 'Aufgaben'
       ImageIndex = 3
       DesignSize = (
         535
@@ -624,7 +622,7 @@ object Main: TMain
         Caption = 'l'#246'schen'
         Enabled = False
         TabOrder = 1
-        OnClick = bDeleteServiceItemClick
+        OnClick = bDeleteTaskItemClick
       end
       object bDisableTaskitem: TButton
         Left = 428
@@ -635,7 +633,7 @@ object Main: TMain
         Caption = 'deaktivieren'
         Enabled = False
         TabOrder = 2
-        OnClick = bDisableServiceItemClick
+        OnClick = bDisableTaskitemClick
       end
       object bEnableTaskItem: TButton
         Left = 428
@@ -646,7 +644,7 @@ object Main: TMain
         Caption = 'aktivieren'
         Enabled = False
         TabOrder = 3
-        OnClick = bEnableServiceItemClick
+        OnClick = bEnableTaskItemClick
       end
       object bExportTaskItem: TButton
         Left = 428
@@ -878,7 +876,7 @@ object Main: TMain
   object QuickSearchIconList: TImageList
     Left = 256
     Bitmap = {
-      494C010103000800340110001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C0101030008003C0110001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000001000000001002000000000000010
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
