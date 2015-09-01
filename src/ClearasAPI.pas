@@ -3346,7 +3346,7 @@ end;
 
 procedure TContextList.ExportList(const AFileName: string);
 var
-  i: Word;
+  i: Integer;
   RegFile: TRegistryFile;
   Item: TContextListItem;
 
@@ -4064,8 +4064,8 @@ end;
 
 procedure TServiceList.ExportList(const AFileName: string);
 var
-  RegFile: TRegistryFile;
   i: Integer;
+  RegFile: TRegistryFile;
   Item: TServiceListItem;
 
 begin
@@ -4291,7 +4291,7 @@ begin
   Actions := FTaskDefinition.Actions._NewEnum as IEnumVariant;
 
   // Try to find executable command in task
-  while (Actions.Next(1, ActionItem, Fetched) = S_OK) do
+  while Succeeded(Actions.Next(1, ActionItem, Fetched)) do
   begin
     Action := IDispatch(ActionItem) as IAction;
 
@@ -4443,7 +4443,7 @@ begin
     // Try to find executable command in task
     Actions := Definition.Actions._NewEnum as IEnumVariant;
 
-    if (Actions.Next(1, ActionItem, Fetched) = S_OK) then
+    if Succeeded(Actions.Next(1, ActionItem, Fetched)) then
     begin
       Action := IDispatch(ActionItem) as IAction;
 
@@ -4475,8 +4475,8 @@ end;
 
 procedure TTaskList.ExportList(const AFileName: string);
 var
-  ZipFile: TZipFile;
   i: Integer;
+  ZipFile: TZipFile;
   Item: TTaskListItem;
   Path, ZipLocation: string;
 

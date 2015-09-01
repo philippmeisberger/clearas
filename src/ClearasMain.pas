@@ -2514,12 +2514,10 @@ end;
 
 procedure TMain.mmExportClick(Sender: TObject);
 begin
-  case PageControl.ActivePageIndex of
-    0: bExportStartupItem.Click();
-    1: bExportContextItem.Click();
-    2: bExportServiceItem.Click();
-    3: bExportTaskItem.Click();
-  end;  //of case
+  if (PageControl.ActivePageIndex = 0) then
+    bExportStartupItem.Click()
+  else
+    bExportItemClick(Sender);
 end;
 
 { TMain.mmExportListClick
@@ -2620,10 +2618,10 @@ begin
       FLang.ShowMessage(100, 101, mtWarning);
 
     on E: EWarning do
-      FLang.ShowMessage(FLang.GetString(55), E.Message, mtWarning);
+      FLang.ShowMessage(StripHotkey(mmImport.Caption) + FLang.GetString(18), E.Message, mtWarning);
 
     on E: Exception do
-      FLang.ShowException(FLang.GetString(55), E.Message);
+      FLang.ShowException(StripHotkey(mmImport.Caption) + FLang.GetString(18), E.Message);
   end;  //of try
 end;
 

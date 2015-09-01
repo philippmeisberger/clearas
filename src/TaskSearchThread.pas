@@ -68,7 +68,7 @@ var
 
 begin
   // Open current folder
-  if Failed(FTaskService.GetFolder(Addr(APath[1]), TaskFolder)) then
+  if Failed(FTaskService.GetFolder(PChar(APath), TaskFolder)) then
     raise ETaskException.Create('Could not open task folder!');
 
   // Add tasks in folder to list
@@ -107,7 +107,6 @@ begin
 
       // Notify start of search
       Synchronize(DoNotifyOnStart);
-      Synchronize(DoNotifyOnSearching);
 
       // Start searching for tasks
       LoadTasks(FPath);
