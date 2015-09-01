@@ -164,6 +164,7 @@ type
   protected
     FActCount: Word;
     FLock: TCriticalSection;
+    procedure DoNotifyOnChanged();
     function QueryInterface(const IID: TGUID; out Obj): HResult; stdcall;
     function _AddRef: Integer; stdcall;
     function _Release: Integer; stdcall;
@@ -1172,6 +1173,16 @@ begin
   inherited Destroy;
 end;
 
+{ protected RootList.DoNotifyOnChanged
+
+  Notifies if a item has been changed. }
+
+procedure TRootList<T>.DoNotifyOnChanged();
+begin
+  if Assigned(FOnChanged) then
+    FOnChanged(Self);
+end;
+
 { protected RootList.QueryInterface
 
   Returns the pointer to an implemention of an interface specified by a GUID. }
@@ -1237,8 +1248,8 @@ begin
     Changed := FItem.ChangeFilePath(ANewFilePath);
 
     // Notify changed
-    if (Changed and Assigned(FOnChanged)) then
-      FOnChanged(Self);
+    if Changed then
+      DoNotifyOnChanged();
 
     Result := Changed;
 
@@ -1278,9 +1289,8 @@ begin
       else
         Dec(FActCount);
 
-      // Notify changed
-      if Assigned(FOnChanged) then
-        FOnChanged(Self);
+      // Notify status change
+      DoNotifyOnChanged();
     end;  //of begin
 
     Result := Changed;
@@ -1325,8 +1335,7 @@ begin
       FItem := nil;
 
       // Notify delete
-      if Assigned(FOnChanged) then
-        FOnChanged(Self);
+      DoNotifyOnChanged();
     end;  //of begin
 
     Result := Deleted;
@@ -1367,8 +1376,7 @@ begin
       Dec(FActCount);
 
       // Notify disable
-      if Assigned(FOnChanged) then
-        FOnChanged(Self);
+      DoNotifyOnChanged();
     end;  //of begin
 
     Result := Disabled;
@@ -1409,8 +1417,7 @@ begin
       Inc(FActCount);
 
       // Notify enable
-      if Assigned(FOnChanged) then
-        FOnChanged(Self);
+      DoNotifyOnChanged();
     end;  //of begin
 
     Result := Enabled;
@@ -4504,7 +4511,7 @@ end;
 
 function TTaskList.ImportBackup(const AFileName: string): Boolean;
 var
-  Path, XmlText: string;
+  Ext, Path: string;
   TaskFile: TStringList;
   TaskFolder: ITaskFolder;
   NewTask: IRegisteredTask;
@@ -4513,7 +4520,20 @@ var
 {$ENDIF}
 
 begin
-  Path := '\'+ ChangeFileExt(ExtractFileName(AFileName), '');
+  Result := False;
+  Ext := ExtractFileExt(AFileName);
+
+  // Check invalid extension
+  if ((Ext <> '.xml') and (Ext <> '.zip')) then
+    raise EArgumentException.Create('Invalid backup file extension! Must be '
+      +'''.xml'' or ''.zip''!');
+
+  // List locked?
+  if not FLock.TryEnter() then
+    raise EListBlocked.Create('Another operation is pending. Please wait!');
+
+  TaskFile := TStringList.Create;
+
 {$IFDEF WIN32}
   Win64 := (TOSVersion.Architecture = arIntelX64);
 
@@ -4521,12 +4541,31 @@ begin
   if Win64 then
     Wow64FsRedirection(True);
 {$ENDIF}
-  TaskFile := TStringList.Create;
 
   try
+    // Open root task folder
+    if Failed(FTaskService.GetFolder('\', TaskFolder)) then
+      raise ETaskException.Create('Could not open task folder!');
+
+    Path := '\'+ ChangeFileExt(ExtractFileName(AFileName), '');
+
+    // Task exists?
+    if Succeeded(TaskFolder.GetTask(PChar(Path), NewTask)) then
+      Exit;
+
     // Read .xml task file
     TaskFile.LoadFromFile(AFileName);
-    XmlText := TaskFile.Text;
+
+    // Register new task
+    if Failed(TaskFolder.RegisterTask(PChar(Path), PChar(TaskFile.Text),
+      Ord(TASK_CREATE), Null, Null, TASK_LOGON_INTERACTIVE_TOKEN, Null, NewTask)) then
+      raise ETaskException.Create('Could not register task!');
+
+    // Add new task to list
+    Result := (AddTaskItem(NewTask, TaskFolder) <> -1);
+
+    // Notify import
+    DoNotifyOnChanged();
 
   finally
     TaskFile.Free;
@@ -4536,28 +4575,6 @@ begin
       Wow64FsRedirection(False);
   {$ENDIF}
   end;  //of try
-
-  // Open root folder
-  if Failed(FTaskService.GetFolder('\', TaskFolder)) then
-    raise ETaskException.Create('Could not open task folder!');
-
-  // Task exists?
-  if Succeeded(TaskFolder.GetTask(PChar(Path), NewTask)) then
-    raise EWarning.Create('Task already exists!');
-
-  // Register new task
-  if Failed(TaskFolder.RegisterTask(PChar(Path), PChar(XmlText), Ord(TASK_CREATE),
-    Null, Null, TASK_LOGON_INTERACTIVE_TOKEN, Null, NewTask)) then
-    raise ETaskException.Create('Could not register task!');
-
-  // Add new task to list
-  AddTaskItem(NewTask, TaskFolder);
-
-  // Notify import
-  if Assigned(OnChanged) then
-    OnChanged(Self);
-
-  Result := True;
 end;
 
 { public TTaskList.LoadTasks

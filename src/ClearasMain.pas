@@ -131,8 +131,7 @@ type
     procedure bDisableContextItemClick(Sender: TObject);
     procedure bDisableServiceItemClick(Sender: TObject);
     procedure bExportStartupItemClick(Sender: TObject);
-    procedure bExportContextItemClick(Sender: TObject);
-    procedure bExportServiceItemClick(Sender: TObject);
+    procedure bExportItemClick(Sender: TObject);
     procedure eSearchChange(Sender: TObject);
     procedure lwContextDblClick(Sender: TObject);
     procedure lwContextSelectItem(Sender: TObject; Item: TListItem;
@@ -174,8 +173,6 @@ type
     procedure lwTasksSelectItem(Sender: TObject; Item: TListItem;
       Selected: Boolean);
     procedure lwTasksDblClick(Sender: TObject);
-    procedure tsStartupContextPopup(Sender: TObject; MousePos: TPoint;
-      var Handled: Boolean);
   private
     FStartup: TStartupList;
     FContext: TContextList;
@@ -207,7 +204,7 @@ type
     procedure OnTaskItemChanged(Sender: TObject);
     procedure OnUpdate(Sender: TObject; const ANewBuild: Cardinal);
     procedure SetLanguage(Sender: TObject);
-    function ShowRegistryExportDialog(): Boolean;
+    function ShowExportItemDialog(): Boolean;
     procedure ShowColumnDate(AListView: TListView; AShow: Boolean = True);
     function UpdateContextPath(): Boolean; overload;
     function UpdateContextPath(ALangFile: TLanguageFile): Boolean; overload; deprecated;
@@ -399,7 +396,7 @@ begin
     end  //of begin
     else
       // Default .reg file export
-      Result := ShowRegistryExportDialog();
+      Result := ShowExportItemDialog();
 
   except
     on E: EInvalidItem do
@@ -656,6 +653,12 @@ begin
          pbServiceProgress.Visible := True;
          lwService.Cursor := crHourGlass;
        end;
+
+    3: begin
+         eTaskSearch.Visible := False;
+         pbTaskProgress.Visible := True;
+         lwTasks.Cursor := crHourGlass;
+       end;
   end;  //of case
 end;
 
@@ -680,6 +683,12 @@ begin
          pbServiceProgress.Visible := False;
          eServiceSearch.Visible := True;
          lwService.Cursor := crDefault;
+       end;
+
+    3: begin
+         pbTaskProgress.Visible := False;
+         eTaskSearch.Visible := True;
+         lwTasks.Cursor := crDefault;
        end;
   end;  //of case
 end;
@@ -869,8 +878,7 @@ begin
     Text := FTasks[i].Name;
 
     // Filter items
-    if ((eTaskSearch.Text = '') or
-      (AnsiContainsText(Text, eTaskSearch.Text))) then
+    if ((eTaskSearch.Text = '') or (AnsiContainsText(Text, eTaskSearch.Text))) then
       with lwTasks.Items.Add do
       begin
         Caption := FTasks[i].GetStatus(FLang);
@@ -933,6 +941,7 @@ begin
     case PageControl.ActivePageIndex of
       0,2: mmAdd.Caption := GetString(69);
       1:   mmAdd.Caption := GetString(105);
+      3:   mmAdd.Caption := GetString(117);
     end;  //of case
 
     mmImport.Caption := GetString(70);
@@ -1064,68 +1073,64 @@ begin
       begin
         Caption := FLang.GetString(80);
         Width := 120;
-        // TODO: Update lists
+
+        case PageControl.ActivePageIndex of
+          0: LoadStartupItems(False);
+          2: LoadServiceItems(False);
+        end;  //of case
       end;  //of with
 end;
 
-{ private TMain.ShowRegistryExportDialog
+{ private TMain.ShowExportItemDialog
 
-  Shows a .reg file export dialog. }
+  Shows a file export dialog. }
 
-function TMain.ShowRegistryExportDialog(): Boolean;
+function TMain.ShowExportItemDialog(): Boolean;
 var
-  SaveDialog: TSaveDialog;
+  FileName, Filter, DefaultExt: string;
+  SelectedList: TRootList<TRootItem>;
 
 begin
   Result := False;
-  SaveDialog := TSaveDialog.Create(Self);
+
+  // Select file filter
+  if (PageControl.ActivePageIndex = 3) then
+  begin
+    Filter := FLang.GetString(118);
+    DefaultExt := '.xml';
+  end  //of begin
+  else
+  begin
+    Filter := FLang.GetString(36);
+    DefaultExt := '.reg';
+  end;  //of if
 
   try
-    // Set TSaveDialog options
-    with SaveDialog do
+    SelectedList := GetSelectedList();
+
+    // Set a default file name
+    if (PageControl.ActivePageIndex = 1) then
     begin
-      Title := StripHotkey(bExportStartupItem.Caption);
-      InitialDir := '%HOMEPATH%';
+      if (FContext.Selected.Location = '*') then
+        FileName := FContext.Selected.Name
+      else
+        if (FContext.Selected is TShellNewItem) then
+          FileName := FContext.Selected.Name +'_'+ CM_SHELLNEW
+        else
+          FileName := FContext.Selected.Name +'_'+ FContext.Selected.Location;
+    end  //of begin
+    else
+      FileName := SelectedList.Selected.Name;
 
-      // Confirm overwrite
-      Options := Options + [ofOverwritePrompt];
+    FileName := FileName + DefaultExt;
 
-      // Filter .reg files only
-      Filter := FLang.GetString(36);
-      DefaultExt := '.reg';
-
-      // Set a default file name
-      case PageControl.ActivePageIndex of
-        0: FileName := FStartup.Selected.Name;
-        1: begin
-             if (FContext.Selected.Location = '*') then
-               FileName := FContext.Selected.Name
-             else
-               if (FContext.Selected is TShellNewItem) then
-                 FileName := FContext.Selected.Name +'_'+ CM_SHELLNEW
-               else
-                 FileName := FContext.Selected.Name +'_'+ FContext.Selected.Location;
-           end;
-        2: FileName := FService.Selected.Name;
-        // TODO
-        //3:
-      end;  //of case
-
-      // Append default extension
-      FileName := FileName + DefaultExt
-    end;  //of with
-
-    try
-      // User clicked "save"?
-      if SaveDialog.Execute() then
-      begin
-        GetSelectedList().ExportItem(SaveDialog.FileName);
-        Result := True;
-      end;  //of begin
-
-    finally
-      SaveDialog.Free;
-    end;  //of try
+    // Show save dialog
+    if PromptForFileName(FileName, Filter, DefaultExt, StripHotkey(mmExport.Caption),
+      '%HOMEPATH%', True) then
+    begin
+      SelectedList.ExportItem(FileName);
+      Result := True;
+    end;  //of begin
 
   except
     on E: EAccessViolation do
@@ -1134,12 +1139,6 @@ begin
     on E: Exception do
       FLang.ShowException(FLang.GetString([95, 18]), E.Message);
   end;  //of try
-end;
-
-procedure TMain.tsStartupContextPopup(Sender: TObject; MousePos: TPoint;
-  var Handled: Boolean);
-begin
-
 end;
 
 { public TMain.UpdateContextPath
@@ -1225,7 +1224,7 @@ begin
       Answer := FLang.ShowMessage(FLang.GetString(52), mtConfirmation);
 
       // Abort if user clicks cancel!
-      if (((Answer = IDYES) and ShowRegistryExportDialog()) or (Answer = IDNO)) then
+      if (((Answer = IDYES) and ShowExportItemDialog()) or (Answer = IDNO)) then
         // Successfully deleted item physically?
         if FService.DeleteItem() then
         begin
@@ -1361,7 +1360,7 @@ begin
       Answer := FLang.ShowMessage(FLang.GetString(52), mtConfirmation);
 
       // Abort if user clicks cancel!
-      if (((Answer = IDYES) and ShowRegistryExportDialog()) or (Answer = IDNO)) then
+      if (((Answer = IDYES) and ShowExportItemDialog()) or (Answer = IDNO)) then
         // Successfully deleted item physically?
         if FContext.DeleteItem() then
         begin
@@ -1691,36 +1690,20 @@ begin
   CreateStartupUserBackup();
 end;
 
-{ TMain.bExportContextItemClick
+{ TMain.bExportItemClick
 
   Calls the export method of current selected context menu item. }
 
-procedure TMain.bExportContextItemClick(Sender: TObject);
+procedure TMain.bExportItemClick(Sender: TObject);
 begin
   // Nothing selected?
-  if not Assigned(FContext.Selected) then
+  if not Assigned(GetSelectedList().Selected) then
   begin
     FLang.ShowMessage(FLang.GetString([95, 18]), FLang.GetString(53), mtWarning);
     Exit;
   end;  //of begin
 
-  ShowRegistryExportDialog();
-end;
-
-{ TMain.bExportServiceItemClick
-
-  Calls the export method of current selected service item. }
-
-procedure TMain.bExportServiceItemClick(Sender: TObject);
-begin
-  // Nothing selected?
-  if not Assigned(FService.Selected) then
-  begin
-    FLang.ShowMessage(FLang.GetString([95, 18]), FLang.GetString(53), mtWarning);
-    Exit;
-  end;  //of begin
-
-  ShowRegistryExportDialog();
+  ShowExportItemDialog();
 end;
 
 { TMain.eSearchChange
@@ -2377,6 +2360,12 @@ var
   Extended: Boolean;
 
 begin
+  if (PageControl.ActivePageIndex = 3) then
+  begin
+    ExecuteProgram('control', 'schedtasks');
+    Exit;
+  end;  //of begin
+
   OpenDialog := TOpenDialog.Create(Self);
 
   // Set TOpenDialog options
@@ -2540,7 +2529,7 @@ end;
 procedure TMain.mmExportListClick(Sender: TObject);
 var
   SelectedList: TExportablelist<TRootItem>;
-  FileName: string;
+  FileName, Filter, DefaultExt: string;
 
 begin
   SelectedList := TExportablelist<TRootItem>(GetSelectedList());
@@ -2552,12 +2541,24 @@ begin
     Exit;
   end;  //of begin
 
+  // Select file filter
+  if (PageControl.ActivePageIndex = 3) then
+  begin
+    Filter := FLang.GetString(119);
+    DefaultExt := '.zip';
+  end  //of begin
+  else
+  begin
+    Filter := FLang.GetString(36);
+    DefaultExt := '.reg';
+  end;  //of if
+
   // Sets default file name
-  FileName := PageControl.ActivePage.Caption + '.reg';
+  FileName := PageControl.ActivePage.Caption + DefaultExt;
 
   // Show save dialog
-  if PromptForFileName(FileName, FLang.GetString(36), '.reg',
-    StripHotkey(mmExportList.Caption), '%HOMEPATH%', True) then
+  if PromptForFileName(FileName, Filter, DefaultExt, StripHotkey(mmExportList.Caption),
+    '%HOMEPATH%', True) then
     // Export list (threaded!)
     with TExportListThread.Create(SelectedList, FileName, PageControl.ActivePageIndex) do
     begin
@@ -2585,10 +2586,12 @@ begin
            if not DirectoryExists(BackupDir) then
              ForceDirectories(BackupDir);
 
-           Filter := Format(FLang.GetString(109), [EXT_USER, EXT_USER, EXT_COMMON, EXT_COMMON]);
+           Filter := Format(FLang.GetString(109), [EXT_USER, EXT_USER,
+             EXT_COMMON, EXT_COMMON]);
          end;
 
-      3: Filter := 'XML-Datei *.xml|*.xml';
+      3: Filter := FLang.GetString(118);
+         //Filter := Format('%s|%s', [FLang.GetString(118), FLang.GetString(119)]);
 
       else
          Exit;
@@ -2605,7 +2608,7 @@ begin
            end;
 
         3: begin
-             if not FStartup.ImportBackup(FileName) then
+             if not FTasks.ImportBackup(FileName) then
                raise EWarning.Create(FLang.GetString(41));
 
              LoadTaskItems(False);
@@ -2852,8 +2855,7 @@ begin
        end;
 
     3: begin
-         //mmAdd.Caption := FLang.GetString(57);
-         mmAdd.Enabled := False;
+         mmAdd.Caption := FLang.GetString(117);
          mmImport.Visible := True;
          mmDate.Visible := False;
          lwTasksSelectItem(Sender, lwTasks.ItemFocused, True);

@@ -34,7 +34,6 @@ object Main: TMain
     OnChange = PageControlChange
     object tsStartup: TTabSheet
       Caption = 'Autostart'
-      OnContextPopup = tsStartupContextPopup
       DesignSize = (
         535
         284)
@@ -245,7 +244,7 @@ object Main: TMain
         Caption = 'exportieren'
         Enabled = False
         TabOrder = 3
-        OnClick = bExportContextItemClick
+        OnClick = bExportItemClick
       end
       object bDeleteContextItem: TButton
         Left = 428
@@ -474,7 +473,7 @@ object Main: TMain
         Caption = 'exportieren'
         Enabled = False
         TabOrder = 3
-        OnClick = bExportServiceItemClick
+        OnClick = bExportItemClick
       end
       object bDeleteServiceItem: TButton
         Left = 428
@@ -658,7 +657,7 @@ object Main: TMain
         Caption = 'exportieren'
         Enabled = False
         TabOrder = 4
-        OnClick = bExportServiceItemClick
+        OnClick = bExportItemClick
       end
       object cbTaskExpert: TCheckBox
         Left = 414
@@ -879,7 +878,7 @@ object Main: TMain
   object QuickSearchIconList: TImageList
     Left = 256
     Bitmap = {
-      494C010103000800240110001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C0101030008002C0110001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000001000000001002000000000000010
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
