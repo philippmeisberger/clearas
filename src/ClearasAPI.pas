@@ -189,7 +189,7 @@ type
     function IndexOf(AItemName: string; AEnabled: Boolean): Integer; overload;
     function IsLocked(): Boolean;
     function Remove(ARootItem: T): Integer; virtual;
-    procedure Load(); virtual; abstract;
+    procedure Load(AExpertMode: Boolean = False); virtual; abstract;
     { external }
     property Enabled: Word read FActCount;
     property OnChanged: TChangeEvent read FOnChanged write FOnChanged;
@@ -285,12 +285,11 @@ type
     function EnableItem(): Boolean; override;
     procedure ExportList(const AFileName: string); override;
     function ImportBackup(const AFileName: string): Boolean;
-    procedure Load(); override;
+    procedure Load(AExpertMode: Boolean = False); override;
     procedure LoadDisabled(AStartupUser: Boolean; AWow64: Boolean = False);
     procedure LoadEnabled(AAllUsers: Boolean); overload;
     procedure LoadEnabled(AHKey: HKEY; ARunOnce: Boolean = False;
       AWow64: Boolean = False); overload;
-    procedure LoadStartup(AIncludeRunOnce: Boolean);
     { external }
     property DeleteBackup: Boolean read FDeleteBackup write FDeleteBackup;
   end;
@@ -372,12 +371,12 @@ type
       AExtended: Boolean = False): Boolean; reintroduce;
     procedure ExportList(const AFileName: string); override;
     function IndexOf(AName, ALocationRoot: string): Integer; overload;
+    procedure Load(AExpertMode: Boolean = False); override;
     procedure LoadContextmenu(const ALocationRoot: string;
       AWow64: Boolean); overload;
-    procedure Load(); override;
     procedure LoadContextmenu(const ALocationRoot: string;
       AShellItemType: TShellItemType; AWow64: Boolean); overload;
-    procedure LoadContextMenus(ALocationRootCommaList: string = '');
+    procedure LoadContextMenus(ALocationRootCommaList: string = CM_LOCATIONS_DEFAULT); overload;
   end;
 
   { Exception class }
@@ -429,14 +428,13 @@ type
     function Add(AFileName, AArguments, ACaption: string): Boolean; reintroduce;
     procedure ExportList(const AFileName: string); override;
     function IndexOf(const ACaptionOrName: string): Integer;
-    procedure Load(); override;
+    procedure Load(AExpertMode: Boolean = False); override;
     function LoadService(AName: string; AService: SC_HANDLE;
       AIncludeDemand: Boolean = False): Integer;
-    procedure LoadServices(AIncludeShared: Boolean);
   end;
 
   { Exception }
-  ETaskException = class(Exception);
+  ETaskException = class(EOleError);
 
   { TTaskItem }
   TTaskListItem = class(TRootItem)
@@ -468,9 +466,9 @@ type
     destructor Destroy; override;
     procedure ExportList(const AFileName: string); override;
     function ImportBackup(const AFileName: string): Boolean;
-    procedure Load(); override;
+    procedure Load(AExpertMode: Boolean = False); override;
     procedure LoadTasks(ATaskFolder: ITaskFolder; AIncludeHidden: Boolean); overload;
-    procedure LoadTasks(APath: string; ARecursive: Boolean = False;
+    procedure LoadTasks(APath: string = ''; ARecursive: Boolean = False;
       AIncludeHidden: Boolean = False); overload;
   end;
 
@@ -2504,11 +2502,26 @@ end;
 
 { public TStartupList.Load
 
-  Uses default settings to load items into list. }
+  Searches for startup items in default or expert mode. }
 
-procedure TStartupList.Load();
+procedure TStartupList.Load(AExpertMode: Boolean = False);
+var
+  StartupSearchThread: TStartupSearchThread;
+
 begin
-  LoadStartup(False);
+  // Init search thread
+  StartupSearchThread := TStartupSearchThread.Create(Self, FLock);
+
+  with StartupSearchThread do
+  begin
+    Win64 := (TOSVersion.Architecture = arIntelX64);
+    IncludeRunOnce := AExpertMode;
+    OnError := OnSearchError;
+    OnFinish := OnSearchFinish;
+    OnStart := OnSearchStart;
+    OnSearching := OnSearching;
+    Start;
+  end;  // of with
 end;
 
 { public TStartupList.LoadDisabled
@@ -2647,30 +2660,6 @@ begin
     Reg.Free;
     Items.Free;
   end;  //of finally
-end;
-
-{ public TStartupList.LoadStartup
-
-  Searches for startup items at different locations. }
-
-procedure TStartupList.LoadStartup(AIncludeRunOnce: Boolean);
-var
-  StartupSearchThread: TStartupSearchThread;
-
-begin
-  // Init search thread
-  StartupSearchThread := TStartupSearchThread.Create(Self, FLock);
-
-  with StartupSearchThread do
-  begin
-    Win64 := (TOSVersion.Architecture = arIntelX64);
-    IncludeRunOnce := AIncludeRunOnce;
-    OnError := OnSearchError;
-    OnFinish := OnSearchFinish;
-    OnStart := OnSearchStart;
-    OnSearching := OnSearching;
-    Start;
-  end;  // of with
 end;
 
 { public TStartupListItem.OpenInRegEdit
@@ -3434,11 +3423,14 @@ end;
 
 { public TContextList.Load
 
-  Uses default settings to load items into list. }
+  Searches for context menu items in default or expert mode. }
 
-procedure TContextList.Load();
+procedure TContextList.Load(AExpertMode: Boolean = False);
 begin
-  LoadContextMenus(CM_LOCATIONS_DEFAULT);
+  if AExpertMode then
+    LoadContextMenus('')
+  else
+    LoadContextMenus(CM_LOCATIONS_DEFAULT);
 end;
 
 { public TContextList.LoadContextmenu
@@ -3635,7 +3627,7 @@ end;
 
   Searches for context menu entries at different locations. }
 
-procedure TContextList.LoadContextMenus(ALocationRootCommaList: string = '');
+procedure TContextList.LoadContextMenus(ALocationRootCommaList: string = CM_LOCATIONS_DEFAULT);
 var
   SearchThread: TContextSearchThread;
 
@@ -4159,11 +4151,24 @@ end;
 
 { public TServiceList.Load
 
-  Uses default settings to load items into list. }
+  Searches for service items in default or expert mode. }
 
-procedure TServiceList.Load();
+procedure TServiceList.Load(AExpertMode: Boolean = False);
+var
+  SearchThread: TServiceSearchThread;
+
 begin
-  LoadServices(False);
+  SearchThread := TServiceSearchThread.Create(Self, FManager, FLock);
+
+  with SearchThread do
+  begin
+    IncludeShared := AExpertMode;
+    OnError := OnSearchError;
+    OnFinish := OnSearchFinish;
+    OnStart := OnSearchStart;
+    OnSearching := OnSearching;
+    Start;
+  end;  //of with
 end;
 
 { public TServiceList.LoadService
@@ -4249,28 +4254,6 @@ begin
   end;  //of try
 end;
 
-{ public TServiceList.LoadServices
-
-  Searches for service items. }
-
-procedure TServiceList.LoadServices(AIncludeShared: Boolean);
-var
-  SearchThread: TServiceSearchThread;
-
-begin
-  SearchThread := TServiceSearchThread.Create(Self, FManager, FLock);
-
-  with SearchThread do
-  begin
-    IncludeShared := AIncludeShared;
-    OnError := OnSearchError;
-    OnFinish := OnSearchFinish;
-    OnStart := OnSearchStart;
-    OnSearching := OnSearching;
-    Start;
-  end;  //of with
-end;
-
 
 { TTaskListItem }
 
@@ -4295,9 +4278,8 @@ var
 
 begin
   // Update task
-  if Failed(FTaskFolder.RegisterTaskDefinition(PChar(Name), FTaskDefinition,
-    Ord(TASK_UPDATE), Null, Null, FTaskDefinition.Principal.LogonType, Null, NewTask)) then
-    raise ETaskException.Create('Could not update task definition!');
+  OleCheck(FTaskFolder.RegisterTaskDefinition(PChar(Name), FTaskDefinition,
+    Ord(TASK_UPDATE), Null, Null, FTaskDefinition.Principal.LogonType, Null, NewTask));
 
   Result := True;
 end;
@@ -4356,9 +4338,7 @@ end;
 function TTaskListItem.Delete(): Boolean;
 begin
   // Delete task
-  if Failed(FTaskFolder.DeleteTask(PChar(Name), 0)) then
-    raise ETaskException.Create('Could not read task!');
-
+  OleCheck(FTaskFolder.DeleteTask(PChar(Name), 0));
   Result := True;
 end;
 
@@ -4407,7 +4387,7 @@ begin
   try
     // Copy file
     if not CopyFile(PChar(GetFullLocation()), PChar(AFileName), False) then
-      raise ETaskException.Create('Task does not exist!');
+      raise ETaskException.Create(SysErrorMessage(GetLastError()));
 
   finally
     // Allow WOW64 redirection on 64 Bit Windows again
@@ -4516,7 +4496,7 @@ var
 {$ENDIF}
 
 begin
-  FLock.Acquire;
+  FLock.Acquire();
   ZipFile := TZipFile.Create;
 
   try
@@ -4549,7 +4529,7 @@ begin
     if Win64 then
       Wow64FsRedirection(False);
   {$ENDIF}
-    FLock.Release;
+    FLock.Release();
   end;  //of try
 end;
 
@@ -4593,9 +4573,7 @@ begin
 
   try
     // Open root task folder
-    if Failed(FTaskService.GetFolder('\', TaskFolder)) then
-      raise ETaskException.Create('Could not open task folder!');
-
+    OleCheck(FTaskService.GetFolder('\', TaskFolder));
     Path := TaskFolder.Path + ChangeFileExt(ExtractFileName(AFileName), '');
 
     // Task exists?
@@ -4606,9 +4584,8 @@ begin
     TaskFile.LoadFromFile(AFileName, TEncoding.Unicode);
 
     // Register new task
-    if Failed(TaskFolder.RegisterTask(PChar(Path), TaskFile.GetText(),
-      Ord(TASK_CREATE), Null, Null, TASK_LOGON_INTERACTIVE_TOKEN, Null, NewTask)) then
-      raise ETaskException.Create('Could not register task!');
+    OleCheck(TaskFolder.RegisterTask(PChar(Path), TaskFile.GetText(),
+      Ord(TASK_CREATE), Null, Null, TASK_LOGON_INTERACTIVE_TOKEN, Null, NewTask));
 
     // Add new task to list
     Result := (AddTaskItem(NewTask, TaskFolder) <> -1);
@@ -4624,6 +4601,15 @@ begin
       Wow64FsRedirection(False);
   {$ENDIF}
   end;  //of try
+end;
+
+{ public TTaskList.Load
+
+  Searches for task items in default or expert mode. }
+
+procedure TTaskList.Load(AExpertMode: Boolean = False);
+begin
+  LoadTasks('', AExpertMode, AExpertMode);
 end;
 
 { public TTaskList.LoadTasks
@@ -4647,9 +4633,7 @@ begin
     Flags := 0;
 
   // Add tasks in current folder
-  if Failed(ATaskFolder.GetTasks(Flags, TaskCollection)) then
-    raise ETaskException.Create('Could not read tasks!');
-
+  OleCheck(ATaskFolder.GetTasks(Flags, TaskCollection));
   Tasks := (TaskCollection._NewEnum as IEnumVariant);
 
   // Add tasks to list
@@ -4665,29 +4649,16 @@ begin
     end;  //of try
 end;
 
-{ public TTaskList.Load
-
-  Uses default settings to load items into list. }
-
-procedure TTaskList.Load();
-begin
-  LoadTasks('\');
-end;
-
 { public TTaskList.LoadTasks
 
   Searches for task items in specific folder and adds them to the list. }
 
-procedure TTaskList.LoadTasks(APath: string; ARecursive: Boolean = False;
+procedure TTaskList.LoadTasks(APath: string = ''; ARecursive: Boolean = False;
   AIncludeHidden: Boolean = False);
 var
   SearchThread: TTaskSearchThread;
 
 begin
-  // Invalid path?
-  if ((APath = '') or (APath[1] <> '\')) then
-    raise ETaskException.Create('Invalid path: Must start with a backslash!');
-
   SearchThread := TTaskSearchThread.Create(Self, FTaskService, FLock);
 
   with SearchThread do

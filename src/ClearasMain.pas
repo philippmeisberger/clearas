@@ -121,18 +121,12 @@ type
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure bCloseStartupClick(Sender: TObject);
-    procedure bDeleteStartupItemClick(Sender: TObject);
-    procedure bDeleteContextItemClick(Sender: TObject);
-    procedure bDeleteServiceItemClick(Sender: TObject);
-    procedure bDeleteTaskItemClick(Sender: TObject);
     procedure bEnableStartupItemClick(Sender: TObject);
     procedure bEnableContextItemClick(Sender: TObject);
     procedure bEnableServiceItemClick(Sender: TObject);
     procedure bEnableTaskItemClick(Sender: TObject);
-    procedure bDisableStartupItemClick(Sender: TObject);
-    procedure bDisableContextItemClick(Sender: TObject);
-    procedure bDisableServiceItemClick(Sender: TObject);
-    procedure bDisableTaskitemClick(Sender: TObject);
+    procedure bDeleteItemClick(Sender: TObject);
+    procedure bDisableItemClick(Sender: TObject);
     procedure bExportStartupItemClick(Sender: TObject);
     procedure bExportItemClick(Sender: TObject);
     procedure eSearchChange(Sender: TObject);
@@ -185,15 +179,13 @@ type
     FUpdateCheck: TUpdateCheck;
     function CreateStartupUserBackup(): Boolean;
     function DeleteItem(AConfirmMessageId: Word): Boolean;
+    procedure DeleteStartupItem(Sender: TObject);
     function DisableItem(): Boolean;
     function EnableItem(): Boolean;
     function GetSelectedItem(): TRootItem;
     function GetSelectedList(): TRootList<TRootItem>;
     function GetSelectedListView(): TListView;
-    procedure LoadContextMenuItems(ATotalRefresh: Boolean = True);
-    procedure LoadStartupItems(ATotalRefresh: Boolean = True);
-    procedure LoadServiceItems(ATotalRefresh: Boolean = True);
-    procedure LoadTaskItems(ATotalRefresh: Boolean = True);
+    procedure LoadItems(ATotalRefresh: Boolean = True);
     procedure OnContextSearchStart(Sender: TObject; const AMax: Cardinal);
     procedure OnContextSearchEnd(Sender: TObject);
     procedure OnContextItemChanged(Sender: TObject; ANewStatus: TItemStatus);
@@ -324,7 +316,7 @@ begin
   mmContext.Checked := UpdateContextPath();
 
   // Load autostart
-  LoadStartupItems();
+  FStartup.Load();
 end;
 
 { private TMain.OnUpdate
@@ -474,6 +466,81 @@ begin
   end;  //of try
 end;
 
+{ private TMain.DeleteStartupItem
+
+  Deletes currently selected startup item. }
+
+procedure TMain.DeleteStartupItem(Sender: TObject);
+var
+  DelBackup, BackupExists: Boolean;
+  Answer: Integer;
+
+begin
+  DelBackup := True;
+
+  try
+    // Nothing selected?
+    if (not Assigned(lwStartup.ItemFocused) or not Assigned(FStartup.Selected)) then
+      raise EInvalidItem.Create('No item selected!');
+
+    // Confirm deletion of item
+    if (FLang.ShowMessage(FLang.Format([48], [FStartup.Selected.Name]),
+      FLang.GetString([49, 50]), mtCustom) = IDYES) then
+    begin
+      // Save the DeleteBackup flag
+      DelBackup := FStartup.DeleteBackup;
+      BackupExists := FStartup.BackupExists();
+
+      // Skip export dialog for enabled startup user item with exising backup
+      if ((FStartup.Selected is TStartupUserItem) and FStartup.Selected.Enabled
+        and BackupExists) then
+        Answer := IDCANCEL
+      else
+        Answer := FLang.ShowMessage(FLang.GetString(52), mtConfirmation);
+
+      // Export item and only continue if this has succeeded
+      if (Answer = IDYES) then
+        if CreateStartupUserBackup() then
+          FStartup.DeleteBackup := False
+        else
+          Exit;
+
+      // Ask user to delete old existing backup
+      if ((Answer = IDCANCEL) or ((FStartup.Selected is TStartupUserItem)
+        and not FStartup.Selected.Enabled and BackupExists)) then
+        FStartup.DeleteBackup := (FLang.ShowMessage(FLang.GetString(44),
+          mtConfirmation) = IDYES);
+
+      // Successfully deleted item physically?
+      if FStartup.DeleteItem() then
+      begin
+        // Delete item from TListView
+        lwStartup.DeleteSelected();
+        lwStartup.ItemFocused := nil;
+      end  //of begin
+      else
+        raise Exception.Create('Unknown error!');
+    end;  //of begin
+
+  except
+    on E: EInvalidItem do
+      FLang.ShowMessage(FLang.GetString([96, 18]), FLang.GetString(53), mtWarning);
+
+    on E: EListBlocked do
+      FLang.ShowMessage(100, 101, mtWarning);
+
+    on E: EWarning do
+      FLang.ShowMessage(FLang.GetString([96, 18]), E.Message, mtWarning);
+
+    on E: Exception do
+      FLang.ShowException(FLang.GetString([96, 18]), E.Message);
+  end;  //of try
+
+  // Restore the DeleteBackup flag
+  if (FStartup.DeleteBackup <> DelBackup) then
+    FStartup.DeleteBackup := DelBackup;
+end;
+
 { private TMain.DisableItem
 
   Disables the current selected item. }
@@ -608,7 +675,7 @@ begin
   end;  //of case
 
   if not Assigned(List) then
-    raise EInvalidItem.Create('No TRootList selected!');
+    raise EInvalidItem.Create('No list selected!');
 
   Result := List;
 end;
@@ -632,72 +699,27 @@ begin
   end;  //of case
 
   if not Assigned(List) then
-    raise EInvalidItem.Create('No TListView selected!');
+    raise EInvalidItem.Create('No ListView selected!');
 
   Result := List;
 end;
 
-{ private TMain.LoadContextMenuItems
+{ private TMain.LoadItems
 
-  Loads context menu entries and brings them into a TListView. }
+  Loads items and brings them into a TListView. }
 
-procedure TMain.LoadContextMenuItems(ATotalRefresh: Boolean = True);
+procedure TMain.LoadItems(ATotalRefresh: Boolean = True);
 begin
   // Make a total refresh or just use cached items
   if ATotalRefresh then
-  begin
-    // Use expert search mode?
-    if cbContextExpert.Checked then
-      // Start the expert search (threaded!)
-      FContext.LoadContextmenus()
-    else
-      // Use default search mode (threaded!)
-      FContext.LoadContextMenus(CM_LOCATIONS_DEFAULT);
-  end  //of begin
+  case PageControl.ActivePageIndex of
+    0: FStartup.Load(cbRunOnce.Checked);
+    1: FContext.Load(cbContextExpert.Checked);
+    2: FService.Load(cbServiceExpert.Checked);
+    3: FTasks.Load(cbTaskExpert.Checked);
+  end  //of case
   else
-    OnContextSearchEnd(Self);
-end;
-
-{ private TMain.LoadStartupItems
-
-  Loads startup entries and brings them into a TListView. }
-
-procedure TMain.LoadStartupItems(ATotalRefresh: Boolean = True);
-begin
-  // Make a total refresh or just use cached items
-  if ATotalRefresh then
-    // Load autostart with or without special RunOnce entries (threaded!)
-    FStartup.LoadStartup(cbRunOnce.Checked)
-  else
-    OnStartupSearchEnd(Self);
-end;
-
-{ private TMain.LoadServiceItems
-
-  Loads service entries and brings them into a TListView. }
-
-procedure TMain.LoadServiceItems(ATotalRefresh: Boolean = True);
-begin
-  // Make a total refresh or just use cached items
-  if ATotalRefresh then
-    // Load service items (threaded!)
-    FService.LoadServices(cbServiceExpert.Checked)
-  else
-    OnServiceSearchEnd(Self);
-end;
-
-{ private TMain.LoadTaskItems
-
-  Loads task items and brings them into a TListView. }
-
-procedure TMain.LoadTaskItems(ATotalRefresh: Boolean = True);
-begin
-  // Make a total refresh or just use cached items
-  if ATotalRefresh then
-    // Load tasks (threaded!)
-    FTasks.LoadTasks('\', cbTaskExpert.Checked, cbTaskExpert.Checked)
-  else
-    OnTaskSearchEnd(Self);
+    GetSelectedList().OnSearchFinish(Self);
 end;
 
 { private TMain.OnContextSearchStart
@@ -1308,14 +1330,14 @@ begin
     pmCopyLocation.Caption := GetString(106);
   end;  //of with
 
-  // Update TListView captions
   if Assigned(FStartup) and Assigned(FContext) and Assigned(FService) and
     Assigned(FTasks) then
   begin
-    LoadStartupItems(False);
-    LoadContextMenuItems(False);
-    LoadServiceItems(False);
-    LoadTaskItems(False);
+    // Update TListView captions
+    FStartup.OnSearchFinish(Self);
+    FContext.OnSearchFinish(Self);
+    FService.OnSearchFinish(Self);
+    FTasks.OnSearchFinish(Self);
   end;  //of begin
 end;
 
@@ -1337,11 +1359,7 @@ begin
       begin
         Caption := FLang.GetString(80);
         Width := 120;
-
-        case PageControl.ActivePageIndex of
-          0: LoadStartupItems(False);
-          2: LoadServiceItems(False);
-        end;  //of case
+        LoadItems(False);
       end;  //of with
 end;
 
@@ -1434,140 +1452,25 @@ begin
   end;  //of try
 end;
 
-{ TMain.bDeleteStartupItemClick
+{ TMain.bDeleteItemClick
 
-  Deletes currently selected service item. }
+  Event method that is called when user wants to delete an item. }
 
-procedure TMain.bDeleteStartupItemClick(Sender: TObject);
-var
-  DelBackup, BackupExists: Boolean;
-  Answer: Integer;
-
+procedure TMain.bDeleteItemClick(Sender: TObject);
 begin
-  DelBackup := True;
-
-  try
-    // Nothing selected?
-    if (not Assigned(lwStartup.ItemFocused) or not Assigned(FStartup.Selected)) then
-      raise EInvalidItem.Create('No item selected!');
-
-    // Confirm deletion of item
-    if (FLang.ShowMessage(FLang.Format([48], [FStartup.Selected.Name]),
-      FLang.GetString([49, 50]), mtCustom) = IDYES) then
-    begin
-      // Save the DeleteBackup flag
-      DelBackup := FStartup.DeleteBackup;
-      BackupExists := FStartup.BackupExists();
-
-      // Skip export dialog for enabled startup user item with exising backup
-      if ((FStartup.Selected is TStartupUserItem) and FStartup.Selected.Enabled
-        and BackupExists) then
-        Answer := IDCANCEL
-      else
-        Answer := FLang.ShowMessage(FLang.GetString(52), mtConfirmation);
-
-      // Export item and only continue if this has succeeded
-      if (Answer = IDYES) then
-        if CreateStartupUserBackup() then
-          FStartup.DeleteBackup := False
-        else
-          Exit;
-
-      // Ask user to delete old existing backup
-      if ((Answer = IDCANCEL) or ((FStartup.Selected is TStartupUserItem)
-        and not FStartup.Selected.Enabled and BackupExists)) then
-        FStartup.DeleteBackup := (FLang.ShowMessage(FLang.GetString(44),
-          mtConfirmation) = IDYES);
-
-      // Successfully deleted item physically?
-      if FStartup.DeleteItem() then
-      begin
-        // Delete item from TListView
-        lwStartup.DeleteSelected();
-        lwStartup.ItemFocused := nil;
-      end  //of begin
-      else
-        raise Exception.Create('Unknown error!');
-    end;  //of begin
-
-  except
-    on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([96, 18]), FLang.GetString(53), mtWarning);
-
-    on E: EListBlocked do
-      FLang.ShowMessage(100, 101, mtWarning);
-
-    on E: EWarning do
-      FLang.ShowMessage(FLang.GetString([96, 18]), E.Message, mtWarning);
-
-    on E: Exception do
-      FLang.ShowException(FLang.GetString([96, 18]), E.Message);
-  end;  //of try
-
-  // Restore the DeleteBackup flag
-  if (FStartup.DeleteBackup <> DelBackup) then
-    FStartup.DeleteBackup := DelBackup;
+  case PageControl.ActivePageIndex of
+    0: DeleteStartupItem(Sender);
+    1: DeleteItem(85);
+    2: DeleteItem(58);
+    3: DeleteItem(120);
+  end;  //of case
 end;
 
-{ TMain.bDeleteContextItemClick
+{ TMain.bDisableItemClick
 
-  Deletes currently selected context menu item. }
+  Event method that is called when user wants to disable an item. }
 
-procedure TMain.bDeleteContextItemClick(Sender: TObject);
-begin
-  DeleteItem(85);
-end;
-
-{ TMain.bDeleteServiceItemClick
-
-  Deletes currently selected service item. }
-
-procedure TMain.bDeleteServiceItemClick(Sender: TObject);
-begin
-  DeleteItem(58);
-end;
-
-{ TMain.bDeleteTaskItemClick
-
-  Deletes currently selected task item. }
-
-procedure TMain.bDeleteTaskItemClick(Sender: TObject);
-begin
-  DeleteItem(120);
-end;
-
-{ TMain.bDisableStartupItemClick
-
-  Disables currently selected startup item. }
-
-procedure TMain.bDisableStartupItemClick(Sender: TObject);
-begin
-  DisableItem();
-end;
-
-{ TMain.bDisableContextItemClick
-
-  Disables currently selected context menu item. }
-
-procedure TMain.bDisableContextItemClick(Sender: TObject);
-begin
-  DisableItem();
-end;
-
-{ TMain.bDisableServiceItemClick
-
-  Disables currently selected service item. }
-
-procedure TMain.bDisableServiceItemClick(Sender: TObject);
-begin
-  DisableItem();
-end;
-
-{ TMain.bDisableTaskitemClick
-
-  Disables currently selected task item. }
-
-procedure TMain.bDisableTaskitemClick(Sender: TObject);
+procedure TMain.bDisableItemClick(Sender: TObject);
 begin
   DisableItem();
 end;
@@ -2151,27 +2054,24 @@ end;
 
 { TMain.pmChangeStatusClick
 
-  Popup menu entry to deactivate an item. }
+  Popup menu entry to change the status of the current selected item. }
 
 procedure TMain.pmChangeStatusClick(Sender: TObject);
 begin
-  case PageControl.ActivePageIndex of
-    0: lwStartupDblClick(Sender);
-    1: lwContextDblClick(Sender);
-    2: lwServiceDblClick(Sender);
-  end;  //of case
+  GetSelectedListView().OnDblClick(Sender);
 end;
 
 { TMain.pmDeleteClick
 
-  Popup menu entry to delete an item. }
+  opup menu entry to delete the current selected item. }
 
 procedure TMain.pmDeleteClick(Sender: TObject);
 begin
   case PageControl.ActivePageIndex of
-    0: bDeleteStartupItem.Click;
-    1: bDeleteContextItem.Click;
-    2: bDeleteServiceItem.Click;
+    0: bDeleteStartupItem.OnClick(Sender);
+    1: bDeleteContextItem.OnClick(Sender);
+    2: bDeleteServiceItem.OnClick(Sender);
+    3: bDeleteTaskItem.OnClick(Sender);
   end;  //of case
 end;
 
@@ -2606,12 +2506,7 @@ end;
 
 procedure TMain.mmRefreshClick(Sender: TObject);
 begin
-  case PageControl.ActivePageIndex of
-    0: LoadStartupItems();
-    1: LoadContextMenuItems();
-    2: LoadServiceItems();
-    3: LoadTaskItems();
-  end;  //of case
+  LoadItems();
 end;
 
 { TMain.mmStandardClick
@@ -2763,7 +2658,7 @@ begin
 
          // Load context menu entries dynamically
          if (FContext.Count = 0) then
-           LoadContextMenuItems();
+           LoadItems();
        end;
 
     2: begin
@@ -2775,7 +2670,7 @@ begin
 
          // Load context menu entries dynamically
          if (FService.Count = 0) then
-           LoadServiceItems();
+           LoadItems();
        end;
 
     3: begin
@@ -2786,7 +2681,7 @@ begin
 
          // Load task items dynamically
          if (FTasks.Count = 0) then
-           LoadTaskItems();
+           LoadItems();
        end;
   end;  //of case
 end;

@@ -138,7 +138,7 @@ object Main: TMain
         Caption = 'deaktivieren'
         Enabled = False
         TabOrder = 2
-        OnClick = bDisableStartupItemClick
+        OnClick = bDisableItemClick
       end
       object bDeleteStartupItem: TButton
         Left = 428
@@ -149,7 +149,7 @@ object Main: TMain
         Caption = 'l'#246'schen'
         Enabled = False
         TabOrder = 4
-        OnClick = bDeleteStartupItemClick
+        OnClick = bDeleteItemClick
       end
       object bExportStartupItem: TButton
         Left = 428
@@ -253,7 +253,7 @@ object Main: TMain
         Caption = 'l'#246'schen'
         Enabled = False
         TabOrder = 4
-        OnClick = bDeleteContextItemClick
+        OnClick = bDeleteItemClick
       end
       object bCloseContext: TButton
         Left = 428
@@ -274,7 +274,7 @@ object Main: TMain
         Caption = 'deaktivieren'
         Enabled = False
         TabOrder = 2
-        OnClick = bDisableContextItemClick
+        OnClick = bDisableItemClick
       end
       object bEnableContextItem: TButton
         Left = 428
@@ -482,7 +482,7 @@ object Main: TMain
         Caption = 'l'#246'schen'
         Enabled = False
         TabOrder = 4
-        OnClick = bDeleteServiceItemClick
+        OnClick = bDeleteItemClick
       end
       object bCloseService: TButton
         Left = 428
@@ -503,7 +503,7 @@ object Main: TMain
         Caption = 'deaktivieren'
         Enabled = False
         TabOrder = 2
-        OnClick = bDisableServiceItemClick
+        OnClick = bDisableItemClick
       end
       object bEnableServiceItem: TButton
         Left = 428
@@ -622,7 +622,7 @@ object Main: TMain
         Caption = 'l'#246'schen'
         Enabled = False
         TabOrder = 1
-        OnClick = bDeleteTaskItemClick
+        OnClick = bDeleteItemClick
       end
       object bDisableTaskitem: TButton
         Left = 428
@@ -633,7 +633,7 @@ object Main: TMain
         Caption = 'deaktivieren'
         Enabled = False
         TabOrder = 2
-        OnClick = bDisableTaskitemClick
+        OnClick = bDisableItemClick
       end
       object bEnableTaskItem: TButton
         Left = 428
@@ -876,7 +876,7 @@ object Main: TMain
   object QuickSearchIconList: TImageList
     Left = 256
     Bitmap = {
-      494C010103000800480110001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C0101030008004C0110001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000001000000001002000000000000010
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000

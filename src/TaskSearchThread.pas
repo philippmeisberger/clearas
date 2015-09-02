@@ -49,7 +49,6 @@ constructor TTaskSearchThread.Create(ATaskList: TTaskList;
 begin
   inherited Create(TRootList<TRootItem>(ATaskList), ALock);
   FTaskService := ATaskService;
-  FPath := '\';
 end;
 
 { private TTaskSearchThread.LoadTasks
