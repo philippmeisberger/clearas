@@ -19,7 +19,6 @@ type
   private
     FReg: TRegistry;
     FLocations: TStringList;
-    FContextList: TContextList;
     FWin64: Boolean;
     FRoot: string;
     FRootKey: HKEY;
@@ -51,8 +50,7 @@ uses StrUtils, SysUtils;
 constructor TContextSearchThread.Create(AContextList: TContextList;
   ALock: TCriticalSection);
 begin
-  inherited Create(ALock);
-  FContextList := AContextList;
+  inherited Create(TRootList<TRootItem>(AContextList), ALock);
   FLocations := TStringList.Create;
 
   // Init Registry access with read-only
@@ -100,11 +98,11 @@ begin
       begin
         // Load Shell context menu items
         if AnsiSameText(Keys[i], CM_SHELL) then
-          FContextList.LoadContextmenu(AKeyName, stShell, FWin64);
+          TContextList(FSelectedList).LoadContextmenu(AKeyName, stShell, FWin64);
 
         // Load ShellEx context menu items
         if AnsiSameText(Keys[i], CM_SHELLEX) then
-          FContextList.LoadContextmenu(AKeyName, stShellEx, FWin64);
+          TContextList(FSelectedList).LoadContextmenu(AKeyName, stShellEx, FWin64);
 
         // Load ShellNew context menu items
         if AnsiContainsStr(Keys[i], CM_SHELLNEW) then
@@ -115,7 +113,7 @@ begin
 
           // Only valid ShellNew item when there are values inside
           if (Values.Count > 0) then
-            FContextList.LoadContextmenu(AKeyName, stShellNew, FWin64);
+            TContextList(FSelectedList).LoadContextmenu(AKeyName, stShellNew, FWin64);
         end;  //of begin
 
         // File extension: Search in subkey for ShellNew items
@@ -185,7 +183,7 @@ begin
   for i := 0 to FLocations.Count - 1 do
   begin
     Synchronize(DoNotifyOnSearching);
-    FContextList.LoadContextmenu(FLocations[i], FWin64);
+    TContextList(FSelectedList).LoadContextmenu(FLocations[i], FWin64);
   end;  //of for
 end;
 
@@ -200,7 +198,7 @@ begin
   try
     try
       // Clear data
-      FContextList.Clear;
+      FSelectedList.Clear;
 
       // Load specific menus or search for all?
       if (FLocations.Count > 0) then

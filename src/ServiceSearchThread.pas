@@ -40,7 +40,7 @@ implementation
 constructor TServiceSearchThread.Create(AServiceList: TServiceList;
   AManager: SC_HANDLE; ALock: TCriticalSection);
 begin
-  inherited Create(ALock);
+  inherited Create(TRootList<TRootItem>(AServiceList), ALock);
   FServiceList := AServiceList;
   FManager := AManager;
 end;

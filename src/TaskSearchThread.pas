@@ -12,13 +12,12 @@ interface
 
 uses
   SysUtils, ActiveX, Variants, SyncObjs, Taskschd, ClearasSearchThread,
-  ClearasAPI;
+  ClearasAPI, PMCWOSUtils;
 
 type
   { TTaskSearchThread }
   TTaskSearchThread = class(TClearasSearchThread)
   private
-    FTaskList: TTaskList;
     FTaskService: ITaskService;
     FPath: string;
     FIncludeHidden,
@@ -48,8 +47,7 @@ implementation
 constructor TTaskSearchThread.Create(ATaskList: TTaskList;
   ATaskService: ITaskService; ALock: TCriticalSection);
 begin
-  inherited Create(ALock);
-  FTaskList := ATaskList;
+  inherited Create(TRootList<TRootItem>(ATaskList), ALock);
   FTaskService := ATaskService;
   FPath := '\';
 end;
@@ -72,7 +70,7 @@ begin
     raise ETaskException.Create('Could not open task folder!');
 
   // Add tasks in folder to list
-  FTaskList.LoadTasks(TaskFolder, FIncludeHidden);
+  TTaskList(FSelectedList).LoadTasks(TaskFolder, FIncludeHidden);
 
   // Include subfolders?
   if FIncludeSubFolders then
@@ -81,12 +79,12 @@ begin
     if Failed(TaskFolder.GetFolders(0, FolderCollection)) then
       raise ETaskException.Create('Could not read subfolders!');
 
-    Folders := FolderCollection._NewEnum as IEnumVariant;
+    Folders := (FolderCollection._NewEnum as IEnumVariant);
 
     // Search for tasks in subfolders
-    while (Folders.Next(1, FolderItem, Fetched) = S_OK) do
+    while (Folders.Next(1, FolderItem, Fetched) = 0) do
     begin
-      TaskFolder := IDispatch(FolderItem) as ITaskFolder;
+      TaskFolder := (IDispatch(FolderItem) as ITaskFolder);
       LoadTasks(TaskFolder.Path);
     end;  //of while
   end;  //of begin
@@ -103,15 +101,27 @@ begin
   try
     try
       // Clear data
-      FTaskList.Clear;
+      FSelectedList.Clear;
 
       // Notify start of search
       Synchronize(DoNotifyOnStart);
+
+    {$IFDEF WIN32}
+      // Deny WOW64 redirection on 64 Bit Windows
+      if FWin64 then
+        Wow64FsRedirection(True);
+    {$ENDIF}
 
       // Start searching for tasks
       LoadTasks(FPath);
 
     finally
+    {$IFDEF WIN32}
+      // Allow WOW64 redirection on 64 Bit Windows again
+      if Win64 then
+        Wow64FsRedirection(False);
+    {$ENDIF}
+
       // Notify end of search
       Synchronize(DoNotifyOnFinish);
       FLock.Release;

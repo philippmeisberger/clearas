@@ -17,7 +17,6 @@ type
   { TStartupSearchThread }
   TStartupSearchThread = class(TClearasSearchThread)
   private
-    FStartupList: TStartupList;
     FIncludeRunOnce,
     FWin64: Boolean;
     procedure LoadEnabled(AAllUsers: Boolean); overload;
@@ -44,8 +43,7 @@ implementation
 constructor TStartupSearchThread.Create(AStartupList: TStartupList;
   ALock: TCriticalSection);
 begin
-  inherited Create(ALock);
-  FStartupList := AStartupList;
+  inherited Create(TRootList<TRootItem>(AStartupList), ALock);
 end;
 
 { public TStartupList.LoadEnabled
@@ -55,7 +53,7 @@ end;
 procedure TStartupSearchThread.LoadEnabled(AAllUsers: Boolean);
 begin
   Synchronize(DoNotifyOnSearching);
-  FStartupList.LoadEnabled(AAllUsers);
+  TStartupList(FSelectedList).LoadEnabled(AAllUsers);
 end;
 
 { private TStartupSearchThread.LoadEnabled
@@ -66,7 +64,7 @@ procedure TStartupSearchThread.LoadEnabled(AHKey: HKEY;
   ARunOnce: Boolean = False; AWow64: Boolean = False);
 begin
   Synchronize(DoNotifyOnSearching);
-  FStartupList.LoadEnabled(AHKey, ARunOnce, AWow64);
+  TStartupList(FSelectedList).LoadEnabled(AHKey, ARunOnce, AWow64);
 end;
 
 { private TStartupSearchThread.LoadEnabled
@@ -77,7 +75,7 @@ procedure TStartupSearchThread.LoadDisabled(AStartupUser: Boolean;
   AIncludeWow64: Boolean = False);
 begin
   Synchronize(DoNotifyOnSearching);
-  FStartupList.LoadDisabled(AStartupUser, AIncludeWow64);
+  TStartupList(FSelectedList).LoadDisabled(AStartupUser, AIncludeWow64);
 end;
 
 { protected TContextMenuSearchThread.Execute
@@ -94,7 +92,7 @@ begin
   try
     try
       // Clear data
-      FStartupList.Clear;
+      FSelectedList.Clear;
 
       // Calculate key count for events
       if FWin64 then

@@ -11,16 +11,20 @@ unit ExportListThread;
 interface
 
 uses
-  Classes, ClearasAPI;
+  Classes, SysUtils, ClearasAPI;
 
 type
   { TExportListThread }
   TExportListThread = class(TThread)
   private
     FList: IExportableList;
-    FFileName: string;
+    FFileName,
+    FErrorMessage: string;
     FPageControlIndex: Byte;
-    FOnFinish, FOnStart: TSearchEvent;
+    FOnFinish,
+    FOnStart: TSearchEvent;
+    FOnError: TSearchErrorEvent;
+    procedure DoNotifyOnError();
     procedure DoNotifyOnFinish();
     procedure DoNotifyOnStart();
   protected
@@ -29,6 +33,7 @@ type
     constructor Create(AList: IExportableList; const AFileName: string;
       APageControlIndex: Byte);
     { external }
+    property OnError: TSearchErrorEvent read FOnError write FOnError;
     property OnFinish: TSearchEvent read FOnFinish write FOnFinish;
     property OnStart: TSearchEvent read FOnStart write FOnStart;
   end;
@@ -49,6 +54,16 @@ begin
   FList := AList;
   FFileName := AFileName;
   FPageControlIndex := APageControlIndex;
+end;
+
+{ private TExportListThread.DoNotifyOnError
+
+  Synchronizable event method that is called when an error has occured. }
+
+procedure TExportListThread.DoNotifyOnError();
+begin
+  if Assigned(FOnError) then
+    FOnError(Self, FErrorMessage);
 end;
 
 { private TExportListThread.DoNotifyOnFinish
@@ -77,9 +92,23 @@ end;
 
 procedure TExportListThread.Execute;
 begin
-  Synchronize(DoNotifyOnStart);
-  FList.ExportList(FFileName);
-  Synchronize(DoNotifyOnFinish);
+  try
+    Synchronize(DoNotifyOnStart);
+
+    try
+      FList.ExportList(FFileName);
+
+    finally
+      Synchronize(DoNotifyOnFinish);
+    end;  //of try
+
+  except
+    on E: Exception do
+    begin
+      FErrorMessage := Format('%s: %s', [ToString(), E.Message]);
+      Synchronize(DoNotifyOnError);
+    end;
+  end;  //of try
 end;
 
 end.

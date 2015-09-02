@@ -199,6 +199,7 @@ type
     procedure OnContextItemChanged(Sender: TObject; ANewStatus: TItemStatus);
     procedure OnExportListStart(Sender: TObject; const APageControlIndex: Cardinal);
     procedure OnExportListEnd(Sender: TObject; const APageControlIndex: Cardinal);
+    procedure OnExportListError(Sender: TObject; AErrorMessage: string);
     procedure OnSearchError(Sender: TObject; AErrorMessage: string);
     procedure OnStartupSearchStart(Sender: TObject; const AMax: Cardinal);
     procedure OnStartupSearchEnd(Sender: TObject);
@@ -387,7 +388,7 @@ begin
 
   try
     // Nothing selected?
-    if not Assigned(FStartup.Selected) then
+    if (not Assigned(lwStartup.ItemFocused) or not Assigned(FStartup.Selected)) then
       raise EInvalidItem.Create('No item selected!');
 
     // Special .lnk file backup only for activated startup user entries!
@@ -642,15 +643,6 @@ end;
 
 procedure TMain.LoadContextMenuItems(ATotalRefresh: Boolean = True);
 begin
-  // Clear all visual data
-  lwContext.Clear;
-
-  // Disable VCL
-  bDisableContextItem.Enabled := False;
-  bEnableContextItem.Enabled := False;
-  bDeleteContextItem.Enabled := False;
-  bExportContextItem.Enabled := False;
-
   // Make a total refresh or just use cached items
   if ATotalRefresh then
   begin
@@ -672,15 +664,6 @@ end;
 
 procedure TMain.LoadStartupItems(ATotalRefresh: Boolean = True);
 begin
-  // Clear all visual data
-  lwStartup.Clear;
-
-  // Disable VCL
-  bDisableStartupItem.Enabled := False;
-  bEnableStartupItem.Enabled := False;
-  bDeleteStartupItem.Enabled := False;
-  bExportStartupItem.Enabled := False;
-
   // Make a total refresh or just use cached items
   if ATotalRefresh then
     // Load autostart with or without special RunOnce entries (threaded!)
@@ -695,15 +678,6 @@ end;
 
 procedure TMain.LoadServiceItems(ATotalRefresh: Boolean = True);
 begin
-  // Clear all visual data
-  lwService.Clear;
-
-  // Disable VCL
-  bDisableServiceItem.Enabled := False;
-  bEnableServiceItem.Enabled := False;
-  bDeleteServiceItem.Enabled := False;
-  bExportServiceItem.Enabled := False;
-
   // Make a total refresh or just use cached items
   if ATotalRefresh then
     // Load service items (threaded!)
@@ -718,15 +692,6 @@ end;
 
 procedure TMain.LoadTaskItems(ATotalRefresh: Boolean = True);
 begin
-  // Clear all visual data
-  lwTasks.Clear;
-
-  // Disable VCL
-  bDisableTaskitem.Enabled := False;
-  bEnableTaskItem.Enabled := False;
-  bDeleteTaskItem.Enabled := False;
-  bExportTaskItem.Enabled := False;
-
   // Make a total refresh or just use cached items
   if ATotalRefresh then
     // Load tasks (threaded!)
@@ -763,6 +728,9 @@ var
   Text: string;
 
 begin
+  // Clear all visual data
+  lwContext.Clear;
+
   // Print all information about context menu entries
   for i := 0 to FContext.Count - 1 do
   begin
@@ -899,6 +867,15 @@ begin
   end;  //of case
 end;
 
+{ private TMain.OnExportListError
+
+  Event method that is called when export thread has failed. }
+
+procedure TMain.OnExportListError(Sender: TObject; AErrorMessage: string);
+begin
+  FLang.ShowException(FLang.GetString([95, 18]), AErrorMessage);
+end;
+
 { private TMain.OnStartupItemChanged
 
   Event method that is called when item status has been changed. }
@@ -959,6 +936,8 @@ var
   i: Integer;
 
 begin
+  // Clear all visual data
+  lwStartup.Clear;
   IconList.Clear;
   Icon := TIcon.Create;
 
@@ -1059,6 +1038,9 @@ var
   Text: string;
 
 begin
+  // Clear all visual data
+  lwService.Clear;
+
   // Print all information about service items
   for i := 0 to FService.Count - 1 do
   begin
@@ -1153,6 +1135,9 @@ var
   Text: string;
 
 begin
+  // Clear all visual data
+  lwTasks.Clear;
+
   // Print all information about task items
   for i := 0 to FTasks.Count - 1 do
   begin
@@ -1168,9 +1153,6 @@ begin
         SubItems.Append(FTasks[i].Location);
       end; //of with
   end;  //of for
-
-  // Refresh counter label
-  OnTaskItemChanged(Sender, stNone);
 
   // Update some VCL
   mmImport.Enabled := True;
@@ -2505,6 +2487,7 @@ begin
     begin
       OnStart := OnExportListStart;
       OnFinish := OnExportListEnd;
+      OnError := OnExportListError;
       Start;
     end;  //of with
 end;

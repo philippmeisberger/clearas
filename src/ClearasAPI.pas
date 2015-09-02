@@ -148,6 +148,7 @@ type
     property Wow64Location: string read GetWow64Key;
   end;
 
+  { TItemStatus }
   TItemStatus = (
     stNone, stEnabled, stDisabled, stDeleted
   );
@@ -171,7 +172,7 @@ type
     FLock: TCriticalSection;
     procedure DoNotifyOnChanged(ANewStatus: TItemStatus);
     procedure DoNotifyOnFinished();
-    function QueryInterface(const IID: TGUID; out Obj): HResult; stdcall;
+    function QueryInterface(const IID: TGUID; out Obj): HRESULT; stdcall;
     function _AddRef: Integer; stdcall;
     function _Release: Integer; stdcall;
   public
@@ -210,7 +211,7 @@ type
   end;
 
   { TExportablelist }
-  TExportablelist<T: TRootItem> = class(TRootList<T>, IExportableList)
+  TExportableList<T: TRootItem> = class(TRootList<T>, IExportableList)
     procedure ExportList(const AFileName: string); virtual; abstract;
   end;
 
@@ -261,7 +262,7 @@ type
   end;
 
   { TStartupList }
-  TStartupList = class(TExportablelist<TStartupListItem>, IImportableList)
+  TStartupList = class(TExportableList<TStartupListItem>, IImportableList)
   private
     FDeleteBackup: Boolean;
     function DeleteBackupFile(): Boolean;
@@ -357,7 +358,7 @@ type
   end;
 
   { TContextList }
-  TContextList = class(TExportablelist<TContextListItem>)
+  TContextList = class(TExportableList<TContextListItem>)
   protected
     function AddShellItem(const AName, ALocationRoot, AFileName, ACaption: string;
       AEnabled, AWow64: Boolean): Integer;
@@ -414,7 +415,7 @@ type
   end;
 
   { TServiceList }
-  TServiceList = class(TExportablelist<TServiceListItem>)
+  TServiceList = class(TExportableList<TServiceListItem>)
   private
     FManager: SC_HANDLE;
   protected
@@ -442,7 +443,7 @@ type
   private
     FTaskDefinition: ITaskDefinition;
     FTaskFolder: ITaskFolder;
-    function UpdateTask(ATaskDefinition: ITaskDefinition): Boolean;
+    function UpdateTask(): Boolean;
   protected
     function GetFullLocation(): string; override;
   public
@@ -457,7 +458,7 @@ type
   end;
 
   { TTaskList }
-  TTaskList = class(TExportablelist<TTaskListItem>, IImportableList)
+  TTaskList = class(TExportableList<TTaskListItem>, IImportableList)
   private
     FTaskService: ITaskService;
   protected
@@ -1198,7 +1199,7 @@ begin
   if Assigned(FOnSearchFinish) then
     FOnSearchFinish(Self);
 
-  DoNotifyOnChanged(stNone);
+  DoNotifyOnChanged(stDeleted);
 end;
 
 { protected RootList.QueryInterface
@@ -4288,7 +4289,7 @@ end;
 
   Updates a task with a new definition. }
 
-function TTaskListItem.UpdateTask(ATaskDefinition: ITaskDefinition): Boolean;
+function TTaskListItem.UpdateTask(): Boolean;
 var
   NewTask: IRegisteredTask;
 
@@ -4325,24 +4326,24 @@ var
 
 begin
   Result := False;
-  Actions := FTaskDefinition.Actions._NewEnum as IEnumVariant;
+  Actions := (FTaskDefinition.Actions._NewEnum as IEnumVariant);
 
   // Try to find executable command in task
-  if (Actions.Next(1, ActionItem, Fetched) = S_OK) then
+  if (Actions.Next(1, ActionItem, Fetched) = 0) then
   begin
-    Action := IDispatch(ActionItem) as IAction;
+    Action := (IDispatch(ActionItem) as IAction);
 
     // Task has an executable?
     if (Action.ActionType = TASK_ACTION_EXEC) then
     begin
-      ExecAction := Action as IExecAction;
+      ExecAction := (Action as IExecAction);
 
       // Change path + arguments
       ExecAction.Path := PChar(ExtractPathToFile(ANewFilePath));
       ExecAction.Arguments := PChar(ExtractArguments(ANewFilePath));
 
       // Update task
-      Result := UpdateTask(FTaskDefinition);
+      Result := UpdateTask();
       FileName := ANewFilePath;
     end;  //of begin
   end;  //of while
@@ -4368,7 +4369,7 @@ end;
 function TTaskListItem.Disable(): Boolean;
 begin
   FTaskDefinition.Settings.Enabled := False;
-  Result := UpdateTask(FTaskDefinition);
+  Result := UpdateTask();
 
   // Update status
   FEnabled := False;
@@ -4381,7 +4382,7 @@ end;
 function TTaskListItem.Enable(): Boolean;
 begin
   FTaskDefinition.Settings.Enabled := True;
-  Result := UpdateTask(FTaskDefinition);
+  Result := UpdateTask();
 
   // Update status
   FEnabled := True;
@@ -4399,18 +4400,13 @@ var
 begin
   Win64 := (TOSVersion.Architecture = arIntelX64);
 
-  if not GetKnownFolderPath(FOLDERID_System, FsLocation) then
-    raise Exception.Create('SHGetKnownFolderPath: Could not get system directory!');
-
-  FsLocation := FsLocation +'Tasks'+ IncludeTrailingPathDelimiter(Location) + Name;
-
   // Deny WOW64 redirection on 64 Bit Windows
   if Win64 then
     Wow64FsRedirection(True);
 
   try
     // Copy file
-    if not CopyFile(PChar(FsLocation), PChar(AFileName), False) then
+    if not CopyFile(PChar(GetFullLocation()), PChar(AFileName), False) then
       raise ETaskException.Create('Task does not exist!');
 
   finally
@@ -4450,7 +4446,7 @@ end;
 
 destructor TTaskList.Destroy;
 begin
-  CoUninitialize;
+  CoUninitialize();
   inherited Destroy;
 end;
 
@@ -4477,16 +4473,16 @@ begin
     Definition := ATask.Definition;
 
     // Try to find executable command in task
-    Actions := Definition.Actions._NewEnum as IEnumVariant;
+    Actions := (Definition.Actions._NewEnum as IEnumVariant);
 
-    if (Actions.Next(1, ActionItem, Fetched) = S_OK) then
+    if (Actions.Next(1, ActionItem, Fetched) = 0) then
     begin
-      Action := IDispatch(ActionItem) as IAction;
+      Action := (IDispatch(ActionItem) as IAction);
 
       // Task has an executable?
       if (Action.ActionType = TASK_ACTION_EXEC) then
       begin
-        ExecAction := Action as IExecAction;
+        ExecAction := (Action as IExecAction);
         FileName := ExecAction.Path;
 
         // Append arguments?
@@ -4515,6 +4511,9 @@ var
   ZipFile: TZipFile;
   Item: TTaskListItem;
   Path, ZipLocation: string;
+{$IFDEF WIN32}
+  Win64: Boolean;
+{$ENDIF}
 
 begin
   FLock.Acquire;
@@ -4523,6 +4522,14 @@ begin
   try
     ZipFile.Open(AFileName, zmWrite);
     Path := IncludeTrailingPathDelimiter(Path);
+
+  {$IFDEF WIN32}
+    Win64 := (TOSVersion.Architecture = arIntelX64);
+
+    // Deny WOW64 redirection on 64 Bit Windows
+    if Win64 then
+      Wow64FsRedirection(True);
+  {$ENDIF}
 
     for i := 0 to Count - 1 do
     begin
@@ -4537,6 +4544,11 @@ begin
 
   finally
     ZipFile.Free;
+  {$IFDEF WIN32}
+    // Allow WOW64 redirection on 64 Bit Windows again
+    if Win64 then
+      Wow64FsRedirection(False);
+  {$ENDIF}
     FLock.Release;
   end;  //of try
 end;
@@ -4552,7 +4564,6 @@ var
   TaskFolder: ITaskFolder;
   TaskDefinition: ITaskDefinition;
   NewTask: IRegisteredTask;
-
 {$IFDEF WIN32}
   Win64: Boolean;
 {$ENDIF}
@@ -4639,12 +4650,12 @@ begin
   if Failed(ATaskFolder.GetTasks(Flags, TaskCollection)) then
     raise ETaskException.Create('Could not read tasks!');
 
-  Tasks := TaskCollection._NewEnum as IEnumVariant;
+  Tasks := (TaskCollection._NewEnum as IEnumVariant);
 
   // Add tasks to list
-  while (Tasks.Next(1, TaskItem, Fetched) = S_OK) do
+  while (Tasks.Next(1, TaskItem, Fetched) = 0) do
     try
-      Task := IDispatch(TaskItem) as IRegisteredTask;
+      Task := (IDispatch(TaskItem) as IRegisteredTask);
       AddTaskItem(Task, ATaskFolder);
 
     except
