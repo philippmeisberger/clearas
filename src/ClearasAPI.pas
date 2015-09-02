@@ -330,7 +330,7 @@ type
   { TShellExItem }
   TShellExItem = class(TContextListItem)
   private
-    function ChangeStatus(ANewStatus: Boolean): Boolean;
+    function ChangeStatus(ANewStatus: Boolean): Boolean; overload;
     function GetKeyPath(): string; override;
   public
     function ChangeFilePath(const ANewFileName: string): Boolean; override;
@@ -342,7 +342,7 @@ type
   { TShellNewItem }
   TShellNewItem = class(TContextListItem)
   private
-    function ChangeStatus(ANewStatus: Boolean): Boolean;
+    function ChangeStatus(ANewStatus: Boolean): Boolean; overload;
     function GetKeyPath(): string; override;
   public
     function ChangeFilePath(const ANewFileName: string): Boolean; override;
@@ -4370,7 +4370,6 @@ end;
 
 procedure TTaskListItem.ExportItem(const AFileName: string);
 var
-  FsLocation: string;
   Win64: Boolean;
 
 begin
@@ -4538,7 +4537,6 @@ var
   Ext, Path: string;
   TaskFile: TStringList;
   TaskFolder: ITaskFolder;
-  TaskDefinition: ITaskDefinition;
   NewTask: IRegisteredTask;
 {$IFDEF WIN32}
   Win64: Boolean;
@@ -4596,6 +4594,7 @@ begin
     if Win64 then
       Wow64FsRedirection(False);
   {$ENDIF}
+    FLock.Release();
   end;  //of try
 end;
 
