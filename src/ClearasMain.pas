@@ -710,16 +710,22 @@ end;
 
 procedure TMain.LoadItems(ATotalRefresh: Boolean = True);
 begin
-  // Make a total refresh or just use cached items
-  if ATotalRefresh then
-  case PageControl.ActivePageIndex of
-    0: FStartup.Load(cbRunOnce.Checked);
-    1: FContext.Load(cbContextExpert.Checked);
-    2: FService.Load(cbServiceExpert.Checked);
-    3: FTasks.Load(cbTaskExpert.Checked);
-  end  //of case
-  else
-    GetSelectedList().OnSearchFinish(Self);
+  try
+    // Make a total refresh or just use cached items
+    if ATotalRefresh then
+    case PageControl.ActivePageIndex of
+      0: FStartup.Load(cbRunOnce.Checked);
+      1: FContext.Load(cbContextExpert.Checked);
+      2: FService.Load(cbServiceExpert.Checked);
+      3: FTasks.Load(cbTaskExpert.Checked);
+    end  //of case
+    else
+      GetSelectedList().OnSearchFinish(Self);
+
+  except
+    on E: EInvalidItem do
+      FLang.ShowMessage(FLang.GetString([77, 18]), FLang.GetString(53), mtWarning);
+  end;  //of try
 end;
 
 { private TMain.OnContextSearchStart
@@ -1552,14 +1558,17 @@ end;
 
 procedure TMain.bExportItemClick(Sender: TObject);
 begin
-  // Nothing selected?
-  if not Assigned(GetSelectedList().Selected) then
-  begin
-    FLang.ShowMessage(FLang.GetString([95, 18]), FLang.GetString(53), mtWarning);
-    Exit;
-  end;  //of begin
+  try
+    // Nothing selected?
+    if not Assigned(GetSelectedList().Selected) then
+      Abort;
 
-  ShowExportItemDialog();
+    ShowExportItemDialog();
+
+  except
+    on E: Exception do
+      FLang.ShowMessage(FLang.GetString([95, 18]), FLang.GetString(53), mtWarning);
+  end;  //of try
 end;
 
 { TMain.eSearchChange
@@ -2194,7 +2203,7 @@ begin
 
     on E: EInvalidItem do
       FLang.ShowMessage(FLang.GetString([104, 18]), FLang.GetString(53), mtWarning);
-    
+
     on E: Exception do
       FLang.ShowException(FLang.GetString([104, 18]), E.Message);
   end;  //of try
@@ -2351,45 +2360,51 @@ end;
 
 procedure TMain.mmExportListClick(Sender: TObject);
 var
-  SelectedList: TExportablelist<TRootItem>;
+  SelectedList: TRootList<TRootItem>;
   FileName, Filter, DefaultExt: string;
 
 begin
-  SelectedList := TExportablelist<TRootItem>(GetSelectedList());
+  try
+    SelectedList := TRootList<TRootItem>(GetSelectedList());
 
-  // Operation pending?
-  if SelectedList.IsLocked() then
-  begin
-    FLang.ShowMessage(100, 101, mtWarning);
-    Exit;
-  end;  //of begin
+    // Operation pending?
+    if SelectedList.IsLocked() then
+      raise EListBlocked.Create('Another operation is pending. Please wait!');
 
-  // Select file filter
-  if (PageControl.ActivePageIndex = 3) then
-  begin
-    Filter := FLang.GetString(119);
-    DefaultExt := '.zip';
-  end  //of begin
-  else
-  begin
-    Filter := FLang.GetString(36);
-    DefaultExt := '.reg';
-  end;  //of if
-
-  // Sets default file name
-  FileName := PageControl.ActivePage.Caption + DefaultExt;
-
-  // Show save dialog
-  if PromptForFileName(FileName, Filter, DefaultExt, StripHotkey(mmExportList.Caption),
-    '%HOMEPATH%', True) then
-    // Export list (threaded!)
-    with TExportListThread.Create(SelectedList, FileName, PageControl.ActivePageIndex) do
+    // Select file filter
+    if (PageControl.ActivePageIndex = 3) then
     begin
-      OnStart := OnExportListStart;
-      OnFinish := OnExportListEnd;
-      OnError := OnExportListError;
-      Start;
-    end;  //of with
+      Filter := FLang.GetString(119);
+      DefaultExt := '.zip';
+    end  //of begin
+    else
+    begin
+      Filter := FLang.GetString(36);
+      DefaultExt := '.reg';
+    end;  //of if
+
+    // Sets default file name
+    FileName := PageControl.ActivePage.Caption + DefaultExt;
+
+    // Show save dialog
+    if PromptForFileName(FileName, Filter, DefaultExt, StripHotkey(mmExportList.Caption),
+      '%HOMEPATH%', True) then
+      // Export list (threaded!)
+      with TExportListThread.Create(SelectedList, FileName, PageControl.ActivePageIndex) do
+      begin
+        OnStart := OnExportListStart;
+        OnFinish := OnExportListEnd;
+        OnError := OnExportListError;
+        Start;
+      end;  //of with
+
+  except
+    on E: EInvalidItem do
+      FLang.ShowMessage(FLang.GetString([72, 18]), FLang.GetString(53), mtWarning);
+
+    on E: EListBlocked do
+      FLang.ShowMessage(100, 101, mtWarning);
+  end;  //of try
 end;
 
 { TMain.mmImportClick

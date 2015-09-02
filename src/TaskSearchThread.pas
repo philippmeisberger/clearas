@@ -11,7 +11,7 @@ unit TaskSearchThread;
 interface
 
 uses
-  SysUtils, ActiveX, Variants, SyncObjs, Taskschd, ClearasSearchThread,
+  SysUtils, ActiveX, Variants, ComObj, SyncObjs, Taskschd, ClearasSearchThread,
   ClearasAPI, PMCWOSUtils;
 
 type
@@ -65,8 +65,7 @@ var
 
 begin
   // Open current folder
-  if Failed(FTaskService.GetFolder(PChar(APath), TaskFolder)) then
-    raise ETaskException.Create('Could not open task folder!');
+  OleCheck(FTaskService.GetFolder(PChar(APath), TaskFolder));
 
   // Add tasks in folder to list
   TTaskList(FSelectedList).LoadTasks(TaskFolder, FIncludeHidden);
@@ -75,9 +74,7 @@ begin
   if FIncludeSubFolders then
   begin
     // Read subfolders
-    if Failed(TaskFolder.GetFolders(0, FolderCollection)) then
-      raise ETaskException.Create('Could not read subfolders!');
-
+    OleCheck(TaskFolder.GetFolders(0, FolderCollection));
     Folders := (FolderCollection._NewEnum as IEnumVariant);
 
     // Search for tasks in subfolders
@@ -95,7 +92,7 @@ end;
 
 procedure TTaskSearchThread.Execute;
 begin
-  FLock.Acquire;
+  FLock.Acquire();
 
   try
     try
@@ -123,7 +120,7 @@ begin
 
       // Notify end of search
       Synchronize(DoNotifyOnFinish);
-      FLock.Release;
+      FLock.Release();
     end;  //of try
 
   except

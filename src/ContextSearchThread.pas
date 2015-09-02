@@ -193,7 +193,7 @@ end;
 
 procedure TContextSearchThread.Execute;
 begin
-  FLock.Acquire;
+  FLock.Acquire();
 
   try
     try
@@ -209,7 +209,7 @@ begin
     finally
       // Notify end of search
       Synchronize(DoNotifyOnFinish);
-      FLock.Release;
+      FLock.Release();
     end;  //of try
 
   except

@@ -87,7 +87,7 @@ const
   KEYS_COUNT_MAX = 11;
 
 begin
-  FLock.Acquire;
+  FLock.Acquire();
 
   try
     try
@@ -137,7 +137,7 @@ begin
     finally
       // Notify end of search
       Synchronize(DoNotifyOnFinish);
-      FLock.Release;
+      FLock.Release();
     end;  //of try
 
   except

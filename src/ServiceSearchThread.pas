@@ -57,7 +57,7 @@ var
   i: Integer;
 
 begin
-  FLock.Acquire;
+  FLock.Acquire();
 
   try
     // Clear data
@@ -116,7 +116,7 @@ begin
 
       // Notify end of search
       Synchronize(DoNotifyOnFinish);
-      FLock.Release;
+      FLock.Release();
     end;  //of try
 
   except

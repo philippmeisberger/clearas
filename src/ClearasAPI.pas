@@ -158,8 +158,18 @@ type
   TSearchErrorEvent = procedure(Sender: TObject; AErrorMessage: string) of object;
   TChangeEvent = procedure(Sender: TObject; ANewStatus: TItemStatus) of object;
 
+  { IExportableList }
+  IExportableList = interface
+    procedure ExportList(const AFileName: string);
+  end;
+
+  { IImportableList }
+  IImportableList = interface
+    function ImportBackup(const AFileName: string): Boolean;
+  end;
+
   { TRootList }
-  TRootList<T: TRootItem> = class(TObjectList<T>, IInterface)
+  TRootList<T: TRootItem> = class(TObjectList<T>, IInterface, IExportableList)
   private
     FItem: T;
     FOnSearchStart,
@@ -185,6 +195,7 @@ type
     function DisableItem(): Boolean; virtual;
     function EnableItem(): Boolean; virtual;
     procedure ExportItem(const AFileName: string); virtual;
+    procedure ExportList(const AFileName: string); virtual; abstract;
     function IndexOf(AItemName: string): Integer; overload;
     function IndexOf(AItemName: string; AEnabled: Boolean): Integer; overload;
     function IsLocked(): Boolean;
@@ -198,21 +209,6 @@ type
     property OnSearchFinish: TNotifyEvent read FOnSearchFinish write FOnSearchFinish;
     property OnSearchStart: TSearchEvent read FOnSearchStart write FOnSearchStart;
     property Selected: T read FItem write FItem;
-  end;
-
-  { IExportableList }
-  IExportableList = interface
-    procedure ExportList(const AFileName: string);
-  end;
-
-  { IImportableList }
-  IImportableList = interface
-    function ImportBackup(const AFileName: string): Boolean;
-  end;
-
-  { TExportablelist }
-  TExportableList<T: TRootItem> = class(TRootList<T>, IExportableList)
-    procedure ExportList(const AFileName: string); virtual; abstract;
   end;
 
   { Exception class }
@@ -262,7 +258,7 @@ type
   end;
 
   { TStartupList }
-  TStartupList = class(TExportableList<TStartupListItem>, IImportableList)
+  TStartupList = class(TRootList<TStartupListItem>, IImportableList)
   private
     FDeleteBackup: Boolean;
     function DeleteBackupFile(): Boolean;
@@ -357,7 +353,7 @@ type
   end;
 
   { TContextList }
-  TContextList = class(TExportableList<TContextListItem>)
+  TContextList = class(TRootList<TContextListItem>)
   protected
     function AddShellItem(const AName, ALocationRoot, AFileName, ACaption: string;
       AEnabled, AWow64: Boolean): Integer;
@@ -414,7 +410,7 @@ type
   end;
 
   { TServiceList }
-  TServiceList = class(TExportableList<TServiceListItem>)
+  TServiceList = class(TRootList<TServiceListItem>)
   private
     FManager: SC_HANDLE;
   protected
@@ -456,7 +452,7 @@ type
   end;
 
   { TTaskList }
-  TTaskList = class(TExportableList<TTaskListItem>, IImportableList)
+  TTaskList = class(TRootList<TTaskListItem>, IImportableList)
   private
     FTaskService: ITaskService;
   protected
