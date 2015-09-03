@@ -2177,25 +2177,24 @@ begin
     if not GetSelectedList().ChangeItemFilePath(EnteredPath) then
       raise Exception.Create('Error while changing path!');
 
+    // Update icon path in TListView
+    if (PageControl.ActivePageIndex = 0) then
+    begin
+      // Update icon
+      Icon := TIcon.Create;
+
+      try
+        Icon.Handle := FStartup.Selected.Icon;
+        lwStartup.ItemFocused.ImageIndex := IconList.AddIcon(Icon);
+
+      finally
+        Icon.Free;
+      end;  //of try
+    end;  //of begin
+
     // Update file path in TListView
-    case PageControl.ActivePageIndex of
-      0: begin
-           lwStartup.ItemFocused.SubItems[1] := EnteredPath;
-
-           // Update icon
-           Icon := TIcon.Create;
-
-           try
-             Icon.Handle := FStartup.Selected.Icon;
-             lwStartup.ItemFocused.ImageIndex := IconList.AddIcon(Icon);
-
-           finally
-             Icon.Free;
-           end;  //of try
-         end;
-
-      2: lwService.ItemFocused.SubItems[1] := EnteredPath;
-    end;  //of case
+    if (PageControl.ActivePageIndex <> 1) then
+      GetSelectedListView().ItemFocused.SubItems[1] := EnteredPath;
     
   except
     on E: EListBlocked do

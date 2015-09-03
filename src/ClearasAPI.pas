@@ -686,8 +686,8 @@ end;
 function TLnkFile.WriteLnkFile(AFileName, AExeFileName: string;
   AArguments: string = ''): Boolean;
 var
-  ShellLink : IShellLink;
-  PersistFile : IPersistFile;
+  ShellLink: IShellLink;
+  PersistFile: IPersistFile;
 
 begin
   Result := False;
@@ -773,7 +773,7 @@ end;
 
 function TRootItem.GetIcon(): HICON;
 var
-  FileInfo: SHFILEINFO;
+  FileInfo: TSHFileInfo;
 {$IFDEF WIN32}
   Win64: Boolean;
 {$ENDIF}
@@ -4275,7 +4275,7 @@ var
 begin
   // Update task
   OleCheck(FTaskFolder.RegisterTaskDefinition(PChar(Name), FTaskDefinition,
-    Ord(TASK_UPDATE), Null, Null, FTaskDefinition.Principal.LogonType, Null, NewTask));
+    TASK_UPDATE, Null, Null, FTaskDefinition.Principal.LogonType, Null, NewTask));
 
   Result := True;
 end;
@@ -4404,7 +4404,7 @@ begin
   CoInitialize(nil);
 
   if Failed(CoInitializeSecurity(nil, -1, nil, nil, RPC_C_AUTHN_LEVEL_PKT_PRIVACY,
-    RPC_C_IMP_LEVEL_IMPERSONATE, nil, 0, nil)) then
+    RPC_C_IMP_LEVEL_IMPERSONATE, nil, EOAC_NONE, nil)) then
     raise ETaskException.Create('Could not register security values for process!');
 
   if Failed(CoCreateInstance(CLSID_TaskScheduler, nil, CLSCTX_INPROC_SERVER,
@@ -4494,17 +4494,17 @@ begin
   FLock.Acquire();
   ZipFile := TZipFile.Create;
 
+{$IFDEF WIN32}
+  Win64 := (TOSVersion.Architecture = arIntelX64);
+
+  // Deny WOW64 redirection on 64 Bit Windows
+  if Win64 then
+    Wow64FsRedirection(True);
+{$ENDIF}
+
   try
     ZipFile.Open(AFileName, zmWrite);
     Path := IncludeTrailingPathDelimiter(Path);
-
-  {$IFDEF WIN32}
-    Win64 := (TOSVersion.Architecture = arIntelX64);
-
-    // Deny WOW64 redirection on 64 Bit Windows
-    if Win64 then
-      Wow64FsRedirection(True);
-  {$ENDIF}
 
     for i := 0 to Count - 1 do
     begin
@@ -4575,11 +4575,11 @@ begin
       Exit;
 
     // Read .xml task file
-    TaskFile.LoadFromFile(AFileName, TEncoding.Unicode);
+    TaskFile.LoadFromFile(AFileName);
 
     // Register new task
     OleCheck(TaskFolder.RegisterTask(PChar(Path), TaskFile.GetText(),
-      Ord(TASK_CREATE), Null, Null, TASK_LOGON_INTERACTIVE_TOKEN, Null, NewTask));
+      TASK_CREATE, Null, Null, TASK_LOGON_INTERACTIVE_TOKEN, Null, NewTask));
 
     // Add new task to list
     Result := (AddTaskItem(NewTask, TaskFolder) <> -1);
