@@ -160,11 +160,13 @@ type
 
   { IExportableList }
   IExportableList = interface
+  ['{DAC0E183-03FF-4C7A-A1BB-547D89E57C81}']
     procedure ExportList(const AFileName: string);
   end;
 
   { IImportableList }
   IImportableList = interface
+  ['{19B8FB63-483A-4F54-80C4-A25FBBAC7891}']
     function ImportBackup(const AFileName: string): Boolean;
   end;
 
@@ -464,7 +466,7 @@ type
     function ImportBackup(const AFileName: string): Boolean;
     procedure Load(AExpertMode: Boolean = False); override;
     procedure LoadTasks(ATaskFolder: ITaskFolder; AIncludeHidden: Boolean); overload;
-    procedure LoadTasks(APath: string = ''; ARecursive: Boolean = False;
+    procedure LoadTasks(APath: string = '\'; ARecursive: Boolean = False;
       AIncludeHidden: Boolean = False); overload;
   end;
 
@@ -4604,7 +4606,7 @@ end;
 
 procedure TTaskList.Load(AExpertMode: Boolean = False);
 begin
-  LoadTasks('', AExpertMode, AExpertMode);
+  LoadTasks('\', AExpertMode, AExpertMode);
 end;
 
 { public TTaskList.LoadTasks
@@ -4648,7 +4650,7 @@ end;
 
   Searches for task items in specific folder and adds them to the list. }
 
-procedure TTaskList.LoadTasks(APath: string = ''; ARecursive: Boolean = False;
+procedure TTaskList.LoadTasks(APath: string = '\'; ARecursive: Boolean = False;
   AIncludeHidden: Boolean = False);
 var
   SearchThread: TTaskSearchThread;

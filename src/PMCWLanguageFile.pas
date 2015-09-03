@@ -371,7 +371,7 @@ end;
 
 function TLanguageFile.GetLanguageName(ALanguage: Word): string;
 begin
-  SetLength(Result, 255);
+  SetLength(Result, MAX_PATH);
   SetLength(Result, VerLanguageName(MAKELANGID(ALanguage, SUBLANG_DEFAULT),
     @Result[1], Length(Result)));
 end;

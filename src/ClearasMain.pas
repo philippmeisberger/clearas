@@ -2148,8 +2148,7 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.ShowMessage(StripHotkey(pmCopyLocation.Caption) + FLang.GetString(18),
-        FLang.GetString(53), mtWarning);
+      FLang.ShowMessage(FLang.GetString([106, 18]), FLang.GetString(53), mtWarning);
   end;  //of try
 end;
 
@@ -2348,7 +2347,7 @@ end;
 procedure TMain.mmExportClick(Sender: TObject);
 begin
   if (PageControl.ActivePageIndex = 0) then
-    bExportStartupItem.Click()
+    bExportStartupItemClick(Sender)
   else
     bExportItemClick(Sender);
 end;
@@ -2413,6 +2412,7 @@ end;
 procedure TMain.mmImportClick(Sender: TObject);
 var
   BackupDir, Filter, FileName: string;
+  ImportableList: IImportableList;
 
 begin
   try
@@ -2437,27 +2437,22 @@ begin
 
     // Show select file dialog
     if PromptForFileName(FileName, Filter, '', StripHotkey(mmImport.Caption), BackupDir) then
-      case PageControl.ActivePageIndex of
-        0: begin
-             if not FStartup.ImportBackup(FileName) then
-               raise EWarning.Create(FLang.GetString(41));
-           end;
-
-        3: begin
-             if not FTasks.ImportBackup(FileName) then
-               raise EWarning.Create(FLang.GetString(41));
-           end;
-      end;  //of case
+      if (Supports(GetSelectedList(), IImportableList, ImportableList) and not
+        ImportableList.ImportBackup(FileName)) then
+        raise EWarning.Create(FLang.GetString(41));
 
   except
+    on E: EInvalidItem do
+      FLang.ShowMessage(FLang.GetString([70, 18]), FLang.GetString(53), mtWarning);
+
     on E: EListBlocked do
       FLang.ShowMessage(100, 101, mtWarning);
 
     on E: EWarning do
-      FLang.ShowMessage(StripHotkey(mmImport.Caption) + FLang.GetString(18), E.Message, mtWarning);
+      FLang.ShowMessage(FLang.GetString([70, 18]), E.Message, mtWarning);
 
     on E: Exception do
-      FLang.ShowException(StripHotkey(mmImport.Caption) + FLang.GetString(18), E.Message);
+      FLang.ShowException(FLang.GetString([70, 18]), E.Message);
   end;  //of try
 end;
 

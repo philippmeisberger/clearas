@@ -610,7 +610,7 @@ object Main: TMain
         Height = 33
         Anchors = [akTop, akRight]
         Caption = 'Beenden'
-        TabOrder = 0
+        TabOrder = 5
         OnClick = bCloseStartupClick
       end
       object bDeleteTaskItem: TButton
@@ -621,7 +621,7 @@ object Main: TMain
         Anchors = [akTop, akRight]
         Caption = 'l'#246'schen'
         Enabled = False
-        TabOrder = 1
+        TabOrder = 4
         OnClick = bDeleteItemClick
       end
       object bDisableTaskitem: TButton
@@ -643,7 +643,7 @@ object Main: TMain
         Anchors = [akTop, akRight]
         Caption = 'aktivieren'
         Enabled = False
-        TabOrder = 3
+        TabOrder = 1
         OnClick = bEnableTaskItemClick
       end
       object bExportTaskItem: TButton
@@ -654,7 +654,7 @@ object Main: TMain
         Anchors = [akTop, akRight]
         Caption = 'exportieren'
         Enabled = False
-        TabOrder = 4
+        TabOrder = 3
         OnClick = bExportItemClick
       end
       object cbTaskExpert: TCheckBox
@@ -664,7 +664,7 @@ object Main: TMain
         Height = 17
         Anchors = [akRight, akBottom]
         Caption = 'Expertenmodus'
-        TabOrder = 5
+        TabOrder = 6
         OnClick = mmRefreshClick
       end
       object eTaskSearch: TButtonedEdit
@@ -679,7 +679,7 @@ object Main: TMain
         RightButton.ImageIndex = 0
         RightButton.PressedImageIndex = 0
         RightButton.Visible = True
-        TabOrder = 6
+        TabOrder = 7
         TextHint = 'Suchen ...'
         OnChange = eSearchChange
         OnRightButtonClick = eSearchRightButtonClick
@@ -715,7 +715,7 @@ object Main: TMain
         ReadOnly = True
         RowSelect = True
         PopupMenu = PopupMenu
-        TabOrder = 7
+        TabOrder = 0
         ViewStyle = vsReport
         OnColumnClick = ListViewColumnClick
         OnCompare = ListViewCompare
@@ -876,7 +876,7 @@ object Main: TMain
   object QuickSearchIconList: TImageList
     Left = 256
     Bitmap = {
-      494C010103000800540110001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C0101030008005C0110001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000001000000001002000000000000010
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
