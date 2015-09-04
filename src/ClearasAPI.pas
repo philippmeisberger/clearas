@@ -440,13 +440,14 @@ type
   { TTaskItem }
   TTaskListItem = class(TRootItem)
   private
-    FTaskDefinition: ITaskDefinition;
+    FTask: IRegisteredTask;
     FTaskFolder: ITaskFolder;
-    procedure UpdateTask();
+    function GetTaskDefinition(): ITaskDefinition;
   protected
     function GetFullLocation(): string; override;
   public
-    constructor Create(AIndex: Word; AEnabled: Boolean; ATaskFolder: ITaskFolder);
+    constructor Create(AIndex: Word; AEnabled: Boolean; ATask: IRegisteredTask;
+      ATaskFolder: ITaskFolder);
     function ChangeFilePath(const ANewFilePath: string): Boolean; override;
     function Delete(): Boolean; override;
     function Disable(): Boolean; override;
@@ -454,7 +455,7 @@ type
     procedure ExportItem(const AFileName: string); override;
     function Rename(const ANewCaption: string): Boolean; override;
     { external }
-    property Definition: ITaskDefinition read FTaskDefinition write FTaskDefinition;
+    property Definition: ITaskDefinition read GetTaskDefinition;
   end;
 
   { TTaskList }
@@ -4433,23 +4434,20 @@ end;
   Constructor for creating a TTaskListItem instance. }
 
 constructor TTaskListItem.Create(AIndex: Word; AEnabled: Boolean;
-  ATaskFolder: ITaskFolder);
+  ATask: IRegisteredTask; ATaskFolder: ITaskFolder);
 begin
   inherited Create(AIndex, AEnabled);
+  FTask := ATask;
   FTaskFolder := ATaskFolder;
 end;
 
-{ private TTaskListItem.UpdateTask
+{ private TTaskListItem.GetTaskDefinition
 
-  Updates a task with a new definition. }
+  Returns the definition of the task. }
 
-procedure TTaskListItem.UpdateTask();
-var
-  NewTask: IRegisteredTask;
-
+function TTaskListItem.GetTaskDefinition(): ITaskDefinition;
 begin
-  OleCheck(FTaskFolder.RegisterTaskDefinition(PChar(Name), FTaskDefinition,
-    TASK_UPDATE, Null, Null, FTaskDefinition.Principal.LogonType, Null, NewTask));
+  Result := FTask.Definition;
 end;
 
 { protected TTaskListItem.GetFullLocation
@@ -4472,11 +4470,13 @@ var
   Action: IAction;
   ActionItem: OleVariant;
   ExecAction: IExecAction;
+  Task: IRegisteredTask;
   Fetched: Cardinal;
 
 begin
   Result := False;
-  Actions := (FTaskDefinition.Actions._NewEnum as IEnumVariant);
+  OleCheck(FTaskFolder.GetTask(PChar(Name), Task));
+  Actions := (Task.Definition.Actions._NewEnum as IEnumVariant);
 
   // Try to find executable command in task
   if (Actions.Next(1, ActionItem, Fetched) = 0) then
@@ -4493,7 +4493,7 @@ begin
       ExecAction.Arguments := PChar(ExtractArguments(ANewFilePath));
 
       // Update task
-      UpdateTask();
+      //UpdateTask();
       FileName := ANewFilePath;
       Result := True;
     end;  //of begin
@@ -4517,8 +4517,7 @@ end;
 
 function TTaskListItem.Disable(): Boolean;
 begin
-  FTaskDefinition.Settings.Enabled := False;
-  UpdateTask();
+  FTask.Enabled := False;
 
   // Update status
   FEnabled := False;
@@ -4531,8 +4530,7 @@ end;
 
 function TTaskListItem.Enable(): Boolean;
 begin
-  FTaskDefinition.Settings.Enabled := True;
-  UpdateTask();
+  FTask.Enabled := True;
 
   // Update status
   FEnabled := True;
@@ -4592,7 +4590,7 @@ begin
 
     // Update name
     Name := ANewCaption;
-    UpdateTask();
+    //UpdateTask();
     Result := True;
 
   finally
@@ -4650,13 +4648,12 @@ var
   Fetched: Cardinal;
 
 begin
-  Item := TTaskListItem.Create(Count, ATask.Enabled, ATaskFolder);
+  Item := TTaskListItem.Create(Count, ATask.Enabled, ATask, ATaskFolder);
 
   with Item do
   begin
     Name := ATask.Name;
     Location := ExtractFileDir(ATask.Path);
-    Definition := ATask.Definition;
 
     // Try to find executable command in task
     Actions := (Definition.Actions._NewEnum as IEnumVariant);
@@ -4849,9 +4846,8 @@ begin
       AddTaskItem(Task, ATaskFolder);
 
     except
-      on E: ESafecallException do
-        // Task currupted: Skip it!
-        Continue;
+      // Task currupted: Skip it!
+      Continue;
     end;  //of try
 end;
 

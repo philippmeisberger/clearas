@@ -339,6 +339,7 @@ type
     procedure set_Duration(pDuration: TBStr); safecall;
     function get_StopAtDurationEnd: WordBool; safecall;
     procedure set_StopAtDurationEnd(pStop: WordBool); safecall;
+    { external }
     property Interval: TBStr read get_Interval write set_Interval;
     property Duration: TBStr read get_Duration write set_Duration;
     property StopAtDurationEnd: WordBool read get_StopAtDurationEnd write set_StopAtDurationEnd;
@@ -350,6 +351,7 @@ type
     procedure set_Name(pName: TBStr); safecall;
     function get_Value: TBStr; safecall;
     procedure set_Value(pValue: TBStr); safecall;
+    { external }
     property Name: TBStr read get_Name write set_Name;
     property Value: TBStr read get_Value write set_Value;
   end;
@@ -362,6 +364,7 @@ type
     function Create(Name: TBStr; Value: TBStr; out ppPair: ITaskNamedValuePair): HRESULT; stdcall;
     function Remove(index: LONG): HRESULT; stdcall;
     function Clear: HRESULT; stdcall;
+    { external }
     property Count: LONG read get_Count;
     property Item[index: LONG]: ITaskNamedValuePair read get_Item; default;
     property _NewEnum: IUnknown read get__NewEnum;
@@ -387,6 +390,7 @@ type
     procedure set_SecurityDescriptor(pSddl: OleVariant); safecall;
     function get_Source: TBStr; safecall;
     procedure set_Source(pSource: TBStr); safecall;
+    { external }
     property Description: TBStr read get_Description write set_Description;
     property Author: TBStr read get_Author write set_Author;
     property Version: TBStr read get_Version write set_Version;
@@ -413,6 +417,7 @@ type
     procedure set_EndBoundary(pEnd: TBStr); safecall;
     function get_Enabled: WordBool; safecall;
     procedure set_Enabled(pEnabled: WordBool); safecall;
+    { external }
     property TriggerType: TASK_TRIGGER_TYPE2 read get_type;
     property Id: TBStr read get_Id write set_Id;
     property Repetition: IRepetitionPattern read get_Repetition write set_Repetition;
@@ -426,6 +431,7 @@ type
     [SID_IBootTrigger]
     function get_Delay: TBStr; safecall;
     procedure set_Delay(pDelay: TBStr); safecall;
+    { external }
     property Delay: TBStr read get_Delay write set_Delay;
   end;
 
@@ -435,6 +441,7 @@ type
     procedure set_DaysInterval(pDays: Smallint); safecall;
     function get_RandomDelay: TBStr; safecall;
     procedure set_RandomDelay(pRandomDelay: TBStr); safecall;
+    { external }
     property DaysInterval: Smallint read get_DaysInterval write set_DaysInterval;
     property RandomDelay: TBStr read get_RandomDelay write set_RandomDelay;
   end;
@@ -447,6 +454,7 @@ type
     procedure set_Delay(pDelay: TBStr); safecall;
     function get_ValueQueries: ITaskNamedValueCollection; safecall;
     procedure set_ValueQueries(ppNamedXPaths: ITaskNamedValueCollection); safecall;
+    { external }
     property Subscription: TBStr read get_Subscription write set_Subscription;
     property Delay: TBStr read get_Delay write set_Delay;
     property ValueQueries: ITaskNamedValueCollection read get_ValueQueries write set_ValueQueries;
@@ -462,6 +470,7 @@ type
     procedure set_Delay(pDelay: TBStr); safecall;
     function get_UserId: TBStr; safecall;
     procedure set_UserId(pUser: TBStr); safecall;
+    { external }
     property Delay: TBStr read get_Delay write set_Delay;
     property UserId: TBStr read get_UserId write set_UserId;
   end;
@@ -476,6 +485,7 @@ type
     procedure set_RunOnLastDayOfMonth(pLastDay: WordBool); safecall;
     function get_RandomDelay: TBStr; safecall;
     procedure set_RandomDelay(pRandomDelay: TBStr); safecall;
+    { external }
     property DaysOfMonth: LONG read get_DaysOfMonth write set_DaysOfMonth;
     property MonthsOfYear: Smallint read get_MonthsOfYear write set_MonthsOfYear;
     property RunOnLastDayOfMonth: WordBool read get_RunOnLastDayOfMonth write set_RunOnLastDayOfMonth;
@@ -494,6 +504,7 @@ type
     procedure set_RunOnLastWeekOfMonth(pLastWeek: WordBool); safecall;
     function get_RandomDelay: TBStr; safecall;
     procedure set_RandomDelay(pRandomDelay: TBStr); safecall;
+    { external }
     property DaysOfWeek: Smallint read get_DaysOfWeek write set_DaysOfWeek;
     property WeeksOfMonth: Smallint read get_WeeksOfMonth write set_WeeksOfMonth;
     property MonthsOfYear: Smallint read get_MonthsOfYear write set_MonthsOfYear;
@@ -505,6 +516,7 @@ type
     [SID_IRegistrationTrigger]
     function get_Delay: TBStr; safecall;
     procedure set_Delay(pDelay: TBStr); safecall;
+    { external }
     property Delay: TBStr read get_Delay write set_Delay;
   end;
 
@@ -516,6 +528,7 @@ type
     procedure set_UserId(pUser: TBStr); safecall;
     function get_StateChange: TASK_SESSION_STATE_CHANGE_TYPE; safecall;
     procedure set_StateChange(pType: TASK_SESSION_STATE_CHANGE_TYPE); safecall;
+    { external }
     property Delay: TBStr read get_Delay write set_Delay;
     property UserId: TBStr read get_UserId write set_UserId;
     property StateChange: TASK_SESSION_STATE_CHANGE_TYPE read get_StateChange write set_StateChange;
@@ -525,6 +538,7 @@ type
     [SID_ITimeTrigger]
     function get_RandomDelay: TBStr; safecall;
     procedure set_RandomDelay(pRandomDelay: TBStr); safecall;
+    { external }
     property RandomDelay: TBStr read get_RandomDelay write set_RandomDelay;
   end;
 
@@ -536,6 +550,7 @@ type
     procedure set_WeeksInterval(pWeeks: Smallint); safecall;
     function get_RandomDelay: TBStr; safecall;
     procedure set_RandomDelay(pRandomDelay: TBStr); safecall;
+    { external }
     property DaysOfWeek: Smallint read get_DaysOfWeek write set_DaysOfWeek;
     property WeeksInterval: Smallint read get_WeeksInterval write set_WeeksInterval;
     property RandomDelay: TBStr read get_RandomDelay write set_RandomDelay;
@@ -549,6 +564,7 @@ type
     function Create(triggerType: TASK_TRIGGER_TYPE2; out ppTrigger: ITrigger): HRESULT; stdcall;
     function Remove(index: OleVariant): HRESULT; stdcall;
     function Clear: HRESULT; stdcall;
+    { external }
     property Count: LONG read get_Count;
     property Item[index: LONG]: ITrigger read get_Item; default;
     property _NewEnum: IUnknown read get__NewEnum;
@@ -564,6 +580,7 @@ type
     procedure set_StopOnIdleEnd(pStop: WordBool); safecall;
     function get_RestartOnIdle: WordBool; safecall;
     procedure set_RestartOnIdle(pRestart: WordBool); safecall;
+    { external }
     property IdleDuration: TBStr read get_IdleDuration write set_IdleDuration;
     property WaitTimeout: TBStr read get_WaitTimeout write set_WaitTimeout;
     property StopOnIdleEnd: WordBool read get_StopOnIdleEnd write set_StopOnIdleEnd;
@@ -576,6 +593,7 @@ type
     procedure set_Name(pName: TBStr); safecall;
     function get_Id: TBStr; safecall;
     procedure set_Id(pId: TBStr); safecall;
+    { external }
     property Name: TBStr read get_Name write set_Name;
     property Id: TBStr read get_Id write set_Id;
   end;
@@ -622,6 +640,7 @@ type
     procedure set_WakeToRun(pWake: WordBool); safecall;
     function get_NetworkSettings: INetworkSettings; safecall;
     procedure set_NetworkSettings(ppNetworkSettings: INetworkSettings); safecall;
+    { external }
     property AllowDemandStart: WordBool read get_AllowDemandStart write set_AllowDemandStart;
     property RestartInterval: TBStr read get_RestartInterval write set_RestartInterval;
     property RestartCount: SYSINT read get_RestartCount write set_RestartCount;
@@ -650,6 +669,7 @@ type
     procedure set_DisallowStartOnRemoteAppSession(pDisallowStart: WordBool); safecall;
     function get_UseUnifiedSchedulingEngine: WordBool; safecall;
     procedure set_UseUnifiedSchedulingEngine(pUseUnifiedEngine: WordBool); safecall;
+    { external }
     property DisallowStartOnRemoteAppSession: WordBool read get_DisallowStartOnRemoteAppSession write set_DisallowStartOnRemoteAppSession;
     property UseUnifiedSchedulingEngine: WordBool read get_UseUnifiedSchedulingEngine write set_UseUnifiedSchedulingEngine;
   end;
@@ -668,6 +688,7 @@ type
     procedure set_GroupId(pGroup: TBStr); safecall;
     function get_RunLevel: TASK_RUNLEVEL_TYPE; safecall;
     procedure set_RunLevel(pRunLevel: TASK_RUNLEVEL_TYPE); safecall;
+    { external }
     property Id: TBStr read get_Id write set_Id;
     property DisplayName: TBStr read get_DisplayName write set_DisplayName;
     property UserId: TBStr read get_UserId write set_UserId;
@@ -691,6 +712,7 @@ type
     procedure set_ClassId(pClsid: TBStr); safecall;
     function get_Data: TBStr; safecall;
     procedure set_Data(pData: TBStr); safecall;
+    { external }
     property ClassId: TBStr read get_ClassId write set_ClassId;
     property Data: TBStr read get_Data write set_Data;
   end;
@@ -717,6 +739,7 @@ type
     procedure set_Body(pBody: TBStr); safecall;
     function get_Attachments: PSafeArray; safecall;
     procedure set_Attachments(pAttachements: PSafeArray); safecall;
+    { external }
     property Server: TBStr read get_Server write set_Server;
     property Subject: TBStr read get_Subject write set_Subject;
     property To_: TBStr read get_To_ write set_To_;
@@ -737,6 +760,7 @@ type
     procedure set_Arguments(pArgument: TBStr); safecall;
     function get_WorkingDirectory: TBStr; safecall;
     procedure set_WorkingDirectory(pWorkingDirectory: TBStr); safecall;
+    { external }
     property Path: TBStr read get_Path write set_Path;
     property Arguments: TBStr read get_Arguments write set_Arguments;
     property WorkingDirectory: TBStr read get_WorkingDirectory write set_WorkingDirectory;
@@ -748,6 +772,7 @@ type
     procedure set_Title(pTitle: TBStr); safecall;
     function get_MessageBody: TBStr; safecall;
     procedure set_MessageBody(pMessageBody: TBStr); safecall;
+    { external }
     property Title: TBStr read get_Title write set_Title;
     property MessageBody: TBStr read get_MessageBody write set_MessageBody;
   end;
@@ -764,6 +789,7 @@ type
     function Clear: HRESULT; stdcall;
     function get_Context: TBStr; safecall;
     procedure set_Context(pContext: TBStr); safecall;
+    { external }
     property Count: LONG read get_Count;
     property Item[index: LONG]: IAction read get_Item; default;
     property _NewEnum: IUnknown read get__NewEnum;
@@ -794,6 +820,7 @@ type
     procedure set_Actions(ppActions: IActionCollection); safecall;
     function get_XmlText: TBStr; safecall;
     procedure set_XmlText(pXml: TBStr); safecall;
+    { external }
     property RegistrationInfo: IRegistrationInfo read get_RegistrationInfo write set_RegistrationInfo;
     property Triggers: ITriggerCollection read get_Triggers write set_Triggers;
     property Settings: ITaskSettings read get_Settings write set_Settings;
@@ -813,6 +840,7 @@ type
     function Stop: HRESULT; stdcall;
     function Refresh: HRESULT; stdcall;
     function get_EnginePID: LongWord; safecall;
+    { external }
     property Name: TBStr read get_Name;
     property InstanceGuid: TBStr read get_InstanceGuid;
     property Path: TBStr read get_Path;
@@ -826,6 +854,7 @@ type
     function get_Count: LONG; safecall;
     function get_Item(index: OleVariant): IRunningTask; safecall;
     function get__NewEnum: IUnknown; safecall;
+    { external }
     property Count: LONG read get_Count;
     property Item[index: OleVariant]: IRunningTask read get_Item; default;
     property _NewEnum: IUnknown read get__NewEnum;
@@ -856,6 +885,7 @@ type
     function Stop(flags: LONG): HRESULT; stdcall;
     function GetRunTimes(pstStart, pstEnd: PSystemTime; var pCount: DWORD;
       out pRunTimes: PSystemTime): HRESULT; stdcall;
+    { external }
     property Name: TBStr read get_Name;
     property Path: TBStr read get_Path;
     property State: TASK_STATE read get_State;
@@ -873,6 +903,7 @@ type
     function get_Count: LONG; safecall;
     function get_Item(index: OleVariant): IRegisteredTask; safecall;
     function get__NewEnum: IUnknown; safecall;
+    { external }
     property Count: LONG read get_Count;
     property Item[index: OleVariant]: IRegisteredTask read get_Item; default;
     property _NewEnum: IUnknown read get__NewEnum;
@@ -913,6 +944,7 @@ type
     function GetSecurityDescriptor(securityInformation: LONG;
       out pSddl: TBStr): HRESULT; stdcall;
     function SetSecurityDescriptor(sddl: TBStr; flags: LONG): HRESULT; stdcall;
+    { external }
     property Name: TBStr read get_Name;
     property Path: TBStr read get_Path;
   end;
@@ -922,6 +954,7 @@ type
     function get_Count: LONG; safecall;
     function get_Item(index: OleVariant): ITaskFolder; safecall;
     function get__NewEnum: IUnknown; safecall;
+    { external }
     property Count: LONG read get_Count;
     property Item[index: OleVariant]: ITaskFolder read get_Item; default;
     property _NewEnum: IUnknown read get__NewEnum;
@@ -938,6 +971,7 @@ type
     function get_ConnectedUser: TBStr; safecall;
     function get_ConnectedDomain: TBStr; safecall;
     function get_HighestVersion: LongWord; safecall;
+    { external }
     property Connected: WordBool read get_Connected;
     property TargetServer: TBStr read get_TargetServer;
     property ConnectedUser: TBStr read get_ConnectedUser;
