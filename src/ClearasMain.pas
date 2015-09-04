@@ -117,6 +117,7 @@ type
     lWindows4: TLabel;
     lwTasks: TListView;
     pbTaskProgress: TProgressBar;
+    pmRename: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -170,6 +171,7 @@ type
     procedure lwTasksSelectItem(Sender: TObject; Item: TListItem;
       Selected: Boolean);
     procedure lwTasksDblClick(Sender: TObject);
+    procedure pmRenameClick(Sender: TObject);
   private
     FStartup: TStartupList;
     FContext: TContextList;
@@ -1667,6 +1669,7 @@ begin
     pmOpenRegedit.Enabled := True;
     bExportContextItem.Enabled := True;
     pmExport.Enabled := True;
+    pmRename.Enabled := (FContext.Selected is TShellItem);
 
     // Enable "edit path" only if file path is present
     pmEdit.Enabled := (FContext.Selected.FileName <> '');
@@ -2052,6 +2055,7 @@ begin
     pmExport.Enabled := bExportStartupItem.Enabled;
     bDeleteStartupItem.Enabled := True;
     pmDelete.Enabled := True;
+    pmRename.Enabled := not (FStartup.Selected is TStartupUserItem);
 
     // Show popup menu
     PopupMenu.AutoPopup := True;
@@ -2120,8 +2124,40 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.ShowMessage(StripHotkey(pmOpenRegedit.Caption) + FLang.GetString(18),
-        FLang.GetString(53), mtWarning);
+      FLang.ShowMessage(FLang.GetString([66, 18]), FLang.GetString(53), mtWarning);
+  end;  //of try
+end;
+
+{ TMain.pmRenameClick
+
+  Renames the current selected item. }
+
+procedure TMain.pmRenameClick(Sender: TObject);
+var
+  Name: string;
+
+begin
+  try
+    Name := GetSelectedItem().Caption;
+
+    if InputQuery(StripHotkey(pmRename.Caption), StripHotkey(pmRename.Caption), Name) then
+    begin
+      if (Trim(Name) = '') then
+        Exit;
+
+      if GetSelectedList().RenameItem(Name) then
+        GetSelectedListView().ItemFocused.SubItems[0] := Name;
+    end;  //of begin
+
+  except
+    on E: EListBlocked do
+      FLang.ShowMessage(100, 101, mtWarning);
+
+    on E: EInvalidItem do
+      FLang.ShowMessage(FLang.GetString([55, 18]), FLang.GetString(53), mtWarning);
+
+    on E: Exception do
+      FLang.ShowException(FLang.GetString([55, 18]), E.Message);
   end;  //of try
 end;
 

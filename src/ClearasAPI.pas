@@ -93,13 +93,16 @@ type
   TRootItem = class(TObject)
   private
     FIndex: Word;
-    FName, FType, FFileName: string;
+    FName,
+    FType,
+    FFileName: string;
     function GetArguments(): string;
     function GetFileNameOnly(): string;
     function GetIcon(): HICON;
   protected
     FEnabled: Boolean;
-    FLocation: string;
+    FLocation,
+    FCaption: string;
     function DeleteQuoteChars(const APath: string): string;
     function ExtractArguments(const APath: string): string;
     function ExtractPathToFile(const APath: string): string;
@@ -107,7 +110,7 @@ type
   public
     constructor Create(AIndex: Word; AEnabled: Boolean);
     function ChangeFilePath(const ANewFileName: string): Boolean; virtual; abstract;
-    function ChangeStatus(): Boolean; virtual;
+    procedure ChangeStatus(ANewStatus: Boolean); virtual;
     function Delete(): Boolean; virtual; abstract;
     function Disable(): Boolean; virtual; abstract;
     function Enable(): Boolean; virtual; abstract;
@@ -115,9 +118,11 @@ type
     function FileExists(): Boolean;
     function GetStatus(ALangFile: TLanguageFile): string;
     procedure OpenInExplorer();
+    function Rename(const ANewCaption: string): Boolean; virtual; abstract;
     { external }
     property Arguments: string read GetArguments;
-    property Enabled: Boolean read FEnabled;
+    property Caption: string read FCaption write FCaption;
+    property Enabled: Boolean read FEnabled write ChangeStatus;
     property FileName: string read FFileName write FFileName;
     property FileNameOnly: string read GetFileNameOnly;
     property Icon: HICON read GetIcon;
@@ -130,8 +135,9 @@ type
 
   { TRegistryItem }
   TRegistryItem = class(TRootItem)
-  protected
+  private
     FWow64: Boolean;
+  protected
     function DeleteKey(ARootKey: TRootKey; AKeyPath, AKeyName: string;
       AFailIfNotExists: Boolean = True): Boolean;
     function GetRootKey(): HKEY; virtual; abstract;
@@ -158,12 +164,6 @@ type
   TSearchErrorEvent = procedure(Sender: TObject; AErrorMessage: string) of object;
   TChangeEvent = procedure(Sender: TObject; ANewStatus: TItemStatus) of object;
 
-  { IExportableList }
-  IExportableList = interface
-  ['{DAC0E183-03FF-4C7A-A1BB-547D89E57C81}']
-    procedure ExportList(const AFileName: string);
-  end;
-
   { IImportableList }
   IImportableList = interface
   ['{19B8FB63-483A-4F54-80C4-A25FBBAC7891}']
@@ -171,7 +171,7 @@ type
   end;
 
   { TRootList }
-  TRootList<T: TRootItem> = class(TObjectList<T>, IInterface, IExportableList)
+  TRootList<T: TRootItem> = class(TObjectList<T>, IInterface)
   private
     FItem: T;
     FOnSearchStart,
@@ -191,7 +191,7 @@ type
     constructor Create;
     destructor Destroy; override;
     function ChangeItemFilePath(const ANewFilePath: string): Boolean; virtual;
-    function ChangeItemStatus(): Boolean; virtual;
+    procedure ChangeItemStatus(); virtual;
     procedure Clear;
     function DeleteItem(): Boolean; virtual;
     function DisableItem(): Boolean; virtual;
@@ -201,8 +201,8 @@ type
     function IndexOf(AItemName: string): Integer; overload;
     function IndexOf(AItemName: string; AEnabled: Boolean): Integer; overload;
     function IsLocked(): Boolean;
-    function Remove(ARootItem: T): Integer; virtual;
     procedure Load(AExpertMode: Boolean = False); virtual; abstract;
+    function RenameItem(const ANewCaption: string): Boolean; virtual;
     { external }
     property Enabled: Word read FActCount;
     property OnChanged: TChangeEvent read FOnChanged write FOnChanged;
@@ -228,6 +228,7 @@ type
     function ChangeFilePath(const ANewFileName: string): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
     procedure OpenInRegEdit(); override;
+    function Rename(const ANewCaption: string): Boolean; override;
     { external }
     property RootKey: HKEY read GetRootKey write FRootKey;
     property Time: string read FTime write FTime;
@@ -255,6 +256,7 @@ type
     function Disable(): Boolean; override;
     function Enable(): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
+    function Rename(const ANewCaption: string): Boolean; override;
     { external }
     property LnkFile: TLnkFile read FLnkFile write FLnkFile;
   end;
@@ -278,7 +280,7 @@ type
     constructor Create;
     function Add(AFileName, AArguments, ACaption: string): Boolean; reintroduce;
     function BackupExists(): Boolean;
-    function ChangeItemStatus(): Boolean; override;
+    procedure ChangeItemStatus(); override;
     function DeleteItem(): Boolean; override;
     function EnableItem(): Boolean; override;
     procedure ExportList(const AFileName: string); override;
@@ -303,7 +305,6 @@ type
   { TContextListItem }
   TContextListItem = class(TRegistryItem)
   private
-    FCaption: string;
     function GetKeyPath(): string; virtual; abstract;
   protected
     function GetFullLocation(): string; override;
@@ -313,7 +314,6 @@ type
     function DeleteUserChoice(AFileExtension: string): Boolean;
     function UserChoiceExists(AFileExtension: string): Boolean;
     { external }
-    property Caption: string read FCaption write FCaption;
     property Location: string read GetKeyPath;
     property LocationRoot: string read FLocation write FLocation;
   end;
@@ -327,6 +327,7 @@ type
     function Disable(): Boolean; override;
     function Enable(): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
+    function Rename(const ANewCaption: string): Boolean; override;
   end;
 
   { TShellExItem }
@@ -339,6 +340,7 @@ type
     function Disable(): Boolean; override;
     function Enable(): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
+    function Rename(const ANewCaption: string): Boolean; override;
   end;
 
   { TShellNewItem }
@@ -352,6 +354,7 @@ type
     function Disable(): Boolean; override;
     function Enable(): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
+    function Rename(const ANewCaption: string): Boolean; override;
   end;
 
   { TContextList }
@@ -387,7 +390,7 @@ type
   TServiceListItem = class(TRegistryItem)
   private
     FServiceManager: SC_HANDLE;
-    FCaption, FTime: string;
+    FTime: string;
     FServiceStart: TServiceStart;
     function GetLocation(): string;
     function GetHandle(AAccess: DWORD): SC_HANDLE;
@@ -404,7 +407,6 @@ type
     procedure ExportItem(const AFileName: string); override;
     function GetStartText(ALangFile: TLanguageFile): string;
     { external }
-    property Caption: string read FCaption write FCaption;
     property Location: string read GetLocation;
     property Manager: SC_HANDLE read FServiceManager write FServiceManager;
     property Start: TServiceStart read FServiceStart write FServiceStart;
@@ -862,12 +864,21 @@ end;
 
   Changes the item status. }
 
-function TRootItem.ChangeStatus(): Boolean;
+procedure TRootItem.ChangeStatus(ANewStatus: Boolean);
 begin
-  if FEnabled then
-    Result := Disable()
+  if (FEnabled and not ANewStatus) then
+  begin
+    if not Disable() then
+      raise Exception.Create('Unknown error!');
+  end  //of begin
   else
-    Result := Enable();
+    if (not FEnabled and ANewStatus) then
+    begin
+      if not Enable() then
+        raise Exception.Create('Unknown error!');
+    end;  //of if
+
+  FEnabled := ANewStatus;
 end;
 
 { public TRootItem.FileExists
@@ -923,9 +934,6 @@ var
 {$ENDIF}
 
 begin
-  // Extract the file path only (without arguments and quote chars)
-  PreparedFileName := GetFileNameOnly();
-
 {$IFDEF WIN32}
   // 64bit Windows?
   Win64 := (TOSVersion.Architecture = arIntelX64);
@@ -934,6 +942,8 @@ begin
   if Win64 then
     Wow64FsRedirection(True);
 {$ENDIF}
+  // Extract the file path only (without arguments and quote chars)
+  PreparedFileName := GetFileNameOnly();
 
   // Open file in explorer
   if ((PreparedFileName <> '') and SysUtils.FileExists(PreparedFileName)) then
@@ -1026,16 +1036,11 @@ var
 {$ENDIF}
 
 begin
-  if AWow64 then
-    Reg := TRegistry.Create(KEY_WOW64_32KEY or KEY_WRITE)
-  else
-    Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_WRITE);
+  Reg := TRegistry.Create(KEY_WRITE);
 
   try
     Reg.RootKey := HKEY_CURRENT_USER;
     Reg.OpenKey(KEY_REGEDIT, True);
-
-    // Set the Registry key to show
     Reg.WriteString('LastKey', 'Computer\'+ GetFullLocation());
 
     // Redirected 32-Bit item?
@@ -1248,8 +1253,6 @@ var
   Changed: Boolean;
 
 begin
-  Result := False;
-
   // List locked?
   if not FLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
@@ -1266,10 +1269,9 @@ begin
     if Changed then
       DoNotifyOnChanged(stNone);
 
-    Result := Changed;
-
   finally
     FLock.Release();
+    Result := Changed;
   end;  //of try
 end;
 
@@ -1277,14 +1279,12 @@ end;
 
   Changes the item status. }
 
-function TRootList<T>.ChangeItemStatus(): Boolean;
+procedure TRootList<T>.ChangeItemStatus();
 var
   Changed: Boolean;
   NewStatus: TItemStatus;
 
 begin
-  Result := False;
-
   // List locked?
   if not FLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
@@ -1294,28 +1294,22 @@ begin
       raise EInvalidItem.Create('No item selected!');
 
     // Change the status
-    Changed := FItem.ChangeStatus();
+    FItem.ChangeStatus(not FItem.Enabled);
 
-    // Successful?
-    if Changed then
+    // Item has been enabled?
+    if FItem.Enabled then
     begin
-      // Item has been enabled?
-      if FItem.Enabled then
-      begin
-        NewStatus := stEnabled;
-        Inc(FActCount);
-      end  //of begin
-      else
-      begin
-        NewStatus := stDisabled;
-        Dec(FActCount);
-      end;  //of if
+      NewStatus := stEnabled;
+      Inc(FActCount);
+    end  //of begin
+    else
+    begin
+      NewStatus := stDisabled;
+      Dec(FActCount);
+    end;  //of if
 
-      // Notify status change
-      DoNotifyOnChanged(NewStatus);
-    end;  //of begin
-
-    Result := Changed;
+    // Notify status change
+    DoNotifyOnChanged(NewStatus);
 
   finally
     FLock.Release();
@@ -1331,8 +1325,6 @@ var
   Deleted: Boolean;
 
 begin
-  Result := False;
-
   // List locked?
   if not FLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
@@ -1360,10 +1352,9 @@ begin
       DoNotifyOnChanged(stDeleted);
     end;  //of begin
 
-    Result := Deleted;
-
   finally
     FLock.Release();
+    Result := Deleted;
   end;  //of try
 end;
 
@@ -1376,8 +1367,6 @@ var
   Disabled: Boolean;
 
 begin
-  Result := False;
-
   // List locked?
   if not FLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
@@ -1401,10 +1390,9 @@ begin
       DoNotifyOnChanged(stDisabled);
     end;  //of begin
 
-    Result := Disabled;
-
   finally
     FLock.Release();
+    Result := Disabled;
   end;  //of try
 end;
 
@@ -1417,8 +1405,6 @@ var
   Enabled: Boolean;
 
 begin
-  Result := False;
-
   // List locked?
   if not FLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
@@ -1442,10 +1428,9 @@ begin
       DoNotifyOnChanged(stEnabled);
     end;  //of begin
 
-    Result := Enabled;
-
   finally
     FLock.Release();
+    Result := Enabled;
   end;  //of try
 end;
 
@@ -1455,10 +1440,19 @@ end;
 
 procedure TRootList<T>.ExportItem(const AFileName: string);
 begin
-  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
-    raise EInvalidItem.Create('No item selected!');
+    // List locked?
+  if not FLock.TryEnter() then
+    raise EListBlocked.Create('Another operation is pending. Please wait!');
 
-  FItem.ExportItem(AFileName);
+  try
+    if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
+      raise EInvalidItem.Create('No item selected!');
+
+    FItem.ExportItem(AFileName);
+
+  finally
+    FLock.Release();
+  end;  //of try
 end;
 
 { public TRootList.IndexOf
@@ -1521,21 +1515,32 @@ begin
   Result := not Entered;
 end;
 
-{ public TRootList.Remove
+{ public TRootList.RenameItem
 
-  Removes a TRootItem object from the list. }
+  Renames the current selected item. }
 
-function TRootList<T>.Remove(ARootItem: T): Integer;
+function TRootList<T>.RenameItem(const ANewCaption: string): Boolean;
+var
+  Renamed: Boolean;
+
 begin
   // List locked?
   if not FLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
 
   try
-    Result := inherited Remove(ARootItem);
+    if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
+      raise EInvalidItem.Create('No item selected!');
+
+    Renamed := FItem.Rename(ANewCaption);
+
+    // Notify changed
+    if Renamed then
+      DoNotifyOnChanged(stNone);
 
   finally
     FLock.Release();
+    Result := Renamed;
   end;  //of try
 end;
 
@@ -2022,6 +2027,38 @@ begin
       raise EStartupException.Create('Could not create backup file!');
 end;
 
+{ public TStartupUserItem.Rename
+
+  Renames a TStartupUserItem item. }
+
+function TStartupUserItem.Rename(const ANewCaption: string): Boolean;
+{var
+  NewName: string;
+}
+begin
+  {if not FEnabled then
+    inherited Rename(ANewCaption);
+
+  NewName := ExtractFilePath(FLocation) + ANewCaption +'.lnk';
+
+  // Failed to create new .lnk file?
+  if (FEnabled and not FLnkFile.WriteLnkFile(NewName, FLnkFile.ExeFileName, FLnkFile.Arguments)) then
+    raise EStartupException.Create('Could not create .lnk file!');
+
+  FLnkFile.Delete();
+
+  // Update information
+  FileName := NewName;
+  FLnkFile.FileName := NewName;
+
+  // Rewrite backup
+  if (not FEnabled and FLnkFile.BackupExists()) then
+    if not FLnkFile.CreateBackup() then
+      raise EStartupException.Create('Backup could not be created!');
+
+  Result := True;}
+end;
+
 
 { TStartupList }
 
@@ -2374,12 +2411,12 @@ end;
 
   Changes the item status. }
 
-function TStartupList.ChangeItemStatus(): Boolean;
+procedure TStartupList.ChangeItemStatus();
 begin
-  Result := inherited ChangeItemStatus();
+  inherited ChangeItemStatus();
 
   // Only delete backup if item has been enabled!
-  if (Result and Selected.Enabled) then
+  if Selected.Enabled then
     DeleteBackupFile();
 end;
 
@@ -2673,6 +2710,58 @@ begin
     inherited OpenInRegEdit();
 end;
 
+{ public TStartupListItem.Rename
+
+  Renames a TStartupListItem item. }
+
+function TStartupListItem.Rename(const ANewCaption: string): Boolean;
+var
+  Reg: TRegistry;
+
+begin
+  if (FEnabled and FWow64) then
+    Reg := TRegistry.Create(KEY_WOW64_32KEY or KEY_READ or KEY_WRITE)
+  else
+    Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
+
+  try
+    Reg.RootKey := FRootKey;
+
+    if not Reg.OpenKey(FLocation, False) then
+      raise EStartupException.Create('Key does not exist!');
+
+    if FEnabled then
+    begin
+      if not Reg.ValueExists(Name) then
+        raise EStartupException.Create('Value '''+ Name +''' does not exist!');
+
+      Reg.RenameValue(Name, ANewCaption);
+    end  //of begin
+    else
+    begin
+      if (FRootKey <> HKEY_LOCAL_MACHINE) then
+        raise EStartupException.Create('Wrong HKEY!');
+
+      Reg.WriteString('item', ANewCaption);
+      Reg.CloseKey;
+
+      if not Reg.OpenKey(ExtractFileDir(FLocation), False) then
+        raise EStartupException.Create('Key does not exist!');
+
+      Reg.MoveKey(Name, ANewCaption, True);
+    end;  //of if
+
+    // Update caption
+    Name := ANewCaption;
+    FLocation := ExtractFilePath(FLocation) + Name;
+    Result := True;
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
+  end;  //of try
+end;
+
 
 { TContextListItem }
 
@@ -2861,6 +2950,40 @@ begin
   end;  //of try
 end;
 
+{ public TShellItem.Rename
+
+  Renames a TShellItem item. }
+
+function TShellItem.Rename(const ANewCaption: string): Boolean;
+var
+  Reg: TRegistry;
+
+begin
+  Result := False;
+  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
+
+  try
+    Reg.RootKey := HKEY_CLASSES_ROOT;
+
+    // Invalid key?
+    if not Reg.OpenKey(GetKeyPath(), False) then
+      raise EContextMenuException.Create('Key does not exist!');
+
+    // Invalid data type?
+    if (Reg.GetDataType('') <> rdString) then
+      raise EContextMenuException.Create('Invalid data type!');
+
+    // Rename
+    Reg.WriteString('', ANewCaption);
+    FCaption := ANewCaption;
+    Result := True;
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
+  end;  //of try
+end;
+
 
 { TShellExItem }
 
@@ -3035,6 +3158,16 @@ begin
   end;  //of try
 end;
 
+{ public TShellExItem.Rename
+
+  Renames a TShellExItem item. }
+
+function TShellExItem.Rename(const ANewCaption: string): Boolean;
+begin
+  // Impossible!
+  Result := False;
+end;
+
 
 { TShellNewItem }
 
@@ -3159,6 +3292,16 @@ begin
   finally
     RegFile.Free;
   end;  //of try
+end;
+
+{ public TShellNewItem.Rename
+
+  Renames a TShellNewItem item. }
+
+function TShellNewItem.Rename(const ANewCaption: string): Boolean;
+begin
+  // Impossible!
+  Result := False;
 end;
 
 

@@ -17,7 +17,7 @@ type
   { TExportListThread }
   TExportListThread = class(TThread)
   private
-    FList: IExportableList;
+    FList: TRootList<TRootItem>;
     FFileName,
     FErrorMessage: string;
     FPageControlIndex: Byte;
@@ -30,7 +30,7 @@ type
   protected
     procedure Execute; override;
   public
-    constructor Create(AList: IExportableList; const AFileName: string;
+    constructor Create(AList: TRootList<TRootItem>; const AFileName: string;
       APageControlIndex: Byte);
     { external }
     property OnError: TSearchErrorEvent read FOnError write FOnError;
@@ -46,8 +46,8 @@ implementation
 
   Constructor for creating a TExportListThread instance. }
 
-constructor TExportListThread.Create(AList: IExportableList; const AFileName: string;
-  APageControlIndex: Byte);
+constructor TExportListThread.Create(AList: TRootList<TRootItem>;
+  const AFileName: string; APageControlIndex: Byte);
 begin
   inherited Create(True);
   FreeOnTerminate := True;

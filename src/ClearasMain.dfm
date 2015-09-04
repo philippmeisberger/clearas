@@ -731,7 +731,6 @@ object Main: TMain
     object pmChangeStatus: TMenuItem
       Caption = 'deaktivieren'
       Default = True
-      Enabled = False
       OnClick = pmChangeStatusClick
     end
     object N1: TMenuItem
@@ -744,19 +743,20 @@ object Main: TMain
     end
     object pmEdit: TMenuItem
       Caption = 'Pfad bearbeiten'
-      Enabled = False
       OnClick = pmEditClick
     end
     object pmExport: TMenuItem
-      Caption = 'exportieren'
-      Enabled = False
+      Caption = 'Exportieren'
       OnClick = mmExportClick
     end
     object pmDelete: TMenuItem
-      Caption = 'l'#246'schen'
-      Enabled = False
+      Caption = 'L'#246'schen'
       ShortCut = 46
       OnClick = pmDeleteClick
+    end
+    object pmRename: TMenuItem
+      Caption = 'Umbenennen'
+      OnClick = pmRenameClick
     end
     object N2: TMenuItem
       Caption = '-'
@@ -876,7 +876,7 @@ object Main: TMain
   object QuickSearchIconList: TImageList
     Left = 256
     Bitmap = {
-      494C0101030008005C0110001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C010103000800600110001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000001000000001002000000000000010
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
