@@ -406,6 +406,7 @@ type
     function Enable(): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
     function GetStartText(ALangFile: TLanguageFile): string;
+    function Rename(const ANewCaption: string): Boolean; override;
     { external }
     property Location: string read GetLocation;
     property Manager: SC_HANDLE read FServiceManager write FServiceManager;
@@ -441,7 +442,7 @@ type
   private
     FTaskDefinition: ITaskDefinition;
     FTaskFolder: ITaskFolder;
-    function UpdateTask(): Boolean;
+    procedure UpdateTask();
   protected
     function GetFullLocation(): string; override;
   public
@@ -451,6 +452,7 @@ type
     function Disable(): Boolean; override;
     function Enable(): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
+    function Rename(const ANewCaption: string): Boolean; override;
     { external }
     property Definition: ITaskDefinition read FTaskDefinition write FTaskDefinition;
   end;
@@ -2036,6 +2038,7 @@ function TStartupUserItem.Rename(const ANewCaption: string): Boolean;
   NewName: string;
 }
 begin
+  Result := False;
   {if not FEnabled then
     inherited Rename(ANewCaption);
 
@@ -4081,6 +4084,33 @@ begin
   end;  //of case
 end;
 
+{ public TServiceListItem.Rename
+
+  Renames a TServiceListItem item. }
+
+function TServiceListItem.Rename(const ANewCaption: string): Boolean;
+var
+  Service: SC_HANDLE;
+
+begin
+  Result := False;
+  Service := GetHandle(SERVICE_CHANGE_CONFIG);
+
+  try
+    // Rename service
+    if not ChangeServiceConfig(Service, SERVICE_NO_CHANGE, SERVICE_NO_CHANGE,
+      SERVICE_NO_CHANGE, nil, nil, nil, nil, nil, nil, PChar(ANewCaption)) then
+      raise EServiceException.Create(SysErrorMessage(GetLastError()));
+
+    // Update information
+    FCaption := ANewCaption;
+    Result := True;
+
+  finally
+    CloseServiceHandle(Service);
+  end;  //of try
+end;
+
 
 { TServiceList }
 
@@ -4413,16 +4443,13 @@ end;
 
   Updates a task with a new definition. }
 
-function TTaskListItem.UpdateTask(): Boolean;
+procedure TTaskListItem.UpdateTask();
 var
   NewTask: IRegisteredTask;
 
 begin
-  // Update task
   OleCheck(FTaskFolder.RegisterTaskDefinition(PChar(Name), FTaskDefinition,
     TASK_UPDATE, Null, Null, FTaskDefinition.Principal.LogonType, Null, NewTask));
-
-  Result := True;
 end;
 
 { protected TTaskListItem.GetFullLocation
@@ -4466,8 +4493,9 @@ begin
       ExecAction.Arguments := PChar(ExtractArguments(ANewFilePath));
 
       // Update task
-      Result := UpdateTask();
+      UpdateTask();
       FileName := ANewFilePath;
+      Result := True;
     end;  //of begin
   end;  //of while
 end;
@@ -4490,10 +4518,11 @@ end;
 function TTaskListItem.Disable(): Boolean;
 begin
   FTaskDefinition.Settings.Enabled := False;
-  Result := UpdateTask();
+  UpdateTask();
 
   // Update status
   FEnabled := False;
+  Result := True;
 end;
 
 { public TTaskListItem.Enable
@@ -4503,10 +4532,11 @@ end;
 function TTaskListItem.Enable(): Boolean;
 begin
   FTaskDefinition.Settings.Enabled := True;
-  Result := UpdateTask();
+  UpdateTask();
 
   // Update status
   FEnabled := True;
+  Result := True;
 end;
 
 { public TTaskListItem.ExportItem
@@ -4528,6 +4558,42 @@ begin
     // Copy file
     if not CopyFile(PChar(GetFullLocation()), PChar(AFileName), False) then
       raise ETaskException.Create(SysErrorMessage(GetLastError()));
+
+  finally
+    // Allow WOW64 redirection on 64 Bit Windows again
+    if Win64 then
+      Wow64FsRedirection(False);
+  end;  //of try
+end;
+
+{ public TTaskListItem.Rename
+
+  Renames a TTaskListItem item. }
+
+function TTaskListItem.Rename(const ANewCaption: string): Boolean;
+var
+  OldLocation, NewLocation: string;
+  Win64: Boolean;
+
+begin
+  Result := False;
+  Win64 := (TOSVersion.Architecture = arIntelX64);
+
+  // Deny WOW64 redirection on 64 Bit Windows
+  if Win64 then
+    Wow64FsRedirection(True);
+
+  try
+    OldLocation := GetFullLocation();
+    NewLocation := ExtractFilePath(OldLocation) + ANewCaption;
+
+    if not RenameFile(GetFullLocation(), NewLocation) then
+      raise ETaskException.Create(SysErrorMessage(GetLastError()));
+
+    // Update name
+    Name := ANewCaption;
+    UpdateTask();
+    Result := True;
 
   finally
     // Allow WOW64 redirection on 64 Bit Windows again

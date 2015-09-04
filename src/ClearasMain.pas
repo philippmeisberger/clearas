@@ -1743,6 +1743,7 @@ begin
     pmOpenRegedit.Enabled := True;
     bExportServiceItem.Enabled := True;
     pmExport.Enabled := True;
+    pmRename.Enabled := True;
 
     // Enable "edit path" only if file path is present
     pmEdit.Enabled := (FService.Selected.FileName <> '');
@@ -2135,14 +2136,20 @@ end;
 procedure TMain.pmRenameClick(Sender: TObject);
 var
   Name: string;
+  Item: TRootItem;
 
 begin
   try
-    Name := GetSelectedItem().Caption;
+    Item := GetSelectedItem();
+
+    if (Item.Caption <> '') then
+      Name := Item.Caption
+    else
+      Name := Item.Name;
 
     if InputQuery(StripHotkey(pmRename.Caption), StripHotkey(pmRename.Caption), Name) then
     begin
-      if (Trim(Name) = '') then
+      if ((Trim(Name) = '') or (Name = Item.Name) or (Name = Item.Caption)) then
         Exit;
 
       if GetSelectedList().RenameItem(Name) then
