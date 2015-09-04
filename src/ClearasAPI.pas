@@ -4572,6 +4572,7 @@ function TTaskListItem.Rename(const ANewCaption: string): Boolean;
 var
   OldLocation, NewLocation: string;
   Win64: Boolean;
+  NewTask: IRegisteredTask;
 
 begin
   Result := False;
@@ -4588,9 +4589,13 @@ begin
     if not RenameFile(GetFullLocation(), NewLocation) then
       raise ETaskException.Create(SysErrorMessage(GetLastError()));
 
-    // Update name
+    OleCheck(FTaskFolder.RegisterTaskDefinition(PChar(ANewCaption), FTask.Definition,
+      TASK_CREATE, Null, Null, FTask.Definition.Principal.LogonType,
+      Null, NewTask));
+
+    // Update information
+    FTask := NewTask;
     Name := ANewCaption;
-    //UpdateTask();
     Result := True;
 
   finally
@@ -4630,6 +4635,7 @@ end;
 
 destructor TTaskList.Destroy;
 begin
+  FTaskService._Release();
   CoUninitialize();
   inherited Destroy;
 end;
@@ -4782,7 +4788,8 @@ begin
     if Succeeded(TaskFolder.GetTask(PChar(Path), NewTask)) then
       Exit;
 
-    // Read .xml task file
+  {$IFDEF WIN32}
+    // Read .xml task definition
     TaskFile.LoadFromFile(AFileName);
 
     // Register new task
@@ -4791,6 +4798,10 @@ begin
 
     // Add new task to list
     Result := (AddTaskItem(NewTask, TaskFolder) <> -1);
+  {$ELSE}
+    Result := ExecuteProgram('schtasks', '/create /XML "'+ AFileName +'" /tn '+
+      ChangeFileExt(ExtractFileName(AFileName), ''), True);
+  {$ENDIF}
 
     // Refresh TListView
     DoNotifyOnFinished();
