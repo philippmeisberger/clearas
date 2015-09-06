@@ -2753,11 +2753,11 @@ begin
         raise EStartupException.Create('Key does not exist!');
 
       Reg.MoveKey(Name, ANewCaption, True);
+      FLocation := ExtractFilePath(FLocation) + ANewCaption;
     end;  //of if
 
     // Update caption
     Name := ANewCaption;
-    FLocation := ExtractFilePath(FLocation) + Name;
     Result := True;
 
   finally
