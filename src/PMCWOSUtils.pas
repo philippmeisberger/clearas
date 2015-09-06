@@ -209,8 +209,14 @@ end;
   Returns path to the temporary directory of Windows. }
 
 function GetTempDir(): string;
+var
+  Path: string;
+
 begin
-  Result := SysUtils.GetEnvironmentVariable('temp');
+  Path := '%TEMP%';
+
+  if ExpandEnvironmentVar(Path) then
+    Result := IncludeTrailingBackslash(Path);
 end;
 
 { GetUserAppDataDir

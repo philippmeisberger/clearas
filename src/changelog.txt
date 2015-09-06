@@ -11,6 +11,7 @@ Version 4.2  [??.??.15]
   - "Einträge exportieren" speichert alle Aufgaben als ZIP-Datei
   - "Backup importieren" importiert eine zuvor exportierte Aufgabe als XML-Datei
   - "Expertenmodus" findet versteckte Aufgaben
+- "Umbenennen" zum Kontextmenü hinzugefügt
 - Event-System verbessert
 - Nutzung von generischen Container-Klassen (Generics)
 

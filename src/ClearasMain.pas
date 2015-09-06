@@ -271,16 +271,20 @@ begin
     OnSearchStart := OnServiceSearchStart;
   end;  //of with
 
-  FTasks := TTaskList.Create;
-
-  // Link search events
-  with FTasks do
+  // Task feature only for Windows >= Vista
+  if TOSVersion.Check(6) then
   begin
-    OnChanged := OnTaskItemChanged;
-    OnSearchError := Self.OnSearchError;
-    OnSearchFinish := OnTaskSearchEnd;
-    OnSearchStart := OnTaskSearchStart;
-  end;  //of with
+    FTasks := TTaskList.Create;
+
+    // Link search events
+    with FTasks do
+    begin
+      OnChanged := OnTaskItemChanged;
+      OnSearchError := Self.OnSearchError;
+      OnSearchFinish := OnTaskSearchEnd;
+      OnSearchStart := OnTaskSearchStart;
+    end;  //of with
+  end;  //of begin
 
   // Set title
   Caption := Application.Title + PLATFORM_ARCH;
@@ -716,10 +720,17 @@ begin
     // Make a total refresh or just use cached items
     if ATotalRefresh then
     case PageControl.ActivePageIndex of
-      0: FStartup.Load(cbRunOnce.Checked);
-      1: FContext.Load(cbContextExpert.Checked);
-      2: FService.Load(cbServiceExpert.Checked);
-      3: FTasks.Load(cbTaskExpert.Checked);
+      0: if Assigned(FStartup) then
+           FStartup.Load(cbRunOnce.Checked);
+
+      1: if Assigned(FContext) then
+           FContext.Load(cbContextExpert.Checked);
+
+      2: if Assigned(FService) then
+           FService.Load(cbServiceExpert.Checked);
+
+      3: if Assigned(FTasks) then
+           FTasks.Load(cbTaskExpert.Checked);
     end  //of case
     else
       GetSelectedList().OnSearchFinish(Self);
@@ -1338,15 +1349,18 @@ begin
     pmCopyLocation.Caption := GetString(106);
   end;  //of with
 
-  if Assigned(FStartup) and Assigned(FContext) and Assigned(FService) and
-    Assigned(FTasks) then
-  begin
-    // Update TListView captions
+  // Update TListView captions
+  if Assigned(FStartup) then
     FStartup.DoNotifyOnFinished();
+
+  if Assigned(FContext) then
     FContext.DoNotifyOnFinished();
+
+  if Assigned(FService) then
     FService.DoNotifyOnFinished();
+
+  if Assigned(FTasks) then
     FTasks.DoNotifyOnFinished();
-  end;  //of begin
 end;
 
 { private TMain.ShowColumnDate
@@ -2709,7 +2723,7 @@ begin
          lwContextSelectItem(Sender, lwContext.ItemFocused, True);
 
          // Load context menu entries dynamically
-         if (FContext.Count = 0) then
+         if (Assigned(FContext) and (FContext.Count = 0)) then
            LoadItems();
        end;
 
@@ -2721,7 +2735,7 @@ begin
          ShowColumnDate(lwService, mmDate.Checked);
 
          // Load context menu entries dynamically
-         if (FService.Count = 0) then
+         if (Assigned(FService) and (FService.Count = 0)) then
            LoadItems();
        end;
 
@@ -2732,8 +2746,14 @@ begin
          lwTasksSelectItem(Sender, lwTasks.ItemFocused, True);
 
          // Load task items dynamically
-         if (FTasks.Count = 0) then
-           LoadItems();
+         if not Assigned(FTasks) then
+         begin
+           mmImport.Visible := False;
+           FLang.ShowMessage('Scheduled tasks feature requires at least Windows Vista!', mtWarning);
+         end  //of begin
+         else
+           if (FTasks.Count = 0) then
+             LoadItems();
        end;
   end;  //of case
 end;

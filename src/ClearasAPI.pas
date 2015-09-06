@@ -4570,39 +4570,25 @@ end;
 
 function TTaskListItem.Rename(const ANewCaption: string): Boolean;
 var
-  OldLocation, NewLocation: string;
-  Win64: Boolean;
+  TempLocation: string;
   NewTask: IRegisteredTask;
 
 begin
   Result := False;
-  Win64 := (TOSVersion.Architecture = arIntelX64);
+  TempLocation := IncludeTrailingBackslash(GetTempDir()) + ANewCaption;
+  ExportItem(TempLocation);
 
-  // Deny WOW64 redirection on 64 Bit Windows
-  if Win64 then
-    Wow64FsRedirection(True);
+  if not ExecuteProgram('schtasks', '/create /XML "'+ TempLocation +'" /tn '+
+    ANewCaption, SW_HIDE, True, True) then
+    raise Exception.Create(SysErrorMessage(GetLastError()));
 
-  try
-    OldLocation := GetFullLocation();
-    NewLocation := ExtractFilePath(OldLocation) + ANewCaption;
+  OleCheck(FTaskFolder.GetTask(PChar(ANewCaption), NewTask));
+  Delete();
 
-    if not RenameFile(GetFullLocation(), NewLocation) then
-      raise ETaskException.Create(SysErrorMessage(GetLastError()));
-
-    OleCheck(FTaskFolder.RegisterTaskDefinition(PChar(ANewCaption), FTask.Definition,
-      TASK_CREATE, Null, Null, FTask.Definition.Principal.LogonType,
-      Null, NewTask));
-
-    // Update information
-    FTask := NewTask;
-    Name := ANewCaption;
-    Result := True;
-
-  finally
-    // Allow WOW64 redirection on 64 Bit Windows again
-    if Win64 then
-      Wow64FsRedirection(False);
-  end;  //of try
+  // Update information
+  FTask := NewTask;
+  Name := ANewCaption;
+  Result := True;
 end;
 
 
@@ -4750,9 +4736,9 @@ end;
 function TTaskList.ImportBackup(const AFileName: string): Boolean;
 var
   Ext, Path: string;
-  //TaskFile: TStringList;
   TaskFolder: ITaskFolder;
   NewTask: IRegisteredTask;
+  ZipFile: TZipFile;
 {$IFDEF WIN32}
   Win64: Boolean;
 {$ENDIF}
@@ -4778,42 +4764,40 @@ begin
     Wow64FsRedirection(True);
 {$ENDIF}
 
-  //TaskFile := TStringList.Create;
-
   try
-    // Open root task folder
-    OleCheck(FTaskService.GetFolder('\', TaskFolder));
-    Path := TaskFolder.Path + ChangeFileExt(ExtractFileName(AFileName), '');
+    if (Ext = '.xml') then
+    begin
+      // Open root task folder
+      OleCheck(FTaskService.GetFolder('\', TaskFolder));
+      Path := TaskFolder.Path + ChangeFileExt(ExtractFileName(AFileName), '');
 
-    // Task exists?
-    if Succeeded(TaskFolder.GetTask(PChar(Path), NewTask)) then
-      Exit;
+      // Task exists?
+      if Succeeded(TaskFolder.GetTask(PChar(Path), NewTask)) then
+        Exit;
 
-  //{$IFDEF WIN32}
-  {  // Read .xml task definition
-    TaskFile.LoadFromFile(AFileName);
+      // Temporary workaround:
+      // On 32-Bit RegisterTask() works but on 64-Bit not: WTF!
+      if not ExecuteProgram('schtasks', '/create /XML "'+ AFileName +'" /tn '+
+        Copy(Path, 2, Length(Path)), SW_HIDE, True, True) then
+        raise Exception.Create(SysErrorMessage(GetLastError()));
 
-    // Register new task
-    OleCheck(TaskFolder.RegisterTask(PChar(Path), TaskFile.GetText(),
-      TASK_CREATE, Null, Null, TASK_LOGON_INTERACTIVE_TOKEN, Null, NewTask));
-  //{$ELSE}
-    // Temporary workaround:
-    // On 32-Bit RegisterTask() works but on 64-Bit not: WTF!
-    if not ExecuteProgram('schtasks', '/create /XML "'+ AFileName +'" /tn '+
-      Copy(Path, 2, Length(Path)), SW_HIDE, True, True) then
-      raise Exception.Create(SysErrorMessage(GetLastError()));
+      OleCheck(TaskFolder.GetTask(PChar(Path), NewTask));
 
-    OleCheck(TaskFolder.GetTask(PChar(Path), NewTask));
-  //{$ENDIF}
+      // Add new task to list
+      Result := (AddTaskItem(NewTask, TaskFolder) <> -1);
 
-    // Add new task to list
-    Result := (AddTaskItem(NewTask, TaskFolder) <> -1);
+      // Refresh TListView
+      DoNotifyOnFinished();
+    end;  //of begin
+    {else
+    begin
+      Path := GetTempDir() + 'Tasks';
+      ForceDirectories(Path);
 
-    // Refresh TListView
-    DoNotifyOnFinished();
+      //ZipFile := TZipFile.Create;
+    end;  //of if  }
 
   finally
-    //TaskFile.Free;
   {$IFDEF WIN32}
     // Allow WOW64 redirection on 64 Bit Windows again
     if Win64 then
