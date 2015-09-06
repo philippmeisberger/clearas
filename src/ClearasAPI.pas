@@ -183,7 +183,6 @@ type
     FActCount: Word;
     FLock: TCriticalSection;
     procedure DoNotifyOnChanged(ANewStatus: TItemStatus);
-    procedure DoNotifyOnFinished();
     function QueryInterface(const IID: TGUID; out Obj): HRESULT; stdcall;
     function _AddRef: Integer; stdcall;
     function _Release: Integer; stdcall;
@@ -195,6 +194,7 @@ type
     procedure Clear;
     function DeleteItem(): Boolean; virtual;
     function DisableItem(): Boolean; virtual;
+    procedure DoNotifyOnFinished();
     function EnableItem(): Boolean; virtual;
     procedure ExportItem(const AFileName: string); virtual;
     procedure ExportList(const AFileName: string); virtual; abstract;
@@ -1186,24 +1186,12 @@ end;
 
 { protected RootList.DoNotifyOnChanged
 
-  Notifies if a item has been changed. }
+  Notifies if an item has been changed. }
 
 procedure TRootList<T>.DoNotifyOnChanged(ANewStatus: TItemStatus);
 begin
   if Assigned(FOnChanged) then
     FOnChanged(Self, ANewStatus);
-end;
-
-{ protected RootList.DoNotifyOnFinished
-
-  Notifies if a item has been changed. }
-
-procedure TRootList<T>.DoNotifyOnFinished();
-begin
-  if Assigned(FOnSearchFinish) then
-    FOnSearchFinish(Self);
-
-  DoNotifyOnChanged(stDeleted);
 end;
 
 { protected RootList.QueryInterface
@@ -1397,6 +1385,18 @@ begin
     FLock.Release();
     Result := Disabled;
   end;  //of try
+end;
+
+{ public TRootList.DoNotifyOnFinished
+
+  Notifies if the current list needs a visual update. }
+
+procedure TRootList<T>.DoNotifyOnFinished();
+begin
+  if Assigned(FOnSearchFinish) then
+    FOnSearchFinish(Self);
+
+  DoNotifyOnChanged(stDeleted);
 end;
 
 { public TRootList.EnableItem
@@ -4718,6 +4718,7 @@ begin
 
   try
     ZipFile.Open(AFileName, zmWrite);
+    ZipFile.Comment := 'Clearas';
     Path := IncludeTrailingPathDelimiter(Path);
 
     for i := 0 to Count - 1 do
@@ -4749,7 +4750,7 @@ end;
 function TTaskList.ImportBackup(const AFileName: string): Boolean;
 var
   Ext, Path: string;
-  TaskFile: TStringList;
+  //TaskFile: TStringList;
   TaskFolder: ITaskFolder;
   NewTask: IRegisteredTask;
 {$IFDEF WIN32}
@@ -4769,8 +4770,6 @@ begin
   if not FLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
 
-  TaskFile := TStringList.Create;
-
 {$IFDEF WIN32}
   Win64 := (TOSVersion.Architecture = arIntelX64);
 
@@ -4778,6 +4777,8 @@ begin
   if Win64 then
     Wow64FsRedirection(True);
 {$ENDIF}
+
+  //TaskFile := TStringList.Create;
 
   try
     // Open root task folder
@@ -4788,26 +4789,31 @@ begin
     if Succeeded(TaskFolder.GetTask(PChar(Path), NewTask)) then
       Exit;
 
-  {$IFDEF WIN32}
-    // Read .xml task definition
+  //{$IFDEF WIN32}
+  {  // Read .xml task definition
     TaskFile.LoadFromFile(AFileName);
 
     // Register new task
     OleCheck(TaskFolder.RegisterTask(PChar(Path), TaskFile.GetText(),
       TASK_CREATE, Null, Null, TASK_LOGON_INTERACTIVE_TOKEN, Null, NewTask));
+  //{$ELSE}
+    // Temporary workaround:
+    // On 32-Bit RegisterTask() works but on 64-Bit not: WTF!
+    if not ExecuteProgram('schtasks', '/create /XML "'+ AFileName +'" /tn '+
+      Copy(Path, 2, Length(Path)), SW_HIDE, True, True) then
+      raise Exception.Create(SysErrorMessage(GetLastError()));
+
+    OleCheck(TaskFolder.GetTask(PChar(Path), NewTask));
+  //{$ENDIF}
 
     // Add new task to list
     Result := (AddTaskItem(NewTask, TaskFolder) <> -1);
-  {$ELSE}
-    Result := ExecuteProgram('schtasks', '/create /XML "'+ AFileName +'" /tn '+
-      ChangeFileExt(ExtractFileName(AFileName), ''), True);
-  {$ENDIF}
 
     // Refresh TListView
     DoNotifyOnFinished();
 
   finally
-    TaskFile.Free;
+    //TaskFile.Free;
   {$IFDEF WIN32}
     // Allow WOW64 redirection on 64 Bit Windows again
     if Win64 then

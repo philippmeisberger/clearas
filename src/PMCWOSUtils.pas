@@ -14,7 +14,7 @@ interface
 
 uses
 {$IFDEF MSWINDOWS}
-  Windows, Classes, Registry, ShellAPI, ShlObj,
+  Windows, Classes, Registry, ShellAPI, ShlObj, Forms,
 {$ELSE}
   Process,
 {$ENDIF}
@@ -40,8 +40,9 @@ type
   TRootKey = string[4];
 
   function CreateTempDir(const AFolderName: string): Boolean;
-  function ExecuteProgram(const AProgram: string;
-    AArguments: string = ''; ARunAsAdmin: Boolean = False): Boolean;
+  function ExecuteProgram(const AProgram: string; AArguments: string = '';
+    AShow: Integer = SW_SHOWNORMAL; ARunAsAdmin: Boolean = False;
+    AWait: Boolean = False): Boolean;
   function ExpandEnvironmentVar(var AVariable: string): Boolean;
   function GetKnownFolderPath(AFolderId: TGUID; var AFolderPath: string): Boolean;
   function GetSystemWow64Directory(var ASystemWow64Directory: string): Boolean;
@@ -72,22 +73,38 @@ end;
 
 { ExecuteProgram
 
-  Executes a program (optional as admin) using ShellExecute. }
+  Executes a program (optional as admin) using ShellExecuteEx. }
 
-function ExecuteProgram(const AProgram: string;
-  AArguments: string = ''; ARunAsAdmin: Boolean = False): Boolean;
+function ExecuteProgram(const AProgram: string; AArguments: string = '';
+  AShow: Integer = SW_SHOWNORMAL; ARunAsAdmin: Boolean = False;
+  AWait: Boolean = False): Boolean;
 var
-  Operation: PChar;
+  Info: TShellExecuteInfo;
+  ExitCode: Cardinal;
 
 begin
+  FillChar(Info, SizeOf(Info), Chr(0));
+  Info.cbSize := SizeOf(Info);
+  Info.fMask := SEE_MASK_NOCLOSEPROCESS;
+
   // Run as administrator?
   if ARunAsAdmin then
-    Operation := 'runas'
+    Info.lpVerb := 'runas'
   else
-    Operation := 'open';
+    Info.lpVerb := 'open';
 
-  Result := (ShellExecute(0, Operation, PChar(AProgram), PChar(AArguments), nil,
-    SW_SHOWNORMAL) > 32);
+  Info.lpFile := PChar(AProgram);
+  Info.lpParameters := PChar(AArguments);
+  Info.nShow := AShow;
+  Result := ShellExecuteEx(@Info);
+
+  if (Result and AWait) then
+  begin
+    while (WaitForSingleObject(Info.hProcess, 100) = WAIT_TIMEOUT) do
+      Application.ProcessMessages;
+
+    Result := GetExitCodeProcess(Info.hProcess, ExitCode);
+  end;  //of begin
 end;
 
 { ExpandEnvironmentVar

@@ -1342,10 +1342,10 @@ begin
     Assigned(FTasks) then
   begin
     // Update TListView captions
-    FStartup.OnSearchFinish(Self);
-    FContext.OnSearchFinish(Self);
-    FService.OnSearchFinish(Self);
-    FTasks.OnSearchFinish(Self);
+    FStartup.DoNotifyOnFinished();
+    FContext.DoNotifyOnFinished();
+    FService.DoNotifyOnFinished();
+    FTasks.DoNotifyOnFinished();
   end;  //of begin
 end;
 
