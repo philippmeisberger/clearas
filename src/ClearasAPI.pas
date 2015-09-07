@@ -4470,13 +4470,14 @@ var
   Action: IAction;
   ActionItem: OleVariant;
   ExecAction: IExecAction;
-  Task: IRegisteredTask;
   Fetched: Cardinal;
+  NewTask: IRegisteredTask;
+  //TempLocation: string;
+  //TaskFile: TStringList;
 
 begin
   Result := False;
-  OleCheck(FTaskFolder.GetTask(PChar(Name), Task));
-  Actions := (Task.Definition.Actions._NewEnum as IEnumVariant);
+  Actions := (FTask.Definition.Actions._NewEnum as IEnumVariant);
 
   // Try to find executable command in task
   if (Actions.Next(1, ActionItem, Fetched) = 0) then
@@ -4492,10 +4493,30 @@ begin
       ExecAction.Path := PChar(ExtractPathToFile(ANewFilePath));
       ExecAction.Arguments := PChar(ExtractArguments(ANewFilePath));
 
-      // Update task
-      //UpdateTask();
-      FileName := ANewFilePath;
-      Result := True;
+      // TODO
+      {TempLocation := IncludeTrailingBackslash(GetTempDir()) + Name;
+      TaskFile := TStringList.Create;
+
+      try
+        TaskFile.SetText(FTask.Definition.XmlText);
+        TaskFile.SaveToFile(TempLocation, TEncoding.Unicode);
+        Delete();
+
+        if not ExecuteProgram('schtasks', '/create /XML "'+ TempLocation
+          +'" /tn '+ Name, SW_HIDE, True, True) then
+          raise Exception.Create(SysErrorMessage(GetLastError()));
+
+        OleCheck(FTaskFolder.GetTask(PChar(Name), NewTask));
+        DeleteFile(TempLocation);
+
+        // Update information
+        FTask := NewTask;
+        FileName := ANewFilePath;
+        Result := True;
+
+      finally
+        TaskFile.Free;
+      end;  //of try}
     end;  //of begin
   end;  //of while
 end;
@@ -4506,7 +4527,6 @@ end;
 
 function TTaskListItem.Delete(): Boolean;
 begin
-  // Delete task
   OleCheck(FTaskFolder.DeleteTask(PChar(Name), 0));
   Result := True;
 end;
@@ -4574,7 +4594,6 @@ var
   NewTask: IRegisteredTask;
 
 begin
-  Result := False;
   TempLocation := IncludeTrailingBackslash(GetTempDir()) + ANewCaption;
   ExportItem(TempLocation);
 
@@ -4582,6 +4601,7 @@ begin
     ANewCaption, SW_HIDE, True, True) then
     raise Exception.Create(SysErrorMessage(GetLastError()));
 
+  DeleteFile(TempLocation);
   OleCheck(FTaskFolder.GetTask(PChar(ANewCaption), NewTask));
   Delete();
 
@@ -4738,7 +4758,6 @@ var
   Ext, Path: string;
   TaskFolder: ITaskFolder;
   NewTask: IRegisteredTask;
-  ZipFile: TZipFile;
 {$IFDEF WIN32}
   Win64: Boolean;
 {$ENDIF}
@@ -4789,13 +4808,6 @@ begin
       // Refresh TListView
       DoNotifyOnFinished();
     end;  //of begin
-    {else
-    begin
-      Path := GetTempDir() + 'Tasks';
-      ForceDirectories(Path);
-
-      //ZipFile := TZipFile.Create;
-    end;  //of if  }
 
   finally
   {$IFDEF WIN32}
