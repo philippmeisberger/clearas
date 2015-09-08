@@ -103,7 +103,10 @@ begin
     while (WaitForSingleObject(Info.hProcess, 100) = WAIT_TIMEOUT) do
       Application.ProcessMessages;
 
-    Result := GetExitCodeProcess(Info.hProcess, ExitCode);
+    if GetExitCodeProcess(Info.hProcess, ExitCode) then
+      Result := (ExitCode = 0)
+    else
+      Result := False;
   end;  //of begin
 end;
 

@@ -4762,6 +4762,7 @@ var
   Ext, Path: string;
   TaskFolder: ITaskFolder;
   NewTask: IRegisteredTask;
+  ErrorCode: Cardinal;
 {$IFDEF WIN32}
   Win64: Boolean;
 {$ENDIF}
@@ -4802,7 +4803,14 @@ begin
       // On 32-Bit RegisterTask() works but on 64-Bit not: WTF!
       if not ExecuteProgram('schtasks', '/create /XML "'+ AFileName +'" /tn '+
         Copy(Path, 2, Length(Path)), SW_HIDE, True, True) then
-        raise Exception.Create(SysErrorMessage(GetLastError()));
+      begin
+        ErrorCode := GetLastError();
+
+        if (ErrorCode = 0) then
+          ErrorCode := SCHED_E_MALFORMEDXML;
+
+        raise ETaskException.Create(SysErrorMessage(ErrorCode));
+      end;  //of begin
 
       OleCheck(TaskFolder.GetTask(PChar(Path), NewTask));
 
