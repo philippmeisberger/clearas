@@ -443,6 +443,7 @@ type
     FTask: IRegisteredTask;
     FTaskFolder: ITaskFolder;
     function GetTaskDefinition(): ITaskDefinition;
+    procedure UpdateTask(AName: string; ANewDefinition: ITaskDefinition);
   protected
     function GetFullLocation(): string; override;
   public
@@ -4450,6 +4451,45 @@ begin
   Result := FTask.Definition;
 end;
 
+{ private TTaskListItem.UpdateTask
+
+  Updates a task definition. }
+
+procedure TTaskListItem.UpdateTask(AName: string; ANewDefinition: ITaskDefinition);
+var
+  TempLocation: string;
+  TaskFile: TStringList;
+  NewTask: IRegisteredTask;
+
+begin
+  {
+  // Temporary workaround:
+  // On 32-Bit RegisterTaskDefinition() works but on 64-Bit not: WTF!
+  OleCheck(FTaskFolder.RegisterTaskDefinition(FTask.Name, Definition,
+    TASK_UPDATE, Null, Null, FTask.Definition.Principal.LogonType, Null, NewTask));
+  }
+
+  TempLocation := IncludeTrailingBackslash(GetTempDir()) + AName;
+  TaskFile := TStringList.Create;
+
+  try
+    TaskFile.SetText(ANewDefinition.XmlText);
+    TaskFile.SaveToFile(TempLocation, TEncoding.Unicode);
+    Delete();
+
+    if not ExecuteProgram('schtasks', '/create /XML "'+ TempLocation
+      +'" /tn '+ AName, SW_HIDE, True, True) then
+      raise Exception.Create(SysErrorMessage(GetLastError()));
+
+    OleCheck(FTaskFolder.GetTask(PChar(AName), NewTask));
+    DeleteFile(TempLocation);
+    FTask := NewTask;
+
+  finally
+    TaskFile.Free;
+  end;  //of try
+end;
+
 { protected TTaskListItem.GetFullLocation
 
   Returns the full file path to a TTaskListItem. }
@@ -4471,13 +4511,12 @@ var
   ActionItem: OleVariant;
   ExecAction: IExecAction;
   Fetched: Cardinal;
-  NewTask: IRegisteredTask;
-  //TempLocation: string;
-  //TaskFile: TStringList;
+  Definition: ITaskDefinition;
 
 begin
   Result := False;
-  Actions := (FTask.Definition.Actions._NewEnum as IEnumVariant);
+  Definition := FTask.Definition;
+  Actions := (Definition.Actions._NewEnum as IEnumVariant);
 
   // Try to find executable command in task
   if (Actions.Next(1, ActionItem, Fetched) = 0) then
@@ -4493,30 +4532,10 @@ begin
       ExecAction.Path := PChar(ExtractPathToFile(ANewFilePath));
       ExecAction.Arguments := PChar(ExtractArguments(ANewFilePath));
 
-      // TODO
-      {TempLocation := IncludeTrailingBackslash(GetTempDir()) + Name;
-      TaskFile := TStringList.Create;
-
-      try
-        TaskFile.SetText(FTask.Definition.XmlText);
-        TaskFile.SaveToFile(TempLocation, TEncoding.Unicode);
-        Delete();
-
-        if not ExecuteProgram('schtasks', '/create /XML "'+ TempLocation
-          +'" /tn '+ Name, SW_HIDE, True, True) then
-          raise Exception.Create(SysErrorMessage(GetLastError()));
-
-        OleCheck(FTaskFolder.GetTask(PChar(Name), NewTask));
-        DeleteFile(TempLocation);
-
-        // Update information
-        FTask := NewTask;
-        FileName := ANewFilePath;
-        Result := True;
-
-      finally
-        TaskFile.Free;
-      end;  //of try}
+      // Update information
+      UpdateTask(Name, Definition);
+      FileName := ANewFilePath;
+      Result := True;
     end;  //of begin
   end;  //of while
 end;
@@ -4589,28 +4608,13 @@ end;
   Renames a TTaskListItem item. }
 
 function TTaskListItem.Rename(const ANewCaption: string): Boolean;
-var
-  TempLocation: string;
-  NewTask: IRegisteredTask;
-
 begin
-  TempLocation := IncludeTrailingBackslash(GetTempDir()) + ANewCaption;
-  ExportItem(TempLocation);
-
-  if not ExecuteProgram('schtasks', '/create /XML "'+ TempLocation +'" /tn '+
-    ANewCaption, SW_HIDE, True, True) then
-    raise Exception.Create(SysErrorMessage(GetLastError()));
-
-  DeleteFile(TempLocation);
-  OleCheck(FTaskFolder.GetTask(PChar(ANewCaption), NewTask));
-  Delete();
+  UpdateTask(ANewCaption, FTask.Definition);
 
   // Update information
-  FTask := NewTask;
   Name := ANewCaption;
   Result := True;
 end;
-
 
 { TTaskList }
 
