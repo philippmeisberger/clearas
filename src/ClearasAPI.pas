@@ -4464,7 +4464,7 @@ var
 begin
   {
   // Temporary workaround:
-  // On 32-Bit RegisterTaskDefinition() works but on 64-Bit not: WTF!
+  // On 32-Bit RegisterTaskDefinition() works fine but on 64-Bit not: WTF!
   OleCheck(FTaskFolder.RegisterTaskDefinition(FTask.Name, Definition,
     TASK_UPDATE, Null, Null, FTask.Definition.Principal.LogonType, Null, NewTask));
   }
@@ -4800,7 +4800,7 @@ begin
         Exit;
 
       // Temporary workaround:
-      // On 32-Bit RegisterTask() works but on 64-Bit not: WTF!
+      // On 32-Bit RegisterTask() works fine but on 64-Bit not: WTF!
       if not ExecuteProgram('schtasks', '/create /XML "'+ AFileName +'" /tn '+
         Copy(Path, 2, Length(Path)), SW_HIDE, True, True) then
       begin

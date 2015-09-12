@@ -1831,6 +1831,7 @@ begin
     pmOpenRegedit.Enabled := False;
     bExportTaskItem.Enabled := True;
     pmExport.Enabled := True;
+    pmRename.Enabled := True;
 
     // Enable "edit path" only if file path is present
     pmEdit.Enabled := (FTasks.Selected.FileName <> '');

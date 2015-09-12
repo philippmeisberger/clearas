@@ -38,8 +38,7 @@ type
     FUrl,
     FResponseText: string;
     FResponseCode: Integer;
-    FTLSEnabled,
-    FAbort: Boolean;
+    FTLSEnabled: Boolean;
     { Synchronized events }
     procedure DoNotifyOnCancel;
     procedure DoNotifyOnDownloading;
@@ -55,7 +54,6 @@ type
   public
     constructor Create(const AUrl, AFileName: string; AAllowOverwrite: Boolean = False);
     destructor Destroy; override;
-    procedure Cancel(Sender: TObject);
     function GetUniqueFileName(const AFileName: string): string;
     { external }
     property OnCancel: TNotifyEvent read FOnCancel write FOnCancel;
@@ -78,7 +76,6 @@ constructor TDownloadThread.Create(const AUrl, AFileName: string;
 begin
   inherited Create(True);
   FreeOnTerminate := True;
-  FAbort := False;
   FUrl := AUrl;
   FTLSEnabled := AnsiStartsStr('https://', AUrl);
 
@@ -109,15 +106,6 @@ destructor TDownloadThread.Destroy;
 begin
   FHttp.Free;
   inherited Destroy;
-end;
-
-{ private TDownloadThread.Cancel
-
-  Cancels the current download. }
-
-procedure TDownloadThread.Cancel(Sender: TObject);
-begin
-  FAbort := True;
 end;
 
 { private TDownloadThread.DoNotifyOnCancel
@@ -169,7 +157,7 @@ procedure TDownloadThread.Downloading(const Sender: TObject; AContentLength,
   AReadCount: Int64; var AAbort: Boolean);
 begin
   // Abort download if user canceled
-  AAbort := FAbort;
+  AAbort := Terminated;
 
   // Convert Bytes to KB
   FContentLength := AContentLength div 1024;
@@ -239,7 +227,7 @@ begin
     end;  //of begin
 
     // User canceled?
-    if FAbort then
+    if Terminated then
       Abort;
 
     // Download successful!

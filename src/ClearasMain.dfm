@@ -135,7 +135,7 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'deaktivieren'
+        Caption = 'Deaktivieren'
         Enabled = False
         TabOrder = 2
         OnClick = bDisableItemClick
@@ -146,7 +146,7 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'l'#246'schen'
+        Caption = 'L'#246'schen'
         Enabled = False
         TabOrder = 4
         OnClick = bDeleteItemClick
@@ -157,7 +157,7 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'exportieren'
+        Caption = 'Exportieren'
         Enabled = False
         TabOrder = 3
         OnClick = bExportStartupItemClick
@@ -168,7 +168,7 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'aktivieren'
+        Caption = 'Aktivieren'
         Enabled = False
         TabOrder = 1
         OnClick = bEnableStartupItemClick
@@ -239,7 +239,7 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'exportieren'
+        Caption = 'Exportieren'
         Enabled = False
         TabOrder = 3
         OnClick = bExportItemClick
@@ -250,7 +250,7 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'l'#246'schen'
+        Caption = 'L'#246'schen'
         Enabled = False
         TabOrder = 4
         OnClick = bDeleteItemClick
@@ -271,7 +271,7 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'deaktivieren'
+        Caption = 'Deaktivieren'
         Enabled = False
         TabOrder = 2
         OnClick = bDisableItemClick
@@ -282,7 +282,7 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'aktivieren'
+        Caption = 'Aktivieren'
         Enabled = False
         TabOrder = 1
         OnClick = bEnableContextItemClick
@@ -468,7 +468,7 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'exportieren'
+        Caption = 'Exportieren'
         Enabled = False
         TabOrder = 3
         OnClick = bExportItemClick
@@ -479,7 +479,7 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'l'#246'schen'
+        Caption = 'L'#246'schen'
         Enabled = False
         TabOrder = 4
         OnClick = bDeleteItemClick
@@ -500,7 +500,7 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'deaktivieren'
+        Caption = 'Deaktivieren'
         Enabled = False
         TabOrder = 2
         OnClick = bDisableItemClick
@@ -511,7 +511,7 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'aktivieren'
+        Caption = 'Aktivieren'
         Enabled = False
         TabOrder = 1
         OnClick = bEnableServiceItemClick
@@ -619,7 +619,7 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'l'#246'schen'
+        Caption = 'L'#246'schen'
         Enabled = False
         TabOrder = 4
         OnClick = bDeleteItemClick
@@ -630,7 +630,7 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'deaktivieren'
+        Caption = 'Deaktivieren'
         Enabled = False
         TabOrder = 2
         OnClick = bDisableItemClick
@@ -641,7 +641,7 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'aktivieren'
+        Caption = 'Aktivieren'
         Enabled = False
         TabOrder = 1
         OnClick = bEnableTaskItemClick
@@ -652,7 +652,7 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'exportieren'
+        Caption = 'Exportieren'
         Enabled = False
         TabOrder = 3
         OnClick = bExportItemClick
@@ -876,7 +876,7 @@ object Main: TMain
   object QuickSearchIconList: TImageList
     Left = 256
     Bitmap = {
-      494C010103000800700110001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C010103000800780110001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000001000000001002000000000000010
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
