@@ -229,7 +229,6 @@ type
     function ChangeFilePath(const ANewFileName: string): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
     procedure OpenInRegEdit(); override;
-    function Rename(const ANewCaption: string): Boolean; override;
     { external }
     property RootKey: HKEY read GetRootKey write FRootKey;
     property Time: string read FTime write FTime;
@@ -241,6 +240,7 @@ type
     function Delete(): Boolean; override;
     function Disable(): Boolean; override;
     function Enable(): Boolean; override;
+    function Rename(const ANewCaption: string): Boolean; override;
   end;
 
   { TStartupUserItem }
@@ -1846,6 +1846,66 @@ begin
   end;  //of try
 end;
 
+{ public TStartupItem.Rename
+
+  Renames a TStartupItem item. }
+
+function TStartupItem.Rename(const ANewCaption: string): Boolean;
+var
+  Reg: TRegistry;
+
+begin
+  if (FEnabled and FWow64) then
+    Reg := TRegistry.Create(KEY_WOW64_32KEY or KEY_READ or KEY_WRITE)
+  else
+    Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
+
+  try
+    Reg.RootKey := FRootKey;
+
+    if not Reg.OpenKey(FLocation, False) then
+      raise EStartupException.Create('Key does not exist!');
+
+    if FEnabled then
+    begin
+      if not Reg.ValueExists(Name) then
+        raise EStartupException.Create('Value '''+ Name +''' does not exist!');
+
+      Reg.RenameValue(Name, ANewCaption);
+    end  //of begin
+    else
+    begin
+      if (FRootKey <> HKEY_LOCAL_MACHINE) then
+        raise EStartupException.Create('Wrong HKEY!');
+
+      Reg.WriteString('item', ANewCaption);
+      Reg.CloseKey;
+
+      if not Reg.OpenKey(ExtractFileDir(FLocation), False) then
+        raise EStartupException.Create('Key does not exist!');
+
+      if Reg.KeyExists(ANewCaption) then
+        raise EStartupException.Create('Key already exists!');
+
+      // Rename key and delete old key
+      Reg.MoveKey(Name, ANewCaption, True);
+
+      if not Reg.KeyExists(ANewCaption) then
+        raise EStartupException.Create('Key was not renamed!');
+
+      FLocation := KEY_STARTUP_DISABLED + ANewCaption;
+    end;  //of if
+
+    // Update caption
+    Name := ANewCaption;
+    Result := True;
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
+  end;  //of try
+end;
+
 
 { TStartupUserItem }
 
@@ -2767,58 +2827,6 @@ begin
     OpenInRegEdit(False)
   else
     inherited OpenInRegEdit();
-end;
-
-{ public TStartupListItem.Rename
-
-  Renames a TStartupListItem item. }
-
-function TStartupListItem.Rename(const ANewCaption: string): Boolean;
-var
-  Reg: TRegistry;
-
-begin
-  if (FEnabled and FWow64) then
-    Reg := TRegistry.Create(KEY_WOW64_32KEY or KEY_READ or KEY_WRITE)
-  else
-    Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
-
-  try
-    Reg.RootKey := FRootKey;
-
-    if not Reg.OpenKey(FLocation, False) then
-      raise EStartupException.Create('Key does not exist!');
-
-    if FEnabled then
-    begin
-      if not Reg.ValueExists(Name) then
-        raise EStartupException.Create('Value '''+ Name +''' does not exist!');
-
-      Reg.RenameValue(Name, ANewCaption);
-    end  //of begin
-    else
-    begin
-      if (FRootKey <> HKEY_LOCAL_MACHINE) then
-        raise EStartupException.Create('Wrong HKEY!');
-
-      Reg.WriteString('item', ANewCaption);
-      Reg.CloseKey;
-
-      if not Reg.OpenKey(ExtractFileDir(FLocation), False) then
-        raise EStartupException.Create('Key does not exist!');
-
-      Reg.MoveKey(Name, ANewCaption, True);
-      FLocation := ExtractFilePath(FLocation) + ANewCaption;
-    end;  //of if
-
-    // Update caption
-    Name := ANewCaption;
-    Result := True;
-
-  finally
-    Reg.CloseKey();
-    Reg.Free;
-  end;  //of try
 end;
 
 
