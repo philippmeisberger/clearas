@@ -12,7 +12,7 @@ interface
 
 uses
   Windows, WinSvc, Classes, SysUtils, Registry, ShlObj, ActiveX, ComObj, Zip,
-  CommCtrl, ShellAPI, SyncObjs, StrUtils, Variants, System.Generics.Collections,
+  Graphics, CommCtrl, ShellAPI, SyncObjs, StrUtils, Variants, Generics.Collections,
   Taskschd, PMCWOSUtils, PMCWLanguageFile, PMCWIniFileParser;
 
 const
@@ -98,7 +98,6 @@ type
     FFileName: string;
     function GetArguments(): string;
     function GetFileNameOnly(): string;
-    function GetIcon(): HICON;
   protected
     FEnabled: Boolean;
     FLocation,
@@ -107,6 +106,8 @@ type
     function ExtractArguments(const APath: string): string;
     function ExtractPathToFile(const APath: string): string;
     function GetFullLocation(): string; virtual; abstract;
+    function GetIcon(): HICON; overload; virtual;
+    function GetIcon(AExeFileName: string): HICON; overload;
   public
     constructor Create(AIndex: Word; AEnabled: Boolean);
     function ChangeFilePath(const ANewFileName: string): Boolean; virtual; abstract;
@@ -322,8 +323,12 @@ type
   TShellItem = class(TContextListItem)
   private
     function GetKeyPath(): string; override;
+  protected
+    function GetIcon(): HICON; override;
   public
     function ChangeFilePath(const ANewFileName: string): Boolean; override;
+    function ChangeIcon(const ANewIconFileName: string): Boolean;
+    function DeleteIcon(): Boolean;
     function Disable(): Boolean; override;
     function Enable(): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
@@ -775,39 +780,6 @@ begin
   Result := Path;
 end;
 
-{ private TRootItem.GetIcon
-
-  Returns the icon handle to the item file path. }
-
-function TRootItem.GetIcon(): HICON;
-var
-  FileInfo: TSHFileInfo;
-{$IFDEF WIN32}
-  Win64: Boolean;
-{$ENDIF}
-
-begin
-{$IFDEF WIN32}
-  Win64 := (TOSVersion.Architecture = arIntelX64);
-
-  // Deny WOW64 redirection only on 64bit Windows
-  if Win64 then
-    Wow64FsRedirection(True);
-{$ENDIF}
-
-  if Succeeded(SHGetFileInfo(PChar(GetFileNameOnly()), 0, FileInfo, SizeOf(FileInfo),
-    SHGFI_ICON or SHGFI_SMALLICON)) then
-    Result := FileInfo.hIcon
-  else
-    Result := 0;
-
-{$IFDEF WIN32}
-  // Allow WOW64 redirection only on 64bit Windows
-  if Win64 then
-    Wow64FsRedirection(False);
-{$ENDIF}
-end;
-
 { protected TRootItem.DeleteQuoteChars
 
   Deletes quote chars from a file path. }
@@ -862,6 +834,48 @@ begin
   // Add missing quote
   if ((Result = '"') and (Result[Length(Result)] <> '"')) then
     Result := Result +'"';
+end;
+
+{ protected TRootItem.GetIcon
+
+  Returns the icon handle to the item file path. }
+
+function TRootItem.GetIcon(): HICON;
+begin
+  Result := GetIcon(GetFileNameOnly());
+end;
+
+{ protected TRootItem.GetIcon
+
+  Returns the icon handle to the executable. }
+
+function TRootItem.GetIcon(AExeFileName: string): HICON;
+var
+  FileInfo: TSHFileInfo;
+{$IFDEF WIN32}
+  Win64: Boolean;
+{$ENDIF}
+
+begin
+{$IFDEF WIN32}
+  Win64 := (TOSVersion.Architecture = arIntelX64);
+
+  // Deny WOW64 redirection only on 64bit Windows
+  if Win64 then
+    Wow64FsRedirection(True);
+{$ENDIF}
+
+  if Succeeded(SHGetFileInfo(PChar(AExeFileName), 0, FileInfo, SizeOf(FileInfo),
+    SHGFI_ICON or SHGFI_SMALLICON)) then
+    Result := FileInfo.hIcon
+  else
+    Result := 0;
+
+{$IFDEF WIN32}
+  // Allow WOW64 redirection only on 64bit Windows
+  if Win64 then
+    Wow64FsRedirection(False);
+{$ENDIF}
 end;
 
 { public TRootItem.ChangeStatus
@@ -2836,6 +2850,46 @@ begin
   Result := FLocation +'\'+ CM_SHELL +'\'+ Name;
 end;
 
+{ protected TShellItem.GetIcon
+
+  Returns the icon handle to the item file path. }
+
+function TShellItem.GetIcon(): HICON;
+var
+  Reg: TRegistry;
+  Icon: TIcon;
+  IconPath: string;
+
+begin
+  Icon := TIcon.Create;
+  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ);
+
+  try
+    Reg.RootKey := HKEY_CLASSES_ROOT;
+
+    // Invalid key?
+    if not Reg.OpenKey(GetKeyPath(), False) then
+      raise EContextMenuException.Create('Key does not exist!');
+
+    if Reg.ValueExists('Icon') then
+    begin
+      IconPath := DeleteQuoteChars(Reg.ReadString('Icon'));
+
+      if (ExtractFileExt(IconPath) = '.exe') then
+        Icon.Handle := GetIcon(IconPath)
+      else
+        Icon.LoadFromFile(IconPath);
+    end;  //of begin
+
+    Result := Icon.Handle;
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
+    Icon.Free;
+  end;  //of try
+end;
+
 { public TShellItem.ChangeFilePath
 
   Changes the file path of an TShellItem item. }
@@ -2870,6 +2924,60 @@ begin
     Reg.CloseKey();
     Reg.Free;
   end;  //of try
+end;
+
+{ public TShellItem.ChangeIcon
+
+  Changes the icon of an TShellItem item. }
+
+function TShellItem.ChangeIcon(const ANewIconFileName: string): Boolean;
+var
+  Reg: TRegistry;
+
+begin
+  Result := False;
+  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
+
+  try
+    Reg.RootKey := HKEY_CLASSES_ROOT;
+
+    // Invalid key?
+    if not Reg.OpenKey(GetKeyPath(), False) then
+      raise EContextMenuException.Create('Key does not exist!');
+
+    // Delete icon?
+    if ((ANewIconFileName = '') and Reg.ValueExists('Icon')) then
+    begin
+      Result := Reg.DeleteValue('Icon');
+      Exit;
+    end;  //of begin
+
+    // Change icon
+    if Reg.ValueExists('Icon') then
+      case Reg.GetDataType('Icon') of
+        rdExpandString: Reg.WriteExpandString('Icon', ANewIconFileName);
+        rdString:       Reg.WriteString('Icon', ANewIconFileName);
+        else
+                        raise EContextMenuException.Create('Invalid data type!');
+      end  //of case
+    else
+      Reg.WriteString('Icon', ANewIconFileName);
+
+    Result := True;
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
+  end;  //of try
+end;
+
+{ public TShellItem.DeleteIcon
+
+  Deletes the icon of a TShellItem and returns True if successful. }
+
+function TShellItem.DeleteIcon: Boolean;
+begin
+  Result := ChangeIcon('');
 end;
 
 { public TShellItem.Disable

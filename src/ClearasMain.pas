@@ -118,6 +118,9 @@ type
     lwTasks: TListView;
     pbTaskProgress: TProgressBar;
     pmRename: TMenuItem;
+    pmChangeIcon: TMenuItem;
+    pmDeleteIcon: TMenuItem;
+    N5: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -172,6 +175,8 @@ type
       Selected: Boolean);
     procedure lwTasksDblClick(Sender: TObject);
     procedure pmRenameClick(Sender: TObject);
+    procedure pmChangeIconClick(Sender: TObject);
+    procedure pmDeleteIconClick(Sender: TObject);
   private
     FStartup: TStartupList;
     FContext: TContextList;
@@ -1684,6 +1689,8 @@ begin
     bExportContextItem.Enabled := True;
     pmExport.Enabled := True;
     pmRename.Enabled := (FContext.Selected is TShellItem);
+    pmChangeIcon.Visible := pmRename.Enabled;
+    pmDeleteIcon.Visible := (pmRename.Enabled and (FContext.Selected.Icon <> 0));
 
     // Enable "edit path" only if file path is present
     pmEdit.Enabled := (FContext.Selected.FileName <> '');
@@ -2090,9 +2097,23 @@ begin
   GetSelectedListView().OnDblClick(Sender);
 end;
 
+{ TMain.pmChangeIconClick
+
+  Popup menu entry to change the icon of the current selected shell item. }
+
+procedure TMain.pmChangeIconClick(Sender: TObject);
+var
+  FileName: string;
+
+begin
+  if PromptForFileName(FileName, 'Application *.exe|*.exe|Icon *.ico|*.ico') then
+    if (FContext.Selected is TShellItem) then
+      (FContext.Selected as TShellItem).ChangeIcon('"'+ FileName +'"');
+end;
+
 { TMain.pmDeleteClick
 
-  opup menu entry to delete the current selected item. }
+  Popup menu entry to delete the current selected item. }
 
 procedure TMain.pmDeleteClick(Sender: TObject);
 begin
@@ -2102,6 +2123,16 @@ begin
     2: bDeleteServiceItem.OnClick(Sender);
     3: bDeleteTaskItem.OnClick(Sender);
   end;  //of case
+end;
+
+{ TMain.pmDeleteIconClick
+
+  Popup menu entry to delete the icon of the current selected shell item. }
+
+procedure TMain.pmDeleteIconClick(Sender: TObject);
+begin
+  if (FContext.Selected is TShellItem) then
+    (FContext.Selected as TShellItem).DeleteIcon();
 end;
 
 { TMain.pmOpenRegeditClick

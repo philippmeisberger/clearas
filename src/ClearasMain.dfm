@@ -758,6 +758,19 @@ object Main: TMain
       Caption = 'Umbenennen'
       OnClick = pmRenameClick
     end
+    object N5: TMenuItem
+      Caption = '-'
+    end
+    object pmChangeIcon: TMenuItem
+      Caption = 'Icon '#228'ndern'
+      Visible = False
+      OnClick = pmChangeIconClick
+    end
+    object pmDeleteIcon: TMenuItem
+      Caption = 'Icon l'#246'schen'
+      Visible = False
+      OnClick = pmDeleteIconClick
+    end
     object N2: TMenuItem
       Caption = '-'
     end
@@ -876,7 +889,7 @@ object Main: TMain
   object QuickSearchIconList: TImageList
     Left = 256
     Bitmap = {
-      494C010103000800780110001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C0101030008007C0110001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000001000000001002000000000000010
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
