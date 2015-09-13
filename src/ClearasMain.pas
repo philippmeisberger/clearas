@@ -1352,6 +1352,8 @@ begin
     pmExport.Caption := mmExport.Caption;
     pmDelete.Caption := bDeleteStartupItem.Caption;
     pmCopyLocation.Caption := GetString(106);
+    pmChangeIcon.Caption := GetString(121);
+    pmDeleteIcon.Caption := GetString(122);
   end;  //of with
 
   // Update TListView captions
@@ -2106,9 +2108,25 @@ var
   FileName: string;
 
 begin
-  if PromptForFileName(FileName, 'Application *.exe|*.exe|Icon *.ico|*.ico') then
-    if (FContext.Selected is TShellItem) then
-      (FContext.Selected as TShellItem).ChangeIcon('"'+ FileName +'"');
+  try
+    if not (FContext.Selected is TShellItem) then
+      Exit;
+
+    if PromptForFileName(FileName, 'Application *.exe|*.exe|Icon *.ico|*.ico') then
+    begin
+      if not (FContext.Selected as TShellItem).ChangeIcon('"'+ FileName +'"') then
+        raise Exception.Create('Unknown error!');
+
+      pmDeleteIcon.Visible := True;
+    end;  //of begin
+
+  except
+    on E: EInvalidItem do
+      FLang.ShowMessage(FLang.GetString([121, 18]), FLang.GetString(53), mtWarning);
+
+    on E: Exception do
+      FLang.ShowException(FLang.GetString([121, 18]), E.Message);
+  end;  //of try
 end;
 
 { TMain.pmDeleteClick
@@ -2131,8 +2149,26 @@ end;
 
 procedure TMain.pmDeleteIconClick(Sender: TObject);
 begin
-  if (FContext.Selected is TShellItem) then
-    (FContext.Selected as TShellItem).DeleteIcon();
+  try
+    if not (FContext.Selected is TShellItem) then
+      Exit;
+
+    // Show confimation
+    if (FLang.ShowMessage(FLang.GetString(123), mtConfirmation) = ID_YES) then
+    begin
+      if not (FContext.Selected as TShellItem).DeleteIcon() then
+        raise Exception.Create('Unknown error!');
+
+      pmDeleteIcon.Visible := False;
+    end;  //of begin
+
+  except
+    on E: EInvalidItem do
+      FLang.ShowMessage(FLang.GetString([122, 18]), FLang.GetString(53), mtWarning);
+
+    on E: Exception do
+      FLang.ShowException(FLang.GetString([122, 18]), E.Message);
+  end;  //of try
 end;
 
 { TMain.pmOpenRegeditClick
@@ -2149,8 +2185,7 @@ begin
       FLang.ShowMessage(45, 46, mtWarning);
 
     on E: EInvalidItem do
-      FLang.ShowMessage(StripHotkey(pmOpenExplorer.Caption) + FLang.GetString(18),
-        FLang.GetString(53), mtWarning);
+      FLang.ShowMessage(FLang.GetString([51, 18]), FLang.GetString(53), mtWarning);
   end;  //of try
 end;
 

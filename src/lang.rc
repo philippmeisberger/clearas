@@ -121,6 +121,9 @@ BEGIN
   218, "XML-Datei *.xml|*.xml"
   219, "ZIP-Datei *.zip|*.zip"
   220, "Wollen Sie die Aufgabe \"%s\" wirklich löschen?"
+  221, "Icon ändern"
+  222, "Icon löschen"
+  223, "Wollen Sie den Icon wirklich löschen?"
 END
 
 STRINGTABLE VERSION 1033 // english
@@ -246,6 +249,9 @@ BEGIN
   418, "XML file *.xml|*.xml"
   419, "ZIP file *.zip|*.zip"
   420, "Are you sure you want to delete the task \"%s\"?"
+  421, "Change icon"
+  422, "Delete icon"
+  423, "Are you sure you want to delete the icon?"
 END
 
 STRINGTABLE VERSION 1036 // français
@@ -371,4 +377,7 @@ BEGIN
   618, "Fichier XML *.xml|*.xml"
   619, "Fichier ZIP *.zip|*.zip"
   620, "Voulez-vous vraiment supprimer la tâche \"%s\"?"
+  621, "Changer d'icône"
+  622, "Supprimer l'icône"
+  623, "Voulez-vous vraiment supprimer l'icône?"
 END
