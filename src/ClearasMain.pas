@@ -1667,7 +1667,7 @@ begin
     if (Index = -1) then
     begin
       PopupMenu.AutoPopup := False;
-      FLang.ShowMessage(FLang.GetString(53), mtWarning);
+      FLang.ShowMessage(FLang.GetString(53), mtError);
       Exit;
     end;  //of begin
 
@@ -1743,7 +1743,7 @@ begin
     if (Index = -1) then
     begin
       PopupMenu.AutoPopup := False;
-      FLang.ShowMessage(FLang.GetString(53), mtWarning);
+      FLang.ShowMessage(FLang.GetString(53), mtError);
       Exit;
     end;  //of begin
 
@@ -1817,7 +1817,7 @@ begin
     if (Index = -1) then
     begin
       PopupMenu.AutoPopup := False;
-      FLang.ShowMessage(FLang.GetString(53), mtWarning);
+      FLang.ShowMessage(FLang.GetString(53), mtError);
       Exit;
     end;  //of begin
 
@@ -2032,7 +2032,7 @@ begin
     if (Index = -1) then
     begin
       PopupMenu.AutoPopup := False;
-      FLang.ShowMessage(FLang.GetString(53), mtWarning);
+      FLang.ShowMessage(FLang.GetString(53), mtError);
       Exit;
     end;  //of begin
 
@@ -2080,7 +2080,7 @@ begin
     pmExport.Enabled := bExportStartupItem.Enabled;
     bDeleteStartupItem.Enabled := True;
     pmDelete.Enabled := True;
-    pmRename.Enabled := not (FStartup.Selected is TStartupUserItem);
+    pmRename.Enabled := True;
 
     // Show popup menu
     PopupMenu.AutoPopup := True;

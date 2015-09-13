@@ -659,14 +659,11 @@ begin
       PersistFile := (ShellLink as IPersistFile);
 
       // Try to .lnk read file
-      if Failed(PersistFile.Load(StringToOleStr(FFileName), STGM_READ)) then
-        raise Exception.Create('Lnk file does not exist!');
-
+      OleCheck(PersistFile.Load(StringToOleStr(FFileName), STGM_READ));
       SetLength(Path, MAX_PATH + 1);
 
       // Try to read path from .lnk
-      if Failed(ShellLink.GetPath(PChar(Path), MAX_PATH, FileInfo, SLR_ANY_MATCH)) then
-        raise Exception.Create('Could not read path from .lnk file!');
+      OleCheck(ShellLink.GetPath(PChar(Path), MAX_PATH, FileInfo, SLR_ANY_MATCH));
 
       FExeFileName := PChar(Path);
       SetLength(Arguments, MAX_PATH + 1);
@@ -718,13 +715,11 @@ begin
       IID_IShellLink, ShellLink)) then
     begin
       // Set path to .exe
-      if Failed(ShellLink.SetPath(PChar(AExeFileName))) then
-        raise Exception.Create('Could not write path to .lnk file!');
+      OleCheck(ShellLink.SetPath(PChar(AExeFileName)));
 
       // Set arguments if specified
       if (AArguments <> '') then
-        if Failed(ShellLink.SetArguments(PChar(AArguments))) then
-          raise Exception.Create('Could not write arguments to .lnk file!');
+        OleCheck(ShellLink.SetArguments(PChar(AArguments)));
 
       // Set working directory
       ShellLink.SetWorkingDirectory(PChar(ExtractFilePath(AExeFileName)));
@@ -2050,32 +2045,77 @@ end;
   Renames a TStartupUserItem item. }
 
 function TStartupUserItem.Rename(const ANewCaption: string): Boolean;
-{var
-  NewName: string;
-}
+var
+  NewFileName, OldKeyName, NewKeyName, NewName: string;
+  Reg: TRegistry;
+  Renamed: Boolean;
+
 begin
   Result := False;
-  {if not FEnabled then
-    inherited Rename(ANewCaption);
+  NewFileName := ExtractFilePath(FLnkFile.FileName) + ANewCaption;
 
-  NewName := ExtractFilePath(FLocation) + ANewCaption +'.lnk';
+  if (ExtractFileExt(ANewCaption) <> '.lnk') then
+    NewFileName := ChangeFileExt(ANewCaption, '.lnk');
 
-  // Failed to create new .lnk file?
-  if (FEnabled and not FLnkFile.WriteLnkFile(NewName, FLnkFile.ExeFileName, FLnkFile.Arguments)) then
-    raise EStartupException.Create('Could not create .lnk file!');
+  NewName := ExtractFileName(NewFileName);
 
-  FLnkFile.Delete();
+  if FEnabled then
+  begin
+    if not CopyFile(PChar(FLnkFile.FileName), PChar(NewFileName), True) then
+      raise EStartupException.Create(SysErrorMessage(GetLastError()));
+
+    // Delete old .lnk file
+    if Delete() then
+    begin
+      FLocation := NewFileName;
+      Renamed := True;
+    end;  //of begin
+  end  //of begin
+  else
+  begin
+    Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
+
+    try
+      Reg.RootKey := HKEY_LOCAL_MACHINE;
+      Reg.OpenKey(KEY_STARTUP_USER_DISABLED, True);
+
+      OldKeyName := AddCircumflex(FLnkFile.FileName);
+      NewKeyName := AddCircumflex(NewFileName);
+
+      if not Reg.KeyExists(OldKeyName) then
+        raise EStartupException.Create('Key does not exist!');
+
+      if Reg.KeyExists(NewKeyName) then
+        raise EStartupException.Create('Key already exists!');
+
+      // Rename key and delete old key
+      Reg.MoveKey(OldKeyName, NewKeyName, True);
+
+      if not Reg.KeyExists(NewKeyName) then
+        raise EStartupException.Create('Key was not renamed!');
+
+      FLocation := KEY_STARTUP_USER_DISABLED + NewKeyName;
+
+      // Update specific information
+      Reg.CloseKey();
+      Reg.OpenKey(FLocation, False);
+      Reg.WriteString('path', NewFileName);
+      Reg.WriteString('item', ChangeFileExt(NewName, ''));
+      Renamed := True;
+
+    finally
+      Reg.CloseKey();
+      Reg.Free;
+    end;  //of try
+  end;  //of if
 
   // Update information
-  FileName := NewName;
-  FLnkFile.FileName := NewName;
-
-  // Rewrite backup
-  if (not FEnabled and FLnkFile.BackupExists()) then
-    if not FLnkFile.CreateBackup() then
-      raise EStartupException.Create('Backup could not be created!');
-
-  Result := True;}
+  if Renamed then
+  begin
+    Name := NewName;
+    FLnkFile.FileName := NewFileName;
+    Result := True;
+  end;  //of begin
 end;
 
 
@@ -3804,9 +3844,17 @@ begin
         // Get status and caption of Shell item
         Enabled := not Reg.ValueExists(CM_SHELL_DISABLED);
 
-        // Filter Shell items without command
+        // Cascading shell item?
         if not Reg.OpenKey('command', False) then
+        {begin
+          if ((not Reg.ValueExists('MUIVerb') or not Reg.ValueExists('SubCommands')) and
+            not Reg.KeyExists('ExtendedSubCommandsKey')) then
+            Continue;
+
+          Caption := Reg.ReadString('MUIVerb');
+          AddCascadingShellItem(Item, ALocationRoot, '', Caption, Enabled, False);}
           Continue;
+        //end;  //of begin
 
         // Filter important Shell items
         if Reg.ValueExists('DelegateExecute') then
