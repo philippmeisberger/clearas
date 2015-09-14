@@ -1767,6 +1767,8 @@ begin
     bExportServiceItem.Enabled := True;
     pmExport.Enabled := True;
     pmRename.Enabled := True;
+    pmDeleteIcon.Visible := False;
+    pmChangeIcon.Visible := False;
 
     // Enable "edit path" only if file path is present
     pmEdit.Enabled := (FService.Selected.FileName <> '');
@@ -1841,6 +1843,8 @@ begin
     bExportTaskItem.Enabled := True;
     pmExport.Enabled := True;
     pmRename.Enabled := True;
+    pmDeleteIcon.Visible := False;
+    pmChangeIcon.Visible := False;
 
     // Enable "edit path" only if file path is present
     pmEdit.Enabled := (FTasks.Selected.FileName <> '');
@@ -2081,6 +2085,8 @@ begin
     bDeleteStartupItem.Enabled := True;
     pmDelete.Enabled := True;
     pmRename.Enabled := True;
+    pmDeleteIcon.Visible := False;
+    pmChangeIcon.Visible := False;
 
     // Show popup menu
     PopupMenu.AutoPopup := True;
