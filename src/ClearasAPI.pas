@@ -791,11 +791,17 @@ end;
 function TRootItem.ExtractArguments(const APath: string): string;
 var
   ExtWithArguments: string;
-  SpaceDelimiter: Integer;
+  Ext, SpaceDelimiter: Integer;
 
 begin
   // Cut path from extension until end
-  ExtWithArguments := ExtractFileExt(APath);
+  // Note: Garbage in worst case if a folder name contains a '.'!
+  Ext := AnsiPos('.', APath) - 1;
+
+  if (Ext >= 0) and (APath.Chars[Ext] = '.') then
+    ExtWithArguments := APath.SubString(Ext)
+  else
+    Exit;
 
   // Find space delimter between extension and arguments
   SpaceDelimiter := AnsiPos(' ', ExtWithArguments);
