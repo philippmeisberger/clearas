@@ -1,6 +1,6 @@
 { *********************************************************************** }
 {                                                                         }
-{ PM Code Works Operating System Utilities Unit v2.2.3                    }
+{ PM Code Works Operating System Utilities Unit v2.2.4                    }
 {                                                                         }
 { Copyright (c) 2011-2015 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
@@ -14,7 +14,7 @@ interface
 
 uses
 {$IFDEF MSWINDOWS}
-  Windows, Classes, Registry, ShellAPI, ShlObj, Forms,
+  Windows, Classes, Registry, ShellAPI, ShlObj, Forms, SHFolder, Knownfolders,
 {$ELSE}
   Process,
 {$ENDIF}
@@ -29,7 +29,6 @@ const
 {$ELSE}
   PLATFORM_ARCH = ' [32-Bit]';
 {$ENDIF}
-  FOLDERID_System: TGUID = '{1AC14E77-02E7-4E5D-B744-2EB1AE5198B7}';
 
 type
 {$IFDEF LINUX}
@@ -44,11 +43,12 @@ type
     AShow: Integer = SW_SHOWNORMAL; ARunAsAdmin: Boolean = False;
     AWait: Boolean = False): Boolean;
   function ExpandEnvironmentVar(var AVariable: string): Boolean;
-  function GetKnownFolderPath(AFolderId: TGUID; var AFolderPath: string): Boolean;
-  function GetSystemWow64Directory(var ASystemWow64Directory: string): Boolean;
+  function GetFolderPath(ACSIDL: Integer): string; overload; deprecated 'Use GetKnownFolderPath()';
+  function GetFolderPath(ACSIDL: Integer; out AFolderPath: string): Boolean; overload; deprecated 'Use GetKnownFolderPath()';
+  function GetKnownFolderPath(AFolderId: TGUID): string; overload;
+  function GetKnownFolderPath(AFolderId: TGUID; out AFolderPath: string): Boolean; overload;
+  function GetSystemWow64Directory(out ASystemWow64Directory: string): Boolean;
   function GetTempDir(): string;
-  function GetUserAppDataDir(): string;
-  function GetWinDir(): string;
   function HKeyToStr(AHKey: HKey; ALongFormat: Boolean = True): string;
 {$ENDIF}
   function OpenUrl(const AUrl: string): Boolean;
@@ -137,11 +137,37 @@ begin
   end;  //of begin
 end;
 
+{ GetFolderPath
+
+  Retrieves the path of default folders identified by a CSIDL. }
+
+function GetFolderPath(ACSIDL: Integer): string;
+begin
+  GetFolderPath(ACSIDL, Result);
+end;
+
+function GetFolderPath(ACSIDL: Integer; out AFolderPath: string): Boolean;
+var
+  Path: array[0..MAX_PATH] of Char;
+
+begin
+  if Succeeded(SHGetFolderPath(0, ACSIDL, 0, 0, @Path)) then
+  begin
+    AFolderPath := IncludeTrailingBackslash(Path);
+    Result := True;
+  end;  //of begin
+end;
+
 { GetKnownFolderPath
 
-  Retrieves the path of known folders identified by a GUID. }
+  Retrieves the path of known folders identified by a GUID (Windows >= Vista!). }
 
-function GetKnownFolderPath(AFolderId: TGUID; var AFolderPath: string): Boolean;
+function GetKnownFolderPath(AFolderId: TGUID): string;
+begin
+  GetKnownFolderPath(AFolderId, Result);
+end;
+
+function GetKnownFolderPath(AFolderId: TGUID; out AFolderPath: string): Boolean;
 var
   Path: PChar;
 
@@ -161,7 +187,7 @@ end;
   Retrieves the path of the system directory used by WOW64. This directory is
   not present on 32-bit Windows. }
 
-function GetSystemWow64Directory(var ASystemWow64Directory: string): Boolean;
+function GetSystemWow64Directory(out ASystemWow64Directory: string): Boolean;
 {$IFDEF WIN64}
 type
   TGetSystemWow64Directory = function(lpBuffer: LPTSTR; uSize: UINT): UINT; stdcall;
@@ -220,30 +246,6 @@ begin
 
   if ExpandEnvironmentVar(Path) then
     Result := IncludeTrailingBackslash(Path);
-end;
-
-{ GetUserAppDataDir
-
-  Returns the path to users application data directory. }
-
-function GetUserAppDataDir(): string;
-var
-  Path: string;
-
-begin
-  Path := '%APPDATA%';
-
-  if ExpandEnvironmentVar(Path) then
-    Result := IncludeTrailingBackslash(Path);
-end;
-
-{ GetWinDir
-
-  Returns path to install directory of Windows. }
-
-function GetWinDir(): string;
-begin
-  Result := SysUtils.GetEnvironmentVariable('windir');
 end;
 
 { HKeyToStr

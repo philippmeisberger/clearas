@@ -55,7 +55,10 @@ type
   { TLnkFile }
   TLnkFile = class(TObject)
   private
-    FFileName, FExeFileName, FArguments, FBackupExt: string;
+    FFileName,
+    FExeFileName,
+    FArguments,
+    FBackupExt: string;
     function GetBackupLnk(): string;
     function GetFullPath(): string;
     function GetFullPathEscaped(): string;
@@ -156,9 +159,7 @@ type
   end;
 
   { TItemStatus }
-  TItemStatus = (
-    stNone, stEnabled, stDisabled, stDeleted
-  );
+  TItemStatus = (stNone, stEnabled, stDisabled, stDeleted);
 
   { Events }
   TSearchEvent = procedure(Sender: TObject; const ACount: Cardinal) of object;
@@ -439,7 +440,7 @@ type
       AIncludeDemand: Boolean = False): Integer;
   end;
 
-  { Exception }
+  { Exception class }
   ETaskException = class(EOleError);
 
   { TTaskItem }
@@ -598,7 +599,8 @@ end;
 
 class function TLnkFile.GetBackupDir(): string;
 begin
-  Result := GetWinDir() +'\pss\';
+  if GetFolderPath(CSIDL_WINDOWS, Result) then
+    Result := Result +'pss\';
 end;
 
 { public TLnkFile.GetStartUpDir
@@ -606,25 +608,11 @@ end;
   Returns the file system startup location of current user or all. }
 
 class function TLnkFile.GetStartUpDir(AAllUsers: Boolean): string;
-var
-  ItemIDs: PItemIDList;
-  Path: PChar;
-  Folder: Cardinal;
-
 begin
   if AAllUsers then
-    Folder := CSIDL_COMMON_STARTUP
+    GetFolderPath(CSIDL_COMMON_STARTUP, Result)
   else
-    Folder := CSIDL_STARTUP;
-
-  if Succeeded(SHGetSpecialFolderLocation(0, Folder, ItemIDs)) then
-  begin
-    Path := StrAlloc(MAX_PATH);
-    SHGetPathFromIDList(ItemIDs, Path);
-    Result := IncludeTrailingBackslash(string(Path));
-  end  //of begin
-  else
-    Result := '';
+    GetFolderPath(CSIDL_STARTUP, Result);
 end;
 
 { public TLnkFile.HasArguments
@@ -1608,7 +1596,7 @@ begin
     if not Reg.OpenKey(FLocation, False) then
       raise EStartupException.Create('Key does not exist!');
 
-    if FEnabled then
+    if (FEnabled or CheckWin32Version(6, 2)) then
       ItemName := Name
     else
       ItemName := 'command';
@@ -1670,7 +1658,7 @@ begin
     Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
 
   try
-    if FEnabled then
+    if (FEnabled or CheckWin32Version(6, 2))  then
     begin
       Reg.RootKey := FRootKey;
 
@@ -4666,7 +4654,7 @@ end;
 
 function TTaskListItem.GetFullLocation(): string;
 begin
-  if GetKnownFolderPath(FOLDERID_System, Result) then
+  if GetFolderPath(CSIDL_SYSTEM, Result) then
     Result := IncludeTrailingBackslash(Result +'Tasks'+ Location) + Name;
 end;
 

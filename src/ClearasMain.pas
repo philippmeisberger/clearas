@@ -1437,7 +1437,7 @@ begin
 
     // Show save dialog
     if PromptForFileName(FileName, Filter, DefaultExt, StripHotkey(mmExport.Caption),
-      '%HOMEPATH%', True) then
+      '%USERPROFILE%', True) then
     begin
       SelectedList.ExportItem(FileName);
       Result := True;
@@ -2516,7 +2516,7 @@ begin
 
     // Show save dialog
     if PromptForFileName(FileName, Filter, DefaultExt, StripHotkey(mmExportList.Caption),
-      '%HOMEPATH%', True) then
+      '%USERPROFILE%', True) then
       // Export list (threaded!)
       with TExportListThread.Create(SelectedList, FileName, PageControl.ActivePageIndex) do
       begin
