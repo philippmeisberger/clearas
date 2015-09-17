@@ -53,7 +53,7 @@ end;
 procedure TStartupSearchThread.LoadEnabled(AAllUsers: Boolean);
 begin
   Synchronize(DoNotifyOnSearching);
-  TStartupList(FSelectedList).LoadEnabled(AAllUsers);
+  TStartupList(FSelectedList).LoadStartup(AAllUsers);
 end;
 
 { private TStartupSearchThread.LoadEnabled
@@ -64,7 +64,7 @@ procedure TStartupSearchThread.LoadEnabled(AHKey: HKEY;
   ARunOnce: Boolean = False; AWow64: Boolean = False);
 begin
   Synchronize(DoNotifyOnSearching);
-  TStartupList(FSelectedList).LoadEnabled(AHKey, ARunOnce, AWow64);
+  TStartupList(FSelectedList).LoadStartup(AHKey, ARunOnce, AWow64);
 end;
 
 { private TStartupSearchThread.LoadDisabled
