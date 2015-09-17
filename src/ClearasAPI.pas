@@ -24,8 +24,6 @@ const
   KEY_STARTUP_APPROVED           = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\';
   KEY_STARTUP_RUN_APPROVED       = KEY_STARTUP_APPROVED +'Run';
   KEY_STARTUP_RUN32_APPROVED     = KEY_STARTUP_APPROVED +'Run32';
-  KEY_STARTUP_RUNONCE_APPROVED   = KEY_STARTUP_APPROVED +'RunOnce';
-  KEY_STARTUP_RUNONCE32_APPROVED = KEY_STARTUP_APPROVED +'RunOnce32';
   KEY_STARTUP_USER_APPROVED      = KEY_STARTUP_APPROVED +'StartupFolder';
 
   { General startup keys }
@@ -1631,7 +1629,7 @@ var
   Reg: TRegistry;
 
 begin
-  if (FEnabled and FWow64) then
+  if (FEnabled and FWow64 and not CheckWin32Version(6, 2)) then
     Reg := TRegistry.Create(KEY_WOW64_32KEY or KEY_READ or KEY_WRITE)
   else
     Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
@@ -2553,9 +2551,9 @@ begin
         if CheckWin32Version(6, 2) then
         begin
           if AWow64 then
-            LocationApproved := KEY_STARTUP_RUNONCE32_APPROVED
+            LocationApproved := KEY_STARTUP_RUN32_APPROVED
           else
-            LocationApproved := KEY_STARTUP_RUNONCE_APPROVED;
+            LocationApproved := KEY_STARTUP_RUN_APPROVED;
         end;  //of begin
       end  //of begin
       else
@@ -3138,18 +3136,10 @@ begin
     // Windows 8?
     if CheckWin32Version(6, 2) then
     begin
-      if ARunOnce then
-      begin
-        if AWow64 then
-          LoadStatus(AHKey, KEY_STARTUP_RUNONCE32_APPROVED)
-        else
-          LoadStatus(AHKey, KEY_STARTUP_RUNONCE_APPROVED);
-      end  //of begin
+      if AWow64 then
+        LoadStatus(AHKey, KEY_STARTUP_RUN32_APPROVED)
       else
-        if AWow64 then
-          LoadStatus(AHKey, KEY_STARTUP_RUN32_APPROVED)
-        else
-          LoadStatus(AHKey, KEY_STARTUP_RUN_APPROVED);
+        LoadStatus(AHKey, KEY_STARTUP_RUN_APPROVED);
     end;  //of begin
 
   finally

@@ -184,7 +184,7 @@ type
     FTasks: TTaskList;
     FLang: TLanguageFile;
     FUpdateCheck: TUpdateCheck;
-    function CreateStartupUserBackup(): Boolean;
+    function CreateStartupUserBackup(): Boolean; deprecated 'Since Windows 8';
     function DeleteItem(AConfirmMessageId: Word): Boolean;
     procedure DeleteStartupItem(Sender: TObject);
     function DisableItem(): Boolean;
@@ -382,8 +382,7 @@ end;
 
 { private TMain.CreateStartupUserBackup
 
-  Creates a special .lnk backup for currently selected activated startup
-  user entry. }
+  Creates a special .lnk backup for currently selected enabled startup user item. }
 
 function TMain.CreateStartupUserBackup(): Boolean;
 begin
@@ -394,8 +393,9 @@ begin
     if (not Assigned(lwStartup.ItemFocused) or not Assigned(FStartup.Selected)) then
       raise EInvalidItem.Create('No item selected!');
 
-    // Special .lnk file backup only for activated startup user entries!
-    if (FStartup.Selected.Enabled and (FStartup.Selected is TStartupUserItem)) then
+    // Special .lnk file backup only for enabled startup user entries!
+    if (not CheckWin32Version(6, 2) and FStartup.Selected.Enabled and
+      (FStartup.Selected is TStartupUserItem)) then
     begin
       FStartup.Selected.ExportItem('');
       FLang.ShowMessage(FLang.Format(42, [(FStartup.Selected as TStartupUserItem).LnkFile.BackupLnk]));
