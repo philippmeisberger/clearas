@@ -67,7 +67,7 @@ begin
   TStartupList(FSelectedList).LoadEnabled(AHKey, ARunOnce, AWow64);
 end;
 
-{ private TStartupSearchThread.LoadEnabled
+{ private TStartupSearchThread.LoadDisabled
 
   Searches for disabled startup user items and adds them to the list. }
 
@@ -78,7 +78,7 @@ begin
   TStartupList(FSelectedList).LoadDisabled(AStartupUser, AIncludeWow64);
 end;
 
-{ protected TContextMenuSearchThread.Execute
+{ protected TStartupSearchThread.Execute
 
   Searches for startup items in Registry. }
 
@@ -95,13 +95,16 @@ begin
       FSelectedList.Clear;
 
       // Calculate key count for events
-      if FWin64 then
-        FProgressMax := KEYS_COUNT_MAX
-      else
-        FProgressMax := KEYS_COUNT_MAX - 3;
+      FProgressMax := KEYS_COUNT_MAX;
+
+      if not FWin64 then
+        Dec(FProgressMax, 3);
 
       if not FIncludeRunOnce then
-        FProgressMax := FProgressMax - 2;
+        Dec(FProgressMax, 2);
+
+      if CheckWin32Version(6, 2) then
+        Dec(FProgressMax, 2);
 
       // Notify start of search
       Synchronize(DoNotifyOnStart);

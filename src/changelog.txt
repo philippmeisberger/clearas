@@ -11,6 +11,7 @@ Version 4.2  [??.??.15]
   - "Einträge exportieren" speichert alle Aufgaben als ZIP-Datei
   - "Backup importieren" importiert eine zuvor exportierte Aufgabe als XML-Datei
   - "Expertenmodus" findet versteckte Aufgaben
+- Unterstützung von Windows 8
 - Änderungen am Popup Menü:
   - "Umbenennen" hinzugefügt
   - "Icon ändern" für Kontextmenü-Einträge vom Typ "Shell" hinzugefügt
