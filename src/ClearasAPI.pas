@@ -234,10 +234,11 @@ type
     FTime: string;
   protected
     function ChangeStatus(AKeyPath: string; var ANewStatus: TBytes): Boolean; overload;
-    function DeleteValue(AKeyPath: string): Boolean;
+    function DeleteValue(AKeyPath: string; AReallyWow64: Boolean = True): Boolean;
     function GetFullLocation(): string; override;
     function GetRootKey(): HKEY; override;
-    function Rename(const AKeyPath, ANewCaption: string): Boolean; overload;
+    function Rename(const AKeyPath, ANewCaption: string;
+      AReallyWow64: Boolean = True): Boolean; overload;
   public
     function ChangeFilePath(const ANewFileName: string): Boolean; override;
     function Delete(): Boolean; override;
@@ -1603,6 +1604,8 @@ var
 
 begin
   Result := False;
+
+  // Status is stored in 64-Bit registry
   Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
 
   try
@@ -1624,12 +1627,13 @@ end;
 
   Deletes a Registry value whose name is the item name. }
 
-function TStartupListItem.DeleteValue(AKeyPath: string): Boolean;
+function TStartupListItem.DeleteValue(AKeyPath: string;
+  AReallyWow64: Boolean = True): Boolean;
 var
   Reg: TRegistry;
 
 begin
-  if (FEnabled and FWow64 and not CheckWin32Version(6, 2)) then
+  if ((FEnabled or CheckWin32Version(6, 2)) and FWow64 and AReallyWow64) then
     Reg := TRegistry.Create(KEY_WOW64_32KEY or KEY_READ or KEY_WRITE)
   else
     Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
@@ -1675,12 +1679,13 @@ end;
 
   Renames a TStartupListItem item. }
 
-function TStartupListItem.Rename(const AKeyPath, ANewCaption: string): Boolean;
+function TStartupListItem.Rename(const AKeyPath, ANewCaption: string;
+  AReallyWow64: Boolean = True): Boolean;
 var
   Reg: TRegistry;
 
 begin
-  if (FEnabled and FWow64) then
+  if ((FEnabled or CheckWin32Version(6, 2)) and FWow64 and AReallyWow64) then
     Reg := TRegistry.Create(KEY_WOW64_32KEY or KEY_READ or KEY_WRITE)
   else
     Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
@@ -1695,12 +1700,7 @@ begin
       raise EStartupException.Create('Value '''+ Name +''' does not exist!');
 
     Reg.RenameValue(Name, ANewCaption);
-
-    if Reg.ValueExists(ANewCaption) then
-    begin
-      Name := ANewCaption;
-      Result := True;
-    end;  //of begin
+    Result := Reg.ValueExists(ANewCaption);
 
   finally
     Reg.CloseKey();
@@ -1758,7 +1758,7 @@ end;
 
 function TStartupListItem.Delete(): Boolean;
 begin
-  Result := DeleteValue(FApprovedLocation);
+  Result := DeleteValue(FApprovedLocation, False);
 end;
 
 { public TStartupItem.Disable
@@ -1833,7 +1833,7 @@ begin
   if (Enabled or CheckWin32Version(6, 2)) then
     inherited OpenInRegEdit()
   else
-    // Disabled items are in 64-Bit Registry!
+    // Disabled items are stored in 64-Bit Registry!
     OpenInRegEdit(False);
 end;
 
@@ -1843,7 +1843,7 @@ end;
 
 function TStartupListItem.Rename(const ANewCaption: string): Boolean;
 begin
-  Result := Rename(FApprovedLocation, ANewCaption);
+  Result := Rename(FApprovedLocation, ANewCaption, False);
 end;
 
 
@@ -1856,7 +1856,7 @@ end;
 function TStartupItem.Delete(): Boolean;
 begin
   if (FEnabled or CheckWin32Version(6, 2)) then
-    Result := inherited Delete() and DeleteValue(Location)
+    Result := inherited Delete() and DeleteValue(Location, True)
   else
     Result := DeleteKey('HKLM', KEY_STARTUP_DISABLED, Name);
 end;
@@ -2033,10 +2033,14 @@ var
   Reg: TRegistry;
 
 begin
-  // Enabled or Windows 8?
   if (FEnabled or CheckWin32Version(6, 2)) then
   begin
-    Result := inherited Rename(ANewCaption) and Rename(Location, ANewCaption);
+    Result := Rename(Location, ANewCaption, True);
+
+    if CheckWin32Version(6, 2) then
+      Result := inherited Rename(ANewCaption);
+
+    Name := ANewCaption;
     Exit;
   end;  //of begin
 
@@ -2718,6 +2722,8 @@ var
 
 begin
   Items := TStringList.Create;
+
+  // Status in stored in 64-Bit registry
   Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ);
 
   try
