@@ -72,14 +72,14 @@ type
     function GetFullPathEscaped(): string;
   public
     constructor Create(AFileName, ABackupExtension: string); overload;
-    constructor Create(AName: string; AAllUsers: Boolean); overload;
+    constructor Create(AName: string; ACommonStartup: Boolean); overload;
     function BackupExists(): Boolean; deprecated 'Since Windows 8';
     procedure CreateBackup(); deprecated 'Since Windows 8';
     function Delete(): Boolean;
     function DeleteBackup(): Boolean; deprecated 'Since Windows 8';
     function Exists(): Boolean;
     class function GetBackupDir(): string; deprecated 'Since Windows 8';
-    class function GetStartUpDir(AAllUsers: Boolean): string;
+    class function GetStartUpDir(ACommonStartup: Boolean): string;
     function HasArguments(): Boolean;
     function ReadLnkFile(): Boolean;
     function WriteLnkFile(): Boolean; overload;
@@ -269,6 +269,7 @@ type
   { TStartupUserItem }
   TStartupUserItem = class(TStartupListItem)
   private
+    FStartupUser: Boolean;
     FLnkFile: TLnkFile;
     function AddCircumflex(const AName: string): string;
   protected
@@ -282,6 +283,7 @@ type
     procedure ExportItem(const AFileName: string); override;
     function Rename(const ANewCaption: string): Boolean; override;
     { external }
+    property StartupUser: Boolean read FStartupUser write FStartupUser;
     property LnkFile: TLnkFile read FLnkFile write FLnkFile;
   end;
 
@@ -291,15 +293,15 @@ type
     FDeleteBackup: Boolean;
     function DeleteBackupFile(): Boolean; deprecated 'Since Windows 8';
     function GetStartupUserType(AReg: TRegistry): string; overload; deprecated 'Since Windows 8';
-    function GetStartupUserType(AAllUsers: Boolean): string; overload;
+    function GetStartupUserType(ACommonStartup: Boolean): string; overload;
   protected
     function AddItemDisabled(AReg: TRegistry; AWow64: Boolean): Integer; deprecated 'Since Windows 8';
     function AddItem(AHKey: HKEY; AKeyPath, AName, AFileName: string; AWow64,
       ARunOnce: Boolean): Integer;
     function AddNewStartupUserItem(AName, AFilePath: string; AArguments: string = '';
-      AAllUsers: Boolean = False): Boolean;
+      ACommonStartup: Boolean = False): Boolean;
     function AddUserItemDisabled(AReg: TRegistry): Integer; deprecated 'Since Windows 8';
-    function AddUserItem(ALnkFile: TLnkFile; AAllUsers: Boolean): Integer;
+    function AddUserItem(ALnkFile: TLnkFile; ACommonStartup: Boolean): Integer;
     procedure LoadStatus(AHKey: HKEY; AKeyPath: string);
   public
     constructor Create;
@@ -312,7 +314,7 @@ type
     function ImportBackup(const AFileName: string): Boolean;
     procedure Load(AExpertMode: Boolean = False); override;
     procedure LoadDisabled(AStartupUser: Boolean; AWow64: Boolean = False); deprecated 'Since Windows 8';
-    procedure LoadStartup(AAllUsers: Boolean); overload;
+    procedure LoadStartup(ACommonStartup: Boolean); overload;
     procedure LoadStartup(AHKey: HKEY; ARunOnce: Boolean = False;
       AWow64: Boolean = False); overload;
     { external }
@@ -527,12 +529,12 @@ end;
 
   Constructor for creating a TLnkFile instance. }
 
-constructor TLnkFile.Create(AName: string; AAllUsers: Boolean);
+constructor TLnkFile.Create(AName: string; ACommonStartup: Boolean);
 begin
   inherited Create;
-  FFileName := GetStartUpDir(AAllUsers) + AName;
+  FFileName := GetStartUpDir(ACommonStartup) + AName;
 
-  if AAllUsers then
+  if ACommonStartup then
     FBackupExt := EXT_COMMON
   else
     FBackupExt := EXT_USER;
@@ -647,9 +649,9 @@ end;
 
   Returns the file system startup location of current user or all. }
 
-class function TLnkFile.GetStartUpDir(AAllUsers: Boolean): string;
+class function TLnkFile.GetStartUpDir(ACommonStartup: Boolean): string;
 begin
-  if AAllUsers then
+  if ACommonStartup then
     GetFolderPath(CSIDL_COMMON_STARTUP, Result)
   else
     GetFolderPath(CSIDL_STARTUP, Result);
@@ -1720,7 +1722,7 @@ var
 begin
   Result := False;
 
-  if (FEnabled and FWow64) then
+  if ((FEnabled or CheckWin32Version(6, 2)) and FWow64) then
     Reg := TRegistry.Create(KEY_WOW64_32KEY or KEY_READ or KEY_WRITE)
   else
     Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
@@ -1739,7 +1741,7 @@ begin
 
     // Value must exist!
     if not Reg.ValueExists(ItemName) then
-      raise EStartupException.Create('Value does not exist!');
+      raise EStartupException.Create('Value '''+ ItemName +''' does not exist!');
 
     // Change path
     Reg.WriteString(ItemName, ANewFileName);
@@ -1814,6 +1816,7 @@ begin
   RegFile := TRegistryFile.Create(AFileName, True);
 
   try
+    // TODO: Windows 8 support
     if FEnabled then
       RegFile.ExportReg(FRootKey, GetWow64Key(), Name)
     else
@@ -1856,7 +1859,13 @@ end;
 function TStartupItem.Delete(): Boolean;
 begin
   if (FEnabled or CheckWin32Version(6, 2)) then
-    Result := inherited Delete() and DeleteValue(Location, True)
+  begin
+    Result := DeleteValue(Location, True);
+
+    // Windows 8?
+    if (Result and CheckWin32Version(6, 2)) then
+      Result := inherited Delete();
+  end  //of begin
   else
     Result := DeleteKey('HKLM', KEY_STARTUP_DISABLED, Name);
 end;
@@ -2037,7 +2046,8 @@ begin
   begin
     Result := Rename(Location, ANewCaption, True);
 
-    if CheckWin32Version(6, 2) then
+    // Windows 8?
+    if (Result and CheckWin32Version(6, 2)) then
       Result := inherited Rename(ANewCaption);
 
     Name := ANewCaption;
@@ -2455,18 +2465,18 @@ end;
 
   Returns the startup item type. }
 
-function TStartupList.GetStartupUserType(AAllUsers: Boolean): string;
+function TStartupList.GetStartupUserType(ACommonStartup: Boolean): string;
 begin
   // Windows >= Vista?
   if CheckWin32Version(6) then
   begin
-    if AAllUsers then
+    if ACommonStartup then
       Result := TYPE_COMMON
     else
       Result := TYPE_USER;
   end  //of begin
   else
-    if AAllUsers then
+    if ACommonStartup then
       Result := TYPE_COMMON_XP
     else
       Result := TYPE_USER_XP;
@@ -2594,7 +2604,7 @@ end;
   Adds a new startup user item to the autostart. }
 
 function TStartupList.AddNewStartupUserItem(AName, AFilePath: string;
-  AArguments: string = ''; AAllUsers: Boolean = False): Boolean;
+  AArguments: string = ''; ACommonStartup: Boolean = False): Boolean;
 var
   LnkFile: TLnkFile;
 
@@ -2603,14 +2613,21 @@ begin
     AName := AName +'.lnk';
 
   // Init .lnk file
-  LnkFile := TLnkFile.Create(AName, AAllUsers);
+  LnkFile := TLnkFile.Create(AName, ACommonStartup);
 
   // Link file created successfully?
   if not LnkFile.WriteLnkFile(LnkFile.FileName, AFilePath, AArguments) then
     raise EStartupException.Create('Could not create .lnk file '''+ LnkFile.FileName +'''!');
 
   // Add item to list
-  Result := (AddUserItem(LnkFile, AAllUsers) <> -1);
+  if (AddUserItem(LnkFile, ACommonStartup) <> -1) then
+  begin
+    // Windows 8?
+    if CheckWin32Version(6, 2) then
+      Result := Last.Enable()
+    else
+      Result := True;
+  end;  //of begin
 end;
 
 { protected TStartupList.AddUserItemDisabled
@@ -2641,9 +2658,15 @@ begin
       Path := AReg.ReadString('path');
 
       if ((TypeOf = TYPE_USER) or (TypeOf = TYPE_USER_XP)) then
-        Ext := EXT_USER
+      begin
+        StartupUser := True;
+        Ext := EXT_USER;
+      end  //of begin
       else
+      begin
+        StartupUser := True;
         Ext := EXT_COMMON;
+      end;  //of if
 
       // Setup .lnk
       LnkFile := TLnkFile.Create(Path, Ext);
@@ -2663,7 +2686,7 @@ end;
 
   Adds a enabled startup user item to the list. }
 
-function TStartupList.AddUserItem(ALnkFile: TLnkFile; AAllUsers: Boolean): Integer;
+function TStartupList.AddUserItem(ALnkFile: TLnkFile; ACommonStartup: Boolean): Integer;
 var
   Item: TStartupUserItem;
 
@@ -2681,12 +2704,13 @@ begin
       LnkFile := ALnkFile;
       Name := ExtractFileName(ALnkFile.FileName);
       Time := '';
-      TypeOf := GetStartupUserType(AAllUsers);
+      StartupUser := not ACommonStartup;
+      TypeOf := GetStartupUserType(ACommonStartup);
 
       // Windows 8?
       if CheckWin32Version(6, 2) then
       begin
-        if AAllUsers then
+        if ACommonStartup then
           RootKey := HKEY_LOCAL_MACHINE
         else
           RootKey := HKEY_CURRENT_USER;
@@ -2710,18 +2734,18 @@ end;
 
 { protected TStartupList.LoadStatus
 
-  Loads and refreshes the status of all list items. }
+  Loads and refreshes the status of all list items (since Windows 8). }
 
 procedure TStartupList.LoadStatus(AHKey: HKEY; AKeyPath: string);
 var
   Reg: TRegistry;
   i: Integer;
-  Items: TStringList;
+  StartupItems: TStringList;
   Item: TStartupListItem;
   Data: TBytes;
 
 begin
-  Items := TStringList.Create;
+  StartupItems := TStringList.Create;
 
   // Status in stored in 64-Bit registry
   Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ);
@@ -2729,13 +2753,13 @@ begin
   try
     Reg.RootKey := AHKey;
     Reg.OpenKey(AKeyPath, False);
-    Reg.GetValueNames(Items);
+    Reg.GetValueNames(StartupItems);
 
     for i := 0 to Count - 1 do
     begin
-      Item := Self.Items[i];
+      Item := Items[i];
 
-      if (Items.IndexOf(Item.Name) <> -1) then
+      if (StartupItems.IndexOf(Item.Name) <> -1) then
       begin
         SetLength(Data, Reg.GetDataSize(Item.Name));
         Reg.ReadBinaryData(Item.Name, Data[0], Length(Data));
@@ -2749,7 +2773,7 @@ begin
   finally
     Reg.CloseKey();
     Reg.Free;
-    Items.Free;
+    StartupItems.Free;
   end;  //of try
 end;
 
@@ -2812,8 +2836,15 @@ begin
         Reg.WriteString(ACaption, FullPath);
 
         // Adds item to list
-        Result := (AddItem(HKEY_CURRENT_USER, KEY_STARTUP_RUN, ACaption,
-          FullPath, False, False) <> -1);
+        if (AddItem(HKEY_CURRENT_USER, KEY_STARTUP_RUN, ACaption, FullPath,
+          False, False) <> -1) then
+        begin
+          // Windows 8?
+          if CheckWin32Version(6, 2) then
+            Result := Last.Enable()
+          else
+            Result := True;
+        end;  //of begin
 
       finally
         Reg.CloseKey();
@@ -3055,7 +3086,7 @@ end;
 
   Searches for enabled startup user items and adds them to the list. }
 
-procedure TStartupList.LoadStartup(AAllUsers: Boolean);
+procedure TStartupList.LoadStartup(ACommonStartup: Boolean);
 var
   LnkFiles: TStringList;
   SearchResult: TSearchRec;
@@ -3068,7 +3099,7 @@ begin
 
   // Retrieve a list containing all enabled startup user .lnk files
   try
-    Folder := TLnkFile.GetStartUpDir(AAllUsers);
+    Folder := TLnkFile.GetStartUpDir(ACommonStartup);
 
     if (FindFirst(Folder +'*.lnk', faAnyFile, SearchResult) = 0) then
       try
@@ -3086,8 +3117,8 @@ begin
     // Add every file to list
     for i := 0 to LnkFiles.Count - 1 do
     begin
-      LnkFile := TLnkFile.Create(ExtractFileName(LnkFiles[i]), AAllUsers);
-      AddUserItem(LnkFile, AAllUsers);
+      LnkFile := TLnkFile.Create(ExtractFileName(LnkFiles[i]), ACommonStartup);
+      AddUserItem(LnkFile, ACommonStartup);
     end;  //of begin
 
     // Windows 8?
@@ -3406,7 +3437,7 @@ begin
 
     // Delete disable value, but do not fail if value does not exist!
     if (Reg.ValueExists(CM_SHELL_DISABLED) and not Reg.DeleteValue(CM_SHELL_DISABLED)) then
-      raise EStartupException.Create('Could not delete value!');
+      raise EStartupException.Create('Could not delete value '''+ CM_SHELL_DISABLED +'''!');
 
     // Update status
     FEnabled := True;

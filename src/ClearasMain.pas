@@ -184,7 +184,7 @@ type
     FTasks: TTaskList;
     FLang: TLanguageFile;
     FUpdateCheck: TUpdateCheck;
-    function CreateStartupUserBackup(): Boolean; deprecated 'Since Windows 8';
+    function CreateStartupUserBackup(): Boolean;
     function DeleteItem(AConfirmMessageId: Word): Boolean;
     procedure DeleteStartupItem(Sender: TObject);
     function DisableItem(): Boolean;
@@ -320,14 +320,14 @@ begin
   lWindows3.Caption := lWindows.Caption;
   lWindows4.Caption := lWindows.Caption;
 
-  // Show "date of deactivation" only on Vista and later
-  mmDate.Enabled := TOSVersion.Check(6);
-
   // Update Clearas recycle bin context menu entry
   mmContext.Checked := UpdateContextPath();
 
-  // Load autostart
-  FStartup.Load();
+  // Backups are deprecated since Windows 8
+  mmDelBackup.Visible := not CheckWin32Version(6, 2);
+
+  // Load items
+  PageControlChange(Sender);
 end;
 
 { private TMain.OnUpdate
@@ -385,6 +385,9 @@ end;
   Creates a special .lnk backup for currently selected enabled startup user item. }
 
 function TMain.CreateStartupUserBackup(): Boolean;
+var
+  Filter, FileName: string;
+
 begin
   Result := False;
 
@@ -393,16 +396,43 @@ begin
     if (not Assigned(lwStartup.ItemFocused) or not Assigned(FStartup.Selected)) then
       raise EInvalidItem.Create('No item selected!');
 
-    // Special .lnk file backup only for enabled startup user entries!
-    if (not CheckWin32Version(6, 2) and FStartup.Selected.Enabled and
-      (FStartup.Selected is TStartupUserItem)) then
+    // Special .lnk file backup only for enabled startup user items!
+    if (FStartup.Selected is TStartupUserItem) then
     begin
-      FStartup.Selected.ExportItem('');
-      FLang.ShowMessage(FLang.Format(42, [(FStartup.Selected as TStartupUserItem).LnkFile.BackupLnk]));
+      // Windows 8?
+      if CheckWin32Version(6, 2) then
+      begin
+        if (FStartup.Selected as TStartupUserItem).StartupUser then
+        begin
+          Filter := FStartup.Selected.TypeOf +'|*'+ EXT_USER;
+          FileName := FStartup.Selected.Name + EXT_USER;
+        end  //of begin
+        else
+        begin
+          Filter := FStartup.Selected.TypeOf +'|*'+ EXT_COMMON;
+          FileName := FStartup.Selected.Name + EXT_COMMON;
+        end;  //of if
 
-      bExportStartupItem.Enabled := False;
-      pmExport.Enabled := False;
-      Result := True;
+        // Show save dialog
+        if PromptForFileName(FileName, Filter, EXT_USER,
+          bExportStartupItem.Caption, '%USERPROFILE%', True) then
+        begin
+          FStartup.Selected.ExportItem(FileName);
+          Result := True;
+        end;  //of begin
+      end  //of begin
+      else
+        if FStartup.Selected.Enabled then
+        begin
+          FStartup.Selected.ExportItem('');
+          FLang.ShowMessage(FLang.Format(42, [(FStartup.Selected as TStartupUserItem).LnkFile.BackupLnk]));
+          bExportStartupItem.Enabled := False;
+          pmExport.Enabled := False;
+          Result := True;
+        end  //of if
+        else
+          // Default .reg file export
+          Result := ShowExportItemDialog();
     end  //of begin
     else
       // Default .reg file export
@@ -2548,11 +2578,14 @@ begin
   try
     case PageControl.ActivePageIndex of
       0: begin
-           BackupDir := TLnkFile.GetBackupDir();
+           if not CheckWin32Version(6, 2) then
+           begin
+             BackupDir := TLnkFile.GetBackupDir();
 
-           // Create Backup directory if not exists
-           if not DirectoryExists(BackupDir) then
-             ForceDirectories(BackupDir);
+             // Create Backup directory if not exists
+             if not DirectoryExists(BackupDir) then
+               ForceDirectories(BackupDir);
+           end;  //of begin
 
            Filter := Format(FLang.GetString(109), [EXT_USER, EXT_USER,
              EXT_COMMON, EXT_COMMON]);
@@ -2783,45 +2816,49 @@ begin
   case PageControl.ActivePageIndex of
     0: begin
          mmAdd.Caption := FLang.GetString(69);
-         mmImport.Visible := True;
-         mmDate.Visible := True;
+         mmImport.Enabled := True;
+         mmDate.Enabled := ((Win32MajorVersion = 6) and (Win32MinorVersion < 2));
          lwStartupSelectItem(Sender, lwStartup.ItemFocused, True);
          ShowColumnDate(lwStartup, mmDate.Checked);
+
+         // Load startup items dynamically
+         if (Assigned(FContext) and (FContext.Count = 0)) then
+           LoadItems();
        end;
 
     1: begin
          mmAdd.Caption := FLang.GetString(105);
-         mmImport.Visible := False;
-         mmDate.Visible := False;
+         mmImport.Enabled := False;
+         mmDate.Enabled := False;
          lwContextSelectItem(Sender, lwContext.ItemFocused, True);
 
-         // Load context menu entries dynamically
+         // Load context menu items dynamically
          if (Assigned(FContext) and (FContext.Count = 0)) then
            LoadItems();
        end;
 
     2: begin
          mmAdd.Caption := FLang.GetString(57);
-         mmImport.Visible := False;
-         mmDate.Visible := True;
+         mmImport.Enabled := False;
+         mmDate.Enabled := True;
          lwServiceSelectItem(Sender, lwService.ItemFocused, True);
          ShowColumnDate(lwService, mmDate.Checked);
 
-         // Load context menu entries dynamically
+         // Load service items dynamically
          if (Assigned(FService) and (FService.Count = 0)) then
            LoadItems();
        end;
 
     3: begin
          mmAdd.Caption := FLang.GetString(117);
-         mmImport.Visible := True;
-         mmDate.Visible := False;
+         mmImport.Enabled := True;
+         mmDate.Enabled := False;
          lwTasksSelectItem(Sender, lwTasks.ItemFocused, True);
 
          // Load task items dynamically
          if not Assigned(FTasks) then
          begin
-           mmImport.Visible := False;
+           mmImport.Enabled := False;
            FLang.ShowMessage('Scheduled tasks feature requires at least Windows Vista!', mtWarning);
          end  //of begin
          else
