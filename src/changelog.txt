@@ -6,18 +6,19 @@ Changelog
 
 Version 4.2  [??.??.15]
 
+- Autostart-Freature: Unterstützung von Windows 8
 - Neues Feature "Aufgaben":
   - Ermöglicht Bearbeiten von geplanten Aufgaben
   - "Einträge exportieren" speichert alle Aufgaben als ZIP-Datei
   - "Backup importieren" importiert eine zuvor exportierte Aufgabe als XML-Datei
   - "Expertenmodus" findet versteckte Aufgaben
-- Unterstützung von Windows 8
 - Änderungen am Popup Menü:
   - "Umbenennen" hinzugefügt
   - "Icon ändern" für Kontextmenü-Einträge vom Typ "Shell" hinzugefügt
 - "In Explorer öffnen" verbessert
 - Event-System verbessert
 - Nutzung von generischen Container-Klassen (Generics)
+- Menüeinträge werden nur noch deaktiviert (ausgegraut) anstatt versteckt
 
 ---------------------------------
 

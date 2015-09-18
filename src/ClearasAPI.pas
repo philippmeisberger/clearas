@@ -302,7 +302,6 @@ type
       ACommonStartup: Boolean = False): Boolean;
     function AddUserItemDisabled(AReg: TRegistry): Integer; deprecated 'Since Windows 8';
     function AddUserItem(ALnkFile: TLnkFile; ACommonStartup: Boolean): Integer;
-    procedure LoadStatus(AHKey: HKEY; AKeyPath: string);
   public
     constructor Create;
     function Add(AFileName, AArguments, ACaption: string): Boolean; reintroduce;
@@ -317,6 +316,7 @@ type
     procedure LoadStartup(ACommonStartup: Boolean); overload;
     procedure LoadStartup(AHKey: HKEY; ARunOnce: Boolean = False;
       AWow64: Boolean = False); overload;
+    procedure LoadStatus(AHKey: HKEY; AKeyPath: string);
     { external }
     property DeleteBackup: Boolean read FDeleteBackup write FDeleteBackup;
   end;
@@ -1772,6 +1772,7 @@ var
   Data: TBytes;
 
 begin
+  Result := False;
   SetLength(Data, 12);
   Data[0] := 3;
 
@@ -1794,6 +1795,7 @@ var
   Data: TBytes;
 
 begin
+  Result := False;
   SetLength(Data, 12);
   Data[0] := 2;
 
@@ -2732,51 +2734,6 @@ begin
   end;  //of try
 end;
 
-{ protected TStartupList.LoadStatus
-
-  Loads and refreshes the status of all list items (since Windows 8). }
-
-procedure TStartupList.LoadStatus(AHKey: HKEY; AKeyPath: string);
-var
-  Reg: TRegistry;
-  i: Integer;
-  StartupItems: TStringList;
-  Item: TStartupListItem;
-  Data: TBytes;
-
-begin
-  StartupItems := TStringList.Create;
-
-  // Status in stored in 64-Bit registry
-  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ);
-
-  try
-    Reg.RootKey := AHKey;
-    Reg.OpenKey(AKeyPath, False);
-    Reg.GetValueNames(StartupItems);
-
-    for i := 0 to Count - 1 do
-    begin
-      Item := Items[i];
-
-      if (StartupItems.IndexOf(Item.Name) <> -1) then
-      begin
-        SetLength(Data, Reg.GetDataSize(Item.Name));
-        Reg.ReadBinaryData(Item.Name, Data[0], Length(Data));
-        Item.Enabled := (Data[0] = 2);
-
-        if (Item.Enabled) then
-          Inc(FActCount);
-      end;  //of begin
-    end;  //of for
-
-  finally
-    Reg.CloseKey();
-    Reg.Free;
-    StartupItems.Free;
-  end;  //of try
-end;
-
 { public TStartupList.Add
 
   Adds a new startup item to autostart. }
@@ -2819,7 +2776,8 @@ begin
     end  //of begin
     else
     begin
-      Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_WRITE);
+      // No WOW64 redirection on HKCU!
+      Reg := TRegistry.Create(KEY_WRITE);
 
       // Try to add new startup item to Registry
       try
@@ -3029,7 +2987,7 @@ end;
 
 { public TStartupList.LoadDisabled
 
-  Searches for disabled items in AKeyPath and adds them to the list. }
+  Searches for disabled items and adds them to the list. }
 
 procedure TStartupList.LoadDisabled(AStartupUser: Boolean; AWow64: Boolean = False);
 var
@@ -3121,13 +3079,6 @@ begin
       AddUserItem(LnkFile, ACommonStartup);
     end;  //of begin
 
-    // Windows 8?
-    if CheckWin32Version(6, 2) then
-    begin
-      LoadStatus(HKEY_LOCAL_MACHINE, KEY_STARTUP_USER_APPROVED);
-      LoadStatus(HKEY_CURRENT_USER, KEY_STARTUP_USER_APPROVED);
-    end;  //of begin
-
   finally
     LnkFiles.Free;
   end;  //of try
@@ -3167,23 +3118,58 @@ begin
 
     for i := 0 to Items.Count - 1 do
       // Read path to .exe and add item to list
-      AddItem(AHKey, KeyPath, Items[i], Reg.ReadString(Items[i]), AWow64,
-        ARunOnce);
-
-    // Windows 8?
-    if CheckWin32Version(6, 2) then
-    begin
-      if AWow64 then
-        LoadStatus(AHKey, KEY_STARTUP_RUN32_APPROVED)
-      else
-        LoadStatus(AHKey, KEY_STARTUP_RUN_APPROVED);
-    end;  //of begin
+      AddItem(AHKey, KeyPath, Items[i], Reg.ReadString(Items[i]), AWow64, ARunOnce);
 
   finally
     Reg.CloseKey();
     Reg.Free;
     Items.Free;
   end;  //of finally
+end;
+
+{ public TStartupList.LoadStatus
+
+  Loads and refreshes the status of all list items (since Windows 8). }
+
+procedure TStartupList.LoadStatus(AHKey: HKEY; AKeyPath: string);
+var
+  Reg: TRegistry;
+  i: Integer;
+  Items: TStringList;
+  Item: TStartupListItem;
+  Data: TBytes;
+
+begin
+  Items := TStringList.Create;
+
+  // Status is stored in 64-Bit registry
+  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ);
+
+  try
+    Reg.RootKey := AHKey;
+    Reg.OpenKey(AKeyPath, False);
+    Reg.GetValueNames(Items);
+
+    for i := 0 to Count - 1 do
+    begin
+      Item := Self.Items[i];
+
+      if (Items.IndexOf(Item.Name) <> -1) then
+      begin
+        SetLength(Data, Reg.GetDataSize(Item.Name));
+        Reg.ReadBinaryData(Item.Name, Data[0], Length(Data));
+        Item.Enabled := (Data[0] = 2);
+
+        if (Item.Enabled) then
+          Inc(FActCount);
+      end;  //of begin
+    end;  //of for
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
+    Items.Free;
+  end;  //of try
 end;
 
 
@@ -5166,7 +5152,6 @@ end;
 
 destructor TTaskList.Destroy;
 begin
-  FTaskService._Release();
   CoUninitialize();
   inherited Destroy;
 end;

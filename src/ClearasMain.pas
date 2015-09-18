@@ -301,9 +301,18 @@ end;
 
 procedure TMain.FormDestroy(Sender: TObject);
 begin
-  FService.Free;
-  FContext.Free;
-  FStartup.Free;
+  if Assigned(FTasks) then
+    FTasks.Free;
+
+  if Assigned(FService) then
+    FService.Free;
+
+  if Assigned(FContext) then
+    FContext.Free;
+
+  if Assigned(FStartup) then
+    FStartup.Free;
+
   FUpdateCheck.Free;
   FLang.Free;
 end;
@@ -382,7 +391,7 @@ end;
 
 { private TMain.CreateStartupUserBackup
 
-  Creates a special .lnk backup for currently selected enabled startup user item. }
+  Creates a special .lnk backup for currently selected startup user item. }
 
 function TMain.CreateStartupUserBackup(): Boolean;
 var
@@ -414,8 +423,8 @@ begin
         end;  //of if
 
         // Show save dialog
-        if PromptForFileName(FileName, Filter, EXT_USER,
-          bExportStartupItem.Caption, '%USERPROFILE%', True) then
+        if PromptForFileName(FileName, Filter, '', bExportStartupItem.Caption,
+          '%USERPROFILE%', True) then
         begin
           FStartup.Selected.ExportItem(FileName);
           Result := True;

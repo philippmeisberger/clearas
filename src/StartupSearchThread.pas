@@ -129,13 +129,29 @@ begin
           LoadEnabled(HKEY_LOCAL_MACHINE, True, True);
       end;  //of begin
 
-      // Load WOW6432 Registry key only on 64bit Windows
+      // Load WOW6432 Registry key only on 64-Bit Windows (deprecated since Windows 8!)
       LoadDisabled(False, FWin64);
       LoadDisabled(True, FWin64);
 
       // Load startup user items
       LoadEnabled(True);
       LoadEnabled(False);
+
+      // Windows 8?
+      if CheckWin32Version(6, 2) then
+        with TStartupList(FSelectedList) do
+        begin
+          if FWin64 then
+          begin
+            LoadStatus(HKEY_CURRENT_USER, KEY_STARTUP_RUN32_APPROVED);
+            LoadStatus(HKEY_LOCAL_MACHINE, KEY_STARTUP_RUN32_APPROVED);
+          end;  //of begin
+
+          LoadStatus(HKEY_LOCAL_MACHINE, KEY_STARTUP_USER_APPROVED);
+          LoadStatus(HKEY_CURRENT_USER, KEY_STARTUP_USER_APPROVED);
+          LoadStatus(HKEY_CURRENT_USER, KEY_STARTUP_RUN_APPROVED);
+          LoadStatus(HKEY_LOCAL_MACHINE, KEY_STARTUP_RUN_APPROVED);
+        end;  //of begin
 
     finally
       // Notify end of search
