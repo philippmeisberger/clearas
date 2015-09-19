@@ -2871,9 +2871,11 @@ var
   i: Integer;
   RegFile: TRegistryFile;
   Item: TStartupListItem;
+  Win8: Boolean;
 
 begin
-  FLock.Acquire;
+  FLock.Acquire();
+  Win8 := CheckWin32Version(6, 2);
 
   // Init Reg file
   RegFile := TRegistryFile.Create(AFileName, True);
@@ -2884,11 +2886,18 @@ begin
       Item := TStartupListItem(Items[i]);
 
       // Skip enabled startup user items (not in Registry)!
-      if ((Item is TStartupUserItem) and Item.Enabled) then
+      if ((Item is TStartupUserItem) and (Item.Enabled or Win8)) then
         Continue;
 
-      RegFile.ExportKey(Item.RootKey, Item.GetWow64Key(), True);
+      RegFile.ExportKey(Item.RootKey, Item.Wow64Location, True);
     end;  //of for
+
+    // Windows 8?
+    if Win8 then
+    begin
+      RegFile.ExportKey(HKEY_CURRENT_USER, KEY_STARTUP_APPROVED, True);
+      RegFile.ExportKey(HKEY_LOCAL_MACHINE, KEY_STARTUP_APPROVED, True);
+    end;  //of begin
 
     // Save file
     RegFile.Save();

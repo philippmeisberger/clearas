@@ -1,6 +1,6 @@
 { *********************************************************************** }
 {                                                                         }
-{ PM Code Works Initialization file parser Unit v1.2                      }
+{ PM Code Works Initialization file parser Unit v1.2.1                    }
 {                                                                         }
 { Copyright (c) 2011-2015 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
@@ -1096,7 +1096,8 @@ begin
       for i := 0 to Keys.Count -1 do
       begin
         FReg.CloseKey();
-        ExportKey(AHKey, AKeyPath +'\'+ Keys[i], True, AFilterValues, AFilterTypes);
+        ExportKey(AHKey, IncludeTrailingPathDelimiter(AKeyPath) + Keys[i], True,
+          AFilterValues, AFilterTypes);
       end;  //of for
     end;  //of begin
 
@@ -1180,7 +1181,7 @@ end;
 
 function TRegistryFile.GetSection(AHKey: HKEY; AKeyPath: string): string;
 begin
-  Result := HKeyToStr(AHKey) +'\'+ AKeyPath;
+  Result := ExcludeTrailingPathDelimiter(HKeyToStr(AHKey) +'\'+ AKeyPath);
 end;
 
 { public TRegistryFile.MakeHeadline
