@@ -2828,7 +2828,7 @@ begin
          mmImport.Enabled := True;
          mmDate.Enabled := ((Win32MajorVersion = 6) and (Win32MinorVersion < 2));
          lwStartupSelectItem(Sender, lwStartup.ItemFocused, True);
-         ShowColumnDate(lwStartup, mmDate.Checked);
+         ShowColumnDate(lwStartup, (mmDate.Enabled and mmDate.Checked));
 
          // Load startup items dynamically
          if (Assigned(FContext) and (FContext.Count = 0)) then

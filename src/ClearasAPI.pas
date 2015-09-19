@@ -1059,7 +1059,7 @@ end;
 
 function TRegistryItem.GetWow64Key(): string;
 begin
-  if (FEnabled and FWow64) then
+  if ((FEnabled or CheckWin32Version(6, 2)) and FWow64) then
   begin
     if (ExtractFileName(FLocation) = 'RunOnce') then
       Result := KEY_STARTUP_RUNONCE32
@@ -1818,9 +1818,14 @@ begin
   RegFile := TRegistryFile.Create(AFileName, True);
 
   try
-    // TODO: Windows 8 support
-    if FEnabled then
-      RegFile.ExportReg(FRootKey, GetWow64Key(), Name)
+    if (FEnabled or CheckWin32Version(6, 2)) then
+    begin
+      RegFile.ExportReg(FRootKey, GetWow64Key(), Name);
+
+      // Windows 8?
+      if CheckWin32Version(6, 2) then
+        RegFile.ExportReg(FRootKey, FApprovedLocation, Name);
+    end  //of begin
     else
       RegFile.ExportReg(FRootKey, FLocation, False);
 
