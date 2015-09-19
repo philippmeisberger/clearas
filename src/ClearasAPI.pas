@@ -755,8 +755,8 @@ begin
       ShellLink.SetWorkingDirectory(PChar(ExtractFilePath(AExeFileName)));
 
       // Save .lnk
-      if Succeeded(ShellLink.QueryInterface(IPersistFile, PersistFile)) then
-        Result := Succeeded(PersistFile.Save(PChar(AFileName), True));
+      OleCheck(ShellLink.QueryInterface(IPersistFile, PersistFile));
+      Result := Succeeded(PersistFile.Save(PChar(AFileName), True));
     end; //of begin
 
   finally
@@ -2046,7 +2046,7 @@ var
 begin
   if (FEnabled or CheckWin32Version(6, 2)) then
   begin
-    Result := Rename(Location, ANewCaption, True);
+    Result := Rename(FLocation, ANewCaption, True);
 
     // Windows 8?
     if (Result and CheckWin32Version(6, 2)) then
@@ -2144,14 +2144,15 @@ var
   NewFilePath, Arguments: string;
 
 begin
-  if not FEnabled and not CheckWin32Version(6, 2) then
+  if (not FEnabled and not CheckWin32Version(6, 2)) then
     inherited ChangeFilePath(ANewFileName);
 
   NewFilePath := DeleteQuoteChars(ExtractPathToFile(ANewFileName));
   Arguments := DeleteQuoteChars(ExtractArguments(ANewFileName));
 
   // Failed to create new .lnk file?
-  if (FEnabled and not FLnkFile.WriteLnkFile(FLocation, NewFilePath, Arguments)) then
+  if ((FEnabled or CheckWin32Version(6, 2)) and not FLnkFile.WriteLnkFile(
+    FLocation, NewFilePath, Arguments)) then
     raise EStartupException.Create('Could not create .lnk file!');
 
   // Update information
@@ -2205,12 +2206,7 @@ begin
   // Windows 8?
   if CheckWin32Version(6, 2) then
   begin
-    if inherited Disable() then
-    begin
-      FLocation := FApprovedLocation;
-      Result := True;
-    end;  //of begin
-
+    Result := inherited Disable();
     Exit;
   end;  //of begin
 
@@ -2277,12 +2273,7 @@ begin
   // Windows 8?
   if CheckWin32Version(6, 2) then
   begin
-    if inherited Enable() then
-    begin
-      FLocation := FLnkFile.FileName;
-      Result := True;
-    end;  //of begin
-
+    Result := inherited Enable();
     Exit;
   end;  //of begin
 
@@ -2505,8 +2496,8 @@ begin
     with Item do
     begin
       RootKey := HKEY_LOCAL_MACHINE;
-      FLocation := AReg.CurrentPath;
-      Name := ExtractFileName(FLocation);
+      Location := AReg.CurrentPath;
+      Name := ExtractFileName(Location);
       FileName := AReg.ReadString('command');
       Time := GetTimestamp(AReg);
 
@@ -2552,7 +2543,7 @@ begin
     with Item do
     begin
       RootKey := AHKey;
-      FLocation := AKeyPath;
+      Location := AKeyPath;
       Name := AName;
       FileName := AFileName;
       Time := '';
@@ -2626,7 +2617,10 @@ begin
   begin
     // Windows 8?
     if CheckWin32Version(6, 2) then
-      Result := Last.Enable()
+    begin
+      Result := Last.Enable();
+      Inc(FActCount);
+    end  //of begin
     else
       Result := True;
   end;  //of begin
@@ -2652,23 +2646,18 @@ begin
     with (Item as TStartupUserItem) do
     begin
       RootKey := HKEY_LOCAL_MACHINE;
-      FLocation := AReg.CurrentPath;
-      Name := ExtractFileName(StringReplace(FLocation, '^', '\', [rfReplaceAll]));
+      Location := AReg.CurrentPath;
+      Name := ExtractFileName(StringReplace(Location, '^', '\', [rfReplaceAll]));
       FileName := AReg.ReadString('command');
       Time := GetTimestamp(AReg);
       TypeOf := GetStartupUserType(AReg);
       Path := AReg.ReadString('path');
+      StartupUser := ((TypeOf = TYPE_USER) or (TypeOf = TYPE_USER_XP));
 
-      if ((TypeOf = TYPE_USER) or (TypeOf = TYPE_USER_XP)) then
-      begin
-        StartupUser := True;
-        Ext := EXT_USER;
-      end  //of begin
+      if StartupUser then
+        Ext := EXT_USER
       else
-      begin
-        StartupUser := True;
         Ext := EXT_COMMON;
-      end;  //of if
 
       // Setup .lnk
       LnkFile := TLnkFile.Create(Path, Ext);
@@ -2701,7 +2690,7 @@ begin
 
     with Item do
     begin
-      FLocation := ALnkFile.FileName;
+      Location := ALnkFile.FileName;
       FileName := ALnkFile.FullPath;
       LnkFile := ALnkFile;
       Name := ExtractFileName(ALnkFile.FileName);
