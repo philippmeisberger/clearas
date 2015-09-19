@@ -845,6 +845,12 @@ object Main: TMain
         ShortCut = 117
         OnClick = mmDefaultClick
       end
+      object mmShowCaptions: TMenuItem
+        AutoCheck = True
+        Caption = 'Beschreibung anzeigen'
+        Checked = True
+        OnClick = mmShowCaptionsClick
+      end
       object mmDate: TMenuItem
         AutoCheck = True
         Caption = 'Deaktivierungsdatum anzeigen'
@@ -890,7 +896,7 @@ object Main: TMain
   object QuickSearchIconList: TImageList
     Left = 256
     Bitmap = {
-      494C010103000800A00110001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C010103000800A40110001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000001000000001002000000000000010
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000

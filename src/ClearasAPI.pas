@@ -191,6 +191,7 @@ type
     FOnSearchError: TSearchErrorEvent;
   protected
     FActCount: Word;
+    FInvalid: Boolean;
     FLock: TCriticalSection;
     procedure DoNotifyOnChanged(ANewStatus: TItemStatus);
     function QueryInterface(const IID: TGUID; out Obj): HRESULT; stdcall;
@@ -208,13 +209,15 @@ type
     function EnableItem(): Boolean; virtual;
     procedure ExportItem(const AFileName: string); virtual;
     procedure ExportList(const AFileName: string); virtual; abstract;
-    function IndexOf(AItemName: string): Integer; overload;
-    function IndexOf(AItemName: string; AEnabled: Boolean): Integer; overload;
+    function IndexOf(ANameOrCaption: string): Integer; overload;
+    function IndexOf(ANameOrCaption: string; AEnabled: Boolean): Integer; overload;
+    procedure Invalidate();
     function IsLocked(): Boolean;
     procedure Load(AExpertMode: Boolean = False); virtual; abstract;
     function RenameItem(const ANewCaption: string): Boolean; virtual;
     { external }
     property Enabled: Word read FActCount;
+    property IsInvalid: Boolean read FInvalid write FInvalid;
     property OnChanged: TChangeEvent read FOnChanged write FOnChanged;
     property OnSearching: TSearchEvent read FOnSearching write FOnSearching;
     property OnSearchError: TSearchErrorEvent read FOnSearchError write FOnSearchError;
@@ -292,6 +295,7 @@ type
   private
     FDeleteBackup: Boolean;
     function DeleteBackupFile(): Boolean; deprecated 'Since Windows 8';
+    function GetFileDescription(const AFileName: string): string;
     function GetStartupUserType(AReg: TRegistry): string; overload; deprecated 'Since Windows 8';
     function GetStartupUserType(ACommonStartup: Boolean): string; overload;
   protected
@@ -1216,6 +1220,7 @@ constructor TRootList<T>.Create;
 begin
   inherited Create;
   FActCount := 0;
+  FInvalid := True;
   FLock := TCriticalSection.Create;
 end;
 
@@ -1443,6 +1448,7 @@ begin
     FOnSearchFinish(Self);
 
   DoNotifyOnChanged(stDeleted);
+  FInvalid := False;
 end;
 
 { public TRootList.EnableItem
@@ -1508,26 +1514,7 @@ end;
 
   Returns the index of an item checking name only. }
 
-function TRootList<T>.IndexOf(AItemName: string): Integer;
-var
-  i: Integer;
-
-begin
-  Result := -1;
-
-  for i := 0 to Count - 1 do
-    if (TRootItem(Items[i]).Name = AItemName) then
-    begin
-      Result := i;
-      Break;
-    end;  //of begin
-end;
-
-{ public TRootList.IndexOf
-
-  Returns the index of an item checking name and status. }
-
-function TRootList<T>.IndexOf(AItemName: string; AEnabled: Boolean): Integer;
+function TRootList<T>.IndexOf(ANameOrCaption: string): Integer;
 var
   i: Integer;
   Item: TRootItem;
@@ -1539,12 +1526,46 @@ begin
   begin
     Item := Items[i];
 
-    if ((Item.Name = AItemName) and (Item.Enabled = AEnabled)) then
+    if ((Item.Name = ANameOrCaption) or (Item.Caption = ANameOrCaption)) then
     begin
       Result := i;
       Break;
     end;  //of begin
   end;  //of for
+end;
+
+{ public TRootList.IndexOf
+
+  Returns the index of an item checking name or caption and status. }
+
+function TRootList<T>.IndexOf(ANameOrCaption: string; AEnabled: Boolean): Integer;
+var
+  i: Integer;
+  Item: TRootItem;
+
+begin
+  Result := -1;
+
+  for i := 0 to Count - 1 do
+  begin
+    Item := Items[i];
+
+    if (((Item.Name = ANameOrCaption) or (Item.Caption = ANameOrCaption)) and
+      (Item.Enabled = AEnabled)) then
+    begin
+      Result := i;
+      Break;
+    end;  //of begin
+  end;  //of for
+end;
+
+{ public TRootList.Invalidate
+
+  Signals that list needs an visual update. }
+
+procedure TRootList<T>.Invalidate();
+begin
+  FInvalid := True;
 end;
 
 { public TRootList.IsLocked
@@ -2436,6 +2457,45 @@ begin
     Result := (Selected as TStartupUserItem).LnkFile.DeleteBackup();
 end;
 
+{ private TStartupList.GetFileDescription
+
+  Returns the executable file description of an TStartupListItem object. }
+
+function TStartupList.GetFileDescription(const AFileName: string): string;
+var
+  FileInfo: TSHFileInfo;
+  VersionSize, VersionHandle, BufferSize: Cardinal;
+  Buffer: PChar;
+  Description: Pointer;
+
+begin
+  if (SHGetFileInfo(PChar(AFileName), 0, FileInfo, SizeOf(FileInfo), SHGFI_EXETYPE) = 0) then
+    Exit;
+
+  VersionSize := GetFileVersionInfoSize(PChar(AFileName), VersionHandle);
+
+  if (VersionSize > 0) then
+  begin
+    GetMem(Buffer, VersionSize);
+
+    try
+      if not GetFileVersionInfo(PChar(AFileName), VersionHandle, VersionSize, Buffer) then
+        Exit;
+
+      if not VerQueryValue(Buffer, '\VarFileInfo\Translation', Description, BufferSize) then
+        Exit;
+
+      if VerQueryValue(Buffer, PChar(Format('\StringFileInfo\%.4x%.4x\%s',
+        [LoWord(Integer(Description^)), HiWord(Integer(Description^)),
+        'FileDescription'])), Description, BufferSize) then
+        Result := PChar(Description);
+
+    finally
+      FreeMem(Buffer, VersionSize);
+    end;  //of try
+  end;  //of begin
+end;
+
 { private TStartupList.GetStartupUserType
 
   Returns the startup item type. }
@@ -2504,6 +2564,7 @@ begin
       Location := AReg.CurrentPath;
       Name := ExtractFileName(Location);
       FileName := AReg.ReadString('command');
+      Caption := GetFileDescription(FileNameOnly);
       Time := GetTimestamp(AReg);
 
       // RunOnce item?
@@ -2553,6 +2614,7 @@ begin
       FileName := AFileName;
       Time := '';
       RunOnce := ARunOnce;
+      Caption := GetFileDescription(FileNameOnly);
 
       // RunOnce item?
       if (ExtractFileName(AKeyPath) = 'RunOnce') then
@@ -2699,6 +2761,7 @@ begin
       FileName := ALnkFile.FullPath;
       LnkFile := ALnkFile;
       Name := ExtractFileName(ALnkFile.FileName);
+      Caption := GetFileDescription(FileNameOnly);
       Time := '';
       StartupUser := not ACommonStartup;
       TypeOf := GetStartupUserType(ACommonStartup);

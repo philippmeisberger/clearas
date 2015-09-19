@@ -121,6 +121,7 @@ type
     pmChangeIcon: TMenuItem;
     pmDeleteIcon: TMenuItem;
     N5: TMenuItem;
+    mmShowCaptions: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -177,6 +178,7 @@ type
     procedure pmRenameClick(Sender: TObject);
     procedure pmChangeIconClick(Sender: TObject);
     procedure pmDeleteIconClick(Sender: TObject);
+    procedure mmShowCaptionsClick(Sender: TObject);
   private
     FStartup: TStartupList;
     FContext: TContextList;
@@ -277,7 +279,7 @@ begin
   end;  //of with
 
   // Task feature only for Windows >= Vista
-  if TOSVersion.Check(6) then
+  if CheckWin32Version(6) then
   begin
     FTasks := TTaskList.Create;
 
@@ -820,7 +822,7 @@ begin
   for i := 0 to FContext.Count - 1 do
   begin
     // Show name or caption of item?
-    if (FContext.Items[i].Caption <> '') then
+    if ((FContext.Items[i].Caption <> '') and mmShowCaptions.Checked) then
       Text := FContext[i].Caption
     else
       Text := FContext[i].Name;
@@ -852,6 +854,7 @@ begin
 
   // Sort!
   lwContext.AlphaSort();
+  FContext.IsInvalid := False;
 end;
 
 { private TMain.OnContextItemChanged
@@ -1032,7 +1035,12 @@ begin
       with lwStartup.Items.Add do
       begin
         Caption := FStartup[i].GetStatus(FLang);
-        SubItems.Append(FStartup[i].Name);
+
+        if ((FStartup[i].Caption <> '') and mmShowCaptions.Checked) then
+          SubItems.Append(FStartup[i].Caption)
+        else
+          SubItems.Append(FStartup[i].Name);
+
         SubItems.Append(FStartup[i].FileName);
         SubItems.Append(FStartup[i].TypeOf);
 
@@ -1057,6 +1065,7 @@ begin
 
   // Sort!
   lwStartup.AlphaSort();
+  FStartup.IsInvalid := False;
 end;
 
 { private TMain.OnServiceItemChanged
@@ -1130,7 +1139,7 @@ begin
   for i := 0 to FService.Count - 1 do
   begin
     // Show name or caption of item?
-    if (FService[i].Caption <> '') then
+    if ((FService[i].Caption <> '') and mmShowCaptions.Checked) then
       Text := FService[i].Caption
     else
       Text := FService[i].Name;
@@ -1164,6 +1173,7 @@ begin
 
   // Sort!
   lwService.AlphaSort();
+  FService.IsInvalid := False;
 end;
 
 { private TMain.OnSearchError
@@ -1254,6 +1264,7 @@ begin
 
   // Sort!
   lwTasks.AlphaSort();
+  FTasks.IsInvalid := False;
 end;
 
 { private TMain.OnTaskSearchStart
@@ -1306,6 +1317,7 @@ begin
     mmView.Caption := GetString(10);
     mmRefresh.Caption := GetString(77);
     mmDefault.Caption := GetString(78);
+    mmShowCaptions.Caption := GetString(124);
     mmDate.Caption := GetString(80);
     cbRunOnce.Caption := GetString(81);
     mmLang.Caption := GetString(25);
@@ -1395,18 +1407,21 @@ begin
     pmDeleteIcon.Caption := GetString(122);
   end;  //of with
 
-  // Update TListView captions
+  // Invalidate all lists
   if Assigned(FStartup) then
-    FStartup.DoNotifyOnFinished();
+    FStartup.Invalidate();
 
   if Assigned(FContext) then
-    FContext.DoNotifyOnFinished();
+    FContext.Invalidate();
 
   if Assigned(FService) then
-    FService.DoNotifyOnFinished();
+    FService.Invalidate();
 
   if Assigned(FTasks) then
-    FTasks.DoNotifyOnFinished();
+    FTasks.Invalidate();
+
+  // Update captions of current selected list
+  PageControlChange(Sender);
 end;
 
 { private TMain.ShowColumnDate
@@ -2690,6 +2705,19 @@ begin
   LoadItems();
 end;
 
+{ TMain.mmShowCaptionsClick
+
+  MainMenu entry to show captions instead of names. }
+
+procedure TMain.mmShowCaptionsClick(Sender: TObject);
+begin
+  FStartup.Invalidate();
+  FContext.Invalidate();
+  FService.Invalidate();
+  FTasks.Invalidate();
+  LoadItems();
+end;
+
 { TMain.mmStandardClick
 
   MainMenu entry to resize all columns to standard size. }
@@ -2827,52 +2855,83 @@ begin
          mmAdd.Caption := FLang.GetString(69);
          mmImport.Enabled := True;
          mmDate.Enabled := ((Win32MajorVersion = 6) and (Win32MinorVersion < 2));
-         lwStartupSelectItem(Sender, lwStartup.ItemFocused, True);
+         mmShowCaptions.Enabled := True;
          ShowColumnDate(lwStartup, (mmDate.Enabled and mmDate.Checked));
 
          // Load startup items dynamically
-         if (Assigned(FContext) and (FContext.Count = 0)) then
-           LoadItems();
+         if Assigned(FStartup) then
+         begin
+           if (FStartup.Count = 0) then
+             LoadItems()
+           else
+             if FStartup.IsInvalid then
+               FStartup.DoNotifyOnFinished();
+         end;  //of begin
+
+         lwStartupSelectItem(Sender, lwStartup.ItemFocused, True);
        end;
 
     1: begin
          mmAdd.Caption := FLang.GetString(105);
          mmImport.Enabled := False;
          mmDate.Enabled := False;
-         lwContextSelectItem(Sender, lwContext.ItemFocused, True);
+         mmShowCaptions.Enabled := True;
 
          // Load context menu items dynamically
-         if (Assigned(FContext) and (FContext.Count = 0)) then
-           LoadItems();
+         if Assigned(FContext) then
+         begin
+           if (FContext.Count = 0) then
+             LoadItems()
+           else
+             if FContext.IsInvalid then
+               FContext.DoNotifyOnFinished()
+         end;  //of begin
+
+         lwContextSelectItem(Sender, lwContext.ItemFocused, True);
        end;
 
     2: begin
          mmAdd.Caption := FLang.GetString(57);
          mmImport.Enabled := False;
          mmDate.Enabled := True;
-         lwServiceSelectItem(Sender, lwService.ItemFocused, True);
+         mmShowCaptions.Enabled := True;
          ShowColumnDate(lwService, mmDate.Checked);
 
          // Load service items dynamically
-         if (Assigned(FService) and (FService.Count = 0)) then
-           LoadItems();
+         if Assigned(FService) then
+         begin
+           if (FService.Count = 0) then
+             LoadItems()
+           else
+             if FService.IsInvalid then
+               FService.DoNotifyOnFinished();
+         end;  //of begin
+
+         lwServiceSelectItem(Sender, lwService.ItemFocused, True);
        end;
 
     3: begin
          mmAdd.Caption := FLang.GetString(117);
          mmImport.Enabled := True;
          mmDate.Enabled := False;
-         lwTasksSelectItem(Sender, lwTasks.ItemFocused, True);
+         mmShowCaptions.Enabled := False;
 
          // Load task items dynamically
-         if not Assigned(FTasks) then
+         if Assigned(FTasks) then
+         begin
+           if (FTasks.Count = 0) then
+             LoadItems()
+           else
+             if FTasks.IsInvalid then
+               FTasks.DoNotifyOnFinished();
+         end  //of begin
+         else
          begin
            mmImport.Enabled := False;
            FLang.ShowMessage('Scheduled tasks feature requires at least Windows Vista!', mtWarning);
-         end  //of begin
-         else
-           if (FTasks.Count = 0) then
-             LoadItems();
+         end;  //of if
+
+         lwTasksSelectItem(Sender, lwTasks.ItemFocused, True);
        end;
   end;  //of case
 end;

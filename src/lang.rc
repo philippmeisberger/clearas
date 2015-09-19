@@ -124,6 +124,7 @@ BEGIN
   221, "Icon ändern"
   222, "Icon löschen"
   223, "Wollen Sie den Icon wirklich löschen?"
+  224, "Beschreibung anzeigen"
 END
 
 STRINGTABLE VERSION 1033 // english
@@ -252,6 +253,7 @@ BEGIN
   421, "Change icon"
   422, "Delete icon"
   423, "Are you sure you want to delete the icon?"
+  424, "Show description"
 END
 
 STRINGTABLE VERSION 1036 // français
@@ -380,4 +382,5 @@ BEGIN
   621, "Changer d'icône"
   622, "Supprimer l'icône"
   623, "Voulez-vous vraiment supprimer l'icône?"
+  624, "Montrer la description"
 END

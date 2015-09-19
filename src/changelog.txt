@@ -15,6 +15,8 @@ Version 4.2  [??.??.15]
   - "Einträge exportieren" speichert alle Aufgaben als ZIP-Datei
   - "Backup importieren" importiert eine zuvor exportierte Aufgabe als XML-Datei
   - "Expertenmodus" findet versteckte Aufgaben
+- "Beschreibung anzeigen" zum Reiter "Ansicht" hinzugefügt
+  - Zeigt entweder internen Namen oder Beschreibung von Elementen an
 - Änderungen am Popup Menü:
   - "Umbenennen" hinzugefügt
   - "Icon ändern" für Kontextmenü-Einträge vom Typ "Shell" hinzugefügt
