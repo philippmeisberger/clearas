@@ -983,6 +983,10 @@ begin
         bExportStartupItem.Enabled := not FStartup.BackupExists;
         pmExport.Enabled := bExportStartupItem.Enabled;
         pmChangeStatus.Caption := bDisableStartupItem.Caption;
+
+        // Delete deactivation timestamp if necassary
+        if (mmDate.Enabled and mmDate.Checked) then
+          lwStartup.ItemFocused.SubItems[3] := '';
       end;
 
     stDisabled:
@@ -990,6 +994,10 @@ begin
         bEnableStartupItem.Enabled := True;
         bDisableStartupItem.Enabled := False;
         pmChangeStatus.Caption := bEnableStartupItem.Caption;
+
+        // Append deactivation timestamp if necassary
+        if (mmDate.Enabled and mmDate.Checked) then
+          lwStartup.ItemFocused.SubItems[3] := FStartup.Selected.Time;
       end;
 
     stDeleted:
@@ -1085,6 +1093,10 @@ begin
         bEnableServiceItem.Enabled := False;
         bDisableServiceItem.Enabled := True;
         pmChangeStatus.Caption := bDisableServiceItem.Caption;
+
+        // Delete deactivation timestamp if necassary
+        if (mmDate.Enabled and mmDate.Checked) then
+          lwService.ItemFocused.SubItems[3] := '';
       end;
 
     stDisabled:
@@ -1092,6 +1104,10 @@ begin
         bEnableServiceItem.Enabled := True;
         bDisableServiceItem.Enabled := False;
         pmChangeStatus.Caption := bEnableServiceItem.Caption;
+
+        // Append deactivation timestamp if necassary
+        if (mmDate.Enabled and mmDate.Checked) then
+          lwService.ItemFocused.SubItems[3] := FService.Selected.Time;
       end;
 
     stDeleted:
@@ -1145,8 +1161,7 @@ begin
       Text := FService[i].Name;
 
     // Filter items
-    if ((eServiceSearch.Text = '') or
-      (AnsiContainsText(Text, eServiceSearch.Text))) then
+    if ((eServiceSearch.Text = '') or (AnsiContainsText(Text, eServiceSearch.Text))) then
       with lwService.Items.Add do
       begin
         Caption := FService[i].GetStatus(FLang);
@@ -2430,7 +2445,7 @@ begin
 
     // Name must not be empty!
     if (Name = '') then
-      raise EArgumentException.Create('Name must not be empty!');
+      raise EAssertionFailed.Create('Name must not be empty!');
 
     // Append optional parameters
     if not InputQuery(StripHotKey(mmAdd.Caption), FLang.GetString(98), Args) then
@@ -2486,7 +2501,7 @@ begin
       FLang.ShowMessage(StripHotKey(mmAdd.Caption) + FLang.GetString(18),
         E.Message, mtWarning);
 
-    on E: EArgumentException do
+    on E: EAssertionFailed do
       FLang.ShowMessage(StripHotKey(mmAdd.Caption) + FLang.GetString(18),
         E.Message, mtError);
 

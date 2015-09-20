@@ -13,7 +13,7 @@ interface
 uses
   Windows, WinSvc, Classes, SysUtils, Registry, ShlObj, ActiveX, ComObj, Zip,
   Graphics, CommCtrl, ShellAPI, SyncObjs, StrUtils, Variants, Generics.Collections,
-  Taskschd, PMCWOSUtils, PMCWLanguageFile, PMCWIniFileParser;
+  Taskschd, PMCWOSUtils, PMCWLanguageFile, PMCWIniFileParser, KnownFolders;
 
 const
   { Startup registry keys until Windows 7 }
@@ -655,10 +655,19 @@ end;
 
 class function TLnkFile.GetStartUpDir(ACommonStartup: Boolean): string;
 begin
-  if ACommonStartup then
-    GetFolderPath(CSIDL_COMMON_STARTUP, Result)
+  // Windows Vista?
+  if CheckWin32Version(6) then
+  begin
+    if ACommonStartup then
+      GetKnownFolderPath(FOLDERID_CommonStartup, Result)
+    else
+      GetKnownFolderPath(FOLDERID_Startup, Result);
+  end  //of begin
   else
-    GetFolderPath(CSIDL_STARTUP, Result);
+    if ACommonStartup then
+      GetFolderPath(CSIDL_COMMON_STARTUP, Result)
+    else
+      GetFolderPath(CSIDL_STARTUP, Result);
 end;
 
 { public TLnkFile.HasArguments
@@ -683,17 +692,16 @@ var
 
 begin
   Result := False;
+  CoInitialize(nil);
 
   try
-    CoInitialize(nil);
-
     if Succeeded(CoCreateInstance(CLSID_ShellLink, nil, CLSCTX_INPROC_SERVER,
       IID_IShellLink, ShellLink)) then
     begin
       PersistFile := (ShellLink as IPersistFile);
 
-      // Try to .lnk read file
-      OleCheck(PersistFile.Load(StringToOleStr(FFileName), STGM_READ));
+      // Try to read .lnk file
+      OleCheck(PersistFile.Load(PChar(FFileName), STGM_READ));
       SetLength(Path, MAX_PATH + 1);
 
       // Try to read path from .lnk
@@ -735,16 +743,11 @@ var
 
 begin
   Result := False;
-
-  if (AFileName = '') then
-    raise EArgumentException.Create('File name for .lnk file must not be empty!');
-
-  if (AExeFileName = '') then
-    raise EArgumentException.Create('File path to .exe must not be empty!');
+  Assert(AFileName <> '', 'File name for .lnk file must not be empty!');
+  Assert(AExeFileName <> '', 'File path to .exe must not be empty!');
+  CoInitialize(nil);
 
   try
-    CoInitialize(nil);
-
     if Succeeded(CoCreateInstance(CLSID_ShellLink, nil, CLSCTX_INPROC_SERVER,
       IID_IShellLink, ShellLink)) then
     begin
@@ -2467,8 +2470,16 @@ var
   VersionSize, VersionHandle, BufferSize: Cardinal;
   Buffer: PChar;
   Description: Pointer;
+  Win64: Boolean;
 
 begin
+  // 64bit Windows?
+  Win64 := (TOSVersion.Architecture = arIntelX64);
+
+  // Deny WOW64 redirection only on 64bit Windows
+  if Win64 then
+    Wow64FsRedirection(True);
+
   if (SHGetFileInfo(PChar(AFileName), 0, FileInfo, SizeOf(FileInfo), SHGFI_EXETYPE) = 0) then
     Exit;
 
@@ -2492,6 +2503,10 @@ begin
 
     finally
       FreeMem(Buffer, VersionSize);
+
+      // Allow WOW64 redirection only on 64bit Windows
+      if Win64 then
+        Wow64FsRedirection(False);
     end;  //of try
   end;  //of begin
 end;
@@ -2649,6 +2664,7 @@ begin
     end;  //of with
 
     // < Windows 8?
+    // Note: Since Windows 8 LoadStatus() is used to refresh counter!
     if not CheckWin32Version(6, 2) then
       Inc(FActCount);
 
@@ -2808,8 +2824,7 @@ begin
 
   // Check invalid extension
   if ((Ext <> '.exe') and (Ext <> '.bat')) then
-    raise EArgumentException.Create('Invalid program extension! Must be ''.exe'''
-      +' or ''.bat''!');
+    raise EAssertionFailed.Create('Invalid program extension! Must be ''.exe'' or ''.bat''!');
 
   // List locked?
   if not FLock.TryEnter() then
@@ -2856,7 +2871,10 @@ begin
         begin
           // Windows 8?
           if CheckWin32Version(6, 2) then
-            Result := Last.Enable()
+          begin
+            Result := Last.Enable();
+            Inc(FActCount);
+          end  //of begin
           else
             Result := True;
         end;  //of begin
@@ -2987,8 +3005,8 @@ begin
 
   // Check invalid extension
   if ((Ext <> EXT_COMMON) and (Ext <> EXT_USER)) then
-    raise EArgumentException.Create('Invalid backup file extension! Must be '''
-      + EXT_COMMON +''' or '''+ EXT_USER +'''!');
+    raise EAssertionFailed.Create('Invalid backup file extension! Must '+
+      'be '''+ EXT_COMMON +''' or '''+ EXT_USER +'''!');
 
   // List locked?
   if not FLock.TryEnter() then
@@ -3125,13 +3143,11 @@ begin
   try
     Folder := TLnkFile.GetStartUpDir(ACommonStartup);
 
-    if (FindFirst(Folder +'*.lnk', faAnyFile, SearchResult) = 0) then
+    if (FindFirst(Folder +'*.lnk', faAnyFile - faDirectory, SearchResult) = 0) then
       try
+        // .lnk file found
         repeat
-          // .lnk file found?
-          if (SearchResult.Attr <> faDirectory) then
-            LnkFiles.Add(Folder + SearchResult.Name);
-
+          LnkFiles.Add(Folder + SearchResult.Name);
         until FindNext(SearchResult) <> 0;
 
       finally
@@ -3982,14 +3998,13 @@ begin
 
   // Valid location?
   if ((LocationRoot <> '*') and (Length(LocationRoot) <= 2)) then
-    raise EArgumentException.Create('Invalid location: Expected at least two characters or ''*''!');
+    raise EAssertionFailed.Create('Invalid location: Expected at least two characters or ''*''!');
 
   Ext := ExtractFileExt(AFileName);
 
   // Check invalid extension
   if ((Ext <> '.exe') and (Ext <> '.bat')) then
-    raise EArgumentException.Create('Invalid program extension! Must be ''.exe'''
-      +' or ''.bat''!');
+    raise EAssertionFailed.Create('Invalid program extension! Must be ''.exe'' or ''.bat''!');
 
   // List locked?
   if not FLock.TryEnter() then
@@ -4787,8 +4802,7 @@ begin
   Name := ExtractFileName(AFileName);
 
   // Check invalid extension
-  if (ExtractFileExt(Name) <> '.exe') then
-    raise EArgumentException.Create('Invalid program extension! Must be ''.exe''!');
+  Assert(ExtractFileExt(Name) = '.exe', 'Invalid program extension! Must be ''.exe''!');
 
   // List locked?
   if not FLock.TryEnter() then
@@ -5345,7 +5359,7 @@ begin
 
   // Check invalid extension
   if ((Ext <> '.xml') and (Ext <> '.zip')) then
-    raise EArgumentException.Create('Invalid backup file extension! Must be '
+    raise EAssertionFailed.Create('Invalid backup file extension! Must be '
       +'''.xml'' or ''.zip''!');
 
   // List locked?
