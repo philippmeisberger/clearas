@@ -112,7 +112,7 @@ begin
       end;  //of for
 
     finally
-      FreeMem(Services);
+      FreeMem(Services, BytesNeeded);
 
       // Notify end of search
       Synchronize(DoNotifyOnFinish);

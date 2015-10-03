@@ -779,7 +779,7 @@ begin
            FTasks.Load(cbTaskExpert.Checked);
     end  //of case
     else
-      GetSelectedList().OnSearchFinish(Self);
+      GetSelectedList().DoNotifyOnFinished();
 
   except
     on E: EInvalidItem do

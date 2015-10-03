@@ -463,7 +463,6 @@ type
     destructor Destroy(); override;
     function Add(AFileName, AArguments, ACaption: string): Boolean; reintroduce;
     procedure ExportList(const AFileName: string); override;
-    function IndexOf(const ACaptionOrName: string): Integer;
     procedure Load(AExpertMode: Boolean = False); override;
     function LoadService(AName: string; AService: SC_HANDLE;
       AIncludeDemand: Boolean = False): Integer;
@@ -2470,16 +2469,8 @@ var
   VersionSize, VersionHandle, BufferSize: Cardinal;
   Buffer: PChar;
   Description: Pointer;
-  Win64: Boolean;
 
 begin
-  // 64bit Windows?
-  Win64 := (TOSVersion.Architecture = arIntelX64);
-
-  // Deny WOW64 redirection only on 64bit Windows
-  if Win64 then
-    Wow64FsRedirection(True);
-
   if (SHGetFileInfo(PChar(AFileName), 0, FileInfo, SizeOf(FileInfo), SHGFI_EXETYPE) = 0) then
     Exit;
 
@@ -2497,16 +2488,12 @@ begin
         Exit;
 
       if VerQueryValue(Buffer, PChar(Format('\StringFileInfo\%.4x%.4x\%s',
-        [LoWord(Integer(Description^)), HiWord(Integer(Description^)),
+        [LoWord(Cardinal(Description^)), HiWord(Cardinal(Description^)),
         'FileDescription'])), Description, BufferSize) then
         Result := PChar(Description);
 
     finally
       FreeMem(Buffer, VersionSize);
-
-      // Allow WOW64 redirection only on 64bit Windows
-      if Win64 then
-        Wow64FsRedirection(False);
     end;  //of try
   end;  //of begin
 end;
@@ -4884,31 +4871,6 @@ begin
   end;  //of try
 end;
 
-{ public TServiceList.IndexOf
-
-  Returns the index of an item checking caption only. }
-
-function TServiceList.IndexOf(const ACaptionOrName: string): Integer;
-var
-  i: Integer;
-  Item: TServiceListItem;
-
-begin
-  Result := -1;
-
-  for i := 0 to Count - 1 do
-  begin
-    Item := Items[i];
-
-    // Item name or caption matches?
-    if ((Item.Caption = ACaptionOrName) or (Item.Name = ACaptionOrName)) then
-    begin
-      Result := i;
-      Break;
-    end;  //of begin
-  end;  //of for
-end;
-
 { public TServiceList.Load
 
   Searches for service items in default or expert mode. }
@@ -5010,7 +4972,7 @@ begin
         ServiceConfig^.lpBinaryPathName, ServiceStart);
 
   finally
-    FreeMem(ServiceConfig);
+    FreeMem(ServiceConfig, BytesNeeded);
   end;  //of try
 end;
 

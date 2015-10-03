@@ -4,7 +4,7 @@ Ein Open-Source Projekt von PM Code Works
 Changelog
 =========
 
-Version 4.2  [??.??.15]
+Version 4.2  [??.10.15]
 
 - Autostart-Feature: Unterstützung von Windows 8
   - Änderungen an "Startup User" und "Common Startup" Einträgen
@@ -36,7 +36,7 @@ Version 4.1  [27.08.15]
   - "Kontextmenü hinzufügen" verbessert:
     - Es können beliebige Datei-Typen bzw. Dateiendungen benutzt werden
     - Einträge können versteckt werden (nur durch Shift + Rechtsklick sichtbar)
-  - Änderungen an der ProgressBar: 
+  - Änderungen an der ProgressBar:
     - wird nun während des Exportierens von Kontextmenü-Einträgen angezeigt
     - Benutzung ausschließlich als Ladeindikator
 - ProgressBar zu Diensten hinzugefügt
@@ -44,7 +44,7 @@ Version 4.1  [27.08.15]
 - Buttons zur "Quick-Search" hinzugefügt
 - Listen können nun auf- und absteigend sortiert werden
 - Bug fixes:
-  - "Abbrechen" während des Hinzufügens von Einträgen funktioniert nun korrekt 
+  - "Abbrechen" während des Hinzufügens von Einträgen funktioniert nun korrekt
   - Nachdem schwerwiegener Fehler aufgetreten ist, können die Listen trotzdem aktualisiert werden
   - Nachdem neuer Dienst hinzugefügt wurde, wird der korrekte Pfad (mit Argumenten) angezeigt
 - Icon erneuert: http://de.divinity.wikia.com/wiki/Datei:Icon_Besen.svg.png
@@ -92,7 +92,7 @@ Version 4.0  [28.03.15]
 - Auswählen von Elementen in Autostart und Kontextmenü Listen beschleunigt
 - "Backup importieren" verbessert
 - Registry Dateiexport verbessert (eigener Parser)
-- Bug Fixes: 
+- Bug Fixes:
   - Gelöschte Autostart Elemente werden nun korrekt aus Liste gelöscht
   - RunOnce Einträge werden nun auch in 32-Bit Schlüsseln ausgelesen (nur 64-Bit Windows)
 - Neues Manifest
@@ -211,7 +211,7 @@ Version 1.2  [05.10.11]
   - "Strg+C" = selektierten Eintrag exportieren
   - "F5" = aktualisieren
   - "F6" = Standard Spaltengröße
-  - "F7" = Spaltengröße optimieren 
+  - "F7" = Spaltengröße optimieren
 - "Speichern-Dialog" vor löschen eingefügt
 - Sortierfunktion hinzugefügt
 - Layout geändert
@@ -224,7 +224,7 @@ Version 1.2  [05.10.11]
 Version 1.1  [03.10.11]
 
 - verfeinerte Suche nach Autostart-Programmen ("Startup User")
-- Manifest eingebunden 
+- Manifest eingebunden
   --> wird nun mit Admin-Rechten ausgeführt
 - Bugfixes
 - neuer Icon
@@ -237,7 +237,7 @@ Erste Version von Clearas.
 
 Features:
 
-- aktivieren, 
+- aktivieren,
 - deaktivieren und
 - löschen von Autostart-Objekten
 
