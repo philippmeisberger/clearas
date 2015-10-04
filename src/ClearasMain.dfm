@@ -71,7 +71,7 @@ object Main: TMain
         Height = 14
         Alignment = taRightJustify
         Anchors = [akTop, akRight]
-        Caption = 'v4.2'
+        Caption = 'v4.3'
       end
       object lWindows: TLabel
         Left = 21
@@ -224,7 +224,7 @@ object Main: TMain
         Height = 14
         Alignment = taRightJustify
         Anchors = [akTop, akRight]
-        Caption = 'v4.2'
+        Caption = 'v4.3'
       end
       object lWindows2: TLabel
         Left = 21
@@ -411,7 +411,7 @@ object Main: TMain
         Height = 14
         Alignment = taRightJustify
         Anchors = [akTop, akRight]
-        Caption = 'v4.2'
+        Caption = 'v4.3'
       end
       object pbServiceProgress: TProgressBar
         Left = 21
@@ -578,13 +578,13 @@ object Main: TMain
         Caption = 'Folgende Aufgaben werden wie geplant ausgef'#252'hrt.'
       end
       object lVersion4: TLabel
-        Left = 510
-        Top = 4
+        Left = 511
+        Top = 3
         Width = 21
         Height = 14
         Alignment = taRightJustify
         Anchors = [akTop, akRight]
-        Caption = 'v4.2'
+        Caption = 'v4.3'
       end
       object lWindows4: TLabel
         Left = 21
@@ -896,7 +896,7 @@ object Main: TMain
   object QuickSearchIconList: TImageList
     Left = 256
     Bitmap = {
-      494C010103000800B40110001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C010103000800BC0110001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000001000000001002000000000000010
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000

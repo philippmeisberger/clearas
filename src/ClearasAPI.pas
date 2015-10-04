@@ -2361,7 +2361,7 @@ begin
   NewFileName := ExtractFilePath(FLnkFile.FileName) + ANewCaption;
 
   if (ExtractFileExt(ANewCaption) <> '.lnk') then
-    NewFileName := ChangeFileExt(ANewCaption, '.lnk');
+    NewFileName := ChangeFileExt(NewFileName, '.lnk');
 
   NewName := ExtractFileName(NewFileName);
   Win8 := CheckWin32Version(6, 2);

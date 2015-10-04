@@ -326,7 +326,11 @@ end;
 procedure TMain.FormShow(Sender: TObject);
 begin
   // Get version of Windows including service pack
-  lWindows.Caption := TOSVersion.Name +' '+ Win32CSDVersion;
+  if CheckWin32Version(10) then
+    lWindows.Caption := Format('Windows %d %s', [Win32MajorVersion, Win32CSDVersion])
+  else
+    lWindows.Caption := TOSVersion.Name +' '+ Win32CSDVersion;
+
   lWindows2.Caption := lWindows.Caption;
   lWindows3.Caption := lWindows.Caption;
   lWindows4.Caption := lWindows.Caption;

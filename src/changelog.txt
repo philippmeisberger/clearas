@@ -16,7 +16,7 @@ Version 4.2  [??.10.15]
   - "Backup importieren" importiert eine zuvor exportierte Aufgabe als XML-Datei
   - "Expertenmodus" findet versteckte Aufgaben
 - "Beschreibung anzeigen" zum Menü "Ansicht" hinzugefügt
-  - Zeigt entweder Beschreibung oder internen Namen von Elementen an
+  - Zeigt entweder Beschreibung der .exe oder internen Namen von Elementen an
 - Änderungen am Popup Menü:
   - "Umbenennen" hinzugefügt
   - "Icon ändern" für Kontextmenü-Einträge vom Typ "Shell" hinzugefügt

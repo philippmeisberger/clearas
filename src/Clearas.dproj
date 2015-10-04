@@ -103,21 +103,21 @@
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1_Win32)'!=''">
         <VerInfo_AutoIncVersion>true</VerInfo_AutoIncVersion>
-        <VerInfo_MinorVer>2</VerInfo_MinorVer>
+        <VerInfo_MinorVer>3</VerInfo_MinorVer>
         <VerInfo_MajorVer>4</VerInfo_MajorVer>
-        <VerInfo_Keys>CompanyName=PM Code Works;FileDescription=Clearas;FileVersion=4.2.0.1403;InternalName=;LegalCopyright=Philipp Meisberger 2015;LegalTrademarks=PM Code Works;OriginalFilename=Clearas.exe;ProductName=Clearas;ProductVersion=4.2;Comments=Delphi XE8</VerInfo_Keys>
+        <VerInfo_Keys>CompanyName=PM Code Works;FileDescription=Clearas;FileVersion=4.3.0.1412;InternalName=;LegalCopyright=Philipp Meisberger 2015;LegalTrademarks=PM Code Works;OriginalFilename=Clearas.exe;ProductName=Clearas;ProductVersion=4.3;Comments=Delphi XE8</VerInfo_Keys>
         <VerInfo_Locale>1033</VerInfo_Locale>
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
-        <VerInfo_Build>1403</VerInfo_Build>
+        <VerInfo_Build>1412</VerInfo_Build>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1_Win64)'!=''">
         <VerInfo_AutoIncVersion>true</VerInfo_AutoIncVersion>
-        <VerInfo_MinorVer>2</VerInfo_MinorVer>
+        <VerInfo_MinorVer>3</VerInfo_MinorVer>
         <VerInfo_MajorVer>4</VerInfo_MajorVer>
-        <VerInfo_Keys>CompanyName=PM Code Works;FileDescription=Clearas;FileVersion=4.2.0.1405;InternalName=;LegalCopyright=Philipp Meisberger 2015;LegalTrademarks=PM Code Works;OriginalFilename=Clearas.exe;ProductName=Clearas;ProductVersion=4.2;Comments=Delphi XE8</VerInfo_Keys>
+        <VerInfo_Keys>CompanyName=PM Code Works;FileDescription=Clearas;FileVersion=4.3.0.1412;InternalName=;LegalCopyright=Philipp Meisberger 2015;LegalTrademarks=PM Code Works;OriginalFilename=Clearas.exe;ProductName=Clearas;ProductVersion=4.3;Comments=Delphi XE8</VerInfo_Keys>
         <VerInfo_Locale>1033</VerInfo_Locale>
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
-        <VerInfo_Build>1405</VerInfo_Build>
+        <VerInfo_Build>1412</VerInfo_Build>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2)'!=''">
         <DCC_ExeOutput>..\bin\$(Platform)\Debug</DCC_ExeOutput>
@@ -579,13 +579,13 @@
                         <Operation>1</Operation>
                     </Platform>
                 </DeployClass>
-                <ProjectRoot Platform="iOSSimulator" Name="$(PROJECTNAME).app"/>
+                <ProjectRoot Platform="iOSDevice32" Name="$(PROJECTNAME).app"/>
                 <ProjectRoot Platform="Android" Name="$(PROJECTNAME)"/>
                 <ProjectRoot Platform="Win32" Name="$(PROJECTNAME)"/>
                 <ProjectRoot Platform="iOSDevice64" Name="$(PROJECTNAME).app"/>
                 <ProjectRoot Platform="OSX32" Name="$(PROJECTNAME).app"/>
+                <ProjectRoot Platform="iOSSimulator" Name="$(PROJECTNAME).app"/>
                 <ProjectRoot Platform="Win64" Name="$(PROJECTNAME)"/>
-                <ProjectRoot Platform="iOSDevice32" Name="$(PROJECTNAME).app"/>
             </Deployment>
         </BorlandProject>
         <ProjectFileVersion>12</ProjectFileVersion>
