@@ -2301,18 +2301,15 @@ var
 begin
   try
     Item := GetSelectedItem();
-
-    if (Item.Caption <> '') then
-      Name := Item.Caption
-    else
-      Name := Item.Name;
+    Name := Item.Name;
 
     if InputQuery(StripHotkey(pmRename.Caption), StripHotkey(pmRename.Caption), Name) then
     begin
       if ((Trim(Name) = '') or (Name = Item.Name) or (Name = Item.Caption)) then
         Exit;
 
-      if GetSelectedList().RenameItem(Name) then
+      // Names are visible instead of captions?
+      if (GetSelectedList().RenameItem(Name) and not mmShowCaptions.Checked) then
         GetSelectedListView().ItemFocused.SubItems[0] := Name;
     end;  //of begin
 

@@ -2378,7 +2378,7 @@ begin
     FLocation := NewFileName;
 
     if Win8 then
-      Renamed := inherited Rename(ANewCaption)
+      Renamed := inherited Rename(NewName)
     else
       Renamed := True;
   end  //of begin
