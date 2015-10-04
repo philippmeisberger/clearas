@@ -25,6 +25,7 @@ Version 4.2  [04.10.15]
 - Nutzung von generischen Container-Klassen (Generics)
 - Icons werden mit weißem Hintergrund geladen
 - Menüeinträge werden nur noch deaktiviert (ausgegraut) anstatt versteckt
+- Neues Manifest
 
 ---------------------------------
 
