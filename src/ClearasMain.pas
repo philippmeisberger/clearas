@@ -1421,6 +1421,7 @@ begin
     pmEdit.Caption := GetString(104);
     pmExport.Caption := mmExport.Caption;
     pmDelete.Caption := bDeleteStartupItem.Caption;
+    pmRename.Caption := GetString(55);
     pmCopyLocation.Caption := GetString(106);
     pmChangeIcon.Caption := GetString(121);
     pmDeleteIcon.Caption := GetString(122);

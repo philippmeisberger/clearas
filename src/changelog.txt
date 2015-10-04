@@ -4,7 +4,7 @@ Ein Open-Source Projekt von PM Code Works
 Changelog
 =========
 
-Version 4.2  [??.10.15]
+Version 4.2  [04.10.15]
 
 - Autostart-Feature: Unterstützung von Windows 8
   - Änderungen an "Startup User" und "Common Startup" Einträgen
