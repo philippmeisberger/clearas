@@ -103,20 +103,6 @@ type
     eContextSearch: TButtonedEdit;
     eServiceSearch: TButtonedEdit;
     pbServiceProgress: TProgressBar;
-    tsTasks: TTabSheet;
-    bCloseTasks: TButton;
-    bDeleteTaskItem: TButton;
-    bDisableTaskitem: TButton;
-    bEnableTaskItem: TButton;
-    bExportTaskItem: TButton;
-    cbTaskExpert: TCheckBox;
-    eTaskSearch: TButtonedEdit;
-    lCopy4: TLabel;
-    lTasks: TLabel;
-    lVersion4: TLabel;
-    lWindows4: TLabel;
-    lwTasks: TListView;
-    pbTaskProgress: TProgressBar;
     pmRename: TMenuItem;
     pmChangeIcon: TMenuItem;
     pmDeleteIcon: TMenuItem;
@@ -172,9 +158,6 @@ type
     procedure lCopy1MouseEnter(Sender: TObject);
     procedure lCopy1Click(Sender: TObject);
     procedure eSearchRightButtonClick(Sender: TObject);
-    procedure lwTasksSelectItem(Sender: TObject; Item: TListItem;
-      Selected: Boolean);
-    procedure lwTasksDblClick(Sender: TObject);
     procedure pmRenameClick(Sender: TObject);
     procedure pmChangeIconClick(Sender: TObject);
     procedure pmDeleteIconClick(Sender: TObject);
@@ -183,7 +166,6 @@ type
     FStartup: TStartupList;
     FContext: TContextList;
     FService: TServiceList;
-    FTasks: TTaskList;
     FLang: TLanguageFile;
     FUpdateCheck: TUpdateCheck;
     function CreateStartupUserBackup(): Boolean;
@@ -208,9 +190,6 @@ type
     procedure OnServiceSearchStart(Sender: TObject; const AMax: Cardinal);
     procedure OnServiceSearchEnd(Sender: TObject);
     procedure OnServiceItemChanged(Sender: TObject; ANewStatus: TItemStatus);
-    procedure OnTaskSearchStart(Sender: TObject; const AMax: Cardinal);
-    procedure OnTaskSearchEnd(Sender: TObject);
-    procedure OnTaskItemChanged(Sender: TObject; ANewStatus: TItemStatus);
     procedure OnUpdate(Sender: TObject; const ANewBuild: Cardinal);
     procedure SetLanguage(Sender: TObject);
     function ShowExportItemDialog(): Boolean;
@@ -278,21 +257,6 @@ begin
     OnSearchStart := OnServiceSearchStart;
   end;  //of with
 
-  // Task feature only for Windows >= Vista
-  if CheckWin32Version(6) then
-  begin
-    FTasks := TTaskList.Create;
-
-    // Link search events
-    with FTasks do
-    begin
-      OnChanged := OnTaskItemChanged;
-      OnSearchError := Self.OnSearchError;
-      OnSearchFinish := OnTaskSearchEnd;
-      OnSearchStart := OnTaskSearchStart;
-    end;  //of with
-  end;  //of begin
-
   // Set title
   Caption := Application.Title + PLATFORM_ARCH;
 end;
@@ -303,9 +267,6 @@ end;
 
 procedure TMain.FormDestroy(Sender: TObject);
 begin
-  if Assigned(FTasks) then
-    FTasks.Free;
-
   if Assigned(FService) then
     FService.Free;
 
@@ -333,7 +294,6 @@ begin
 
   lWindows2.Caption := lWindows.Caption;
   lWindows3.Caption := lWindows.Caption;
-  lWindows4.Caption := lWindows.Caption;
 
   // Update Clearas recycle bin context menu entry
   mmContext.Checked := UpdateContextPath();
@@ -727,7 +687,6 @@ begin
     0: List := TRootList<TRootItem>(FStartup);
     1: List := TRootList<TRootItem>(FContext);
     2: List := TRootList<TRootItem>(FService);
-    3: List := TRootList<TRootItem>(FTasks);
   end;  //of case
 
   if not Assigned(List) then
@@ -751,7 +710,6 @@ begin
     0: List := lwStartup;
     1: List := lwContext;
     2: List := lwService;
-    3: List := lwTasks;
   end;  //of case
 
   if not Assigned(List) then
@@ -778,9 +736,6 @@ begin
 
       2: if Assigned(FService) then
            FService.Load(cbServiceExpert.Checked);
-
-      3: if Assigned(FTasks) then
-           FTasks.Load(cbTaskExpert.Checked);
     end  //of case
     else
       GetSelectedList().DoNotifyOnFinished();
@@ -919,12 +874,6 @@ begin
          pbServiceProgress.Visible := True;
          lwService.Cursor := crHourGlass;
        end;
-
-    3: begin
-         eTaskSearch.Visible := False;
-         pbTaskProgress.Visible := True;
-         lwTasks.Cursor := crHourGlass;
-       end;
   end;  //of case
 end;
 
@@ -949,12 +898,6 @@ begin
          pbServiceProgress.Visible := False;
          eServiceSearch.Visible := True;
          lwService.Cursor := crDefault;
-       end;
-
-    3: begin
-         pbTaskProgress.Visible := False;
-         eTaskSearch.Visible := True;
-         lwTasks.Cursor := crDefault;
        end;
   end;  //of case
 end;
@@ -1204,107 +1147,6 @@ begin
   FLang.ShowException(FLang.GetString([77, 18]), AErrorMessage);
 end;
 
-{ private TMain.OnTaskItemChanged
-
-  Event method that is called when item status has been changed. }
-
-procedure TMain.OnTaskItemChanged(Sender: TObject; ANewStatus: TItemStatus);
-begin
-  // Refresh counter label
-  lwTasks.Columns[1].Caption := FLang.Format(116, [FTasks.Enabled, FTasks.Count]);
-
-  // Change button states
-  case ANewStatus of
-    stEnabled:
-      begin
-        bEnableTaskItem.Enabled := False;
-        bDisableTaskitem.Enabled := True;
-        pmChangeStatus.Caption := bDisableTaskitem.Caption;
-      end;
-
-    stDisabled:
-      begin
-        bEnableTaskItem.Enabled := True;
-        bDisableTaskitem.Enabled := False;
-        pmChangeStatus.Caption := bEnableTaskItem.Caption;
-      end;
-
-    stDeleted:
-      begin
-        bEnableTaskItem.Enabled := False;
-        bDisableTaskitem.Enabled := False;
-        bDeleteTaskItem.Enabled := False;
-        bExportTaskItem.Enabled := False;
-      end;
-  end;  //of case
-end;
-
-{ private TMain.OnTaskSearchEnd
-
-  Event that is called when export list ends. }
-
-procedure TMain.OnTaskSearchEnd(Sender: TObject);
-var
-  i: Integer;
-  Text: string;
-
-begin
-  // Clear all visual data
-  lwTasks.Clear;
-
-  // Print all information about task items
-  for i := 0 to FTasks.Count - 1 do
-  begin
-    Text := FTasks[i].Name;
-
-    // Filter items
-    if ((eTaskSearch.Text = '') or (AnsiContainsText(Text, eTaskSearch.Text))) then
-      with lwTasks.Items.Add do
-      begin
-        Caption := FTasks[i].GetStatus(FLang);
-        SubItems.Append(Text);
-        SubItems.Append(FTasks[i].FileName);
-        SubItems.Append(FTasks[i].Location);
-      end; //of with
-  end;  //of for
-
-  // Update some VCL
-  mmImport.Enabled := True;
-  mmLang.Enabled := True;
-  cbTaskExpert.Enabled := True;
-  lwTasks.Cursor := crDefault;
-
-  // Hide progress bar
-  if cbTaskExpert.Checked then
-  begin
-    pbTaskProgress.Visible := False;
-    eTaskSearch.Visible := True;
-  end;  //of begin
-
-  // Sort!
-  lwTasks.AlphaSort();
-  FTasks.IsInvalid := False;
-end;
-
-{ private TMain.OnTaskSearchStart
-
-  Event that is called when search starts. }
-
-procedure TMain.OnTaskSearchStart(Sender: TObject; const AMax: Cardinal);
-begin
-  mmLang.Enabled := False;
-  mmImport.Enabled := False;
-  cbTaskExpert.Enabled := False;
-  lwTasks.Cursor := crHourGlass;
-
-  // Show progress bar
-  if cbTaskExpert.Checked then
-  begin
-    eTaskSearch.Visible := False;
-    pbTaskProgress.Visible := True;
-  end;  //of begin
-end;
-
 { private TMain.SetLanguage
 
   Updates all component captions with new language text. }
@@ -1397,23 +1239,6 @@ begin
     lCopy3.Hint := lCopy1.Hint;
     eServiceSearch.TextHint := eContextSearch.TextHint;
 
-    // "Tasks" tab TButton labels
-    tsTasks.Caption := GetString(114);
-    lTasks.Caption := GetString(115);
-    bEnableTaskItem.Caption := bEnableStartupItem.Caption;
-    bDisableTaskitem.Caption := bDisableStartupItem.Caption;
-    bExportTaskItem.Caption := bExportStartupItem.Caption;
-    bDeleteTaskItem.Caption := bDeleteStartupItem.Caption;
-    bCloseTasks.Caption := bCloseStartup.Caption;
-    cbTaskExpert.Caption := cbContextExpert.Caption;
-
-    // "Tasks" tab TListView labels
-    lwTasks.Columns[0].Caption := lwStartup.Columns[0].Caption;
-    lwTasks.Columns[2].Caption := lwStartup.Columns[2].Caption;
-    lwTasks.Columns[3].Caption := lwContext.Columns[2].Caption;
-    lCopy4.Hint := lCopy1.Hint;
-    eTaskSearch.TextHint := eContextSearch.TextHint;
-
     // Popup menu labels
     pmChangeStatus.Caption := bDisableStartupItem.Caption;
     pmOpenRegedit.Caption := GetString(66);
@@ -1436,9 +1261,6 @@ begin
 
   if Assigned(FService) then
     FService.Invalidate();
-
-  if Assigned(FTasks) then
-    FTasks.Invalidate();
 
   // Update captions of current selected list
   PageControlChange(Sender);
@@ -1855,82 +1677,6 @@ begin
     PopupMenu.AutoPopup := False;
 end;
 
-{ TMain.lwTasksDblClick
-
-  Event method that is called when user double clicks on TListView item. }
-
-procedure TMain.lwTasksDblClick(Sender: TObject);
-begin
-  if bEnableTaskItem.Enabled then
-    bEnableTaskItem.Click
-  else
-    if bDisableTaskitem.Enabled then
-      bDisableTaskitem.Click
-    else
-      if bDeleteTaskItem.Enabled then
-        bDeleteTaskItem.Click
-      else
-        FLang.ShowMessage(FLang.GetString(53), mtWarning);
-end;
-
-{ TMain.lwTasksSelectItem
-
-  Event method that is called when user selects an item in list. }
-
-procedure TMain.lwTasksSelectItem(Sender: TObject; Item: TListItem;
-  Selected: Boolean);
-var
-  Index: Integer;
-
-begin
-  // Item selected?
-  if (Selected and Assigned(Item)) then
-  begin
-    // Find index of currently selected item in backend
-    Index := FTasks.IndexOf(Item.SubItems[0]);
-
-    // Item not found?
-    if (Index = -1) then
-    begin
-      PopupMenu.AutoPopup := False;
-      FLang.ShowMessage(FLang.GetString(53), mtError);
-      Exit;
-    end;  //of begin
-
-    // Load item into cache
-    FTasks.Selected := FTasks.Items[Index];
-
-    // Change button states
-    bEnableTaskItem.Enabled := not FTasks.Selected.Enabled;
-    bDisableTaskitem.Enabled := not bEnableTaskItem.Enabled;
-
-    // Change text of "change status" button
-    if bDisableTaskitem.Enabled then
-      pmChangeStatus.Caption := bDisableTaskitem.Caption
-    else
-      pmChangeStatus.Caption := bEnableTaskItem.Caption;
-
-    pmChangeStatus.Enabled := True;
-    bDeleteTaskItem.Enabled := True;
-    pmDelete.Enabled := True;
-    pmOpenRegedit.Enabled := False;
-    bExportTaskItem.Enabled := True;
-    pmExport.Enabled := True;
-    pmRename.Enabled := True;
-    pmDeleteIcon.Visible := False;
-    pmChangeIcon.Visible := False;
-
-    // Enable "edit path" only if file path is present
-    pmEdit.Enabled := (FTasks.Selected.FileName <> '');
-
-    // Show popup menu
-    PopupMenu.AutoPopup := True;
-  end  //of begin
-  else
-    // Nothing selected: Hide popup menu!
-    PopupMenu.AutoPopup := False;
-end;
-
 { TMain.ListViewColumnClick
 
   Event method that is called when user clicks on TListView column. }
@@ -2219,7 +1965,6 @@ begin
     0: bDeleteStartupItem.OnClick(Sender);
     1: bDeleteContextItem.OnClick(Sender);
     2: bDeleteServiceItem.OnClick(Sender);
-    3: bDeleteTaskItem.OnClick(Sender);
   end;  //of case
 end;
 
@@ -2731,7 +2476,6 @@ begin
   FStartup.Invalidate();
   FContext.Invalidate();
   FService.Invalidate();
-  FTasks.Invalidate();
   LoadItems();
 end;
 
@@ -2758,12 +2502,6 @@ begin
          lwService.Columns[1].Width := 125;
          lwService.Columns[2].Width := 122;
          lwService.Columns[3].Width := 75;
-       end;
-
-    3: begin
-         lwTasks.Columns[1].Width := 125;
-         lwTasks.Columns[2].Width := 122;
-         lwTasks.Columns[3].Width := 75;
        end;
   end;  //of case
 end;
@@ -2925,30 +2663,6 @@ begin
          end;  //of begin
 
          lwServiceSelectItem(Sender, lwService.ItemFocused, True);
-       end;
-
-    3: begin
-         mmAdd.Caption := FLang.GetString(117);
-         mmImport.Enabled := True;
-         mmDate.Enabled := False;
-         mmShowCaptions.Enabled := False;
-
-         // Load task items dynamically
-         if Assigned(FTasks) then
-         begin
-           if (FTasks.Count = 0) then
-             LoadItems()
-           else
-             if FTasks.IsInvalid then
-               FTasks.DoNotifyOnFinished();
-         end  //of begin
-         else
-         begin
-           mmImport.Enabled := False;
-           FLang.ShowMessage('Scheduled tasks feature requires at least Windows Vista!', mtWarning);
-         end;  //of if
-
-         lwTasksSelectItem(Sender, lwTasks.ItemFocused, True);
        end;
   end;  //of case
 end;

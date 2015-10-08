@@ -6,15 +6,10 @@ Changelog
 
 Version 4.2  [04.10.15]
 
-- Autostart-Feature: Unterstützung von Windows 8
+- Autostart-Feature: Unterstützung von Windows 8 und 10
   - Änderungen an "Startup User" und "Common Startup" Einträgen
     - Kein Export mehr als .reg sondern als .Startup bzw. .CommonStartup
     - Keine automatischen Backups ("Backup beim Aktivieren löschen" entfernt)
-- Neues Feature "Aufgaben":
-  - Ermöglicht Bearbeiten von geplanten Aufgaben
-  - "Einträge exportieren" speichert alle Aufgaben als ZIP-Datei
-  - "Backup importieren" importiert eine zuvor exportierte Aufgabe als XML-Datei
-  - "Expertenmodus" findet versteckte Aufgaben
 - "Beschreibung anzeigen" zum Menü "Ansicht" hinzugefügt
   - Zeigt entweder Beschreibung der .exe oder internen Namen von Elementen an
 - Änderungen am Popup Menü:
@@ -25,7 +20,6 @@ Version 4.2  [04.10.15]
 - Nutzung von generischen Container-Klassen (Generics)
 - Icons werden mit weißem Hintergrund geladen
 - Menüeinträge werden nur noch deaktiviert (ausgegraut) anstatt versteckt
-- Neues Manifest
 
 ---------------------------------
 

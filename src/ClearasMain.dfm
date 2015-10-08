@@ -71,7 +71,7 @@ object Main: TMain
         Height = 14
         Alignment = taRightJustify
         Anchors = [akTop, akRight]
-        Caption = 'v4.3'
+        Caption = 'v4.2'
       end
       object lWindows: TLabel
         Left = 21
@@ -224,7 +224,7 @@ object Main: TMain
         Height = 14
         Alignment = taRightJustify
         Anchors = [akTop, akRight]
-        Caption = 'v4.3'
+        Caption = 'v4.2'
       end
       object lWindows2: TLabel
         Left = 21
@@ -411,7 +411,7 @@ object Main: TMain
         Height = 14
         Alignment = taRightJustify
         Anchors = [akTop, akRight]
-        Caption = 'v4.3'
+        Caption = 'v4.2'
       end
       object pbServiceProgress: TProgressBar
         Left = 21
@@ -542,186 +542,6 @@ object Main: TMain
         TextHint = 'Suchen ...'
         OnChange = eSearchChange
         OnRightButtonClick = eSearchRightButtonClick
-      end
-    end
-    object tsTasks: TTabSheet
-      Caption = 'Aufgaben'
-      ImageIndex = 3
-      DesignSize = (
-        535
-        284)
-      object lCopy4: TLabel
-        Left = 211
-        Top = 262
-        Width = 112
-        Height = 14
-        Hint = 'Zur Website'
-        Anchors = [akBottom]
-        Caption = #169' P.Meisberger 2015'
-        Font.Charset = ANSI_CHARSET
-        Font.Color = clBlack
-        Font.Height = -11
-        Font.Name = 'Arial'
-        Font.Style = [fsBold]
-        ParentFont = False
-        ParentShowHint = False
-        ShowHint = True
-        OnClick = lCopy1Click
-        OnMouseEnter = lCopy1MouseEnter
-        OnMouseLeave = lCopy1MouseLeave
-      end
-      object lTasks: TLabel
-        Left = 21
-        Top = 32
-        Width = 253
-        Height = 14
-        Caption = 'Folgende Aufgaben werden wie geplant ausgef'#252'hrt.'
-      end
-      object lVersion4: TLabel
-        Left = 511
-        Top = 3
-        Width = 21
-        Height = 14
-        Alignment = taRightJustify
-        Anchors = [akTop, akRight]
-        Caption = 'v4.3'
-      end
-      object lWindows4: TLabel
-        Left = 21
-        Top = 4
-        Width = 46
-        Height = 14
-        Caption = 'Windows'
-      end
-      object pbTaskProgress: TProgressBar
-        Left = 21
-        Top = 255
-        Width = 148
-        Height = 18
-        Anchors = [akLeft, akBottom]
-        Style = pbstMarquee
-        TabOrder = 8
-        Visible = False
-      end
-      object bCloseTasks: TButton
-        Left = 428
-        Top = 216
-        Width = 91
-        Height = 33
-        Anchors = [akTop, akRight]
-        Caption = 'Beenden'
-        TabOrder = 5
-        OnClick = bCloseStartupClick
-      end
-      object bDeleteTaskItem: TButton
-        Left = 428
-        Top = 176
-        Width = 91
-        Height = 33
-        Anchors = [akTop, akRight]
-        Caption = 'L'#246'schen'
-        Enabled = False
-        TabOrder = 4
-        OnClick = bDeleteItemClick
-      end
-      object bDisableTaskitem: TButton
-        Left = 428
-        Top = 96
-        Width = 91
-        Height = 33
-        Anchors = [akTop, akRight]
-        Caption = 'Deaktivieren'
-        Enabled = False
-        TabOrder = 2
-        OnClick = bDisableItemClick
-      end
-      object bEnableTaskItem: TButton
-        Left = 428
-        Top = 56
-        Width = 91
-        Height = 33
-        Anchors = [akTop, akRight]
-        Caption = 'Aktivieren'
-        Enabled = False
-        TabOrder = 1
-        OnClick = bEnableTaskItemClick
-      end
-      object bExportTaskItem: TButton
-        Left = 428
-        Top = 136
-        Width = 91
-        Height = 33
-        Anchors = [akTop, akRight]
-        Caption = 'Exportieren'
-        Enabled = False
-        TabOrder = 3
-        OnClick = bExportItemClick
-      end
-      object cbTaskExpert: TCheckBox
-        Left = 414
-        Top = 258
-        Width = 105
-        Height = 17
-        Anchors = [akRight, akBottom]
-        Caption = 'Expertenmodus'
-        TabOrder = 6
-        OnClick = mmRefreshClick
-      end
-      object eTaskSearch: TButtonedEdit
-        Left = 21
-        Top = 255
-        Width = 148
-        Height = 22
-        Anchors = [akLeft, akBottom]
-        Images = QuickSearchIconList
-        RightButton.DisabledImageIndex = 0
-        RightButton.HotImageIndex = 0
-        RightButton.ImageIndex = 0
-        RightButton.PressedImageIndex = 0
-        RightButton.Visible = True
-        TabOrder = 7
-        TextHint = 'Suchen ...'
-        OnChange = eSearchChange
-        OnRightButtonClick = eSearchRightButtonClick
-      end
-      object lwTasks: TListView
-        Left = 21
-        Top = 56
-        Width = 396
-        Height = 193
-        Anchors = [akLeft, akTop, akRight, akBottom]
-        Columns = <
-          item
-            Caption = 'Aktiviert'
-            MaxWidth = 53
-            MinWidth = 53
-            Width = 53
-          end
-          item
-            Caption = 'Aufgabe (0/0)'
-            Width = 125
-          end
-          item
-            Caption = 'Datei'
-            Width = 122
-          end
-          item
-            Caption = 'Ort'
-            MaxWidth = 75
-            MinWidth = 75
-            Width = 75
-          end>
-        HideSelection = False
-        ReadOnly = True
-        RowSelect = True
-        PopupMenu = PopupMenu
-        TabOrder = 0
-        ViewStyle = vsReport
-        OnColumnClick = ListViewColumnClick
-        OnCompare = ListViewCompare
-        OnDblClick = lwTasksDblClick
-        OnKeyPress = ListViewKeyPress
-        OnSelectItem = lwTasksSelectItem
       end
     end
   end
@@ -896,7 +716,7 @@ object Main: TMain
   object QuickSearchIconList: TImageList
     Left = 256
     Bitmap = {
-      494C010103000800BC0110001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C010103000800C40110001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000001000000001002000000000000010
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
