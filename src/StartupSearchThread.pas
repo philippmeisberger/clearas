@@ -17,7 +17,6 @@ type
   { TStartupSearchThread }
   TStartupSearchThread = class(TClearasSearchThread)
   private
-    FStartupList: TStartupList;
     FIncludeRunOnce,
     FWin64: Boolean;
     procedure LoadEnabled(AAllUsers: Boolean); overload;
@@ -44,8 +43,7 @@ implementation
 constructor TStartupSearchThread.Create(AStartupList: TStartupList;
   ALock: TCriticalSection);
 begin
-  inherited Create(ALock);
-  FStartupList := AStartupList;
+  inherited Create(TRootList<TRootItem>(AStartupList), ALock);
 end;
 
 { public TStartupList.LoadEnabled
@@ -55,7 +53,7 @@ end;
 procedure TStartupSearchThread.LoadEnabled(AAllUsers: Boolean);
 begin
   Synchronize(DoNotifyOnSearching);
-  FStartupList.LoadEnabled(AAllUsers);
+  TStartupList(FSelectedList).LoadStartup(AAllUsers);
 end;
 
 { private TStartupSearchThread.LoadEnabled
@@ -66,10 +64,10 @@ procedure TStartupSearchThread.LoadEnabled(AHKey: HKEY;
   ARunOnce: Boolean = False; AWow64: Boolean = False);
 begin
   Synchronize(DoNotifyOnSearching);
-  FStartupList.LoadEnabled(AHKey, ARunOnce, AWow64);
+  TStartupList(FSelectedList).LoadStartup(AHKey, ARunOnce, AWow64);
 end;
 
-{ private TStartupSearchThread.LoadEnabled
+{ private TStartupSearchThread.LoadDisabled
 
   Searches for disabled startup user items and adds them to the list. }
 
@@ -77,10 +75,10 @@ procedure TStartupSearchThread.LoadDisabled(AStartupUser: Boolean;
   AIncludeWow64: Boolean = False);
 begin
   Synchronize(DoNotifyOnSearching);
-  FStartupList.LoadDisabled(AStartupUser, AIncludeWow64);
+  TStartupList(FSelectedList).LoadDisabled(AStartupUser, AIncludeWow64);
 end;
 
-{ protected TContextMenuSearchThread.Execute
+{ protected TStartupSearchThread.Execute
 
   Searches for startup items in Registry. }
 
@@ -89,21 +87,24 @@ const
   KEYS_COUNT_MAX = 11;
 
 begin
-  FLock.Acquire;
+  FLock.Acquire();
 
   try
     try
       // Clear data
-      FStartupList.Clear;
+      FSelectedList.Clear;
 
       // Calculate key count for events
-      if FWin64 then
-        FProgressMax := KEYS_COUNT_MAX
-      else
-        FProgressMax := KEYS_COUNT_MAX - 3;
+      FProgressMax := KEYS_COUNT_MAX;
+
+      if not FWin64 then
+        Dec(FProgressMax, 3);
 
       if not FIncludeRunOnce then
-        FProgressMax := FProgressMax - 2;
+        Dec(FProgressMax, 2);
+
+      if CheckWin32Version(6, 2) then
+        Dec(FProgressMax, 2);
 
       // Notify start of search
       Synchronize(DoNotifyOnStart);
@@ -128,7 +129,7 @@ begin
           LoadEnabled(HKEY_LOCAL_MACHINE, True, True);
       end;  //of begin
 
-      // Load WOW6432 Registry key only on 64bit Windows
+      // Load WOW6432 Registry key only on 64-Bit Windows (deprecated since Windows 8!)
       LoadDisabled(False, FWin64);
       LoadDisabled(True, FWin64);
 
@@ -136,10 +137,26 @@ begin
       LoadEnabled(True);
       LoadEnabled(False);
 
+      // Windows 8?
+      if CheckWin32Version(6, 2) then
+        with TStartupList(FSelectedList) do
+        begin
+          if FWin64 then
+          begin
+            LoadStatus(HKEY_CURRENT_USER, KEY_STARTUP_RUN32_APPROVED);
+            LoadStatus(HKEY_LOCAL_MACHINE, KEY_STARTUP_RUN32_APPROVED);
+          end;  //of begin
+
+          LoadStatus(HKEY_LOCAL_MACHINE, KEY_STARTUP_USER_APPROVED);
+          LoadStatus(HKEY_CURRENT_USER, KEY_STARTUP_USER_APPROVED);
+          LoadStatus(HKEY_CURRENT_USER, KEY_STARTUP_RUN_APPROVED);
+          LoadStatus(HKEY_LOCAL_MACHINE, KEY_STARTUP_RUN_APPROVED);
+        end;  //of begin
+
     finally
       // Notify end of search
       Synchronize(DoNotifyOnFinish);
-      FLock.Release;
+      FLock.Release();
     end;  //of try
 
   except

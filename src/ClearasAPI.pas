@@ -11,64 +11,75 @@ unit ClearasAPI;
 interface
 
 uses
-  Windows, WinSvc, Classes, SysUtils, Registry, ShlObj, ActiveX, ComObj,
-  CommCtrl, ShellAPI, Contnrs, SyncObjs, StrUtils, PMCWOSUtils, PMCWLanguageFile,
-  PMCWIniFileParser;
+  Windows, WinSvc, Classes, SysUtils, Registry, ShlObj, ActiveX, ComObj, Zip,
+  Graphics, CommCtrl, ShellAPI, SyncObjs, StrUtils, Variants, Generics.Collections,
+  Taskschd, PMCWOSUtils, PMCWLanguageFile, PMCWIniFileParser, KnownFolders;
 
 const
-  { Startup Registry keys }
-  KEY_STARTUP_DISABLED      = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\startupreg\';
-  KEY_STARTUP_USER_DISABLED = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\startupfolder\';
-  KEY_STARTUP_RUN           = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Run';
-  KEY_STARTUP_RUNONCE       = 'SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce';
+  { Startup registry keys until Windows 7 }
+  KEY_STARTUP_DISABLED           = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\startupreg\' deprecated;
+  KEY_STARTUP_USER_DISABLED      = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\startupfolder\' deprecated;
+
+  { Startup registry keys since Windows 8 }
+  KEY_STARTUP_APPROVED           = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\';
+  KEY_STARTUP_RUN_APPROVED       = KEY_STARTUP_APPROVED +'Run';
+  KEY_STARTUP_RUN32_APPROVED     = KEY_STARTUP_APPROVED +'Run32';
+  KEY_STARTUP_USER_APPROVED      = KEY_STARTUP_APPROVED +'StartupFolder';
+
+  { General startup keys }
+  KEY_STARTUP_RUN                = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Run';
+  KEY_STARTUP_RUNONCE            = 'SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce';
 
   { Redirected 32-Bit Registry keys by WOW64 }
-  KEY_STARTUP_RUN32         = 'SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Run';
-  KEY_STARTUP_RUNONCE32     = 'SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnce';
+  KEY_STARTUP_RUN32              = 'SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Run';
+  KEY_STARTUP_RUNONCE32          = 'SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnce';
 
   { Service Registry keys }
-  KEY_SERVICE_DISABLED      = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\services';
-  KEY_SERVICE_ENABLED       = 'SYSTEM\CurrentControlSet\services\';
+  KEY_SERVICE_DISABLED           = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\services';
+  KEY_SERVICE_ENABLED            = 'SYSTEM\CurrentControlSet\services\';
 
   { Context menu Registry subkeys + values}
-  KEY_USERCHOICE            = 'Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\%s\UserChoice';
-  CM_SHELL                  = 'Shell';
-  CM_SHELL_DISABLED         = 'LegacyDisable';
-  CM_SHELLEX                = 'ShellEx';
-  CM_SHELLEX_HANDLERS       = CM_SHELLEX +'\ContextMenuHandlers';
-  CM_SHELLEX_FILE           = 'CLSID\%s\InProcServer32';
-  CM_SHELLNEW               = 'ShellNew';
-  CM_SHELLNEW_DISABLED      = '_'+ CM_SHELLNEW;
-  CM_LOCATIONS_DEFAULT      = 'Directory, Folder, *, Drive';
+  KEY_USERCHOICE                 = 'Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\%s\UserChoice';
+  CM_SHELL                       = 'Shell';
+  CM_SHELL_DISABLED              = 'LegacyDisable';
+  CM_SHELLEX                     = 'ShellEx';
+  CM_SHELLEX_HANDLERS            = CM_SHELLEX +'\ContextMenuHandlers';
+  CM_SHELLEX_FILE                = 'CLSID\%s\InProcServer32';
+  CM_SHELLNEW                    = 'ShellNew';
+  CM_SHELLNEW_DISABLED           = '_'+ CM_SHELLNEW;
+  CM_LOCATIONS_DEFAULT           = 'Directory, Folder, *, Drive';
 
   { Extensions of backup files }
-  EXT_COMMON                = '.CommonStartup';
-  EXT_USER                  = '.Startup';
+  EXT_COMMON                     = '.CommonStartup';
+  EXT_USER                       = '.Startup';
 
   { Description type of startup user items }
-  TYPE_COMMON               = 'Startup Common';
-  TYPE_COMMON_XP            = 'Common Startup';
-  TYPE_USER                 = 'Startup User';
-  TYPE_USER_XP              = 'Startup';
+  TYPE_COMMON                    = 'Startup Common';
+  TYPE_COMMON_XP                 = 'Common Startup' deprecated;
+  TYPE_USER                      = 'Startup User';
+  TYPE_USER_XP                   = 'Startup' deprecated;
 
 type
   { TLnkFile }
   TLnkFile = class(TObject)
   private
-    FFileName, FExeFileName, FArguments, FBackupExt: string;
-    function GetBackupLnk(): string;
+    FFileName,
+    FExeFileName,
+    FArguments,
+    FBackupExt: string;
+    function GetBackupLnk(): string; deprecated 'Since Windows 8';
     function GetFullPath(): string;
     function GetFullPathEscaped(): string;
   public
     constructor Create(AFileName, ABackupExtension: string); overload;
-    constructor Create(AName: string; AAllUsers: Boolean); overload;
-    function BackupExists(): Boolean;
-    function CreateBackup(): Boolean;
+    constructor Create(AName: string; ACommonStartup: Boolean); overload;
+    function BackupExists(): Boolean; deprecated 'Since Windows 8';
+    procedure CreateBackup(); deprecated 'Since Windows 8';
     function Delete(): Boolean;
-    function DeleteBackup(): Boolean;
+    function DeleteBackup(): Boolean; deprecated 'Since Windows 8';
     function Exists(): Boolean;
-    class function GetBackupDir(): string;
-    class function GetStartUpDir(AAllUsers: Boolean): string;
+    class function GetBackupDir(): string; deprecated 'Since Windows 8';
+    class function GetStartUpDir(ACommonStartup: Boolean): string;
     function HasArguments(): Boolean;
     function ReadLnkFile(): Boolean;
     function WriteLnkFile(): Boolean; overload;
@@ -93,21 +104,25 @@ type
   TRootItem = class(TObject)
   private
     FIndex: Word;
-    FName, FType, FFileName: string;
+    FName,
+    FType,
+    FFileName: string;
     function GetArguments(): string;
     function GetFileNameOnly(): string;
-    function GetIcon(): HICON;
   protected
     FEnabled: Boolean;
-    FLocation: string;
+    FLocation,
+    FCaption: string;
     function DeleteQuoteChars(const APath: string): string;
     function ExtractArguments(const APath: string): string;
     function ExtractPathToFile(const APath: string): string;
     function GetFullLocation(): string; virtual; abstract;
+    function GetIcon(): HICON; overload; virtual;
+    function GetIcon(AExeFileName: string): HICON; overload;
   public
     constructor Create(AIndex: Word; AEnabled: Boolean);
     function ChangeFilePath(const ANewFileName: string): Boolean; virtual; abstract;
-    function ChangeStatus(): Boolean; virtual;
+    procedure ChangeStatus(ANewStatus: Boolean); virtual;
     function Delete(): Boolean; virtual; abstract;
     function Disable(): Boolean; virtual; abstract;
     function Enable(): Boolean; virtual; abstract;
@@ -115,9 +130,11 @@ type
     function FileExists(): Boolean;
     function GetStatus(ALangFile: TLanguageFile): string;
     procedure OpenInExplorer();
+    function Rename(const ANewCaption: string): Boolean; virtual; abstract;
     { external }
     property Arguments: string read GetArguments;
-    property Enabled: Boolean read FEnabled;
+    property Caption: string read FCaption write FCaption;
+    property Enabled: Boolean read FEnabled write FEnabled;
     property FileName: string read FFileName write FFileName;
     property FileNameOnly: string read GetFileNameOnly;
     property Icon: HICON read GetIcon;
@@ -128,10 +145,11 @@ type
     property TypeOf: string read FType write FType;
   end;
 
-  { TRootRegItem }
-  TRootRegItem = class(TRootItem)
-  protected
+  { TRegistryItem }
+  TRegistryItem = class(TRootItem)
+  private
     FWow64: Boolean;
+  protected
     function DeleteKey(ARootKey: TRootKey; AKeyPath, AKeyName: string;
       AFailIfNotExists: Boolean = True): Boolean;
     function GetRootKey(): HKEY; virtual; abstract;
@@ -148,89 +166,113 @@ type
     property Wow64Location: string read GetWow64Key;
   end;
 
-  { Search event }
+  { TItemStatus }
+  TItemStatus = (stNone, stEnabled, stDisabled, stDeleted);
+
+  { Events }
   TSearchEvent = procedure(Sender: TObject; const ACount: Cardinal) of object;
   TSearchErrorEvent = procedure(Sender: TObject; AErrorMessage: string) of object;
+  TChangeEvent = procedure(Sender: TObject; ANewStatus: TItemStatus) of object;
+
+  { IImportableList }
+  IImportableList = interface
+  ['{19B8FB63-483A-4F54-80C4-A25FBBAC7891}']
+    function ImportBackup(const AFileName: string): Boolean;
+  end;
 
   { TRootList }
-  TRootList = class(TObjectList)
+  TRootList<T: TRootItem> = class(TObjectList<T>, IInterface)
   private
-    FItem: TRootItem;
+    FItem: T;
     FOnSearchStart,
     FOnSearching: TSearchEvent;
+    FOnChanged: TChangeEvent;
     FOnSearchFinish: TNotifyEvent;
     FOnSearchError: TSearchErrorEvent;
-    FOnChanged: TNotifyEvent;
   protected
     FActCount: Word;
+    FInvalid: Boolean;
     FLock: TCriticalSection;
-    function RootItemAt(AIndex: Word): TRootItem;
+    procedure DoNotifyOnChanged(ANewStatus: TItemStatus);
+    function QueryInterface(const IID: TGUID; out Obj): HRESULT; stdcall;
+    function _AddRef: Integer; stdcall;
+    function _Release: Integer; stdcall;
   public
     constructor Create;
     destructor Destroy; override;
-    function Add(ARootItem: TRootItem): Integer; virtual;
     function ChangeItemFilePath(const ANewFilePath: string): Boolean; virtual;
-    function ChangeItemStatus(): Boolean; virtual;
-    procedure Clear; override;
+    procedure ChangeItemStatus(); virtual;
+    procedure Clear;
     function DeleteItem(): Boolean; virtual;
     function DisableItem(): Boolean; virtual;
+    procedure DoNotifyOnFinished();
     function EnableItem(): Boolean; virtual;
     procedure ExportItem(const AFileName: string); virtual;
-    function First(): TRootItem; virtual;
-    function IndexOf(AItemName: string): Integer; overload;
-    function IndexOf(AItemName: string; AEnabled: Boolean): Integer; overload;
+    procedure ExportList(const AFileName: string); virtual; abstract;
+    function IndexOf(ANameOrCaption: string): Integer; overload;
+    function IndexOf(ANameOrCaption: string; AEnabled: Boolean): Integer; overload;
+    procedure Invalidate();
     function IsLocked(): Boolean;
-    function Remove(ARootItem: TRootItem): Integer; virtual;
-    function Last(): TRootItem; virtual;
-    procedure Load(); virtual; abstract;
+    procedure Load(AExpertMode: Boolean = False); virtual; abstract;
+    function RenameItem(const ANewCaption: string): Boolean; virtual;
     { external }
     property Enabled: Word read FActCount;
-    property Items[AIndex: Word]: TRootItem read RootItemAt; default;
-    property OnChanged: TNotifyEvent read FOnChanged write FOnChanged;
+    property IsInvalid: Boolean read FInvalid write FInvalid;
+    property OnChanged: TChangeEvent read FOnChanged write FOnChanged;
     property OnSearching: TSearchEvent read FOnSearching write FOnSearching;
     property OnSearchError: TSearchErrorEvent read FOnSearchError write FOnSearchError;
     property OnSearchFinish: TNotifyEvent read FOnSearchFinish write FOnSearchFinish;
     property OnSearchStart: TSearchEvent read FOnSearchStart write FOnSearchStart;
-    property Selected: TRootItem read FItem write FItem;
-  end;
-
-  { TRootRegList }
-  TRootRegList = class(TRootList)
-  public
-    procedure ExportList(const AFileName: string); virtual; abstract;
+    property Selected: T read FItem write FItem;
   end;
 
   { Exception class }
   EStartupException = class(Exception);
 
   { TStartupListItem }
-  TStartupListItem = class(TRootRegItem)
+  TStartupListItem = class(TRegistryItem)
   private
     FRootKey: HKEY;
+    FApprovedLocation,
     FTime: string;
   protected
+    function ChangeStatus(AKeyPath: string; var ANewStatus: TBytes): Boolean; overload;
+    function DeleteValue(AKeyPath: string; AReallyWow64: Boolean = True): Boolean;
     function GetFullLocation(): string; override;
     function GetRootKey(): HKEY; override;
+    function Rename(const AKeyPath, ANewCaption: string;
+      AReallyWow64: Boolean = True): Boolean; overload;
   public
     function ChangeFilePath(const ANewFileName: string): Boolean; override;
+    function Delete(): Boolean; override;
+    function Disable(): Boolean; override;
+    function Enable(): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
     procedure OpenInRegEdit(); override;
+    function Rename(const ANewCaption: string): Boolean; overload; override;
     { external }
+    property LocationApproved: string read FApprovedLocation write FApprovedLocation;
     property RootKey: HKEY read GetRootKey write FRootKey;
     property Time: string read FTime write FTime;
   end;
 
   { TStartupItem }
   TStartupItem = class(TStartupListItem)
+  private
+    FRunOnce: Boolean;
   public
     function Delete(): Boolean; override;
     function Disable(): Boolean; override;
     function Enable(): Boolean; override;
+    function Rename(const ANewCaption: string): Boolean; override;
+    { external }
+    property RunOnce: Boolean read FRunOnce write FRunOnce;
   end;
 
   { TStartupUserItem }
   TStartupUserItem = class(TStartupListItem)
   private
+    FStartupUser: Boolean;
     FLnkFile: TLnkFile;
     function AddCircumflex(const AName: string): string;
   protected
@@ -242,46 +284,45 @@ type
     function Disable(): Boolean; override;
     function Enable(): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
+    function Rename(const ANewCaption: string): Boolean; override;
     { external }
+    property StartupUser: Boolean read FStartupUser write FStartupUser;
     property LnkFile: TLnkFile read FLnkFile write FLnkFile;
   end;
 
   { TStartupList }
-  TStartupList = class(TRootRegList)
+  TStartupList = class(TRootList<TStartupListItem>, IImportableList)
   private
     FDeleteBackup: Boolean;
-    function DeleteBackupFile(): Boolean;
-    function ItemAt(AIndex: Word): TStartupListItem;
-    function GetSelectedItem(): TStartupListItem;
-    function GetStartupUserType(AReg: TRegistry): string; overload;
-    function GetStartupUserType(AAllUsers: Boolean): string; overload;
+    function DeleteBackupFile(): Boolean; deprecated 'Since Windows 8';
+    function GetFileDescription(const AFileName: string): string;
+    function GetStartupUserType(AReg: TRegistry): string; overload; deprecated 'Since Windows 8';
+    function GetStartupUserType(ACommonStartup: Boolean): string; overload;
   protected
-    function AddItemDisabled(AReg: TRegistry; AWow64: Boolean): Integer;
-    function AddItemEnabled(AHKey: HKEY; AKeyPath, AName,
-      AFileName: string; AWow64: Boolean): Integer;
-    function AddNewStartupUserItem(AName, AFilePath: string;
-      AArguments: string = ''; AAllUsers: Boolean = False): Boolean;
-    function AddUserItemDisabled(AReg: TRegistry): Integer;
-    function AddUserItemEnabled(ALnkFile: TLnkFile; AAllUsers: Boolean): Integer;
+    function AddItemDisabled(AReg: TRegistry; AWow64: Boolean): Integer; deprecated 'Since Windows 8';
+    function AddItem(AHKey: HKEY; AKeyPath, AName, AFileName: string; AWow64,
+      ARunOnce: Boolean): Integer;
+    function AddNewStartupUserItem(AName, AFilePath: string; AArguments: string = '';
+      ACommonStartup: Boolean = False): Boolean;
+    function AddUserItemDisabled(AReg: TRegistry): Integer; deprecated 'Since Windows 8';
+    function AddUserItem(ALnkFile: TLnkFile; ACommonStartup: Boolean): Integer;
   public
     constructor Create;
     function Add(AFileName, AArguments, ACaption: string): Boolean; reintroduce;
     function BackupExists(): Boolean;
-    function ChangeItemStatus(): Boolean; override;
+    procedure ChangeItemStatus(); override;
     function DeleteItem(): Boolean; override;
     function EnableItem(): Boolean; override;
     procedure ExportList(const AFileName: string); override;
     function ImportBackup(const AFileName: string): Boolean;
-    procedure Load(); override;
-    procedure LoadDisabled(AStartupUser: Boolean; AWow64: Boolean = False);
-    procedure LoadEnabled(AAllUsers: Boolean); overload;
-    procedure LoadEnabled(AHKey: HKEY; ARunOnce: Boolean = False;
+    procedure Load(AExpertMode: Boolean = False); override;
+    procedure LoadDisabled(AStartupUser: Boolean; AWow64: Boolean = False); deprecated 'Since Windows 8';
+    procedure LoadStartup(ACommonStartup: Boolean); overload;
+    procedure LoadStartup(AHKey: HKEY; ARunOnce: Boolean = False;
       AWow64: Boolean = False); overload;
-    procedure LoadStartup(AIncludeRunOnce: Boolean);
+    procedure LoadStatus(AHKey: HKEY; AKeyPath: string);
     { external }
     property DeleteBackup: Boolean read FDeleteBackup write FDeleteBackup;
-    property Item: TStartupListItem read GetSelectedItem;
-    property Items[AIndex: Word]: TStartupListItem read ItemAt; default;
   end;
 
   { Alias class }
@@ -293,9 +334,8 @@ type
   TShellItemType = (stShell, stShellEx, stShellNew);
 
   { TContextListItem }
-  TContextListItem = class(TRootRegItem)
+  TContextListItem = class(TRegistryItem)
   private
-    FCaption: string;
     function GetKeyPath(): string; virtual; abstract;
   protected
     function GetFullLocation(): string; override;
@@ -305,7 +345,6 @@ type
     function DeleteUserChoice(AFileExtension: string): Boolean;
     function UserChoiceExists(AFileExtension: string): Boolean;
     { external }
-    property Caption: string read FCaption write FCaption;
     property Location: string read GetKeyPath;
     property LocationRoot: string read FLocation write FLocation;
   end;
@@ -314,29 +353,35 @@ type
   TShellItem = class(TContextListItem)
   private
     function GetKeyPath(): string; override;
+  protected
+    function GetIcon(): HICON; override;
   public
     function ChangeFilePath(const ANewFileName: string): Boolean; override;
+    function ChangeIcon(const ANewIconFileName: string): Boolean;
+    function DeleteIcon(): Boolean;
     function Disable(): Boolean; override;
     function Enable(): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
+    function Rename(const ANewCaption: string): Boolean; override;
   end;
 
   { TShellExItem }
   TShellExItem = class(TContextListItem)
   private
-    function ChangeStatus(ANewStatus: Boolean): Boolean;
+    function ChangeStatus(ANewStatus: Boolean): Boolean; overload;
     function GetKeyPath(): string; override;
   public
     function ChangeFilePath(const ANewFileName: string): Boolean; override;
     function Disable(): Boolean; override;
     function Enable(): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
+    function Rename(const ANewCaption: string): Boolean; override;
   end;
 
   { TShellNewItem }
   TShellNewItem = class(TContextListItem)
   private
-    function ChangeStatus(ANewStatus: Boolean): Boolean;
+    function ChangeStatus(ANewStatus: Boolean): Boolean; overload;
     function GetKeyPath(): string; override;
   public
     function ChangeFilePath(const ANewFileName: string): Boolean; override;
@@ -344,13 +389,11 @@ type
     function Disable(): Boolean; override;
     function Enable(): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
+    function Rename(const ANewCaption: string): Boolean; override;
   end;
 
   { TContextList }
-  TContextList = class(TRootRegList)
-  private
-    function GetSelectedItem(): TContextListItem;
-    function ItemAt(AIndex: Word): TContextListItem;
+  TContextList = class(TRootList<TContextListItem>)
   protected
     function AddShellItem(const AName, ALocationRoot, AFileName, ACaption: string;
       AEnabled, AWow64: Boolean): Integer;
@@ -364,15 +407,12 @@ type
       AExtended: Boolean = False): Boolean; reintroduce;
     procedure ExportList(const AFileName: string); override;
     function IndexOf(AName, ALocationRoot: string): Integer; overload;
+    procedure Load(AExpertMode: Boolean = False); override;
     procedure LoadContextmenu(const ALocationRoot: string;
       AWow64: Boolean); overload;
-    procedure Load(); override;
     procedure LoadContextmenu(const ALocationRoot: string;
       AShellItemType: TShellItemType; AWow64: Boolean); overload;
-    procedure LoadContextMenus(ALocationRootCommaList: string = '');
-    { external }
-    property Item: TContextListItem read GetSelectedItem;
-    property Items[AIndex: Word]: TContextListItem read ItemAt; default;
+    procedure LoadContextMenus(ALocationRootCommaList: string = CM_LOCATIONS_DEFAULT); overload;
   end;
 
   { Exception class }
@@ -382,10 +422,10 @@ type
   TServiceStart = (ssBoot, ssSystem, ssAutomatic, ssManual, ssDisabled);
 
   { TServiceListItem }
-  TServiceListItem = class(TRootRegItem)
+  TServiceListItem = class(TRegistryItem)
   private
     FServiceManager: SC_HANDLE;
-    FCaption, FTime: string;
+    FTime: string;
     FServiceStart: TServiceStart;
     function GetLocation(): string;
     function GetHandle(AAccess: DWORD): SC_HANDLE;
@@ -401,8 +441,8 @@ type
     function Enable(): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
     function GetStartText(ALangFile: TLanguageFile): string;
+    function Rename(const ANewCaption: string): Boolean; override;
     { external }
-    property Caption: string read FCaption write FCaption;
     property Location: string read GetLocation;
     property Manager: SC_HANDLE read FServiceManager write FServiceManager;
     property Start: TServiceStart read FServiceStart write FServiceStart;
@@ -410,11 +450,9 @@ type
   end;
 
   { TServiceList }
-  TServiceList = class(TRootRegList)
+  TServiceList = class(TRootList<TServiceListItem>)
   private
     FManager: SC_HANDLE;
-    function ItemAt(AIndex: Word): TServiceListItem;
-    function GetSelectedItem(): TServiceListItem;
   protected
     function AddServiceDisabled(AName, ACaption, AFileName: string;
       AReg: TRegistry): Integer;
@@ -425,20 +463,57 @@ type
     destructor Destroy(); override;
     function Add(AFileName, AArguments, ACaption: string): Boolean; reintroduce;
     procedure ExportList(const AFileName: string); override;
-    function IndexOf(const ACaptionOrName: string): Integer;
-    procedure Load(); override;
+    procedure Load(AExpertMode: Boolean = False); override;
     function LoadService(AName: string; AService: SC_HANDLE;
       AIncludeDemand: Boolean = False): Integer;
-    procedure LoadServices(AIncludeShared: Boolean);
+  end;
+
+  { Exception class }
+  ETaskException = class(EOleError);
+
+  { TTaskItem }
+  TTaskListItem = class(TRootItem)
+  private
+    FTask: IRegisteredTask;
+    FTaskFolder: ITaskFolder;
+    function GetTaskDefinition(): ITaskDefinition;
+    procedure UpdateTask(AName: string; ANewDefinition: ITaskDefinition);
+  protected
+    function GetFullLocation(): string; override;
+  public
+    constructor Create(AIndex: Word; AEnabled: Boolean; ATask: IRegisteredTask;
+      ATaskFolder: ITaskFolder);
+    function ChangeFilePath(const ANewFilePath: string): Boolean; override;
+    function Delete(): Boolean; override;
+    function Disable(): Boolean; override;
+    function Enable(): Boolean; override;
+    procedure ExportItem(const AFileName: string); override;
+    function Rename(const ANewCaption: string): Boolean; override;
     { external }
-    property Item: TServiceListItem read GetSelectedItem;
-    property Items[AIndex: Word]: TServiceListItem read ItemAt; default;
+    property Definition: ITaskDefinition read GetTaskDefinition;
+  end;
+
+  { TTaskList }
+  TTaskList = class(TRootList<TTaskListItem>, IImportableList)
+  private
+    FTaskService: ITaskService;
+  protected
+    function AddTaskItem(ATask: IRegisteredTask; ATaskFolder: ITaskFolder): Integer;
+  public
+    constructor Create;
+    destructor Destroy; override;
+    procedure ExportList(const AFileName: string); override;
+    function ImportBackup(const AFileName: string): Boolean;
+    procedure Load(AExpertMode: Boolean = False); override;
+    procedure LoadTasks(ATaskFolder: ITaskFolder; AIncludeHidden: Boolean); overload;
+    procedure LoadTasks(APath: string = '\'; ARecursive: Boolean = False;
+      AIncludeHidden: Boolean = False); overload;
   end;
 
 
 implementation
 
-uses StartupSearchThread, ContextSearchThread, ServiceSearchThread;
+uses StartupSearchThread, ContextSearchThread, ServiceSearchThread, TaskSearchThread;
 
 { TLnkFile }
 
@@ -457,12 +532,12 @@ end;
 
   Constructor for creating a TLnkFile instance. }
 
-constructor TLnkFile.Create(AName: string; AAllUsers: Boolean);
+constructor TLnkFile.Create(AName: string; ACommonStartup: Boolean);
 begin
   inherited Create;
-  FFileName := GetStartUpDir(AAllUsers) + AName;
+  FFileName := GetStartUpDir(ACommonStartup) + AName;
 
-  if AAllUsers then
+  if ACommonStartup then
     FBackupExt := EXT_COMMON
   else
     FBackupExt := EXT_USER;
@@ -474,6 +549,10 @@ end;
 
 function TLnkFile.GetBackupLnk(): string;
 begin
+  // Not possible on Windows 8!
+  if CheckWin32Version(6, 2) then
+    Exit;
+
   Result := GetBackupDir() + ExtractFileName(FFileName) + FBackupExt;
 end;
 
@@ -507,6 +586,10 @@ end;
 
 function TLnkFile.BackupExists(): Boolean;
 begin
+  // Not possible on Windows 8!
+  if CheckWin32Version(6, 2) then
+    Exit;
+
   Result := FileExists(GetBackupLnk());
 end;
 
@@ -514,9 +597,14 @@ end;
 
   Creates a backup .lnk file in C:\Windows\pss\. }
 
-function TLnkFile.CreateBackup(): Boolean;
+procedure TLnkFile.CreateBackup();
 begin
-  Result := CopyFile(PChar(FFileName), PChar(GetBackupLnk()), False);
+  // Deprecated since Windows 8!
+  if CheckWin32Version(6, 2) then
+    Exit;
+
+  if not CopyFile(PChar(FFileName), PChar(GetBackupLnk()), False) then
+    raise EStartupException.Create('Backup could not be created!');
 end;
 
 { public TLnkFile.Delete
@@ -534,6 +622,10 @@ end;
 
 function TLnkFile.DeleteBackup(): Boolean;
 begin
+  // Deprecated since Windows 8!
+  if CheckWin32Version(6, 2) then
+    Exit;
+
   Result := DeleteFile(GetBackupLnk());
 end;
 
@@ -552,33 +644,29 @@ end;
 
 class function TLnkFile.GetBackupDir(): string;
 begin
-  Result := GetWinDir() +'\pss\';
+  if GetFolderPath(CSIDL_WINDOWS, Result) then
+    Result := Result +'pss\';
 end;
 
 { public TLnkFile.GetStartUpDir
 
   Returns the file system startup location of current user or all. }
 
-class function TLnkFile.GetStartUpDir(AAllUsers: Boolean): string;
-var
-  ItemIDs: PItemIDList;
-  Path: PChar;
-  Folder: Cardinal;
-
+class function TLnkFile.GetStartUpDir(ACommonStartup: Boolean): string;
 begin
-  if AAllUsers then
-    Folder := CSIDL_COMMON_STARTUP
-  else
-    Folder := CSIDL_STARTUP;
-
-  if Succeeded(SHGetSpecialFolderLocation(0, Folder, ItemIDs)) then
+  // Windows Vista?
+  if CheckWin32Version(6) then
   begin
-    Path := StrAlloc(MAX_PATH);
-    SHGetPathFromIDList(ItemIDs, Path);
-    Result := IncludeTrailingBackslash(string(Path));
+    if ACommonStartup then
+      GetKnownFolderPath(FOLDERID_CommonStartup, Result)
+    else
+      GetKnownFolderPath(FOLDERID_Startup, Result);
   end  //of begin
   else
-    Result := '';
+    if ACommonStartup then
+      GetFolderPath(CSIDL_COMMON_STARTUP, Result)
+    else
+      GetFolderPath(CSIDL_STARTUP, Result);
 end;
 
 { public TLnkFile.HasArguments
@@ -603,24 +691,20 @@ var
 
 begin
   Result := False;
+  CoInitialize(nil);
 
   try
-    CoInitialize(nil);
-
     if Succeeded(CoCreateInstance(CLSID_ShellLink, nil, CLSCTX_INPROC_SERVER,
       IID_IShellLink, ShellLink)) then
     begin
       PersistFile := (ShellLink as IPersistFile);
 
-      // Try to .lnk read file
-      if Failed(PersistFile.Load(StringToOleStr(FFileName), STGM_READ)) then
-        raise Exception.Create('Lnk file does not exist!');
-
+      // Try to read .lnk file
+      OleCheck(PersistFile.Load(PChar(FFileName), STGM_READ));
       SetLength(Path, MAX_PATH + 1);
 
       // Try to read path from .lnk
-      if Failed(ShellLink.GetPath(PChar(Path), MAX_PATH, FileInfo, SLR_ANY_MATCH)) then
-        raise Exception.Create('Could not read path from .lnk file!');
+      OleCheck(ShellLink.GetPath(PChar(Path), MAX_PATH, FileInfo, SLR_ANY_MATCH));
 
       FExeFileName := PChar(Path);
       SetLength(Arguments, MAX_PATH + 1);
@@ -653,39 +737,32 @@ end;
 function TLnkFile.WriteLnkFile(AFileName, AExeFileName: string;
   AArguments: string = ''): Boolean;
 var
-  ShellLink : IShellLink;
-  PersistFile : IPersistFile;
+  ShellLink: IShellLink;
+  PersistFile: IPersistFile;
 
 begin
   Result := False;
-
-  if (AFileName = '') then
-    raise EArgumentException.Create('File name for .lnk file must not be empty!');
-
-  if (AExeFileName = '') then
-    raise EArgumentException.Create('File path to .exe must not be empty!');
+  Assert(AFileName <> '', 'File name for .lnk file must not be empty!');
+  Assert(AExeFileName <> '', 'File path to .exe must not be empty!');
+  CoInitialize(nil);
 
   try
-    CoInitialize(nil);
-
     if Succeeded(CoCreateInstance(CLSID_ShellLink, nil, CLSCTX_INPROC_SERVER,
       IID_IShellLink, ShellLink)) then
     begin
       // Set path to .exe
-      if Failed(ShellLink.SetPath(PChar(AExeFileName))) then
-        raise Exception.Create('Could not write path to .lnk file!');
+      OleCheck(ShellLink.SetPath(PChar(AExeFileName)));
 
       // Set arguments if specified
       if (AArguments <> '') then
-        if Failed(ShellLink.SetArguments(PChar(AArguments))) then
-          raise Exception.Create('Could not write arguments to .lnk file!');
+        OleCheck(ShellLink.SetArguments(PChar(AArguments)));
 
       // Set working directory
       ShellLink.SetWorkingDirectory(PChar(ExtractFilePath(AExeFileName)));
 
       // Save .lnk
-      if Succeeded(ShellLink.QueryInterface(IPersistFile, PersistFile)) then
-        Result := Succeeded(PersistFile.Save(PChar(AFileName), True));
+      OleCheck(ShellLink.QueryInterface(IPersistFile, PersistFile));
+      Result := Succeeded(PersistFile.Save(PChar(AFileName), True));
     end; //of begin
 
   finally
@@ -734,39 +811,6 @@ begin
   Result := Path;
 end;
 
-{ private TRootItem.GetIcon
-
-  Returns the icon handle to the item file path. }
-
-function TRootItem.GetIcon(): HICON;
-var
-  FileInfo: SHFILEINFO;
-{$IFDEF WIN32}
-  Win64: Boolean;
-{$ENDIF}
-
-begin
-{$IFDEF WIN32}
-  Win64 := (TOSVersion.Architecture = arIntelX64);
-
-  // Deny WOW64 redirection only on 64bit Windows
-  if Win64 then
-    Wow64FsRedirection(True);
-{$ENDIF}
-
-  if Succeeded(SHGetFileInfo(PChar(GetFileNameOnly()), 0, FileInfo, SizeOf(FileInfo),
-    SHGFI_ICON or SHGFI_SMALLICON)) then
-    Result := FileInfo.hIcon
-  else
-    Result := 0;
-
-{$IFDEF WIN32}
-  // Allow WOW64 redirection only on 64bit Windows
-  if Win64 then
-    Wow64FsRedirection(False);
-{$ENDIF}
-end;
-
 { protected TRootItem.DeleteQuoteChars
 
   Deletes quote chars from a file path. }
@@ -783,11 +827,17 @@ end;
 function TRootItem.ExtractArguments(const APath: string): string;
 var
   ExtWithArguments: string;
-  SpaceDelimiter: Integer;
+  Ext, SpaceDelimiter: Integer;
 
 begin
   // Cut path from extension until end
-  ExtWithArguments := ExtractFileExt(APath);
+  // Note: Garbage in worst case if a folder name contains a '.'!
+  Ext := AnsiPos('.', APath) - 1;
+
+  if (Ext >= 0) and (APath.Chars[Ext] = '.') then
+    ExtWithArguments := APath.SubString(Ext)
+  else
+    Exit;
 
   // Find space delimter between extension and arguments
   SpaceDelimiter := AnsiPos(' ', ExtWithArguments);
@@ -823,16 +873,67 @@ begin
     Result := Result +'"';
 end;
 
+{ protected TRootItem.GetIcon
+
+  Returns the icon handle to the item file path. }
+
+function TRootItem.GetIcon(): HICON;
+begin
+  Result := GetIcon(GetFileNameOnly());
+end;
+
+{ protected TRootItem.GetIcon
+
+  Returns the icon handle to the executable. }
+
+function TRootItem.GetIcon(AExeFileName: string): HICON;
+var
+  FileInfo: TSHFileInfo;
+{$IFDEF WIN32}
+  Win64: Boolean;
+{$ENDIF}
+
+begin
+{$IFDEF WIN32}
+  Win64 := (TOSVersion.Architecture = arIntelX64);
+
+  // Deny WOW64 redirection only on 64bit Windows
+  if Win64 then
+    Wow64FsRedirection(True);
+{$ENDIF}
+
+  if Succeeded(SHGetFileInfo(PChar(AExeFileName), 0, FileInfo, SizeOf(FileInfo),
+    SHGFI_ICON or SHGFI_SMALLICON)) then
+    Result := FileInfo.hIcon
+  else
+    Result := 0;
+
+{$IFDEF WIN32}
+  // Allow WOW64 redirection only on 64bit Windows
+  if Win64 then
+    Wow64FsRedirection(False);
+{$ENDIF}
+end;
+
 { public TRootItem.ChangeStatus
 
   Changes the item status. }
 
-function TRootItem.ChangeStatus(): Boolean;
+procedure TRootItem.ChangeStatus(ANewStatus: Boolean);
 begin
-  if FEnabled then
-    Result := Disable()
+  if (FEnabled and not ANewStatus) then
+  begin
+    if not Disable() then
+      raise Exception.Create('Unknown error!');
+  end  //of begin
   else
-    Result := Enable();
+    if (not FEnabled and ANewStatus) then
+    begin
+      if not Enable() then
+        raise Exception.Create('Unknown error!');
+    end;  //of if
+
+  FEnabled := ANewStatus;
 end;
 
 { public TRootItem.FileExists
@@ -888,9 +989,6 @@ var
 {$ENDIF}
 
 begin
-  // Extract the file path only (without arguments and quote chars)
-  PreparedFileName := GetFileNameOnly();
-
 {$IFDEF WIN32}
   // 64bit Windows?
   Win64 := (TOSVersion.Architecture = arIntelX64);
@@ -899,6 +997,8 @@ begin
   if Win64 then
     Wow64FsRedirection(True);
 {$ENDIF}
+  // Extract the file path only (without arguments and quote chars)
+  PreparedFileName := GetFileNameOnly();
 
   // Open file in explorer
   if ((PreparedFileName <> '') and SysUtils.FileExists(PreparedFileName)) then
@@ -914,23 +1014,23 @@ begin
 end;
 
 
-{ TRootRegItem }
+{ TRegistryItem }
 
-{ public TRootRegItem.Create
+{ public TRegistryItem.Create
 
   General constructor for creating a TRootRegItem instance. }
 
-constructor TRootRegItem.Create(AIndex: Word; AEnabled, AWow64: Boolean);
+constructor TRegistryItem.Create(AIndex: Word; AEnabled, AWow64: Boolean);
 begin
   inherited Create(AIndex, AEnabled);
   FWow64 := AWow64;
 end;
 
-{ protected TRootRegItem.DeleteKey
+{ protected TRegistryItem.DeleteKey
 
   Deletes a Registry key. }
 
-function TRootRegItem.DeleteKey(ARootKey: TRootKey; AKeyPath, AKeyName: string;
+function TRegistryItem.DeleteKey(ARootKey: TRootKey; AKeyPath, AKeyName: string;
   AFailIfNotExists: Boolean = True): Boolean;
 var
   Reg: TRegistry;
@@ -959,13 +1059,13 @@ begin
   end;  //of try
 end;
 
-{ protected TRootRegItem.GetWow64Key
+{ protected TRegistryItem.GetWow64Key
 
   Returns the virtualized Registry key by WOW64. }
 
-function TRootRegItem.GetWow64Key(): string;
+function TRegistryItem.GetWow64Key(): string;
 begin
-  if (FEnabled and FWow64) then
+  if ((FEnabled or CheckWin32Version(6, 2)) and FWow64) then
   begin
     if (ExtractFileName(FLocation) = 'RunOnce') then
       Result := KEY_STARTUP_RUNONCE32
@@ -976,11 +1076,11 @@ begin
     Result := FLocation;
 end;
 
-{ protected TRootRegItem.OpenInRegEdit
+{ protected TRegistryItem.OpenInRegEdit
 
-  Opens a TRootRegItem object in either 32- or 64-Bit RegEdit. }
+  Opens a TRegistryItem object in either 32- or 64-Bit RegEdit. }
 
-procedure TRootRegItem.OpenInRegEdit(AWow64: Boolean);
+procedure TRegistryItem.OpenInRegEdit(AWow64: Boolean);
 const
   KEY_REGEDIT = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Regedit';
 
@@ -991,16 +1091,11 @@ var
 {$ENDIF}
 
 begin
-  if AWow64 then
-    Reg := TRegistry.Create(KEY_WOW64_32KEY or KEY_WRITE)
-  else
-    Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_WRITE);
+  Reg := TRegistry.Create(KEY_WRITE);
 
   try
     Reg.RootKey := HKEY_CURRENT_USER;
     Reg.OpenKey(KEY_REGEDIT, True);
-
-    // Set the Registry key to show
     Reg.WriteString('LastKey', 'Computer\'+ GetFullLocation());
 
     // Redirected 32-Bit item?
@@ -1028,11 +1123,11 @@ begin
   end;  //of try
 end;
 
-{ protected TRootRegItem.WriteTimestamp
+{ protected TRegistryItem.WriteTimestamp
 
   Writes the deactivation timestamp. }
 
-function TRootRegItem.WriteTimestamp(AReg: TRegistry): string;
+function TRegistryItem.WriteTimestamp(AReg: TRegistry): string;
 var
   Year, Month, Day, Hour, Min, Sec, MSec: Word;
   TimeNow: TDateTime;
@@ -1069,20 +1164,20 @@ begin
   end;  //of try
 end;
 
-{ public TRootRegItem.OpenInRegEdit
+{ public TRegistryItem.OpenInRegEdit
 
-  Opens a TRootRegItem object in RegEdit. }
+  Opens a TRegistryItem object in RegEdit. }
 
-procedure TRootRegItem.OpenInRegEdit();
+procedure TRegistryItem.OpenInRegEdit();
 begin
   OpenInRegEdit(FWow64);
 end;
 
-{ public TRootRegItem.GetTimestamp
+{ public TRegistryItem.GetTimestamp
 
   Returns the deactivation timestamp. }
 
-function TRootRegItem.GetTimestamp(AReg: TRegistry): string;
+function TRegistryItem.GetTimestamp(AReg: TRegistry): string;
 var
   Year, Month, Day, Hour, Min, Sec: Word;
   Date, Time: string;
@@ -1123,10 +1218,11 @@ end;
 
   General constructor for creating a TRootList instance. }
 
-constructor TRootList.Create;
+constructor TRootList<T>.Create;
 begin
   inherited Create;
   FActCount := 0;
+  FInvalid := True;
   FLock := TCriticalSection.Create;
 end;
 
@@ -1134,53 +1230,73 @@ end;
 
   General destructor for destroying a TRootList instance. }
 
-destructor TRootList.Destroy;
+destructor TRootList<T>.Destroy;
 begin
   FLock.Free;
   Clear();
   inherited Destroy;
 end;
 
-{ protected TRootList.RootItemAt
+{ protected RootList.DoNotifyOnChanged
 
-  Returns a TRootItem object at index. }
+  Notifies if an item has been changed. }
 
-function TRootList.RootItemAt(AIndex: Word): TRootItem;
+procedure TRootList<T>.DoNotifyOnChanged(ANewStatus: TItemStatus);
 begin
-  Result := TRootItem(inherited Items[AIndex]);
+  if Assigned(FOnChanged) then
+    FOnChanged(Self, ANewStatus);
+end;
+
+{ protected RootList.QueryInterface
+
+  Returns the pointer to an implemention of an interface specified by a GUID. }
+
+function TRootList<T>.QueryInterface(const IID: TGUID; out Obj): HResult;
+begin
+  if GetInterface(IID, Obj) then
+    Result:= S_OK
+  else
+    Result:= E_NOINTERFACE;
+end;
+
+{ protected TRootList._AddRef
+
+  Increments the reference count for this interface. }
+
+function TRootList<T>._AddRef(): Integer;
+begin
+  Result := -1;
+end;
+
+{ protected TRootList._Release
+
+  Decrements the reference count for this interface. }
+
+function TRootList<T>._Release(): Integer;
+begin
+  Result := -1;
 end;
 
 { public TRootList.Clear
 
   Deletes all items in the list. }
 
-procedure TRootList.Clear;
+procedure TRootList<T>.Clear;
 begin
   inherited Clear;
   FActCount := 0;
   FItem := nil;
 end;
 
-{ public TRootList.Add
-
-  Adds a TRootItem to the list. }
-
-function TRootList.Add(ARootItem: TRootItem): Integer;
-begin
-  Result := inherited Add(ARootItem);
-end;
-
 { public TRootList.ChangeItemFilePath
 
   Changes the file path of an item. }
 
-function TRootList.ChangeItemFilePath(const ANewFilePath: string): Boolean;
+function TRootList<T>.ChangeItemFilePath(const ANewFilePath: string): Boolean;
 var
   Changed: Boolean;
 
 begin
-  Result := False;
-
   // List locked?
   if not FLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
@@ -1194,13 +1310,12 @@ begin
     Changed := FItem.ChangeFilePath(ANewFilePath);
 
     // Notify changed
-    if (Changed and Assigned(FOnChanged)) then
-      FOnChanged(Self);
-
-    Result := Changed;
+    if Changed then
+      DoNotifyOnChanged(stNone);
 
   finally
     FLock.Release();
+    Result := Changed;
   end;  //of try
 end;
 
@@ -1208,13 +1323,12 @@ end;
 
   Changes the item status. }
 
-function TRootList.ChangeItemStatus(): Boolean;
+procedure TRootList<T>.ChangeItemStatus();
 var
   Changed: Boolean;
+  NewStatus: TItemStatus;
 
 begin
-  Result := False;
-
   // List locked?
   if not FLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
@@ -1224,23 +1338,22 @@ begin
       raise EInvalidItem.Create('No item selected!');
 
     // Change the status
-    Changed := FItem.ChangeStatus();
+    FItem.ChangeStatus(not FItem.Enabled);
 
-    // Successful?
-    if Changed then
+    // Item has been enabled?
+    if FItem.Enabled then
     begin
-      // Item has been enabled?
-      if FItem.Enabled then
-        Inc(FActCount)
-      else
-        Dec(FActCount);
+      NewStatus := stEnabled;
+      Inc(FActCount);
+    end  //of begin
+    else
+    begin
+      NewStatus := stDisabled;
+      Dec(FActCount);
+    end;  //of if
 
-      // Notify changed
-      if Assigned(FOnChanged) then
-        FOnChanged(Self);
-    end;  //of begin
-
-    Result := Changed;
+    // Notify status change
+    DoNotifyOnChanged(NewStatus);
 
   finally
     FLock.Release();
@@ -1251,13 +1364,11 @@ end;
 
   Deletes an item from location and list. }
 
-function TRootList.DeleteItem(): Boolean;
+function TRootList<T>.DeleteItem(): Boolean;
 var
   Deleted: Boolean;
 
 begin
-  Result := False;
-
   // List locked?
   if not FLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
@@ -1282,14 +1393,12 @@ begin
       FItem := nil;
 
       // Notify delete
-      if Assigned(FOnChanged) then
-        FOnChanged(Self);
+      DoNotifyOnChanged(stDeleted);
     end;  //of begin
-
-    Result := Deleted;
 
   finally
     FLock.Release();
+    Result := Deleted;
   end;  //of try
 end;
 
@@ -1297,13 +1406,11 @@ end;
 
   Disables the current selected item. }
 
-function TRootList.DisableItem(): Boolean;
+function TRootList<T>.DisableItem(): Boolean;
 var
   Disabled: Boolean;
 
 begin
-  Result := False;
-
   // List locked?
   if not FLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
@@ -1324,28 +1431,37 @@ begin
       Dec(FActCount);
 
       // Notify disable
-      if Assigned(FOnChanged) then
-        FOnChanged(Self);
+      DoNotifyOnChanged(stDisabled);
     end;  //of begin
-
-    Result := Disabled;
 
   finally
     FLock.Release();
+    Result := Disabled;
   end;  //of try
+end;
+
+{ public TRootList.DoNotifyOnFinished
+
+  Notifies if the current list needs a visual update. }
+
+procedure TRootList<T>.DoNotifyOnFinished();
+begin
+  if Assigned(FOnSearchFinish) then
+    FOnSearchFinish(Self);
+
+  DoNotifyOnChanged(stDeleted);
+  FInvalid := False;
 end;
 
 { public TRootList.EnableItem
 
   Enables the current selected item. }
 
-function TRootList.EnableItem(): Boolean;
+function TRootList<T>.EnableItem(): Boolean;
 var
   Enabled: Boolean;
 
 begin
-  Result := False;
-
   // List locked?
   if not FLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
@@ -1366,14 +1482,12 @@ begin
       Inc(FActCount);
 
       // Notify enable
-      if Assigned(FOnChanged) then
-        FOnChanged(Self);
+      DoNotifyOnChanged(stEnabled);
     end;  //of begin
-
-    Result := Enabled;
 
   finally
     FLock.Release();
+    Result := Enabled;
   end;  //of try
 end;
 
@@ -1381,47 +1495,28 @@ end;
 
   Exports an item as file. }
 
-procedure TRootList.ExportItem(const AFileName: string);
+procedure TRootList<T>.ExportItem(const AFileName: string);
 begin
-  if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
-    raise EInvalidItem.Create('No item selected!');
+    // List locked?
+  if not FLock.TryEnter() then
+    raise EListBlocked.Create('Another operation is pending. Please wait!');
 
-  FItem.ExportItem(AFileName);
-end;
+  try
+    if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
+      raise EInvalidItem.Create('No item selected!');
 
-{ public TRootList.First
+    FItem.ExportItem(AFileName);
 
-  Returns the first TRootItem object in list. }
-
-function TRootList.First(): TRootItem;
-begin
-  Result := TRootItem(inherited First());
+  finally
+    FLock.Release();
+  end;  //of try
 end;
 
 { public TRootList.IndexOf
 
   Returns the index of an item checking name only. }
 
-function TRootList.IndexOf(AItemName: string): Integer;
-var
-  i: Integer;
-
-begin
-  Result := -1;
-
-  for i := 0 to Count -1 do
-    if (RootItemAt(i).Name = AItemName) then
-    begin
-      Result := i;
-      Break;
-    end;  //of begin
-end;
-
-{ public TRootList.IndexOf
-
-  Returns the index of an item checking name and status. }
-
-function TRootList.IndexOf(AItemName: string; AEnabled: Boolean): Integer;
+function TRootList<T>.IndexOf(ANameOrCaption: string): Integer;
 var
   i: Integer;
   Item: TRootItem;
@@ -1431,9 +1526,9 @@ begin
 
   for i := 0 to Count - 1 do
   begin
-    Item := RootItemAt(i);
+    Item := Items[i];
 
-    if ((Item.Name = AItemName) and (Item.Enabled = AEnabled)) then
+    if ((Item.Name = ANameOrCaption) or (Item.Caption = ANameOrCaption)) then
     begin
       Result := i;
       Break;
@@ -1441,20 +1536,45 @@ begin
   end;  //of for
 end;
 
-{ public TRootList.Last
+{ public TRootList.IndexOf
 
-  Returns the last item of list. }
+  Returns the index of an item checking name or caption and status. }
 
-function TRootList.Last(): TRootItem;
+function TRootList<T>.IndexOf(ANameOrCaption: string; AEnabled: Boolean): Integer;
+var
+  i: Integer;
+  Item: TRootItem;
+
 begin
-  Result := TRootItem(inherited Last());
+  Result := -1;
+
+  for i := 0 to Count - 1 do
+  begin
+    Item := Items[i];
+
+    if (((Item.Name = ANameOrCaption) or (Item.Caption = ANameOrCaption)) and
+      (Item.Enabled = AEnabled)) then
+    begin
+      Result := i;
+      Break;
+    end;  //of begin
+  end;  //of for
+end;
+
+{ public TRootList.Invalidate
+
+  Signals that list needs an visual update. }
+
+procedure TRootList<T>.Invalidate();
+begin
+  FInvalid := True;
 end;
 
 { public TRootList.IsLocked
 
   Checks if the list is currently locked. }
 
-function TRootList.IsLocked(): Boolean;
+function TRootList<T>.IsLocked(): Boolean;
 var
   Entered: Boolean;
 
@@ -1467,26 +1587,100 @@ begin
   Result := not Entered;
 end;
 
-{ public TRootList.Remove
+{ public TRootList.RenameItem
 
-  Removes a TRootItem object from the list. }
+  Renames the current selected item. }
 
-function TRootList.Remove(ARootItem: TRootItem): Integer;
+function TRootList<T>.RenameItem(const ANewCaption: string): Boolean;
+var
+  Renamed: Boolean;
+
 begin
   // List locked?
   if not FLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
 
   try
-    Result := inherited Remove(ARootItem);
+    if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
+      raise EInvalidItem.Create('No item selected!');
+
+    Renamed := FItem.Rename(ANewCaption);
+
+    // Notify changed
+    if Renamed then
+      DoNotifyOnChanged(stNone);
 
   finally
     FLock.Release();
+    Result := Renamed;
   end;  //of try
 end;
 
 
 { TStartupListItem }
+
+{ protected TStartupListItem.ChangeStatus
+
+  Changes the status of a TStartupListItem object and returns True if successful. }
+
+function TStartupListItem.ChangeStatus(AKeyPath: string; var ANewStatus: TBytes): Boolean;
+var
+  Reg: TRegistry;
+
+begin
+  Result := False;
+
+  // Status is stored in 64-Bit registry
+  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
+
+  try
+    Reg.RootKey := FRootKey;
+
+    if not Reg.OpenKey(AKeyPath, False) then
+      raise EStartupException.Create('Key '''+ AKeyPath +''' does not exist!');
+
+    Reg.WriteBinaryData(Name, ANewStatus[0], Length(ANewStatus));
+    Result := True;
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
+  end;  //of try
+end;
+
+{ protected TStartupListItem.Delete
+
+  Deletes a Registry value whose name is the item name. }
+
+function TStartupListItem.DeleteValue(AKeyPath: string;
+  AReallyWow64: Boolean = True): Boolean;
+var
+  Reg: TRegistry;
+
+begin
+  if ((FEnabled or CheckWin32Version(6, 2)) and FWow64 and AReallyWow64) then
+    Reg := TRegistry.Create(KEY_WOW64_32KEY or KEY_READ or KEY_WRITE)
+  else
+    Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
+
+  try
+    Reg.RootKey := FRootKey;
+
+    // Key invalid?
+    if not Reg.OpenKey(AKeyPath, False) then
+      raise EStartupException.Create('Key does not exist!');
+
+    // Delete value
+    if (Reg.ValueExists(Name) and not Reg.DeleteValue(Name)) then
+      raise EStartupException.Create('Could not delete value!');
+
+    Result := True;
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
+  end;  //of try
+end;
 
 { protected TStartupListItem.GetFullLocation
 
@@ -1506,6 +1700,39 @@ begin
   Result := FRootKey;
 end;
 
+{ protected TStartupListItem.Rename
+
+  Renames a TStartupListItem item. }
+
+function TStartupListItem.Rename(const AKeyPath, ANewCaption: string;
+  AReallyWow64: Boolean = True): Boolean;
+var
+  Reg: TRegistry;
+
+begin
+  if ((FEnabled or CheckWin32Version(6, 2)) and FWow64 and AReallyWow64) then
+    Reg := TRegistry.Create(KEY_WOW64_32KEY or KEY_READ or KEY_WRITE)
+  else
+    Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
+
+  try
+    Reg.RootKey := FRootKey;
+
+    if not Reg.OpenKey(AKeyPath, False) then
+      raise EStartupException.Create('Key does not exist!');
+
+    if not Reg.ValueExists(Name) then
+      raise EStartupException.Create('Value '''+ Name +''' does not exist!');
+
+    Reg.RenameValue(Name, ANewCaption);
+    Result := Reg.ValueExists(ANewCaption);
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
+  end;  //of try
+end;
+
 { public TStartupListItem.ChangeFilePath
 
   Changes the file path of an TStartupListItem. }
@@ -1518,7 +1745,7 @@ var
 begin
   Result := False;
 
-  if (FEnabled and FWow64) then
+  if ((FEnabled or CheckWin32Version(6, 2)) and FWow64) then
     Reg := TRegistry.Create(KEY_WOW64_32KEY or KEY_READ or KEY_WRITE)
   else
     Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
@@ -1530,14 +1757,14 @@ begin
     if not Reg.OpenKey(FLocation, False) then
       raise EStartupException.Create('Key does not exist!');
 
-    if FEnabled then
+    if (FEnabled or CheckWin32Version(6, 2)) then
       ItemName := Name
     else
       ItemName := 'command';
 
     // Value must exist!
     if not Reg.ValueExists(ItemName) then
-      raise EStartupException.Create('Value does not exist!');
+      raise EStartupException.Create('Value '''+ ItemName +''' does not exist!');
 
     // Change path
     Reg.WriteString(ItemName, ANewFileName);
@@ -1548,6 +1775,58 @@ begin
     Reg.CloseKey();
     Reg.Free;
   end;  //of try
+end;
+
+{ public TStartupListItem.Delete
+
+  Deletes a TStartupListItem object and returns True if successful. }
+
+function TStartupListItem.Delete(): Boolean;
+begin
+  Result := DeleteValue(FApprovedLocation, False);
+end;
+
+{ public TStartupItem.Disable
+
+  Disables a TStartupItem object and returns True if successful. }
+
+function TStartupListItem.Disable(): Boolean;
+var
+  Data: TBytes;
+
+begin
+  Result := False;
+  SetLength(Data, 12);
+  Data[0] := 3;
+
+  // TODO:
+  //BinToHex(BytesOf(DateTimeToStr(Now())), 0, Data, 4, Length(Data) - 4);
+
+  if ChangeStatus(FApprovedLocation, Data) then
+  begin
+    FEnabled := False;
+    Result := True;
+  end;  //of begin
+end;
+
+{ public TStartupItem.Enable
+
+  Enables a TStartupItem object and returns True if successful. }
+
+function TStartupListItem.Enable(): Boolean;
+var
+  Data: TBytes;
+
+begin
+  Result := False;
+  SetLength(Data, 12);
+  Data[0] := 2;
+
+  if ChangeStatus(FApprovedLocation, Data) then
+  begin
+    FEnabled := True;
+    Result := True;
+  end;  //of begin
 end;
 
 { public TStartupListItem.ExportItem
@@ -1562,14 +1841,42 @@ begin
   RegFile := TRegistryFile.Create(AFileName, True);
 
   try
-    if FEnabled then
-      RegFile.ExportReg(FRootKey, GetWow64Key(), Name)
+    if (FEnabled or CheckWin32Version(6, 2)) then
+    begin
+      RegFile.ExportReg(FRootKey, GetWow64Key(), Name);
+
+      // Windows 8?
+      if CheckWin32Version(6, 2) then
+        RegFile.ExportReg(FRootKey, FApprovedLocation, Name);
+    end  //of begin
     else
       RegFile.ExportReg(FRootKey, FLocation, False);
 
   finally
     RegFile.Free;
   end;  //of try
+end;
+
+{ public TStartupListItem.OpenInRegEdit
+
+  Opens a TStartupListItem object in RegEdit. }
+
+procedure TStartupListItem.OpenInRegEdit();
+begin
+  if (Enabled or CheckWin32Version(6, 2)) then
+    inherited OpenInRegEdit()
+  else
+    // Disabled items are stored in 64-Bit Registry!
+    OpenInRegEdit(False);
+end;
+
+{ public TStartupListItem.Rename
+
+  Renames a TStartupListItem item. }
+
+function TStartupListItem.Rename(const ANewCaption: string): Boolean;
+begin
+  Result := Rename(FApprovedLocation, ANewCaption, False);
 end;
 
 
@@ -1580,49 +1887,17 @@ end;
   Deletes a TStartupItem object and returns True if successful. }
 
 function TStartupItem.Delete(): Boolean;
-var
-  Reg: TRegistry;
-
 begin
-  Result := False;
+  if (FEnabled or CheckWin32Version(6, 2)) then
+  begin
+    Result := DeleteValue(Location, True);
 
-  if (FEnabled and FWow64) then
-    Reg := TRegistry.Create(KEY_WOW64_32KEY or KEY_READ or KEY_WRITE)
+    // Windows 8?
+    if (Result and CheckWin32Version(6, 2)) then
+      Result := inherited Delete();
+  end  //of begin
   else
-    Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
-
-  try
-    if FEnabled then
-    begin
-      Reg.RootKey := FRootKey;
-
-      // Key invalid?
-      if not Reg.OpenKey(FLocation, False) then
-        raise EStartupException.Create('Key does not exist!');
-
-      // Delete value
-      if not Reg.DeleteValue(Name) then
-        raise EStartupException.Create('Could not delete value!');
-    end  //of begin
-    else
-    begin
-      Reg.RootKey := HKEY_LOCAL_MACHINE;
-
-      // Key invalid?
-      if not Reg.OpenKey(KEY_STARTUP_DISABLED, False) then
-        raise EStartupException.Create('Key does not exist!');
-
-      // Delete key
-      if not Reg.DeleteKey(Name) then
-        raise EStartupException.Create('Could not delete key!');
-    end;  //of if
-
-    Result := True;
-
-  finally
-    Reg.CloseKey();
-    Reg.Free;
-  end;  //of try
+    Result := DeleteKey('HKLM', KEY_STARTUP_DISABLED, Name);
 end;
 
 { public TStartupItem.Disable
@@ -1634,6 +1909,13 @@ var
   Reg: TRegistry;
 
 begin
+  // Windows 8?
+  if CheckWin32Version(6, 2) then
+  begin
+    Result := inherited Disable();
+    Exit;
+  end;  //of begin
+
   Result := False;
   Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
 
@@ -1702,6 +1984,13 @@ var
   Access64: Cardinal;
 
 begin
+  // Windows 8?
+  if CheckWin32Version(6, 2) then
+  begin
+    Result := inherited Enable();
+    Exit;
+  end;  //of begin
+
   Result := False;
   Access64 := KEY_WOW64_64KEY or KEY_READ;
   Reg := TRegistry.Create(Access64);
@@ -1774,6 +2063,68 @@ begin
   end;  //of try
 end;
 
+{ public TStartupItem.Rename
+
+  Renames a TStartupItem item. }
+
+function TStartupItem.Rename(const ANewCaption: string): Boolean;
+var
+  Reg: TRegistry;
+
+begin
+  if (FEnabled or CheckWin32Version(6, 2)) then
+  begin
+    Result := Rename(FLocation, ANewCaption, True);
+
+    // Windows 8?
+    if (Result and CheckWin32Version(6, 2)) then
+      Result := inherited Rename(ANewCaption);
+
+    Name := ANewCaption;
+    Exit;
+  end;  //of begin
+
+  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
+
+  try
+    Reg.RootKey := FRootKey;
+
+    if not Reg.OpenKey(FLocation, False) then
+      raise EStartupException.Create('Key does not exist!');
+
+    if not FEnabled then
+    begin
+      if (FRootKey <> HKEY_LOCAL_MACHINE) then
+        raise EStartupException.Create('Wrong HKEY!');
+
+      Reg.WriteString('item', ANewCaption);
+      Reg.CloseKey;
+
+      if not Reg.OpenKey(ExtractFileDir(FLocation), False) then
+        raise EStartupException.Create('Key does not exist!');
+
+      if Reg.KeyExists(ANewCaption) then
+        raise EStartupException.Create('Key already exists!');
+
+      // Rename key and delete old key
+      Reg.MoveKey(Name, ANewCaption, True);
+
+      if not Reg.KeyExists(ANewCaption) then
+        raise EStartupException.Create('Key was not renamed!');
+
+      FLocation := KEY_STARTUP_DISABLED + ANewCaption;
+    end;  //of begin
+
+    // Update caption
+    Name := ANewCaption;
+    Result := True;
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
+  end;  //of try
+end;
+
 
 { TStartupUserItem }
 
@@ -1805,7 +2156,11 @@ begin
   if FEnabled then
     Result := FLocation
   else
-    Result := inherited GetFullLocation();
+    // Windows 8?
+    if CheckWin32Version(6, 2) then
+      Result := HKeyToStr(FRootKey) +'\'+ LocationApproved
+    else
+      Result := inherited GetFullLocation();
 end;
 
 { public TStartupUserItem.ChangeFilePath
@@ -1817,14 +2172,15 @@ var
   NewFilePath, Arguments: string;
 
 begin
-  if not FEnabled then
+  if (not FEnabled and not CheckWin32Version(6, 2)) then
     inherited ChangeFilePath(ANewFileName);
 
   NewFilePath := DeleteQuoteChars(ExtractPathToFile(ANewFileName));
   Arguments := DeleteQuoteChars(ExtractArguments(ANewFileName));
 
   // Failed to create new .lnk file?
-  if (FEnabled and not FLnkFile.WriteLnkFile(FLocation, NewFilePath, Arguments)) then
+  if ((FEnabled or CheckWin32Version(6, 2)) and not FLnkFile.WriteLnkFile(
+    FLocation, NewFilePath, Arguments)) then
     raise EStartupException.Create('Could not create .lnk file!');
 
   // Update information
@@ -1834,8 +2190,7 @@ begin
 
   // Rewrite backup
   if (not FEnabled and FLnkFile.BackupExists()) then
-    if not FLnkFile.CreateBackup() then
-      raise EStartupException.Create('Backup could not be created!');
+    FLnkFile.CreateBackup();
 
   Result := True;
 end;
@@ -1845,14 +2200,22 @@ end;
   Deletes a TStartupUserItem object and returns True if successful. }
 
 function TStartupUserItem.Delete(): Boolean;
+var
+  Win8: Boolean;
+
 begin
-  if FEnabled then
+  Win8 := CheckWin32Version(6, 2);
+
+  if (FEnabled or Win8) then
   begin
     // Could not delete .lnk?
     if not FLnkFile.Delete() then
       raise EStartupException.Create('Could not delete .lnk file!');
 
-    Result := True;
+    if Win8 then
+      Result := inherited Delete()
+    else
+      Result := True;
   end  //of begin
   else
     Result := DeleteKey('HKLM', KEY_STARTUP_USER_DISABLED, AddCircumflex(FLnkFile.FileName));
@@ -1868,6 +2231,13 @@ var
   KeyName: string;
 
 begin
+  // Windows 8?
+  if CheckWin32Version(6, 2) then
+  begin
+    Result := inherited Disable();
+    Exit;
+  end;  //of begin
+
   Result := False;
 
   // Create backup directory if not exist
@@ -1879,8 +2249,7 @@ begin
     raise EStartupException.Create('Lnk file '''+ FLnkFile.FileName +''' does not exist!');
 
   // Create backup by copying original .lnk
-  if not FLnkFile.CreateBackup() then
-    raise EStartupException.Create('Could not create backup file!');
+  FLnkFile.CreateBackup();
 
   Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_WRITE);
 
@@ -1898,7 +2267,7 @@ begin
     Reg.WriteString('backup', FLnkFile.BackupLnk);
 
     // Special Registry entries only for Windows >= Vista
-    if TOSVersion.Check(6) then
+    if CheckWin32Version(6) then
     begin
       Reg.WriteString('backupExtension', FLnkFile.BackupExt);
       Reg.WriteString('location', ExtractFileDir(FLocation));
@@ -1929,6 +2298,13 @@ end;
 
 function TStartupUserItem.Enable(): Boolean;
 begin
+  // Windows 8?
+  if CheckWin32Version(6, 2) then
+  begin
+    Result := inherited Enable();
+    Exit;
+  end;  //of begin
+
   // Backup file exists?
   if FLnkFile.BackupExists() then
   begin
@@ -1961,11 +2337,97 @@ end;
 
 procedure TStartupUserItem.ExportItem(const AFileName: string);
 begin
-  if not FEnabled then
-    inherited ExportItem(AFileName)
+  if CheckWin32Version(6, 2) then
+    CopyFile(PChar(FLnkFile.FileName), PChar(AFileName), False)
   else
-    if not FLnkFile.CreateBackup() then
-      raise EStartupException.Create('Could not create backup file!');
+    if not FEnabled then
+      inherited ExportItem(AFileName)
+    else
+      FLnkFile.CreateBackup();
+end;
+
+{ public TStartupUserItem.Rename
+
+  Renames a TStartupUserItem item. }
+
+function TStartupUserItem.Rename(const ANewCaption: string): Boolean;
+var
+  NewFileName, OldKeyName, NewKeyName, NewName: string;
+  Reg: TRegistry;
+  Win8, Renamed: Boolean;
+
+begin
+  Renamed := False;
+  NewFileName := ExtractFilePath(FLnkFile.FileName) + ANewCaption;
+
+  if (ExtractFileExt(ANewCaption) <> '.lnk') then
+    NewFileName := ChangeFileExt(NewFileName, '.lnk');
+
+  NewName := ExtractFileName(NewFileName);
+  Win8 := CheckWin32Version(6, 2);
+
+  if (FEnabled or Win8) then
+  begin
+    if not CopyFile(PChar(FLnkFile.FileName), PChar(NewFileName), True) then
+      raise EStartupException.Create(SysErrorMessage(GetLastError()));
+
+    // Delete old .lnk file
+    if not FLnkFile.Delete() then
+      raise EStartupException.Create('Could not delete .lnk file!');
+
+    FLocation := NewFileName;
+
+    if Win8 then
+      Renamed := inherited Rename(NewName)
+    else
+      Renamed := True;
+  end  //of begin
+  else
+  begin
+    Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
+
+    try
+      Reg.RootKey := HKEY_LOCAL_MACHINE;
+      Reg.OpenKey(KEY_STARTUP_USER_DISABLED, True);
+
+      OldKeyName := AddCircumflex(FLnkFile.FileName);
+      NewKeyName := AddCircumflex(NewFileName);
+
+      if not Reg.KeyExists(OldKeyName) then
+        raise EStartupException.Create('Key does not exist!');
+
+      if Reg.KeyExists(NewKeyName) then
+        raise EStartupException.Create('Key already exists!');
+
+      // Rename key and delete old key
+      Reg.MoveKey(OldKeyName, NewKeyName, True);
+
+      if not Reg.KeyExists(NewKeyName) then
+        raise EStartupException.Create('Key was not renamed!');
+
+      FLocation := KEY_STARTUP_USER_DISABLED + NewKeyName;
+
+      // Update specific information
+      Reg.CloseKey();
+      Reg.OpenKey(FLocation, False);
+      Reg.WriteString('path', NewFileName);
+      Reg.WriteString('item', ChangeFileExt(NewName, ''));
+      Renamed := True;
+
+    finally
+      Reg.CloseKey();
+      Reg.Free;
+    end;  //of try
+  end;  //of if
+
+  // Update information
+  if Renamed then
+  begin
+    Name := NewName;
+    FLnkFile.FileName := NewFileName;
+  end;  //of begin
+
+  Result := Renamed;
 end;
 
 
@@ -1989,26 +2451,51 @@ function TStartupList.DeleteBackupFile(): Boolean;
 begin
   Result := False;
 
+  // Deprecated since Windows 8!
+  if CheckWin32Version(6, 2) then
+    Exit;
+
   if (FDeleteBackup and (Selected is TStartupUserItem)) then
     Result := (Selected as TStartupUserItem).LnkFile.DeleteBackup();
 end;
 
-{ private TStartupList.ItemAt
+{ private TStartupList.GetFileDescription
 
-  Returns a TStartupListItem object at index. }
+  Returns the executable file description of an TStartupListItem object. }
 
-function TStartupList.ItemAt(AIndex: Word): TStartupListItem;
+function TStartupList.GetFileDescription(const AFileName: string): string;
+var
+  FileInfo: TSHFileInfo;
+  VersionSize, VersionHandle, BufferSize: Cardinal;
+  Buffer: PChar;
+  Description: Pointer;
+
 begin
-  Result := TStartupListItem(RootItemAt(AIndex));
-end;
+  if (SHGetFileInfo(PChar(AFileName), 0, FileInfo, SizeOf(FileInfo), SHGFI_EXETYPE) = 0) then
+    Exit;
 
-{ private TStartupList.GetSelectedItem
+  VersionSize := GetFileVersionInfoSize(PChar(AFileName), VersionHandle);
 
-  Returns the current selected item as TStartupListItem. }
+  if (VersionSize > 0) then
+  begin
+    GetMem(Buffer, VersionSize);
 
-function TStartupList.GetSelectedItem(): TStartupListItem;
-begin
-  Result := TStartupListItem(Selected);
+    try
+      if not GetFileVersionInfo(PChar(AFileName), VersionHandle, VersionSize, Buffer) then
+        Exit;
+
+      if not VerQueryValue(Buffer, '\VarFileInfo\Translation', Description, BufferSize) then
+        Exit;
+
+      if VerQueryValue(Buffer, PChar(Format('\StringFileInfo\%.4x%.4x\%s',
+        [LoWord(Cardinal(Description^)), HiWord(Cardinal(Description^)),
+        'FileDescription'])), Description, BufferSize) then
+        Result := PChar(Description);
+
+    finally
+      FreeMem(Buffer, VersionSize);
+    end;  //of try
+  end;  //of begin
 end;
 
 { private TStartupList.GetStartupUserType
@@ -2021,7 +2508,7 @@ var
 
 begin
   // Windows >= Vista?
-  if TOSVersion.Check(6) then
+  if CheckWin32Version(6) then
   begin
     StartupType := AReg.ReadString('backupExtension');
 
@@ -2038,18 +2525,18 @@ end;
 
   Returns the startup item type. }
 
-function TStartupList.GetStartupUserType(AAllUsers: Boolean): string;
+function TStartupList.GetStartupUserType(ACommonStartup: Boolean): string;
 begin
   // Windows >= Vista?
-  if TOSVersion.Check(6) then
+  if CheckWin32Version(6) then
   begin
-    if AAllUsers then
+    if ACommonStartup then
       Result := TYPE_COMMON
     else
       Result := TYPE_USER;
   end  //of begin
   else
-    if AAllUsers then
+    if ACommonStartup then
       Result := TYPE_COMMON_XP
     else
       Result := TYPE_USER_XP;
@@ -2065,15 +2552,21 @@ var
 
 begin
   Result := -1;
+
+  // Deprecated since Windows 8!
+  if CheckWin32Version(6, 2) then
+    Exit;
+
   Item := TStartupItem.Create(Count, False, AWow64);
 
   try
     with Item do
     begin
       RootKey := HKEY_LOCAL_MACHINE;
-      FLocation := AReg.CurrentPath;
-      Name := ExtractFileName(FLocation);
+      Location := AReg.CurrentPath;
+      Name := ExtractFileName(Location);
       FileName := AReg.ReadString('command');
+      Caption := GetFileDescription(FileNameOnly);
       Time := GetTimestamp(AReg);
 
       // RunOnce item?
@@ -2093,15 +2586,15 @@ begin
   end;  //of try
 end;
 
-{ protected TStartupList.AddItemEnabled
+{ protected TStartupList.AddItem
 
   Adds a enabled default startup item to the list. }
 
-function TStartupList.AddItemEnabled(AHKey: HKEY; AKeyPath, AName,
-  AFileName: string; AWow64: Boolean): Integer;
+function TStartupList.AddItem(AHKey: HKEY; AKeyPath, AName,
+  AFileName: string; AWow64, ARunOnce: Boolean): Integer;
 var
-  Item: TStartupListItem;
-  HKey: string;
+  Item: TStartupItem;
+  RootKeyStr: string;
 
 begin
   Result := -1;
@@ -2109,8 +2602,8 @@ begin
 
   try
     case AHKey of
-      HKEY_LOCAL_MACHINE: HKey := 'HKLM';
-      HKEY_CURRENT_USER:  HKey := 'HKCU';
+      HKEY_LOCAL_MACHINE: RootKeyStr := 'HKLM';
+      HKEY_CURRENT_USER:  RootKeyStr := 'HKCU';
       else
         raise EStartupException.Create('Invalid startup key!');
     end;  //of case
@@ -2118,22 +2611,50 @@ begin
     with Item do
     begin
       RootKey := AHKey;
-      FLocation := AKeyPath;
+      Location := AKeyPath;
       Name := AName;
       FileName := AFileName;
       Time := '';
+      RunOnce := ARunOnce;
+      Caption := GetFileDescription(FileNameOnly);
 
       // RunOnce item?
       if (ExtractFileName(AKeyPath) = 'RunOnce') then
-        TypeOf := 'RunOnce'
+      begin
+        TypeOf := 'RunOnce';
+
+        // Windows 8?
+        if CheckWin32Version(6, 2) then
+        begin
+          if AWow64 then
+            LocationApproved := KEY_STARTUP_RUN32_APPROVED
+          else
+            LocationApproved := KEY_STARTUP_RUN_APPROVED;
+        end;  //of begin
+      end  //of begin
       else
-        TypeOf := HKey;
+      begin
+        TypeOf := RootKeyStr;
+
+        // Windows 8?
+        if CheckWin32Version(6, 2) then
+        begin
+          if AWow64 then
+            LocationApproved := KEY_STARTUP_RUN32_APPROVED
+          else
+            LocationApproved := KEY_STARTUP_RUN_APPROVED;
+        end;  //of begin
+      end;  //of if
 
       if AWow64 then
         TypeOf := TypeOf +'32';
     end;  //of with
 
-    Inc(FActCount);
+    // < Windows 8?
+    // Note: Since Windows 8 LoadStatus() is used to refresh counter!
+    if not CheckWin32Version(6, 2) then
+      Inc(FActCount);
+
     Result := inherited Add(Item);
 
   except
@@ -2146,7 +2667,7 @@ end;
   Adds a new startup user item to the autostart. }
 
 function TStartupList.AddNewStartupUserItem(AName, AFilePath: string;
-  AArguments: string = ''; AAllUsers: Boolean = False): Boolean;
+  AArguments: string = ''; ACommonStartup: Boolean = False): Boolean;
 var
   LnkFile: TLnkFile;
 
@@ -2155,14 +2676,24 @@ begin
     AName := AName +'.lnk';
 
   // Init .lnk file
-  LnkFile := TLnkFile.Create(AName, AAllUsers);
+  LnkFile := TLnkFile.Create(AName, ACommonStartup);
 
   // Link file created successfully?
   if not LnkFile.WriteLnkFile(LnkFile.FileName, AFilePath, AArguments) then
     raise EStartupException.Create('Could not create .lnk file '''+ LnkFile.FileName +'''!');
 
   // Add item to list
-  Result := (AddUserItemEnabled(LnkFile, AAllUsers) <> -1);
+  if (AddUserItem(LnkFile, ACommonStartup) <> -1) then
+  begin
+    // Windows 8?
+    if CheckWin32Version(6, 2) then
+    begin
+      Result := Last.Enable();
+      Inc(FActCount);
+    end  //of begin
+    else
+      Result := True;
+  end;  //of begin
 end;
 
 { protected TStartupList.AddUserItemDisabled
@@ -2175,20 +2706,25 @@ var
   Path, Ext: string;
 
 begin
+  // Deprecated since Windows 8!
+  if CheckWin32Version(6, 2) then
+    Exit;
+
   Item := TStartupUserItem.Create(Count, False, False);
 
   try
     with (Item as TStartupUserItem) do
     begin
       RootKey := HKEY_LOCAL_MACHINE;
-      FLocation := AReg.CurrentPath;
-      Name := ExtractFileName(StringReplace(FLocation, '^', '\', [rfReplaceAll]));
+      Location := AReg.CurrentPath;
+      Name := ExtractFileName(StringReplace(Location, '^', '\', [rfReplaceAll]));
       FileName := AReg.ReadString('command');
       Time := GetTimestamp(AReg);
       TypeOf := GetStartupUserType(AReg);
       Path := AReg.ReadString('path');
+      StartupUser := ((TypeOf = TYPE_USER) or (TypeOf = TYPE_USER_XP));
 
-      if ((TypeOf = TYPE_USER) or (TypeOf = TYPE_USER_XP)) then
+      if StartupUser then
         Ext := EXT_USER
       else
         Ext := EXT_COMMON;
@@ -2207,14 +2743,13 @@ begin
   end;  //of try
 end;
 
-{ protected TStartupList.AddUserItemEnabled
+{ protected TStartupList.AddUserItem
 
   Adds a enabled startup user item to the list. }
 
-function TStartupList.AddUserItemEnabled(ALnkFile: TLnkFile;
-  AAllUsers: Boolean): Integer;
+function TStartupList.AddUserItem(ALnkFile: TLnkFile; ACommonStartup: Boolean): Integer;
 var
-  Item: TStartupListItem;
+  Item: TStartupUserItem;
 
 begin
   Item := TStartupUserItem.Create(Count, True, False);
@@ -2223,18 +2758,34 @@ begin
     // Read .lnk file
     ALnkFile.ReadLnkFile();
 
-    with (Item as TStartupUserItem) do
+    with Item do
     begin
-      RootKey := 0;
-      FLocation := ALnkFile.FileName;
+      Location := ALnkFile.FileName;
       FileName := ALnkFile.FullPath;
       LnkFile := ALnkFile;
       Name := ExtractFileName(ALnkFile.FileName);
+      Caption := GetFileDescription(FileNameOnly);
       Time := '';
-      TypeOf := GetStartupUserType(AAllUsers);
+      StartupUser := not ACommonStartup;
+      TypeOf := GetStartupUserType(ACommonStartup);
+
+      // Windows 8?
+      if CheckWin32Version(6, 2) then
+      begin
+        if ACommonStartup then
+          RootKey := HKEY_LOCAL_MACHINE
+        else
+          RootKey := HKEY_CURRENT_USER;
+
+        LocationApproved := KEY_STARTUP_USER_APPROVED;
+      end  //of begin
+      else
+      begin
+        RootKey := 0;
+        Inc(FActCount);
+      end;  //of if
     end;  //of with
 
-    Inc(FActCount);
     Result := inherited Add(Item);
 
   except
@@ -2260,8 +2811,7 @@ begin
 
   // Check invalid extension
   if ((Ext <> '.exe') and (Ext <> '.bat')) then
-    raise EArgumentException.Create('Invalid program extension! Must be ''.exe'''
-      +' or ''.bat''!');
+    raise EAssertionFailed.Create('Invalid program extension! Must be ''.exe'' or ''.bat''!');
 
   // List locked?
   if not FLock.TryEnter() then
@@ -2270,7 +2820,7 @@ begin
   try
     // File path already exists in another item?
     for i := 0 to Count - 1 do
-      if AnsiContainsStr(ItemAt(i).FileName, AFileName) then
+      if AnsiContainsStr(Items[i].FileName, AFileName) then
         Exit;
 
     // Add new startup user item?
@@ -2285,14 +2835,15 @@ begin
     end  //of begin
     else
     begin
-      Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_WRITE);
+      // No WOW64 redirection on HKCU!
+      Reg := TRegistry.Create(KEY_WRITE);
 
       // Try to add new startup item to Registry
       try
         Reg.RootKey := HKEY_CURRENT_USER;
         Reg.OpenKey(KEY_STARTUP_RUN, True);
 
-        // Escape space char using quotes
+        // Escape space chars using quotes
         FullPath := '"'+ AFileName +'"';
 
         // Append arguments if used
@@ -2302,14 +2853,27 @@ begin
         Reg.WriteString(ACaption, FullPath);
 
         // Adds item to list
-        Result := (AddItemEnabled(HKEY_CURRENT_USER, KEY_STARTUP_RUN, ACaption,
-          FullPath, False) <> -1);
+        if (AddItem(HKEY_CURRENT_USER, KEY_STARTUP_RUN, ACaption, FullPath,
+          False, False) <> -1) then
+        begin
+          // Windows 8?
+          if CheckWin32Version(6, 2) then
+          begin
+            Result := Last.Enable();
+            Inc(FActCount);
+          end  //of begin
+          else
+            Result := True;
+        end;  //of begin
 
       finally
         Reg.CloseKey();
         Reg.Free;
       end;  //of try
     end;  //of begin
+
+    // Refresh TListView
+    DoNotifyOnFinished();
 
   finally
     FLock.Release();
@@ -2335,12 +2899,12 @@ end;
 
   Changes the item status. }
 
-function TStartupList.ChangeItemStatus(): Boolean;
+procedure TStartupList.ChangeItemStatus();
 begin
-  Result := inherited ChangeItemStatus();
+  inherited ChangeItemStatus();
 
   // Only delete backup if item has been enabled!
-  if (Result and Selected.Enabled) then
+  if Selected.Enabled then
     DeleteBackupFile();
 end;
 
@@ -2375,9 +2939,11 @@ var
   i: Integer;
   RegFile: TRegistryFile;
   Item: TStartupListItem;
+  Win8: Boolean;
 
 begin
-  FLock.Acquire;
+  FLock.Acquire();
+  Win8 := CheckWin32Version(6, 2);
 
   // Init Reg file
   RegFile := TRegistryFile.Create(AFileName, True);
@@ -2385,14 +2951,21 @@ begin
   try
     for i := 0 to Count - 1 do
     begin
-      Item := ItemAt(i);
+      Item := TStartupListItem(Items[i]);
 
       // Skip enabled startup user items (not in Registry)!
-      if ((Item is TStartupUserItem) and Item.Enabled) then
+      if ((Item is TStartupUserItem) and (Item.Enabled or Win8)) then
         Continue;
 
-      RegFile.ExportKey(Item.RootKey, Item.GetWow64Key(), True);
+      RegFile.ExportKey(Item.RootKey, Item.Wow64Location, True);
     end;  //of for
+
+    // Windows 8?
+    if Win8 then
+    begin
+      RegFile.ExportKey(HKEY_CURRENT_USER, KEY_STARTUP_APPROVED, True);
+      RegFile.ExportKey(HKEY_LOCAL_MACHINE, KEY_STARTUP_APPROVED, True);
+    end;  //of begin
 
     // Save file
     RegFile.Save();
@@ -2419,8 +2992,8 @@ begin
 
   // Check invalid extension
   if ((Ext <> EXT_COMMON) and (Ext <> EXT_USER)) then
-    raise EArgumentException.Create('Invalid backup file extension! Must be '''
-      + EXT_COMMON +''' or '''+ EXT_USER +'''!');
+    raise EAssertionFailed.Create('Invalid backup file extension! Must '+
+      'be '''+ EXT_COMMON +''' or '''+ EXT_USER +'''!');
 
   // List locked?
   if not FLock.TryEnter() then
@@ -2443,12 +3016,15 @@ begin
 
     // File path already exists in another item?
     for i := 0 to Count - 1 do
-      if (ItemAt(i).FileName = LnkFile.ExeFileName) then
+      if (Items[i].FileName = LnkFile.ExeFileName) then
         Exit;
 
     // Create .lnk file and add it to list
     Result := AddNewStartupUserItem(Name, LnkFile.ExeFileName, LnkFile.Arguments,
       (Ext = EXT_COMMON));
+
+    // Refresh TListView
+    DoNotifyOnFinished();
 
   finally
     LnkFile.Free;
@@ -2458,16 +3034,31 @@ end;
 
 { public TStartupList.Load
 
-  Uses default settings to load items into list. }
+  Searches for startup items in default or expert mode. }
 
-procedure TStartupList.Load();
+procedure TStartupList.Load(AExpertMode: Boolean = False);
+var
+  StartupSearchThread: TStartupSearchThread;
+
 begin
-  LoadStartup(False);
+  // Init search thread
+  StartupSearchThread := TStartupSearchThread.Create(Self, FLock);
+
+  with StartupSearchThread do
+  begin
+    Win64 := (TOSVersion.Architecture = arIntelX64);
+    IncludeRunOnce := AExpertMode;
+    OnError := OnSearchError;
+    OnFinish := OnSearchFinish;
+    OnStart := OnSearchStart;
+    OnSearching := OnSearching;
+    Start;
+  end;  // of with
 end;
 
 { public TStartupList.LoadDisabled
 
-  Searches for disabled items in AKeyPath and adds them to the list. }
+  Searches for disabled items and adds them to the list. }
 
 procedure TStartupList.LoadDisabled(AStartupUser: Boolean; AWow64: Boolean = False);
 var
@@ -2478,6 +3069,10 @@ var
   Wow64: Boolean;
 
 begin
+  // Deprecated since Windows 8!
+  if CheckWin32Version(6, 2) then
+    Exit;
+
   Items := TStringList.Create;
   Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ);
   Reg.RootKey := HKEY_LOCAL_MACHINE;
@@ -2516,11 +3111,11 @@ begin
   end;  //of try
 end;
 
-{ public TStartupList.LoadEnabled
+{ public TStartupList.LoadStartup
 
   Searches for enabled startup user items and adds them to the list. }
 
-procedure TStartupList.LoadEnabled(AAllUsers: Boolean);
+procedure TStartupList.LoadStartup(ACommonStartup: Boolean);
 var
   LnkFiles: TStringList;
   SearchResult: TSearchRec;
@@ -2531,17 +3126,15 @@ var
 begin
   LnkFiles := TStringList.Create;
 
-  // Retrieve a list containing all activated startup user .lnk files
+  // Retrieve a list containing all enabled startup user .lnk files
   try
-    Folder := TLnkFile.GetStartUpDir(AAllUsers);
+    Folder := TLnkFile.GetStartUpDir(ACommonStartup);
 
-    if (FindFirst(Folder +'*.lnk', faAnyFile, SearchResult) = 0) then
+    if (FindFirst(Folder +'*.lnk', faAnyFile - faDirectory, SearchResult) = 0) then
       try
+        // .lnk file found
         repeat
-          // .lnk file found?
-          if (SearchResult.Attr <> faDirectory) then
-            LnkFiles.Add(Folder + SearchResult.Name);
-
+          LnkFiles.Add(Folder + SearchResult.Name);
         until FindNext(SearchResult) <> 0;
 
       finally
@@ -2551,8 +3144,8 @@ begin
     // Add every file to list
     for i := 0 to LnkFiles.Count - 1 do
     begin
-      LnkFile := TLnkFile.Create(ExtractFileName(LnkFiles[i]), AAllUsers);
-      AddUserItemEnabled(LnkFile, AAllUsers);
+      LnkFile := TLnkFile.Create(ExtractFileName(LnkFiles[i]), ACommonStartup);
+      AddUserItem(LnkFile, ACommonStartup);
     end;  //of begin
 
   finally
@@ -2560,11 +3153,11 @@ begin
   end;  //of try
 end;
 
-{ public TStartupList.LoadEnabled
+{ public TStartupList.LoadStartup
 
   Searches for enabled items in ARootKey and AKeyPath and adds them to the list. }
 
-procedure TStartupList.LoadEnabled(AHKey: HKEY; ARunOnce: Boolean = False;
+procedure TStartupList.LoadStartup(AHKey: HKEY; ARunOnce: Boolean = False;
   AWow64: Boolean = False);
 var
   Reg: TRegistry;
@@ -2594,7 +3187,7 @@ begin
 
     for i := 0 to Items.Count - 1 do
       // Read path to .exe and add item to list
-      AddItemEnabled(AHKey, KeyPath, Items[i], Reg.ReadString(Items[i]), AWow64);
+      AddItem(AHKey, KeyPath, Items[i], Reg.ReadString(Items[i]), AWow64, ARunOnce);
 
   finally
     Reg.CloseKey();
@@ -2603,41 +3196,49 @@ begin
   end;  //of finally
 end;
 
-{ public TStartupList.LoadStartup
+{ public TStartupList.LoadStatus
 
-  Searches for startup items at different locations. }
+  Loads and refreshes the status of all list items (since Windows 8). }
 
-procedure TStartupList.LoadStartup(AIncludeRunOnce: Boolean);
+procedure TStartupList.LoadStatus(AHKey: HKEY; AKeyPath: string);
 var
-  StartupSearchThread: TStartupSearchThread;
+  Reg: TRegistry;
+  i: Integer;
+  Items: TStringList;
+  Item: TStartupListItem;
+  Data: TBytes;
 
 begin
-  // Init search thread
-  StartupSearchThread := TStartupSearchThread.Create(Self, FLock);
+  Items := TStringList.Create;
 
-  with StartupSearchThread do
-  begin
-    Win64 := (TOSVersion.Architecture = arIntelX64);
-    IncludeRunOnce := AIncludeRunOnce;
-    OnError := OnSearchError;
-    OnFinish := OnSearchFinish;
-    OnStart := OnSearchStart;
-    OnSearching := OnSearching;
-    Start;
-  end;  // of with
-end;
+  // Status is stored in 64-Bit registry
+  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ);
 
-{ public TStartupListItem.OpenInRegEdit
+  try
+    Reg.RootKey := AHKey;
+    Reg.OpenKey(AKeyPath, False);
+    Reg.GetValueNames(Items);
 
-  Opens a TStartupListItem object in RegEdit. }
+    for i := 0 to Count - 1 do
+    begin
+      Item := Self.Items[i];
 
-procedure TStartupListItem.OpenInRegEdit();
-begin
-  // Disabled items are in 64-Bit Registry!
-  if not Enabled then
-    OpenInRegEdit(False)
-  else
-    inherited OpenInRegEdit();
+      if (Items.IndexOf(Item.Name) <> -1) then
+      begin
+        SetLength(Data, Reg.GetDataSize(Item.Name));
+        Reg.ReadBinaryData(Item.Name, Data[0], Length(Data));
+        Item.Enabled := (Data[0] = 2);
+
+        if (Item.Enabled) then
+          Inc(FActCount);
+      end;  //of begin
+    end;  //of for
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
+    Items.Free;
+  end;  //of try
 end;
 
 
@@ -2709,6 +3310,46 @@ begin
   Result := FLocation +'\'+ CM_SHELL +'\'+ Name;
 end;
 
+{ protected TShellItem.GetIcon
+
+  Returns the icon handle to the item file path. }
+
+function TShellItem.GetIcon(): HICON;
+var
+  Reg: TRegistry;
+  Icon: TIcon;
+  IconPath: string;
+
+begin
+  Icon := TIcon.Create;
+  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ);
+
+  try
+    Reg.RootKey := HKEY_CLASSES_ROOT;
+
+    // Invalid key?
+    if not Reg.OpenKey(GetKeyPath(), False) then
+      raise EContextMenuException.Create('Key does not exist!');
+
+    if Reg.ValueExists('Icon') then
+    begin
+      IconPath := DeleteQuoteChars(Reg.ReadString('Icon'));
+
+      if (ExtractFileExt(IconPath) = '.exe') then
+        Icon.Handle := GetIcon(IconPath)
+      else
+        Icon.LoadFromFile(IconPath);
+    end;  //of begin
+
+    Result := Icon.Handle;
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
+    Icon.Free;
+  end;  //of try
+end;
+
 { public TShellItem.ChangeFilePath
 
   Changes the file path of an TShellItem item. }
@@ -2743,6 +3384,60 @@ begin
     Reg.CloseKey();
     Reg.Free;
   end;  //of try
+end;
+
+{ public TShellItem.ChangeIcon
+
+  Changes the icon of an TShellItem item. }
+
+function TShellItem.ChangeIcon(const ANewIconFileName: string): Boolean;
+var
+  Reg: TRegistry;
+
+begin
+  Result := False;
+  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
+
+  try
+    Reg.RootKey := HKEY_CLASSES_ROOT;
+
+    // Invalid key?
+    if not Reg.OpenKey(GetKeyPath(), False) then
+      raise EContextMenuException.Create('Key does not exist!');
+
+    // Delete icon?
+    if ((ANewIconFileName = '') and Reg.ValueExists('Icon')) then
+    begin
+      Result := Reg.DeleteValue('Icon');
+      Exit;
+    end;  //of begin
+
+    // Change icon
+    if Reg.ValueExists('Icon') then
+      case Reg.GetDataType('Icon') of
+        rdExpandString: Reg.WriteExpandString('Icon', ANewIconFileName);
+        rdString:       Reg.WriteString('Icon', ANewIconFileName);
+        else
+                        raise EContextMenuException.Create('Invalid data type!');
+      end  //of case
+    else
+      Reg.WriteString('Icon', ANewIconFileName);
+
+    Result := True;
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
+  end;  //of try
+end;
+
+{ public TShellItem.DeleteIcon
+
+  Deletes the icon of a TShellItem and returns True if successful. }
+
+function TShellItem.DeleteIcon: Boolean;
+begin
+  Result := ChangeIcon('');
 end;
 
 { public TShellItem.Disable
@@ -2797,7 +3492,7 @@ begin
 
     // Delete disable value, but do not fail if value does not exist!
     if (Reg.ValueExists(CM_SHELL_DISABLED) and not Reg.DeleteValue(CM_SHELL_DISABLED)) then
-      raise EStartupException.Create('Could not delete value!');
+      raise EStartupException.Create('Could not delete value '''+ CM_SHELL_DISABLED +'''!');
 
     // Update status
     FEnabled := True;
@@ -2825,6 +3520,40 @@ begin
 
   finally
     RegFile.Free;
+  end;  //of try
+end;
+
+{ public TShellItem.Rename
+
+  Renames a TShellItem item. }
+
+function TShellItem.Rename(const ANewCaption: string): Boolean;
+var
+  Reg: TRegistry;
+
+begin
+  Result := False;
+  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
+
+  try
+    Reg.RootKey := HKEY_CLASSES_ROOT;
+
+    // Invalid key?
+    if not Reg.OpenKey(GetKeyPath(), False) then
+      raise EContextMenuException.Create('Key does not exist!');
+
+    // Invalid data type?
+    if (Reg.GetDataType('') <> rdString) then
+      raise EContextMenuException.Create('Invalid data type!');
+
+    // Rename
+    Reg.WriteString('', ANewCaption);
+    FCaption := ANewCaption;
+    Result := True;
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
   end;  //of try
 end;
 
@@ -3002,6 +3731,16 @@ begin
   end;  //of try
 end;
 
+{ public TShellExItem.Rename
+
+  Renames a TShellExItem item. }
+
+function TShellExItem.Rename(const ANewCaption: string): Boolean;
+begin
+  // Impossible!
+  Result := False;
+end;
+
 
 { TShellNewItem }
 
@@ -3128,6 +3867,16 @@ begin
   end;  //of try
 end;
 
+{ public TShellNewItem.Rename
+
+  Renames a TShellNewItem item. }
+
+function TShellNewItem.Rename(const ANewCaption: string): Boolean;
+begin
+  // Impossible!
+  Result := False;
+end;
+
 
 { TContextList }
 
@@ -3139,24 +3888,6 @@ constructor TContextList.Create;
 begin
   inherited Create;
   FActCount := 0;
-end;
-
-{ private TContextList.GetSelectedItem
-
-  Returns the current selected item as TContextListItem. }
-
-function TContextList.GetSelectedItem(): TContextListItem;
-begin
-  Result := TContextListItem(Selected);
-end;
-
-{ private TContextList.ItemAt
-
-  Returns a TContextListItem object at index. }
-
-function TContextList.ItemAt(AIndex: Word): TContextListItem;
-begin
-  Result := TContextListItem(RootItemAt(AIndex));
 end;
 
 { protected TContextList.AddShellItem
@@ -3245,7 +3976,7 @@ end;
 function TContextList.Add(AFileName, AArguments, ALocationRoot, ACaption: string;
   AExtended: Boolean = False): Boolean;
 var
-  Name, Ext, FullPath, LocationRoot, FileType, KeyPath, UserChoice: string;
+  Name, Ext, FullPath, LocationRoot, FileType, KeyPath: string;
   Reg: TRegistry;
 
 begin
@@ -3254,21 +3985,21 @@ begin
 
   // Valid location?
   if ((LocationRoot <> '*') and (Length(LocationRoot) <= 2)) then
-    raise EArgumentException.Create('Invalid location: Expected at least two characters or ''*''!');
+    raise EAssertionFailed.Create('Invalid location: Expected at least two characters or ''*''!');
 
   Ext := ExtractFileExt(AFileName);
-  Name := ChangeFileExt(ExtractFileName(AFileName), '');
 
   // Check invalid extension
   if ((Ext <> '.exe') and (Ext <> '.bat')) then
-    raise EArgumentException.Create('Invalid program extension! Must be ''.exe'''
-      +' or ''.bat''!');
+    raise EAssertionFailed.Create('Invalid program extension! Must be ''.exe'' or ''.bat''!');
 
   // List locked?
   if not FLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
 
   try
+    Name := ChangeFileExt(ExtractFileName(AFileName), '');
+
     // File path already exists in another item?
     if (IndexOf(Name, LocationRoot) <> -1) then
       Exit;
@@ -3331,8 +4062,10 @@ begin
       Reg.WriteString('', FullPath);
 
       // Adds item to list
-      AddShellItem(Name, FileType, FullPath, ACaption, True, False);
-      Result := True;
+      Result := (AddShellItem(Name, FileType, FullPath, ACaption, True, False) <> -1);
+
+      // Refresh TListView
+      DoNotifyOnFinished();
 
     finally
       Reg.CloseKey();
@@ -3350,7 +4083,7 @@ end;
 
 procedure TContextList.ExportList(const AFileName: string);
 var
-  i: Word;
+  i: Integer;
   RegFile: TRegistryFile;
   Item: TContextListItem;
 
@@ -3363,7 +4096,7 @@ begin
   try
     for i := 0 to Count - 1 do
     begin
-      Item := ItemAt(i);
+      Item := TContextListItem(Items[i]);
       RegFile.ExportKey(HKEY_CLASSES_ROOT, Item.Location, True);
     end;  //of for
 
@@ -3382,7 +4115,7 @@ end;
 
 function TContextList.IndexOf(AName, ALocationRoot: string): Integer;
 var
-  i: Word;
+  i: Integer;
   Item: TContextListItem;
 
 begin
@@ -3390,7 +4123,7 @@ begin
 
   for i := 0 to Count - 1 do
   begin
-    Item := ItemAt(i);
+    Item := Items[i];
 
     if (((Item.Name = AName) or (Item.Caption = AName)) and
       (Item.LocationRoot = ALocationRoot)) then
@@ -3403,11 +4136,14 @@ end;
 
 { public TContextList.Load
 
-  Uses default settings to load items into list. }
+  Searches for context menu items in default or expert mode. }
 
-procedure TContextList.Load();
+procedure TContextList.Load(AExpertMode: Boolean = False);
 begin
-  LoadContextMenus(CM_LOCATIONS_DEFAULT);
+  if AExpertMode then
+    LoadContextMenus('')
+  else
+    LoadContextMenus(CM_LOCATIONS_DEFAULT);
 end;
 
 { public TContextList.LoadContextmenu
@@ -3527,9 +4263,17 @@ begin
         // Get status and caption of Shell item
         Enabled := not Reg.ValueExists(CM_SHELL_DISABLED);
 
-        // Filter Shell items without command
+        // Cascading shell item?
         if not Reg.OpenKey('command', False) then
+        {begin
+          if ((not Reg.ValueExists('MUIVerb') or not Reg.ValueExists('SubCommands')) and
+            not Reg.KeyExists('ExtendedSubCommandsKey')) then
+            Continue;
+
+          Caption := Reg.ReadString('MUIVerb');
+          AddCascadingShellItem(Item, ALocationRoot, '', Caption, Enabled, False);}
           Continue;
+        //end;  //of begin
 
         // Filter important Shell items
         if Reg.ValueExists('DelegateExecute') then
@@ -3604,7 +4348,7 @@ end;
 
   Searches for context menu entries at different locations. }
 
-procedure TContextList.LoadContextMenus(ALocationRootCommaList: string = '');
+procedure TContextList.LoadContextMenus(ALocationRootCommaList: string = CM_LOCATIONS_DEFAULT);
 var
   SearchThread: TContextSearchThread;
 
@@ -3742,7 +4486,7 @@ begin
       Reg.OpenKey(KEY_SERVICE_DISABLED, False);
 
       // Windows >= Vista?
-      if TOSVersion.Check(6) then
+      if CheckWin32Version(6) then
         Result := Reg.DeleteKey(Name)
       else
         Result := Reg.DeleteValue(Name);
@@ -3781,7 +4525,7 @@ begin
     Reg.RootKey := HKEY_LOCAL_MACHINE;
 
     // Windows >= Vista?
-    if TOSVersion.Check(6) then
+    if CheckWin32Version(6) then
     begin
       // Write disable key
       if not Reg.OpenKey(KEY_SERVICE_DISABLED +'\'+ Name, True) then
@@ -3827,7 +4571,7 @@ begin
     Reg.RootKey := HKEY_LOCAL_MACHINE;
 
     // Windows >= Vista?
-    if TOSVersion.Check(6) then
+    if CheckWin32Version(6) then
     begin
       if not Reg.OpenKey(KEY_SERVICE_DISABLED +'\'+ Name, False) then
         EServiceException.Create('Disable key does not exist!');
@@ -3845,7 +4589,7 @@ begin
       raise EServiceException.Create(SysErrorMessage(GetLastError()));
 
     // Windows >= Vista?
-    if TOSVersion.Check(6) then
+    if CheckWin32Version(6) then
     begin
       Reg.CloseKey();
       Reg.OpenKey(KEY_SERVICE_DISABLED, True);
@@ -3888,7 +4632,7 @@ begin
     if not FEnabled then
     begin
       // Windows >= Vista?
-      if TOSVersion.Check(6) then
+      if CheckWin32Version(6) then
       begin
         RegFile.ExportKey(HKEY_LOCAL_MACHINE, KEY_SERVICE_DISABLED +'\'+ Name, False);
         RegFile.ExportKey(HKEY_LOCAL_MACHINE, GetLocation(), True);
@@ -3917,6 +4661,33 @@ begin
   end;  //of case
 end;
 
+{ public TServiceListItem.Rename
+
+  Renames a TServiceListItem item. }
+
+function TServiceListItem.Rename(const ANewCaption: string): Boolean;
+var
+  Service: SC_HANDLE;
+
+begin
+  Result := False;
+  Service := GetHandle(SERVICE_CHANGE_CONFIG);
+
+  try
+    // Rename service
+    if not ChangeServiceConfig(Service, SERVICE_NO_CHANGE, SERVICE_NO_CHANGE,
+      SERVICE_NO_CHANGE, nil, nil, nil, nil, nil, nil, PChar(ANewCaption)) then
+      raise EServiceException.Create(SysErrorMessage(GetLastError()));
+
+    // Update information
+    FCaption := ANewCaption;
+    Result := True;
+
+  finally
+    CloseServiceHandle(Service);
+  end;  //of try
+end;
+
 
 { TServiceList }
 
@@ -3939,24 +4710,6 @@ destructor TServiceList.Destroy();
 begin
   CloseServiceHandle(FManager);
   inherited Destroy;
-end;
-
-{ private TServiceList.ItemAt
-
-  Returns a TServiceListItem object at index. }
-
-function TServiceList.ItemAt(AIndex: Word): TServiceListItem;
-begin
-  Result := TServiceListItem(RootItemAt(AIndex));
-end;
-
-{ private TServiceList.GetSelectedItem
-
-  Returns the current selected item as TServiceListItem. }
-
-function TServiceList.GetSelectedItem(): TServiceListItem;
-begin
-  Result := TServiceListItem(Selected);
 end;
 
 { protected TServiceList.AddServiceDisabled
@@ -4036,8 +4789,7 @@ begin
   Name := ExtractFileName(AFileName);
 
   // Check invalid extension
-  if (ExtractFileExt(Name) <> '.exe') then
-    raise EArgumentException.Create('Invalid program extension! Must be ''.exe''!');
+  Assert(ExtractFileExt(Name) = '.exe', 'Invalid program extension! Must be ''.exe''!');
 
   // List locked?
   if not FLock.TryEnter() then
@@ -4075,6 +4827,9 @@ begin
     // Adds service to list
     Result := (AddServiceEnabled(Name, ACaption, FullPath, ssAutomatic) <> -1);
 
+    // Refresh TListView
+    DoNotifyOnFinished();
+
   finally
     FLock.Release();
   end;  //of try
@@ -4086,8 +4841,8 @@ end;
 
 procedure TServiceList.ExportList(const AFileName: string);
 var
-  RegFile: TRegistryFile;
   i: Integer;
+  RegFile: TRegistryFile;
   Item: TServiceListItem;
 
 begin
@@ -4100,7 +4855,7 @@ begin
     // Export enabled services
     for i := 0 to Count - 1 do
     begin
-      Item := ItemAt(i);
+      Item := TServiceListItem(Items[i]);
       RegFile.ExportKey(HKEY_LOCAL_MACHINE, Item.Location, True);
     end;  //of for
 
@@ -4116,38 +4871,26 @@ begin
   end;  //of try
 end;
 
-{ public TServiceList.IndexOf
-
-  Returns the index of an item checking caption only. }
-
-function TServiceList.IndexOf(const ACaptionOrName: string): Integer;
-var
-  i: Integer;
-  Item: TServiceListItem;
-
-begin
-  Result := -1;
-
-  for i := 0 to Count - 1 do
-  begin
-    Item := ItemAt(i);
-
-    // Item name or caption matches?
-    if ((Item.Caption = ACaptionOrName) or (Item.Name = ACaptionOrName)) then
-    begin
-      Result := i;
-      Break;
-    end;  //of begin
-  end;  //of for
-end;
-
 { public TServiceList.Load
 
-  Uses default settings to load items into list. }
+  Searches for service items in default or expert mode. }
 
-procedure TServiceList.Load();
+procedure TServiceList.Load(AExpertMode: Boolean = False);
+var
+  SearchThread: TServiceSearchThread;
+
 begin
-  LoadServices(False);
+  SearchThread := TServiceSearchThread.Create(Self, FManager, FLock);
+
+  with SearchThread do
+  begin
+    IncludeShared := AExpertMode;
+    OnError := OnSearchError;
+    OnFinish := OnSearchFinish;
+    OnStart := OnSearchStart;
+    OnSearching := OnSearching;
+    Start;
+  end;  //of with
 end;
 
 { public TServiceList.LoadService
@@ -4201,7 +4944,7 @@ begin
         Reg.RootKey := HKEY_LOCAL_MACHINE;
 
         // Windows >= Vista?
-        if TOSVersion.Check(6) then
+        if CheckWin32Version(6) then
           Reg.OpenKey(KEY_SERVICE_DISABLED +'\'+ AName, False)
         else
           Reg.OpenKey(KEY_SERVICE_DISABLED, False);
@@ -4229,24 +4972,476 @@ begin
         ServiceConfig^.lpBinaryPathName, ServiceStart);
 
   finally
-    FreeMem(ServiceConfig);
+    FreeMem(ServiceConfig, BytesNeeded);
   end;  //of try
 end;
 
-{ public TServiceList.LoadServices
 
-  Searches for service items. }
+{ TTaskListItem }
 
-procedure TServiceList.LoadServices(AIncludeShared: Boolean);
+{ public TTaskListItem.Create
+
+  Constructor for creating a TTaskListItem instance. }
+
+constructor TTaskListItem.Create(AIndex: Word; AEnabled: Boolean;
+  ATask: IRegisteredTask; ATaskFolder: ITaskFolder);
+begin
+  inherited Create(AIndex, AEnabled);
+  FTask := ATask;
+  FTaskFolder := ATaskFolder;
+end;
+
+{ private TTaskListItem.GetTaskDefinition
+
+  Returns the definition of the task. }
+
+function TTaskListItem.GetTaskDefinition(): ITaskDefinition;
+begin
+  Result := FTask.Definition;
+end;
+
+{ private TTaskListItem.UpdateTask
+
+  Updates a task definition. }
+
+procedure TTaskListItem.UpdateTask(AName: string; ANewDefinition: ITaskDefinition);
 var
-  SearchThread: TServiceSearchThread;
+  TempLocation: string;
+  TaskFile: TStringList;
+  NewTask: IRegisteredTask;
 
 begin
-  SearchThread := TServiceSearchThread.Create(Self, FManager, FLock);
+  {
+  // Temporary workaround:
+  // On 32-Bit RegisterTaskDefinition() works fine but on 64-Bit not: WTF!
+  OleCheck(FTaskFolder.RegisterTaskDefinition(FTask.Name, Definition,
+    TASK_UPDATE, Null, Null, FTask.Definition.Principal.LogonType, Null, NewTask));
+  }
+
+  TempLocation := IncludeTrailingBackslash(GetTempDir()) + AName;
+  TaskFile := TStringList.Create;
+
+  try
+    TaskFile.SetText(ANewDefinition.XmlText);
+    TaskFile.SaveToFile(TempLocation, TEncoding.Unicode);
+    Delete();
+
+    if not ExecuteProgram('schtasks', '/create /XML "'+ TempLocation
+      +'" /tn '+ AName, SW_HIDE, True, True) then
+      raise Exception.Create(SysErrorMessage(GetLastError()));
+
+    OleCheck(FTaskFolder.GetTask(PChar(AName), NewTask));
+    DeleteFile(TempLocation);
+    FTask := NewTask;
+
+  finally
+    TaskFile.Free;
+  end;  //of try
+end;
+
+{ protected TTaskListItem.GetFullLocation
+
+  Returns the full file path to a TTaskListItem. }
+
+function TTaskListItem.GetFullLocation(): string;
+begin
+  if GetFolderPath(CSIDL_SYSTEM, Result) then
+    Result := IncludeTrailingBackslash(Result +'Tasks'+ Location) + Name;
+end;
+
+{ public TTaskListItem.ChangeFilePath
+
+  Changes the file path of an TTaskListItem item. }
+
+function TTaskListItem.ChangeFilePath(const ANewFilePath: string): Boolean;
+var
+  Actions: IEnumVariant;
+  Action: IAction;
+  ActionItem: OleVariant;
+  ExecAction: IExecAction;
+  Fetched: Cardinal;
+  Definition: ITaskDefinition;
+
+begin
+  Result := False;
+  Definition := FTask.Definition;
+  Actions := (Definition.Actions._NewEnum as IEnumVariant);
+
+  // Try to find executable command in task
+  if (Actions.Next(1, ActionItem, Fetched) = 0) then
+  begin
+    Action := (IDispatch(ActionItem) as IAction);
+
+    // Task has an executable?
+    if (Action.ActionType = TASK_ACTION_EXEC) then
+    begin
+      ExecAction := (Action as IExecAction);
+
+      // Change path + arguments
+      ExecAction.Path := PChar(ExtractPathToFile(ANewFilePath));
+      ExecAction.Arguments := PChar(ExtractArguments(ANewFilePath));
+
+      // Update information
+      UpdateTask(Name, Definition);
+      FileName := ANewFilePath;
+      Result := True;
+    end;  //of begin
+  end;  //of while
+end;
+
+{ public TTaskListItem.Delete
+
+  Deletes a TTaskListItem object and returns True if successful. }
+
+function TTaskListItem.Delete(): Boolean;
+begin
+  OleCheck(FTaskFolder.DeleteTask(PChar(Name), 0));
+  Result := True;
+end;
+
+{ public TTaskListItem.Disable
+
+  Disables an TTaskListItem object and returns True if successful. }
+
+function TTaskListItem.Disable(): Boolean;
+begin
+  FTask.Enabled := False;
+
+  // Update status
+  FEnabled := False;
+  Result := True;
+end;
+
+{ public TTaskListItem.Enable
+
+  Enables an TTaskListItem object and returns True if successful. }
+
+function TTaskListItem.Enable(): Boolean;
+begin
+  FTask.Enabled := True;
+
+  // Update status
+  FEnabled := True;
+  Result := True;
+end;
+
+{ public TTaskListItem.ExportItem
+
+  Exports a TTaskListItem object as .xml backup file. }
+
+procedure TTaskListItem.ExportItem(const AFileName: string);
+var
+  Win64: Boolean;
+
+begin
+  Win64 := (TOSVersion.Architecture = arIntelX64);
+
+  // Deny WOW64 redirection on 64 Bit Windows
+  if Win64 then
+    Wow64FsRedirection(True);
+
+  try
+    // Copy file
+    if not CopyFile(PChar(GetFullLocation()), PChar(AFileName), False) then
+      raise ETaskException.Create(SysErrorMessage(GetLastError()));
+
+  finally
+    // Allow WOW64 redirection on 64 Bit Windows again
+    if Win64 then
+      Wow64FsRedirection(False);
+  end;  //of try
+end;
+
+{ public TTaskListItem.Rename
+
+  Renames a TTaskListItem item. }
+
+function TTaskListItem.Rename(const ANewCaption: string): Boolean;
+begin
+  UpdateTask(ANewCaption, FTask.Definition);
+
+  // Update information
+  Name := ANewCaption;
+  Result := True;
+end;
+
+{ TTaskList }
+
+{ public TTaskList.Create
+
+  General constructor for creating a TTaskList instance. }
+
+constructor TTaskList.Create;
+begin
+  inherited Create;
+  CoInitialize(nil);
+
+  if Failed(CoInitializeSecurity(nil, -1, nil, nil, RPC_C_AUTHN_LEVEL_PKT_PRIVACY,
+    RPC_C_IMP_LEVEL_IMPERSONATE, nil, EOAC_NONE, nil)) then
+    raise ETaskException.Create('Could not register security values for process!');
+
+  if Failed(CoCreateInstance(CLSID_TaskScheduler, nil, CLSCTX_INPROC_SERVER,
+    IID_ITaskService, FTaskService)) then
+    raise ETaskException.Create('Could not create task service!');
+
+  if Failed(FTaskService.Connect(Null, Null, Null, Null)) then
+    raise ETaskException.Create('Could not connect to task service!');
+end;
+
+{ public TTaskList.Destroy
+
+  Destructor for destroying a TTaskList instance. }
+
+destructor TTaskList.Destroy;
+begin
+  CoUninitialize();
+  inherited Destroy;
+end;
+
+{ protected TTaskList.AddTaskItem
+
+  Adds a task item to the list. }
+
+function TTaskList.AddTaskItem(ATask: IRegisteredTask; ATaskFolder: ITaskFolder): Integer;
+var
+  Item: TTaskListItem;
+  Action: IAction;
+  ExecAction: IExecAction;
+  Actions: IEnumVariant;
+  ActionItem: OleVariant;
+  Fetched: Cardinal;
+
+begin
+  Item := TTaskListItem.Create(Count, ATask.Enabled, ATask, ATaskFolder);
+
+  with Item do
+  begin
+    Name := ATask.Name;
+    Location := ExtractFileDir(ATask.Path);
+
+    // Try to find executable command in task
+    Actions := (Definition.Actions._NewEnum as IEnumVariant);
+
+    if (Actions.Next(1, ActionItem, Fetched) = 0) then
+    begin
+      Action := (IDispatch(ActionItem) as IAction);
+
+      // Task has an executable?
+      if (Action.ActionType = TASK_ACTION_EXEC) then
+      begin
+        ExecAction := (Action as IExecAction);
+        FileName := ExecAction.Path;
+
+        // Append arguments?
+        if (ExecAction.Arguments <> '') then
+          FileName := FileName +' '+ ExecAction.Arguments;
+      end;  //of begin
+    end;  //of while
+
+    TypeOf := 'Task';
+  end;  //of with
+
+  // Update active counter
+  if Item.Enabled then
+    Inc(FActCount);
+
+  Result := Add(Item);
+end;
+
+{ public TTaskList.ExportList
+
+  Exports the complete list as .zip file. }
+
+procedure TTaskList.ExportList(const AFileName: string);
+var
+  i: Integer;
+  ZipFile: TZipFile;
+  Item: TTaskListItem;
+  Path, ZipLocation: string;
+{$IFDEF WIN32}
+  Win64: Boolean;
+{$ENDIF}
+
+begin
+  FLock.Acquire();
+  ZipFile := TZipFile.Create;
+
+{$IFDEF WIN32}
+  Win64 := (TOSVersion.Architecture = arIntelX64);
+
+  // Deny WOW64 redirection on 64 Bit Windows
+  if Win64 then
+    Wow64FsRedirection(True);
+{$ENDIF}
+
+  try
+    ZipFile.Open(AFileName, zmWrite);
+    ZipFile.Comment := 'Clearas';
+    Path := IncludeTrailingPathDelimiter(Path);
+
+    for i := 0 to Count - 1 do
+    begin
+      Item := Items[i];
+      ZipLocation := IncludeTrailingPathDelimiter(Item.Location);
+      ZipLocation := Copy(ZipLocation, 2, Length(Item.Location));
+      ZipLocation := StringReplace(ZipLocation + Item.Name, '\', '/', [rfReplaceAll]);
+      ZipFile.Add(Item.LocationFull, ZipLocation, zcDeflate);
+    end;  //of for
+
+    ZipFile.Close();
+
+  finally
+    ZipFile.Free;
+  {$IFDEF WIN32}
+    // Allow WOW64 redirection on 64 Bit Windows again
+    if Win64 then
+      Wow64FsRedirection(False);
+  {$ENDIF}
+    FLock.Release();
+  end;  //of try
+end;
+
+{ public TTaskList.ImportBackup
+
+  Imports an exported task item as .xml file and adds it to the list. }
+
+function TTaskList.ImportBackup(const AFileName: string): Boolean;
+var
+  Ext, Path: string;
+  TaskFolder: ITaskFolder;
+  NewTask: IRegisteredTask;
+  ErrorCode: Cardinal;
+{$IFDEF WIN32}
+  Win64: Boolean;
+{$ENDIF}
+
+begin
+  Result := False;
+  Ext := ExtractFileExt(AFileName);
+
+  // Check invalid extension
+  if ((Ext <> '.xml') and (Ext <> '.zip')) then
+    raise EAssertionFailed.Create('Invalid backup file extension! Must be '
+      +'''.xml'' or ''.zip''!');
+
+  // List locked?
+  if not FLock.TryEnter() then
+    raise EListBlocked.Create('Another operation is pending. Please wait!');
+
+{$IFDEF WIN32}
+  Win64 := (TOSVersion.Architecture = arIntelX64);
+
+  // Deny WOW64 redirection on 64 Bit Windows
+  if Win64 then
+    Wow64FsRedirection(True);
+{$ENDIF}
+
+  try
+    if (Ext = '.xml') then
+    begin
+      // Open root task folder
+      OleCheck(FTaskService.GetFolder('\', TaskFolder));
+      Path := TaskFolder.Path + ChangeFileExt(ExtractFileName(AFileName), '');
+
+      // Task exists?
+      if Succeeded(TaskFolder.GetTask(PChar(Path), NewTask)) then
+        Exit;
+
+      // Temporary workaround:
+      // On 32-Bit RegisterTask() works fine but on 64-Bit not: WTF!
+      if not ExecuteProgram('schtasks', '/create /XML "'+ AFileName +'" /tn '+
+        Copy(Path, 2, Length(Path)), SW_HIDE, True, True) then
+      begin
+        ErrorCode := GetLastError();
+
+        if (ErrorCode = 0) then
+          ErrorCode := SCHED_E_MALFORMEDXML;
+
+        raise ETaskException.Create(SysErrorMessage(ErrorCode));
+      end;  //of begin
+
+      OleCheck(TaskFolder.GetTask(PChar(Path), NewTask));
+
+      // Add new task to list
+      Result := (AddTaskItem(NewTask, TaskFolder) <> -1);
+
+      // Refresh TListView
+      DoNotifyOnFinished();
+    end;  //of begin
+
+  finally
+  {$IFDEF WIN32}
+    // Allow WOW64 redirection on 64 Bit Windows again
+    if Win64 then
+      Wow64FsRedirection(False);
+  {$ENDIF}
+    FLock.Release();
+  end;  //of try
+end;
+
+{ public TTaskList.Load
+
+  Searches for task items in default or expert mode. }
+
+procedure TTaskList.Load(AExpertMode: Boolean = False);
+begin
+  LoadTasks('\', AExpertMode, AExpertMode);
+end;
+
+{ public TTaskList.LoadTasks
+
+  Adds task items to the list. }
+
+procedure TTaskList.LoadTasks(ATaskFolder: ITaskFolder; AIncludeHidden: Boolean);
+var
+  TaskCollection: IRegisteredTaskCollection;
+  Task: IRegisteredTask;
+  Tasks: IEnumVariant;
+  TaskItem: OleVariant;
+  Fetched: Cardinal;
+  Flags: Byte;
+
+begin
+  // Show hidden?
+  if AIncludeHidden then
+    Flags := Ord(TASK_ENUM_HIDDEN)
+  else
+    Flags := 0;
+
+  // Add tasks in current folder
+  OleCheck(ATaskFolder.GetTasks(Flags, TaskCollection));
+  Tasks := (TaskCollection._NewEnum as IEnumVariant);
+
+  // Add tasks to list
+  while (Tasks.Next(1, TaskItem, Fetched) = 0) do
+    try
+      Task := (IDispatch(TaskItem) as IRegisteredTask);
+      AddTaskItem(Task, ATaskFolder);
+
+    except
+      // Task currupted: Skip it!
+      Continue;
+    end;  //of try
+end;
+
+{ public TTaskList.LoadTasks
+
+  Searches for task items in specific folder and adds them to the list. }
+
+procedure TTaskList.LoadTasks(APath: string = '\'; ARecursive: Boolean = False;
+  AIncludeHidden: Boolean = False);
+var
+  SearchThread: TTaskSearchThread;
+
+begin
+  SearchThread := TTaskSearchThread.Create(Self, FTaskService, FLock);
 
   with SearchThread do
   begin
-    IncludeShared := AIncludeShared;
+    Path := APath;
+    Win64 := (TOSVersion.Architecture = arIntelX64);
+    IncludeSubFolders := ARecursive;
+    IncludeHidden := AIncludeHidden;
     OnError := OnSearchError;
     OnFinish := OnSearchFinish;
     OnStart := OnSearchStart;

@@ -19,7 +19,6 @@ type
   private
     FServiceList: TServiceList;
     FManager: SC_HANDLE;
-    FOnFinish: TNotifyEvent;
     FIncludeShared: Boolean;
   protected
     procedure Execute; override;
@@ -41,7 +40,7 @@ implementation
 constructor TServiceSearchThread.Create(AServiceList: TServiceList;
   AManager: SC_HANDLE; ALock: TCriticalSection);
 begin
-  inherited Create(ALock);
+  inherited Create(TRootList<TRootItem>(AServiceList), ALock);
   FServiceList := AServiceList;
   FManager := AManager;
 end;
@@ -58,7 +57,7 @@ var
   i: Integer;
 
 begin
-  FLock.Acquire;
+  FLock.Acquire();
 
   try
     // Clear data
@@ -113,11 +112,11 @@ begin
       end;  //of for
 
     finally
-      FreeMem(Services);
+      FreeMem(Services, BytesNeeded);
 
       // Notify end of search
       Synchronize(DoNotifyOnFinish);
-      FLock.Release;
+      FLock.Release();
     end;  //of try
 
   except

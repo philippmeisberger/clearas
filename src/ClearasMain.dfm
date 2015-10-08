@@ -40,11 +40,9 @@ object Main: TMain
       object lStartup: TLabel
         Left = 21
         Top = 32
-        Width = 367
+        Width = 275
         Height = 14
-        Caption = 
-          'Programme aus dieser Liste (mit einem "ja") werden bei jedem Sta' +
-          'rt geladen.'
+        Caption = 'Folgende Programme werden bei jedem Start ausgef'#252'hrt.'
       end
       object lCopy1: TLabel
         Left = 211
@@ -73,7 +71,7 @@ object Main: TMain
         Height = 14
         Alignment = taRightJustify
         Anchors = [akTop, akRight]
-        Caption = 'v4.1'
+        Caption = 'v4.3'
       end
       object lWindows: TLabel
         Left = 21
@@ -137,10 +135,10 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'deaktivieren'
+        Caption = 'Deaktivieren'
         Enabled = False
         TabOrder = 2
-        OnClick = bDisableStartupItemClick
+        OnClick = bDisableItemClick
       end
       object bDeleteStartupItem: TButton
         Left = 428
@@ -148,10 +146,10 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'l'#246'schen'
+        Caption = 'L'#246'schen'
         Enabled = False
         TabOrder = 4
-        OnClick = bDeleteStartupItemClick
+        OnClick = bDeleteItemClick
       end
       object bExportStartupItem: TButton
         Left = 428
@@ -159,7 +157,7 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'exportieren'
+        Caption = 'Exportieren'
         Enabled = False
         TabOrder = 3
         OnClick = bExportStartupItemClick
@@ -170,7 +168,7 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'aktivieren'
+        Caption = 'Aktivieren'
         Enabled = False
         TabOrder = 1
         OnClick = bEnableStartupItemClick
@@ -226,7 +224,7 @@ object Main: TMain
         Height = 14
         Alignment = taRightJustify
         Anchors = [akTop, akRight]
-        Caption = 'v4.1'
+        Caption = 'v4.3'
       end
       object lWindows2: TLabel
         Left = 21
@@ -241,10 +239,10 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'exportieren'
+        Caption = 'Exportieren'
         Enabled = False
         TabOrder = 3
-        OnClick = bExportContextItemClick
+        OnClick = bExportItemClick
       end
       object bDeleteContextItem: TButton
         Left = 428
@@ -252,10 +250,10 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'l'#246'schen'
+        Caption = 'L'#246'schen'
         Enabled = False
         TabOrder = 4
-        OnClick = bDeleteContextItemClick
+        OnClick = bDeleteItemClick
       end
       object bCloseContext: TButton
         Left = 428
@@ -273,10 +271,10 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'deaktivieren'
+        Caption = 'Deaktivieren'
         Enabled = False
         TabOrder = 2
-        OnClick = bDisableContextItemClick
+        OnClick = bDisableItemClick
       end
       object bEnableContextItem: TButton
         Left = 428
@@ -284,7 +282,7 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'aktivieren'
+        Caption = 'Aktivieren'
         Enabled = False
         TabOrder = 1
         OnClick = bEnableContextItemClick
@@ -362,8 +360,8 @@ object Main: TMain
         RightButton.Visible = True
         TabOrder = 8
         TextHint = 'Suchen ...'
-        OnChange = eContextSearchChange
-        OnRightButtonClick = eContextSearchRightButtonClick
+        OnChange = eSearchChange
+        OnRightButtonClick = eSearchRightButtonClick
       end
     end
     object tsService: TTabSheet
@@ -413,7 +411,7 @@ object Main: TMain
         Height = 14
         Alignment = taRightJustify
         Anchors = [akTop, akRight]
-        Caption = 'v4.1'
+        Caption = 'v4.3'
       end
       object pbServiceProgress: TProgressBar
         Left = 21
@@ -470,10 +468,10 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'exportieren'
+        Caption = 'Exportieren'
         Enabled = False
         TabOrder = 3
-        OnClick = bExportServiceItemClick
+        OnClick = bExportItemClick
       end
       object bDeleteServiceItem: TButton
         Left = 428
@@ -481,10 +479,10 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'l'#246'schen'
+        Caption = 'L'#246'schen'
         Enabled = False
         TabOrder = 4
-        OnClick = bDeleteServiceItemClick
+        OnClick = bDeleteItemClick
       end
       object bCloseService: TButton
         Left = 428
@@ -502,10 +500,10 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'deaktivieren'
+        Caption = 'Deaktivieren'
         Enabled = False
         TabOrder = 2
-        OnClick = bDisableServiceItemClick
+        OnClick = bDisableItemClick
       end
       object bEnableServiceItem: TButton
         Left = 428
@@ -513,7 +511,7 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'aktivieren'
+        Caption = 'Aktivieren'
         Enabled = False
         TabOrder = 1
         OnClick = bEnableServiceItemClick
@@ -542,8 +540,188 @@ object Main: TMain
         RightButton.Visible = True
         TabOrder = 7
         TextHint = 'Suchen ...'
-        OnChange = eContextSearchChange
-        OnRightButtonClick = eContextSearchRightButtonClick
+        OnChange = eSearchChange
+        OnRightButtonClick = eSearchRightButtonClick
+      end
+    end
+    object tsTasks: TTabSheet
+      Caption = 'Aufgaben'
+      ImageIndex = 3
+      DesignSize = (
+        535
+        284)
+      object lCopy4: TLabel
+        Left = 211
+        Top = 262
+        Width = 112
+        Height = 14
+        Hint = 'Zur Website'
+        Anchors = [akBottom]
+        Caption = #169' P.Meisberger 2015'
+        Font.Charset = ANSI_CHARSET
+        Font.Color = clBlack
+        Font.Height = -11
+        Font.Name = 'Arial'
+        Font.Style = [fsBold]
+        ParentFont = False
+        ParentShowHint = False
+        ShowHint = True
+        OnClick = lCopy1Click
+        OnMouseEnter = lCopy1MouseEnter
+        OnMouseLeave = lCopy1MouseLeave
+      end
+      object lTasks: TLabel
+        Left = 21
+        Top = 32
+        Width = 253
+        Height = 14
+        Caption = 'Folgende Aufgaben werden wie geplant ausgef'#252'hrt.'
+      end
+      object lVersion4: TLabel
+        Left = 511
+        Top = 3
+        Width = 21
+        Height = 14
+        Alignment = taRightJustify
+        Anchors = [akTop, akRight]
+        Caption = 'v4.3'
+      end
+      object lWindows4: TLabel
+        Left = 21
+        Top = 4
+        Width = 46
+        Height = 14
+        Caption = 'Windows'
+      end
+      object pbTaskProgress: TProgressBar
+        Left = 21
+        Top = 255
+        Width = 148
+        Height = 18
+        Anchors = [akLeft, akBottom]
+        Style = pbstMarquee
+        TabOrder = 8
+        Visible = False
+      end
+      object bCloseTasks: TButton
+        Left = 428
+        Top = 216
+        Width = 91
+        Height = 33
+        Anchors = [akTop, akRight]
+        Caption = 'Beenden'
+        TabOrder = 5
+        OnClick = bCloseStartupClick
+      end
+      object bDeleteTaskItem: TButton
+        Left = 428
+        Top = 176
+        Width = 91
+        Height = 33
+        Anchors = [akTop, akRight]
+        Caption = 'L'#246'schen'
+        Enabled = False
+        TabOrder = 4
+        OnClick = bDeleteItemClick
+      end
+      object bDisableTaskitem: TButton
+        Left = 428
+        Top = 96
+        Width = 91
+        Height = 33
+        Anchors = [akTop, akRight]
+        Caption = 'Deaktivieren'
+        Enabled = False
+        TabOrder = 2
+        OnClick = bDisableItemClick
+      end
+      object bEnableTaskItem: TButton
+        Left = 428
+        Top = 56
+        Width = 91
+        Height = 33
+        Anchors = [akTop, akRight]
+        Caption = 'Aktivieren'
+        Enabled = False
+        TabOrder = 1
+        OnClick = bEnableTaskItemClick
+      end
+      object bExportTaskItem: TButton
+        Left = 428
+        Top = 136
+        Width = 91
+        Height = 33
+        Anchors = [akTop, akRight]
+        Caption = 'Exportieren'
+        Enabled = False
+        TabOrder = 3
+        OnClick = bExportItemClick
+      end
+      object cbTaskExpert: TCheckBox
+        Left = 414
+        Top = 258
+        Width = 105
+        Height = 17
+        Anchors = [akRight, akBottom]
+        Caption = 'Expertenmodus'
+        TabOrder = 6
+        OnClick = mmRefreshClick
+      end
+      object eTaskSearch: TButtonedEdit
+        Left = 21
+        Top = 255
+        Width = 148
+        Height = 22
+        Anchors = [akLeft, akBottom]
+        Images = QuickSearchIconList
+        RightButton.DisabledImageIndex = 0
+        RightButton.HotImageIndex = 0
+        RightButton.ImageIndex = 0
+        RightButton.PressedImageIndex = 0
+        RightButton.Visible = True
+        TabOrder = 7
+        TextHint = 'Suchen ...'
+        OnChange = eSearchChange
+        OnRightButtonClick = eSearchRightButtonClick
+      end
+      object lwTasks: TListView
+        Left = 21
+        Top = 56
+        Width = 396
+        Height = 193
+        Anchors = [akLeft, akTop, akRight, akBottom]
+        Columns = <
+          item
+            Caption = 'Aktiviert'
+            MaxWidth = 53
+            MinWidth = 53
+            Width = 53
+          end
+          item
+            Caption = 'Aufgabe (0/0)'
+            Width = 125
+          end
+          item
+            Caption = 'Datei'
+            Width = 122
+          end
+          item
+            Caption = 'Ort'
+            MaxWidth = 75
+            MinWidth = 75
+            Width = 75
+          end>
+        HideSelection = False
+        ReadOnly = True
+        RowSelect = True
+        PopupMenu = PopupMenu
+        TabOrder = 0
+        ViewStyle = vsReport
+        OnColumnClick = ListViewColumnClick
+        OnCompare = ListViewCompare
+        OnDblClick = lwTasksDblClick
+        OnKeyPress = ListViewKeyPress
+        OnSelectItem = lwTasksSelectItem
       end
     end
   end
@@ -553,7 +731,6 @@ object Main: TMain
     object pmChangeStatus: TMenuItem
       Caption = 'deaktivieren'
       Default = True
-      Enabled = False
       OnClick = pmChangeStatusClick
     end
     object N1: TMenuItem
@@ -566,19 +743,33 @@ object Main: TMain
     end
     object pmEdit: TMenuItem
       Caption = 'Pfad bearbeiten'
-      Enabled = False
       OnClick = pmEditClick
     end
     object pmExport: TMenuItem
-      Caption = 'exportieren'
-      Enabled = False
+      Caption = 'Exportieren'
       OnClick = mmExportClick
     end
     object pmDelete: TMenuItem
-      Caption = 'l'#246'schen'
-      Enabled = False
+      Caption = 'L'#246'schen'
       ShortCut = 46
       OnClick = pmDeleteClick
+    end
+    object pmRename: TMenuItem
+      Caption = 'Umbenennen'
+      OnClick = pmRenameClick
+    end
+    object N5: TMenuItem
+      Caption = '-'
+    end
+    object pmChangeIcon: TMenuItem
+      Caption = 'Icon '#228'ndern'
+      Visible = False
+      OnClick = pmChangeIconClick
+    end
+    object pmDeleteIcon: TMenuItem
+      Caption = 'Icon l'#246'schen'
+      Visible = False
+      OnClick = pmDeleteIconClick
     end
     object N2: TMenuItem
       Caption = '-'
@@ -654,6 +845,12 @@ object Main: TMain
         ShortCut = 117
         OnClick = mmDefaultClick
       end
+      object mmShowCaptions: TMenuItem
+        AutoCheck = True
+        Caption = 'Beschreibung anzeigen'
+        Checked = True
+        OnClick = mmShowCaptionsClick
+      end
       object mmDate: TMenuItem
         AutoCheck = True
         Caption = 'Deaktivierungsdatum anzeigen'
@@ -693,12 +890,13 @@ object Main: TMain
     end
   end
   object IconList: TImageList
+    BkColor = clWhite
     Left = 392
   end
   object QuickSearchIconList: TImageList
     Left = 256
     Bitmap = {
-      494C0101030008000C0110001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C010103000800BC0110001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000001000000001002000000000000010
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000

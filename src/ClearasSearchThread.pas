@@ -22,7 +22,9 @@ type
     FOnSearching: TSearchEvent;
     FOnFinish: TNotifyEvent;
     FOnError: TSearchErrorEvent;
+    FOnChanged: TChangeEvent;
   protected
+    FSelectedList: TRootList<TRootItem>;
     FLock: TCriticalSection;
     FProgressMax: Cardinal;
     FErrorMessage: string;
@@ -31,7 +33,7 @@ type
     procedure DoNotifyOnStart();
     procedure DoNotifyOnSearching();
   public
-    constructor Create(ALock: TCriticalSection);
+    constructor Create(ASelectedList: TRootList<TRootItem>; ALock: TCriticalSection);
     { external }
     property OnError: TSearchErrorEvent read FOnError write FOnError;
     property OnFinish: TNotifyEvent read FOnFinish write FOnFinish;
@@ -47,11 +49,14 @@ implementation
 
   Constructor for creating a TClearasSearchThread instance. }
 
-constructor TClearasSearchThread.Create(ALock: TCriticalSection);
+constructor TClearasSearchThread.Create(ASelectedList: TRootList<TRootItem>;
+  ALock: TCriticalSection);
 begin
   inherited Create(True);
   FreeOnTerminate := True;
+  FSelectedList := ASelectedList;
   FLock := ALock;
+  FOnChanged := FSelectedList.OnChanged;
 end;
 
 { protected TClearasSearchThread.DoNotifyOnError
@@ -72,6 +77,9 @@ procedure TClearasSearchThread.DoNotifyOnFinish();
 begin
   if Assigned(FOnFinish) then
     FOnFinish(Self);
+
+  // Notify that GUI counter needs to be updated
+  FOnChanged(Self, stDeleted);
 end;
 
 { protected TContextSearchThread.DoNotifyOnSearching
