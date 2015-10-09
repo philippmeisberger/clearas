@@ -9,3 +9,5 @@ src\__history\**
 **.stat
 **.rsm
 **.otares
+**.local
+**.identcache
