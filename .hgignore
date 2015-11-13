@@ -1,6 +1,7 @@
 syntax: glob
 BACKUP/**
 src\__history\**
+tests\__history\**
 **.dcu
 **.exe
 **.reg
@@ -9,5 +10,7 @@ src\__history\**
 **.stat
 **.rsm
 **.otares
-**.local
 **.identcache
+**.local
+**.db
+**.ini

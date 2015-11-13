@@ -5176,9 +5176,11 @@ begin
   inherited Create;
   CoInitialize(nil);
 
+{$IFNDEF DEBUG}
   if Failed(CoInitializeSecurity(nil, -1, nil, nil, RPC_C_AUTHN_LEVEL_PKT_PRIVACY,
     RPC_C_IMP_LEVEL_IMPERSONATE, nil, EOAC_NONE, nil)) then
     raise ETaskException.Create('Could not register security values for process!');
+{$ENDIF}
 
   if Failed(CoCreateInstance(CLSID_TaskScheduler, nil, CLSCTX_INPROC_SERVER,
     IID_ITaskService, FTaskService)) then
