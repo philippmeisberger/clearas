@@ -1,1 +1,6 @@
+v4.3
 - Cascading Shell submenus (ExtendedSubCommandsKey, SubCommands)
+- Counter bug
+
+v4.4
+- Shell bags cleaning

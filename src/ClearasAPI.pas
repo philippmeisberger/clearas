@@ -40,6 +40,7 @@ const
 
   { Context menu Registry subkeys + values}
   KEY_USERCHOICE                 = 'Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\%s\UserChoice';
+  KEY_COMMAND_STORE              = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\CommandStore\shell';
   CM_SHELL                       = 'Shell';
   CM_SHELL_DISABLED              = 'LegacyDisable';
   CM_SHELLEX                     = 'ShellEx';
@@ -365,6 +366,15 @@ type
     function Rename(const ANewCaption: string): Boolean; override;
   end;
 
+  { TShellCascadingItem }
+  TShellCascadingItem = class(TShellItem)
+  private
+    procedure GetSubCommands(var ASubCommands: TStrings);
+  public
+    function ChangeFilePath(const ANewFileName: string): Boolean; override;
+    procedure ExportItem(const AFileName: string); override;
+  end;
+
   { TShellExItem }
   TShellExItem = class(TContextListItem)
   private
@@ -395,6 +405,8 @@ type
   { TContextList }
   TContextList = class(TRootList<TContextListItem>)
   protected
+    function AddCascadingShellItem(const AName, ALocationRoot, ACaption: string;
+      AEnabled, AWow64: Boolean): Integer;
     function AddShellItem(const AName, ALocationRoot, AFileName, ACaption: string;
       AEnabled, AWow64: Boolean): Integer;
     function AddShellExItem(const AName, ALocationRoot, AFileName: string;
@@ -2576,7 +2588,7 @@ begin
         TypeOf := AReg.ReadString('hkey');
 
       if AWow64 then
-        TypeOf := TypeOf +'32'; 
+        TypeOf := TypeOf +'32';
     end;  //of with
 
     Result := inherited Add(Item);
@@ -3558,6 +3570,76 @@ begin
 end;
 
 
+{ TShellCascadingItem }
+
+{ private TShellCascadingItem.GetSubCommands
+
+  Gets the submenu items of a TShellCascadingItem item. }
+
+procedure TShellCascadingItem.GetSubCommands(var ASubCommands: TStrings);
+const
+  CM_SUBCOMMANDS = 'SubCommands';
+
+var
+  Reg: TRegistry;
+
+begin
+  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ);
+
+  try
+    Reg.RootKey := HKEY_CLASSES_ROOT;
+
+    if (not Reg.OpenKey(GetKeyPath(), False) or not Reg.ValueExists(CM_SUBCOMMANDS)) then
+      Exit;
+
+    ASubCommands.Delimiter := ';';
+    ASubCommands.DelimitedText := Reg.ReadString(CM_SUBCOMMANDS);
+
+  finally
+    Reg.Free;
+  end;  //of try
+end;
+
+{ public TShellCascadingItem.ChangeFilePath
+
+  Changes the file path of a TShellCascadingItem item. }
+
+function TShellCascadingItem.ChangeFilePath(const ANewFileName: string): Boolean;
+begin
+  // Impossible!
+  Result := False;
+end;
+
+{ public TShellCascadingItem.ExportItem
+
+  Exports a TShellCascadingItem object as .reg file. }
+
+procedure TShellCascadingItem.ExportItem(const AFileName: string);
+var
+  RegFile: TRegistryFile;
+  i: Integer;
+  Commands: TStrings;
+
+begin
+  RegFile := TRegistryFile.Create(AFileName, True);
+  Commands := TStringList.Create;
+
+  try
+    RegFile.ExportKey(HKEY_CLASSES_ROOT, GetKeyPath(), True);
+    GetSubCommands(Commands);
+
+    for i := 0 to Commands.Count - 1 do
+      RegFile.ExportKey(HKEY_LOCAL_MACHINE, KEY_COMMAND_STORE +'\'+ Commands[i], True);
+
+    RegFile.Save();
+
+  finally
+    Commands.Free;
+    RegFile.Free;
+  end;  //of try
+end;
+
+
 { TShellExItem }
 
 { private TShellExItem.ChangeStatus
@@ -3919,6 +4001,32 @@ end;
 
 { protected TContextList.AddShellExItem
 
+  Adds a cascading shell item to list. }
+
+function TContextList.AddCascadingShellItem(const AName, ALocationRoot,
+  ACaption: string; AEnabled, AWow64: Boolean): Integer;
+var
+  Item: TContextListItem;
+
+begin
+  Item := TShellCascadingItem.Create(Count, AEnabled, AWow64);
+
+  with Item do
+  begin
+    Name := AName;
+    LocationRoot := ALocationRoot;
+    Caption := ACaption;
+    TypeOf := CM_SHELL +' Cascading';
+
+    if AEnabled then
+      Inc(FActCount);
+  end;  //of with
+
+  Result := inherited Add(Item);
+end;
+
+{ protected TContextList.AddShellExItem
+
   Adds a shellex item to list. }
 
 function TContextList.AddShellExItem(const AName, ALocationRoot, AFileName: string;
@@ -4265,15 +4373,15 @@ begin
 
         // Cascading shell item?
         if not Reg.OpenKey('command', False) then
-        {begin
+        begin
           if ((not Reg.ValueExists('MUIVerb') or not Reg.ValueExists('SubCommands')) and
             not Reg.KeyExists('ExtendedSubCommandsKey')) then
             Continue;
 
           Caption := Reg.ReadString('MUIVerb');
-          AddCascadingShellItem(Item, ALocationRoot, '', Caption, Enabled, False);}
+          AddCascadingShellItem(Item, ALocationRoot, Caption, Enabled, False);
           Continue;
-        //end;  //of begin
+        end;  //of begin
 
         // Filter important Shell items
         if Reg.ValueExists('DelegateExecute') then
@@ -4393,7 +4501,7 @@ var
 begin
   if (FServiceManager = 0) then
     raise EServiceException.Create('Service manager not initialized!');
-  
+
   Handle := OpenService(FServiceManager, PChar(Name), AAccess);
 
   // Error occured?
@@ -4493,7 +4601,7 @@ begin
     end  //of begin
     else
       Result := True;
-    
+
   finally
     Reg.CloseKey();
     Reg.Free;
@@ -4912,7 +5020,7 @@ begin
   // Determine the required size for buffer
   QueryServiceConfig(AService, ServiceConfig, 0, BytesNeeded);
   LastError := GetLastError();
-  
+
   // ERROR_INSUFFICIENT_BUFFER will be fired normally
   if (LastError <> ERROR_INSUFFICIENT_BUFFER) then
     raise EServiceException.Create(SysErrorMessage(LastError));
