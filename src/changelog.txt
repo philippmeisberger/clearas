@@ -11,6 +11,9 @@ Version 4.3  [??.12.15]
   - "Einträge exportieren" speichert alle Aufgaben als ZIP-Datei
   - "Backup importieren" importiert eine zuvor exportierte Aufgabe als XML-Datei
   - "Expertenmodus" findet versteckte Aufgaben
+- Bug fixes:
+  - "Umbenennen" zeigt nun initial den korrekten Text
+  - Nach "Umbenennen" wird der neue Anzeigename aktualisiert, wenn "Beschreibung anzeigen" ausgewählt ist
 
 ---------------------------------
 

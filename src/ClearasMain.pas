@@ -2189,6 +2189,7 @@ var
 
 begin
   try
+    // Only icon of shell item can be changed!
     if not (FContext.Selected is TShellItem) then
       Exit;
 
@@ -2302,7 +2303,12 @@ var
 begin
   try
     Item := GetSelectedItem();
-    Name := Item.Name;
+
+    // The caption of startup and task items can not be renamed
+    if (PageControl.ActivePageIndex in [0, 3]) then
+      Name := Item.Name
+    else
+      Name := Item.Caption;
 
     if InputQuery(StripHotkey(pmRename.Caption), StripHotkey(pmRename.Caption), Name) then
     begin
@@ -2310,7 +2316,7 @@ begin
         Exit;
 
       // Names are visible instead of captions?
-      if (GetSelectedList().RenameItem(Name) and not mmShowCaptions.Checked) then
+      if (GetSelectedList().RenameItem(Name) and mmShowCaptions.Checked) then
         GetSelectedListView().ItemFocused.SubItems[0] := Name;
     end;  //of begin
 

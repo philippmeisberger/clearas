@@ -335,7 +335,9 @@ type
   { Exception class }
   EContextMenuException = class(Exception);
 
-  TShellItemType = (stShell, stShellEx, stShellNew);
+  TShellItemType = (
+    stShell, stShellEx, stShellNew
+  );
 
   { TContextListItem }
   TContextListItem = class(TRegistryItem)
@@ -359,6 +361,7 @@ type
     function GetKeyPath(): string; override;
   protected
     function GetIcon(): HICON; override;
+    function Rename(const AValueName, ANewCaption: string): Boolean; reintroduce; overload;
   public
     function ChangeFilePath(const ANewFileName: string): Boolean; override;
     function ChangeIcon(const ANewIconFileName: string): Boolean;
@@ -366,7 +369,7 @@ type
     function Disable(): Boolean; override;
     function Enable(): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
-    function Rename(const ANewCaption: string): Boolean; override;
+    function Rename(const ANewCaption: string): Boolean; overload; override;
   end;
 
   { TShellCascadingItem }
@@ -376,6 +379,7 @@ type
   public
     function ChangeFilePath(const ANewFileName: string): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
+    function Rename(const ANewCaption: string): Boolean; override;
   end;
 
   { TShellExItem }
@@ -2607,8 +2611,8 @@ end;
 
   Adds a enabled default startup item to the list. }
 
-function TStartupList.AddItem(AHKey: HKEY; AKeyPath, AName,
-  AFileName: string; AWow64, ARunOnce: Boolean): Integer;
+function TStartupList.AddItem(AHKey: HKEY; AKeyPath, AName, AFileName: string;
+  AWow64, ARunOnce: Boolean): Integer;
 var
   Item: TStartupItem;
   RootKeyStr: string;
@@ -3245,10 +3249,12 @@ begin
       if (Items.IndexOf(Item.Name) <> -1) then
       begin
         SetLength(Data, Reg.GetDataSize(Item.Name));
+
+        // TODO: Counting bug when entry is not present
         Reg.ReadBinaryData(Item.Name, Data[0], Length(Data));
         Item.Enabled := (Data[0] = 2);
 
-        if (Item.Enabled) then
+        if Item.Enabled then
           Inc(FActCount);
       end;  //of begin
     end;  //of for
@@ -3327,6 +3333,40 @@ end;
 function TShellItem.GetKeyPath(): string;
 begin
   Result := FLocation +'\'+ CM_SHELL +'\'+ Name;
+end;
+
+{ protected TShellItem.Rename
+
+  Renames a TShellItem item. }
+
+function TShellItem.Rename(const AValueName, ANewCaption: string): Boolean;
+var
+  Reg: TRegistry;
+
+begin
+  Result := False;
+  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
+
+  try
+    Reg.RootKey := HKEY_CLASSES_ROOT;
+
+    // Invalid key?
+    if not Reg.OpenKey(GetKeyPath(), False) then
+      raise EContextMenuException.Create('Key does not exist!');
+
+    // Invalid data type?
+    if (Reg.GetDataType(AValueName) <> rdString) then
+      raise EContextMenuException.Create('Invalid data type!');
+
+    // Rename
+    Reg.WriteString(AValueName, ANewCaption);
+    FCaption := ANewCaption;
+    Result := True;
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
+  end;  //of try
 end;
 
 { protected TShellItem.GetIcon
@@ -3547,33 +3587,8 @@ end;
   Renames a TShellItem item. }
 
 function TShellItem.Rename(const ANewCaption: string): Boolean;
-var
-  Reg: TRegistry;
-
 begin
-  Result := False;
-  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
-
-  try
-    Reg.RootKey := HKEY_CLASSES_ROOT;
-
-    // Invalid key?
-    if not Reg.OpenKey(GetKeyPath(), False) then
-      raise EContextMenuException.Create('Key does not exist!');
-
-    // Invalid data type?
-    if (Reg.GetDataType('') <> rdString) then
-      raise EContextMenuException.Create('Invalid data type!');
-
-    // Rename
-    Reg.WriteString('', ANewCaption);
-    FCaption := ANewCaption;
-    Result := True;
-
-  finally
-    Reg.CloseKey();
-    Reg.Free;
-  end;  //of try
+  Result := Rename('', ANewCaption);
 end;
 
 
@@ -3644,6 +3659,15 @@ begin
     Commands.Free;
     RegFile.Free;
   end;  //of try
+end;
+
+{ public TShellItem.Rename
+
+  Renames a TShellCascadingItem item. }
+
+function TShellCascadingItem.Rename(const ANewCaption: string): Boolean;
+begin
+  Result := Rename('MUIVerb', ANewCaption);
 end;
 
 

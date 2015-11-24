@@ -339,8 +339,10 @@ var
   Path: PChar;
 
 begin
+  Result := False;
+
   if (Win32MajorVersion < 6) then
-    Exit(False);
+    Exit;
 
   if Succeeded(SHGetKnownFolderPath(AFolderId, 0, 0, Path)) then
   begin
