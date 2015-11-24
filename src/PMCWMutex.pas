@@ -11,7 +11,7 @@ unit PMCWMutex;
 interface
 
 uses
-  Windows, Forms, Dialogs;
+  Windows, Forms, Dialogs, UITypes;
 
 implementation
 

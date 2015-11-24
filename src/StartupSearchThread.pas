@@ -8,6 +8,8 @@
 
 unit StartupSearchThread;
 
+{$WARN SYMBOL_DEPRECATED OFF}
+
 interface
 
 uses

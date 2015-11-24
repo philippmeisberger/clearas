@@ -8,6 +8,8 @@
 
 unit PMCWDialogs;
 
+{$WARN SYMBOL_PLATFORM OFF}
+
 interface
 
 uses
@@ -71,7 +73,7 @@ var
   Combo: TComboBox;
   CheckBox: TCheckBox;
   DialogUnits: TPoint;
-  PromptCount, CurPrompt: Integer;
+  CurPrompt: Integer;
   MaxPromptWidth: Integer;
   ButtonTop, ButtonWidth, ButtonHeight: Integer;
 

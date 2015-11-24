@@ -8,6 +8,9 @@
 
 unit ClearasAPI;
 
+{$WARN SYMBOL_PLATFORM OFF}
+{$WARN SYMBOL_DEPRECATED OFF}
+
 interface
 
 uses
@@ -237,12 +240,12 @@ type
     FApprovedLocation,
     FTime: string;
   protected
-    function ChangeStatus(AKeyPath: string; var ANewStatus: TBytes): Boolean; overload;
+    function ChangeStatus(AKeyPath: string; var ANewStatus: TBytes): Boolean; reintroduce; overload;
     function DeleteValue(AKeyPath: string; AReallyWow64: Boolean = True): Boolean;
     function GetFullLocation(): string; override;
     function GetRootKey(): HKEY; override;
     function Rename(const AKeyPath, ANewCaption: string;
-      AReallyWow64: Boolean = True): Boolean; overload;
+      AReallyWow64: Boolean = True): Boolean; reintroduce; overload;
   public
     function ChangeFilePath(const ANewFileName: string): Boolean; override;
     function Delete(): Boolean; override;
@@ -378,7 +381,7 @@ type
   { TShellExItem }
   TShellExItem = class(TContextListItem)
   private
-    function ChangeStatus(ANewStatus: Boolean): Boolean; overload;
+    function ChangeStatus(ANewStatus: Boolean): Boolean; reintroduce; overload;
     function GetKeyPath(): string; override;
   public
     function ChangeFilePath(const ANewFileName: string): Boolean; override;
@@ -391,7 +394,7 @@ type
   { TShellNewItem }
   TShellNewItem = class(TContextListItem)
   private
-    function ChangeStatus(ANewStatus: Boolean): Boolean; overload;
+    function ChangeStatus(ANewStatus: Boolean): Boolean; reintroduce; overload;
     function GetKeyPath(): string; override;
   public
     function ChangeFilePath(const ANewFileName: string): Boolean; override;
@@ -600,7 +603,7 @@ function TLnkFile.BackupExists(): Boolean;
 begin
   // Not possible on Windows 8!
   if CheckWin32Version(6, 2) then
-    Exit;
+    Exit(False);
 
   Result := FileExists(GetBackupLnk());
 end;
@@ -636,7 +639,7 @@ function TLnkFile.DeleteBackup(): Boolean;
 begin
   // Deprecated since Windows 8!
   if CheckWin32Version(6, 2) then
-    Exit;
+    Exit(False);
 
   Result := DeleteFile(GetBackupLnk());
 end;
@@ -1811,7 +1814,7 @@ begin
   SetLength(Data, 12);
   Data[0] := 3;
 
-  // TODO:
+  // TODO: Check the binary coded data (maybe a timestamp)
   //BinToHex(BytesOf(DateTimeToStr(Now())), 0, Data, 4, Length(Data) - 4);
 
   if ChangeStatus(FApprovedLocation, Data) then
@@ -1992,8 +1995,9 @@ end;
 function TStartupItem.Enable(): Boolean;
 var
   Reg: TRegistry;
-  NewHKey, NewKeyPath: string;
-  Access64: Cardinal;
+  NewKeyPath: string;
+  NewHKey: TRootKey;
+  Access64: LongWord;
 
 begin
   // Windows 8?
@@ -2018,7 +2022,7 @@ begin
         +'''hkey'' or ''key''!');
 
     // Set new values
-    NewHKey := Reg.ReadString('hkey');
+    NewHKey := TRootKey(Reg.ReadString('hkey'));
     NewKeyPath := Reg.ReadString('key');
 
     if ((NewHKey = '') or (NewKeyPath = '')) then
@@ -2478,7 +2482,8 @@ end;
 function TStartupList.GetFileDescription(const AFileName: string): string;
 var
   FileInfo: TSHFileInfo;
-  VersionSize, VersionHandle, BufferSize: Cardinal;
+  VersionSize, VersionHandle: DWORD;
+  BufferSize: UINT;
   Buffer: PChar;
   Description: Pointer;
 
@@ -2500,7 +2505,7 @@ begin
         Exit;
 
       if VerQueryValue(Buffer, PChar(Format('\StringFileInfo\%.4x%.4x\%s',
-        [LoWord(Cardinal(Description^)), HiWord(Cardinal(Description^)),
+        [LoWord(DWORD(Description^)), HiWord(DWORD(Description^)),
         'FileDescription'])), Description, BufferSize) then
         Result := PChar(Description);
 
@@ -2684,6 +2689,8 @@ var
   LnkFile: TLnkFile;
 
 begin
+  Result := False;
+
   if (ExtractFileExt(AName) <> '.lnk') then
     AName := AName +'.lnk';
 
@@ -4279,7 +4286,7 @@ var
   List: TStringList;
   Item, Key, FilePath, GuID, Caption: string;
   Enabled, Wow64: Boolean;
-  Access64: Cardinal;
+  Access64: LongWord;
 
 begin
   Access64 := KEY_WOW64_64KEY or KEY_READ;
@@ -4890,7 +4897,7 @@ function TServiceList.Add(AFileName, AArguments, ACaption: string): Boolean;
 var
   Name, FullPath: string;
   Service: SC_Handle;
-  LastError: Cardinal;
+  LastError: DWORD;
 
 begin
   Result := False;
@@ -5008,8 +5015,8 @@ end;
 function TServiceList.LoadService(AName: string; AService: SC_HANDLE;
   AIncludeDemand: Boolean = False): Integer;
 var
-  ServiceConfig: LPQUERY_SERVICE_CONFIG;
-  BytesNeeded, LastError: Cardinal;
+  ServiceConfig: PQueryServiceConfig;
+  BytesNeeded, LastError: DWORD;
   ServiceStart: TServiceStart;
   Reg: TRegistry;
 
@@ -5167,7 +5174,7 @@ var
   Action: IAction;
   ActionItem: OleVariant;
   ExecAction: IExecAction;
-  Fetched: Cardinal;
+  Fetched: DWORD;
   Definition: ITaskDefinition;
 
 begin
@@ -5319,7 +5326,7 @@ var
   ExecAction: IExecAction;
   Actions: IEnumVariant;
   ActionItem: OleVariant;
-  Fetched: Cardinal;
+  Fetched: DWORD;
 
 begin
   Item := TTaskListItem.Create(Count, ATask.Enabled, ATask, ATaskFolder);
@@ -5420,7 +5427,7 @@ var
   Ext, Path: string;
   TaskFolder: ITaskFolder;
   NewTask: IRegisteredTask;
-  ErrorCode: Cardinal;
+  ErrorCode: DWORD;
 {$IFDEF WIN32}
   Win64: Boolean;
 {$ENDIF}
@@ -5457,8 +5464,12 @@ begin
       if Succeeded(TaskFolder.GetTask(PChar(Path), NewTask)) then
         Exit;
 
+      {
       // Temporary workaround:
       // On 32-Bit RegisterTask() works fine but on 64-Bit not: WTF!
+      OleCheck(TaskFolder.RegisterTask(PChar(Path), PChar(XmlText),
+        TASK_CREATE, Null, Null, TASK_LOGON_INTERACTIVE_TOKEN, Null, NewTask));
+      }
       if not ExecuteProgram('schtasks', '/create /XML "'+ AFileName +'" /tn '+
         Copy(Path, 2, Length(Path)), SW_HIDE, True, True) then
       begin
@@ -5508,8 +5519,8 @@ var
   Task: IRegisteredTask;
   Tasks: IEnumVariant;
   TaskItem: OleVariant;
-  Fetched: Cardinal;
-  Flags: Byte;
+  Fetched: DWORD;
+  Flags: LONG;
 
 begin
   // Show hidden?

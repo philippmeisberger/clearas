@@ -10,12 +10,14 @@ unit PMCWLanguageFile;
 
 {$IFDEF LINUX} {$mode delphi}{$H+} {$ENDIF}
 
+{$WARN SYMBOL_PLATFORM OFF}
+
 interface
 
 uses
   Classes, SysUtils, Forms, Dialogs, IdURI, Menus,
 {$IFDEF MSWINDOWS}
-  Windows, CommCtrl, System.Generics.Collections, ShellAPI;
+  Windows, CommCtrl, System.Generics.Collections, ShellAPI, UITypes;
 {$ELSE}
   LCLType, PMCWIniFileParser;
 {$ENDIF}

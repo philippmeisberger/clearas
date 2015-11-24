@@ -16,7 +16,7 @@ uses
   SysUtils, Classes, Dialogs, PMCWUpdateCheckThread, PMCWLanguageFile, Forms,
 {$IFDEF MSWINDOWS}
   PMCWDownloadThread, Windows, FileCtrl, StdCtrls, ComCtrls, Controls,
-  System.Win.TaskbarCore, Vcl.Taskbar, Registry, ShellAPI;
+  System.Win.TaskbarCore, Vcl.Taskbar, UITypes, Registry, ShellAPI;
 {$ELSE}
   LCLType, Resource, ElfReader, VersionResource, LResources, VersionTypes;
 {$ENDIF}
@@ -101,7 +101,7 @@ type
     function Download(ARemoteFileName, ALocalFileName: string;
       ADownloadDirectory: string = ''; AUseTls: Boolean = True): Boolean;
   public
-    constructor Create(AOwner: TComponent; ALang: TLanguageFile);
+    constructor Create(AOwner: TComponent; ALang: TLanguageFile); reintroduce;
     destructor Destroy; override;
     procedure AddListener(AListener: IUpdateListener);
     function CertificateExists(): Boolean;

@@ -12,7 +12,7 @@ interface
 
 uses
   Classes, SysUtils, System.Net.HttpClientComponent, System.Net.HttpClient,
-  System.Net.URLClient, StrUtils;
+  System.Net.URLClient, System.NetConsts, StrUtils;
 
 const
   ERROR_CERTIFICATE_VALIDATION = -2;

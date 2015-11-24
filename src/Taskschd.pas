@@ -205,52 +205,57 @@ const
   RPC_C_IMP_LEVEL_DELEGATE              = 4;
 
 type
-  TTaskRunFlags = (
+  TASK_RUN_FLAGS = (
     TASK_RUN_NO_FLAGS   = $0,
     TASK_RUN_AS_SELF    = $1,
     TASK_RUN_IGNORE_CONSTRAINTS = $2,
     TASK_RUN_USE_SESSION_ID = $4,
     TASK_RUN_USER_SID   = $8
   );
+  TTaskRunFlags = TASK_RUN_FLAGS;
 
   TASK_ENUM_FLAGS = (
     TASK_ENUM_HIDDEN = $1
   );
+  TTaskEnumFlags = TASK_ENUM_FLAGS;
 
   TASK_LOGON_TYPE = (
-    TASK_LOGON_NONE = 0,
-    TASK_LOGON_PASSWORD = 1,
-    TASK_LOGON_S4U = 2,
-    TASK_LOGON_INTERACTIVE_TOKEN = 3,
-    TASK_LOGON_GROUP = 4,
-    TASK_LOGON_SERVICE_ACCOUNT = 5,
-    TASK_LOGON_INTERACTIVE_TOKEN_OR_PASSWORD = 6
+    TASK_LOGON_NONE,
+    TASK_LOGON_PASSWORD,
+    TASK_LOGON_S4U,
+    TASK_LOGON_INTERACTIVE_TOKEN,
+    TASK_LOGON_GROUP,
+    TASK_LOGON_SERVICE_ACCOUNT,
+    TASK_LOGON_INTERACTIVE_TOKEN_OR_PASSWORD
   );
+  TTaskLogonType = TASK_LOGON_TYPE;
 
   TASK_RUNLEVEL_TYPE = (
-    TASK_RUNLEVEL_LUA   = 0,
-    TASK_RUNLEVEL_HIGHEST   = 1
+    TASK_RUNLEVEL_LUA,
+    TASK_RUNLEVEL_HIGHEST
   );
+  TTaskRunLevelType = TASK_RUNLEVEL_TYPE;
 
   TASK_STATE = (
-    TASK_STATE_UNKNOWN  = 0,
-    TASK_STATE_DISABLED = 1,
-    TASK_STATE_QUEUED   = 2,
-    TASK_STATE_READY    = 3,
-    TASK_STATE_RUNNING  = 4
+    TASK_STATE_UNKNOWN,
+    TASK_STATE_DISABLED,
+    TASK_STATE_QUEUED,
+    TASK_STATE_READY,
+    TASK_STATE_RUNNING
   );
+  TTaskState = TASK_STATE;
 
   TASK_CREATION = (
     TASK_VALIDATE_ONLY = $1,
     TASK_CREATE = $2,
     TASK_UPDATE = $4,
-    TASK_CREATE_OR_UPDATE   = $6,
-    TASK_DISABLE    = $8,
+    TASK_CREATE_OR_UPDATE = $6,
+    TASK_DISABLE = $8,
     TASK_DONT_ADD_PRINCIPAL_ACE = $10,
-    TASK_IGNORE_REGISTRATION_TRIGGERS   = $20
+    TASK_IGNORE_REGISTRATION_TRIGGERS = $20
   );
+  TTaskCreation = TASK_CREATION;
 
-  PTASK_TRIGGER_TYPE2 = ^TASK_TRIGGER_TYPE2;
   TASK_TRIGGER_TYPE2 = (
     TASK_TRIGGER_EVENT  = 0,
     TASK_TRIGGER_TIME   = 1,
@@ -264,68 +269,75 @@ type
     TASK_TRIGGER_LOGON  = 9,
     TASK_TRIGGER_SESSION_STATE_CHANGE   = 11
   );
+  TTaskTriggerType2 = TASK_TRIGGER_TYPE2;
+  PTASK_TRIGGER_TYPE2 = ^TASK_TRIGGER_TYPE2;
+  PTaskTriggerType2 = PTASK_TRIGGER_TYPE2;
 
   TASK_SESSION_STATE_CHANGE_TYPE = (
     TASK_CONSOLE_CONNECT    = 1,
     TASK_CONSOLE_DISCONNECT = 2,
-    TASK_REMOTE_CONNECT = 3,
+    TASK_REMOTE_CONNECT     = 3,
     TASK_REMOTE_DISCONNECT  = 4,
-    TASK_SESSION_LOCK   = 7,
-    TASK_SESSION_UNLOCK = 8
+    TASK_SESSION_LOCK       = 7,
+    TASK_SESSION_UNLOCK     = 8
   );
+  TTaskSessionStateChangeType = TASK_SESSION_STATE_CHANGE_TYPE;
 
   TASK_ACTION_TYPE = (
-    TASK_ACTION_EXEC = 0,
-    TASK_ACTION_COM_HANDLER = 5,
-    TASK_ACTION_SEND_EMAIL  = 6,
-    TASK_ACTION_SHOW_MESSAGE    = 7
+    TASK_ACTION_EXEC         = 0,
+    TASK_ACTION_COM_HANDLER  = 5,
+    TASK_ACTION_SEND_EMAIL   = 6,
+    TASK_ACTION_SHOW_MESSAGE = 7
   );
+  TTaskActionType = TASK_ACTION_TYPE;
 
   TASK_INSTANCES_POLICY = (
-    TASK_INSTANCES_PARALLEL = 0,
-    TASK_INSTANCES_QUEUE    = 1,
-    TASK_INSTANCES_IGNORE_NEW   = 2,
-    TASK_INSTANCES_STOP_EXISTING    = 3
+    TASK_INSTANCES_PARALLEL      = 0,
+    TASK_INSTANCES_QUEUE         = 1,
+    TASK_INSTANCES_IGNORE_NEW    = 2,
+    TASK_INSTANCES_STOP_EXISTING = 3
   );
+  TTaskInstancesPolicy = TASK_INSTANCES_POLICY;
 
   TASK_COMPATIBILITY = (
     TASK_COMPATIBILITY_AT   = 0,
     TASK_COMPATIBILITY_V1   = 1,
     TASK_COMPATIBILITY_V2   = 2
   );
-
+  TTaskCompatibility = TASK_COMPATIBILITY;
 
   DAILY = packed record
     DaysInterval: Word;
   end;
+  TDaily = DAILY;
 
   MONTHLYDATE = packed record
     rgfDays: DWORD;
     rgfMonths: WORD;
   end;
+  TMonthlyDate = MONTHLYDATE;
 
   MONTHLYDOW = packed record
     wWhichWeek: WORD;
     rgfDaysOfTheWeek: WORD;
     rgfMonths: WORD;
   end;
+  TMonthlyDow = MONTHLYDOW;
 
   WEEKLY = packed record
     WeeksInterval: WORD;
     rgfDaysOfTheWeek: WORD;
   end;
+  TWeekly = WEEKLY;
 
   TRIGGER_TYPE_UNION = record
     case Integer of
-      0:
-        ( Daily: DAILY; );
-      1:
-        ( Weekly: WEEKLY; );
-      2:
-        ( MonthlyDate: MONTHLYDATE; );
-      3:
-        ( MonthlyDOW: MONTHLYDOW; );
+      0: ( Daily: DAILY; );
+      1: ( Weekly: WEEKLY; );
+      2: ( MonthlyDate: MONTHLYDATE; );
+      3: ( MonthlyDOW: MONTHLYDOW; );
   end;
+  TTriggerTypeUnion = TRIGGER_TYPE_UNION;
 
 type
   IActionCollection = interface;

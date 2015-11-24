@@ -1,6 +1,6 @@
 { *********************************************************************** }
 {                                                                         }
-{ PM Code Works Operating System Utilities Unit v2.2.4                    }
+{ PM Code Works Operating System Utilities Unit v2.2.5                    }
 {                                                                         }
 { Copyright (c) 2011-2015 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
@@ -9,6 +9,8 @@
 unit PMCWOSUtils;
 
 {$IFDEF LINUX} {$mode delphi}{$H+} {$ENDIF}
+
+{$WARN SYMBOL_PLATFORM OFF}
 
 interface
 
@@ -32,48 +34,223 @@ const
 
 type
 {$IFDEF LINUX}
-  { Exception class }
   EArgumentException = class(Exception);
 {$ELSE}
-  { TRootKey }
+  /// <summary>
+  ///   The four letter short spelling of a <c>HKEY</c> string representation.
+  /// </summary>
   TRootKey = string[4];
 
+  /// <summary>
+  ///   Creates an new folder in the temporay directory.
+  /// </summary>
+  /// <param name="AFolderName">
+  ///   The folder name.
+  /// </param>
+  /// <returns>
+  ///   <c>True</c> if the folder was successfully created or <c>False</c>
+  ///   otherwise.
+  /// </returns>
   function CreateTempDir(const AFolderName: string): Boolean;
+
+  /// <summary>
+  ///   Executes a program using ShellExecuteEx.
+  /// </summary>
+  /// <param name="AProgram">
+  ///   The program to execute.
+  /// </param>
+  /// <param name="AArguments">
+  ///   Optional arguments passed to the program.
+  /// </param>
+  /// <param name="AShow">
+  ///   The show mode. Default is <c>SW_SHOWNORMAL</c>.
+  /// </param>
+  /// <param name="ARunAsAdmin">
+  ///   If set to <c>True</c> execute the program with admin access rights
+  ///   otherwise with normal user access rights.
+  /// </param>
+  /// <param name="AWait">
+  ///   If set to <c>True</c> wait until the program has finished. Otherwise
+  ///   continue directly. NOTE: Can freeze the main program if this function
+  ///   is called by the main thread.
+  /// </param>
+  /// <returns>
+  ///   <c>True</c> if the program was successfully launched or <c>False</c>
+  ///   otherwise.
+  /// </returns>
   function ExecuteProgram(const AProgram: string; AArguments: string = '';
     AShow: Integer = SW_SHOWNORMAL; ARunAsAdmin: Boolean = False;
     AWait: Boolean = False): Boolean;
+  /// <summary>
+  ///   Expands an environment variable.
+  /// </summary>
+  /// <param name="AVariable">
+  ///   The variable that has to be expanded. If the function succeeds the
+  ///   original content will be overwritten.
+  /// </param>
+  /// <returns>
+  ///   <c>True</c> if the variable was successfully expanded or <c>False</c>
+  ///   otherwise.
+  /// </returns>
   function ExpandEnvironmentVar(var AVariable: string): Boolean;
+
+  /// <summary>
+  ///   Retrieves the path of default folders identified by a CSIDL.
+  /// </summary>
+  /// <param name="ACSIDL">
+  ///    A <c>CSIDL</c> value that is used as identifier.
+  /// </param>
+  /// <returns>
+  ///   The folder path.
+  /// </returns>
   function GetFolderPath(ACSIDL: Integer): string; overload; deprecated 'Use GetKnownFolderPath()';
+
+  /// <summary>
+  ///   Retrieves the path of known folders identified by a GUID (Windows >= Vista!).
+  /// </summary>
+  /// <param name="ACSIDL">
+  ///    A <c>CSIDL</c> value that is used as identifier.
+  /// </param>
+  /// <param name="AFolderPath">
+  ///   The folder path.
+  /// </param>
+  /// <returns>
+  ///   <c>True</c> if the folder could be retrieved successfully or <c>False</c>
+  ///   otherwise.
+  /// </returns>
   function GetFolderPath(ACSIDL: Integer; out AFolderPath: string): Boolean; overload; deprecated 'Use GetKnownFolderPath()';
+
+  /// <summary>
+  ///   Retrieves the path of known folders identified by a GUID (Windows >= Vista!).
+  /// </summary>
+  /// <param name="AFolderId">
+  ///    A GUID that is used as identifier.
+  /// </param>
+  /// <returns>
+  ///   The folder path.
+  /// </returns>
   function GetKnownFolderPath(AFolderId: TGUID): string; overload;
+
+  /// <summary>
+  ///   Retrieves the path of default folders identified by a CSIDL.
+  /// </summary>
+  /// <param name="AFolderId">
+  ///    A GUID that is used as identifier.
+  /// </param>
+  /// <param name="AFolderPath">
+  ///   The folder path.
+  /// </param>
+  /// <returns>
+  ///   <c>True</c> if the folder could be retrieved successfully or <c>False</c>
+  ///   otherwise.
+  /// </returns>
   function GetKnownFolderPath(AFolderId: TGUID; out AFolderPath: string): Boolean; overload;
+
+  /// <summary>
+  ///   Retrieves the path of the system directory used by WOW64. Note that this
+  ///   directory is not present on 32-bit Windows!
+  /// </summary>
+  /// <param name="ASystemWow64Directory">
+  ///   A string which should receive the system directory used by WOW64.
+  /// </param>
+  /// <returns>
+  ///   <c>True</c> if the folder could be retrieved successfully or <c>False</c>
+  ///   otherwise.
+  /// </returns>
   function GetSystemWow64Directory(out ASystemWow64Directory: string): Boolean;
+
+  /// <summary>
+  ///   Retrieves the path to the temporary directory of Windows.
+  /// </summary>
+  /// <returns>
+  ///   The path.
+  /// </returns>
   function GetTempDir(): string;
+
+  /// <summary>
+  ///   Converts a <c>HKEY</c> into its string representation.
+  /// </summary>
+  /// <param name="AHKey">
+  ///   The <c>HKEY</c>.
+  /// </param>
+  /// <param name="ALongFormat">
+  ///   If set to <c>True</c> the complete string representaion is returned.
+  ///   Otherwise only the four main letters e.g. HKLM are returned.
+  /// </param>
+  /// <returns>
+  ///   The string representation.
+  /// </returns>
+  /// <remarks>
+  ///   Raises a <see cref="EArgumentException"/> if the <c>HKEY</c> is invalid.
+  /// </remarks>
   function HKeyToStr(AHKey: HKey; ALongFormat: Boolean = True): string;
 {$ENDIF}
+
+  /// <summary>
+  ///   Opens a given URL in the default web browser.
+  /// </summary>
+  /// <param name="AUrl">
+  ///    The URL that should be opened.
+  /// </param>
+  /// <returns>
+  ///   <c>True</c> if the URL was successfully opened or <c>False</c> otherwise.
+  /// </returns>
   function OpenUrl(const AUrl: string): Boolean;
 {$IFDEF MSWINDOWS}
-  function StrToHKey(ARootKey: TRootKey): HKEY;
+  /// <summary>
+  ///   Converts short <c>HKEY</c> string representation into real <c>HKEY</c> type.
+  /// </summary>
+  /// <param name="ARootKey">
+  ///    A <see cref="TRootKey"/> short string.
+  /// </param>
+  /// <returns>
+  ///   The <c>HKEY</c>.
+  /// </returns>
+  /// <remarks>
+  ///   Raises a <see cref="EArgumentException"/> if the root key is invalid.
+  /// </remarks>
+  function StrToHKey(const ARootKey: TRootKey): HKEY;
+
+  /// <summary>
+  ///   Disables or reverts the WOW64 filesystem redirection on 64-bit Windows.
+  /// </summary>
+  /// <param name="A64Bit">
+  ///    If set to <c>True</c> use the 64-bit filesystem. Otherwise use the
+  ///    32-bit.
+  /// </param>
+  /// <returns>
+  ///   <c>True</c> if the filesystem redirection was successfully or <c>False</c>
+  ///   otherwise.
+  /// </returns>
+  /// <remarks>
+  ///
+  /// </remarks>
   function Wow64FsRedirection(A64Bit: Boolean = True): Boolean;
-  function Wow64RegistryRedirection(AAccessRight: Cardinal;
-    A64Bit: Boolean = True): Cardinal;
+
+  /// <summary>
+  ///   Gets an access rights mask to disable or revert the WOW64 registry
+  ///   redirection on 64-bit Windows.
+  /// </summary>
+  /// <param name="AAccessRight">
+  ///   The access right to use, e.g. <c>KEY_READ</c>.
+  /// </param>
+  /// <param name="A64Bit">
+  ///    If set to <c>True</c> use the 64-bit registry. Otherwise use the 32-bit.
+  /// </param>
+  /// <returns>
+  ///    The access mask.
+  /// </returns>
+  function Wow64RegistryRedirection(AAccessRight: LongWord;
+    A64Bit: Boolean = True): LongWord;
 {$ENDIF}
 
 implementation
 
 {$IFDEF MSWINDOWS}
-{ CreateTempDir
-
-  Creates an new folder in the temporay directory. }
-
 function CreateTempDir(const AFolderName: string): Boolean;
 begin
   Result := ForceDirectories(GetTempDir() + AFolderName);
 end;
-
-{ ExecuteProgram
-
-  Executes a program (optional as admin) using ShellExecuteEx. }
 
 function ExecuteProgram(const AProgram: string; AArguments: string = '';
   AShow: Integer = SW_SHOWNORMAL; ARunAsAdmin: Boolean = False;
@@ -83,7 +260,7 @@ var
   ExitCode: Cardinal;
 
 begin
-  FillChar(Info, SizeOf(Info), Chr(0));
+  FillChar(Info, SizeOf(Info), #0);
   Info.cbSize := SizeOf(Info);
   Info.fMask := SEE_MASK_NOCLOSEPROCESS;
 
@@ -110,10 +287,6 @@ begin
   end;  //of begin
 end;
 
-{ ExpandEnvironmentVar
-
-  Expands an environment variable. }
-
 function ExpandEnvironmentVar(var AVariable: string): Boolean;
 var
   BufferSize: Integer;
@@ -137,10 +310,6 @@ begin
   end;  //of begin
 end;
 
-{ GetFolderPath
-
-  Retrieves the path of default folders identified by a CSIDL. }
-
 function GetFolderPath(ACSIDL: Integer): string;
 begin
   GetFolderPath(ACSIDL, Result);
@@ -151,16 +320,14 @@ var
   Path: array[0..MAX_PATH] of Char;
 
 begin
+  Result := False;
+
   if Succeeded(SHGetFolderPath(0, ACSIDL, 0, 0, @Path)) then
   begin
     AFolderPath := IncludeTrailingBackslash(Path);
     Result := True;
   end;  //of begin
 end;
-
-{ GetKnownFolderPath
-
-  Retrieves the path of known folders identified by a GUID (Windows >= Vista!). }
 
 function GetKnownFolderPath(AFolderId: TGUID): string;
 begin
@@ -173,7 +340,7 @@ var
 
 begin
   if (Win32MajorVersion < 6) then
-    Exit;
+    Exit(False);
 
   if Succeeded(SHGetKnownFolderPath(AFolderId, 0, 0, Path)) then
   begin
@@ -181,11 +348,6 @@ begin
     Result := True;
   end;  //of begin
 end;
-
-{ GetSystemWow64Directory
-
-  Retrieves the path of the system directory used by WOW64. This directory is
-  not present on 32-bit Windows. }
 
 function GetSystemWow64Directory(out ASystemWow64Directory: string): Boolean;
 {$IFDEF WIN64}
@@ -233,10 +395,6 @@ begin
 {$ENDIF}
 end;
 
-{ GetTempDir
-
-  Returns path to the temporary directory of Windows. }
-
 function GetTempDir(): string;
 var
   Path: string;
@@ -248,51 +406,60 @@ begin
     Result := IncludeTrailingBackslash(Path);
 end;
 
-{ HKeyToStr
-
-  Converts a HKEY into its string representation. }
-
 function HKeyToStr(AHKey: HKey; ALongFormat: Boolean = True): string;
 begin
-  case AHKey of
-    HKEY_CLASSES_ROOT:     if ALongFormat then
-                             Result := 'HKEY_CLASSES_ROOT'
-                           else
-                             Result := 'HKCR';
-
-    HKEY_CURRENT_USER:     if ALongFormat then
-                             Result := 'HKEY_CURRENT_USER'
-                           else
-                             Result := 'HKCU';
-
-    HKEY_LOCAL_MACHINE:    if ALongFormat then
-                             Result := 'HKEY_LOCAL_MACHINE'
-                           else
-                             Result := 'HKLM';
-
-    HKEY_USERS:            if ALongFormat then
-                             Result := 'HKEY_USERS'
-                           else
-                             Result := 'HKU';
-
-    HKEY_PERFORMANCE_DATA: if ALongFormat then
-                             Result := 'HKEY_PERFORMANCE_DATA'
-                           else
-                             Result := 'HKPD';
-
-    HKEY_CURRENT_CONFIG:   if ALongFormat then
-                             Result := 'HKEY_CURRENT_CONFIG'
-                           else
-                             Result := 'HKCC';
-
-    else                   raise EArgumentException.Create('Unknown HKEY!');
-  end;  //of case
+  // DONE: Using a case leads to warning W1012
+  if (AHKey = HKEY_CLASSES_ROOT) then
+  begin
+    if ALongFormat then
+      Result := 'HKEY_CLASSES_ROOT'
+    else
+      Result := 'HKCR';
+  end  //of begin
+  else
+  if (AHKey = HKEY_CURRENT_USER) then
+  begin
+    if ALongFormat then
+      Result := 'HKEY_CURRENT_USER'
+    else
+      Result := 'HKCU';
+  end  //of begin
+  else
+  if (AHKey = HKEY_LOCAL_MACHINE) then
+  begin
+    if ALongFormat then
+      Result := 'HKEY_LOCAL_MACHINE'
+    else
+      Result := 'HKLM';
+  end  //of begin
+  else
+  if (AHKey = HKEY_USERS) then
+  begin
+    if ALongFormat then
+      Result := 'HKEY_USERS'
+    else
+      Result := 'HKU';
+  end  //of begin
+  else
+  if (AHKey = HKEY_PERFORMANCE_DATA) then
+  begin
+    if ALongFormat then
+      Result := 'HKEY_PERFORMANCE_DATA'
+    else
+      Result := 'HKPD';
+  end  //of begin
+  else
+  if (AHKey = HKEY_CURRENT_CONFIG) then
+  begin
+    if ALongFormat then
+      Result := 'HKEY_CURRENT_CONFIG'
+    else
+      Result := 'HKCC';
+  end  //of begin
+  else
+    raise EArgumentException.Create('Unknown HKEY!');
 end;
 {$ENDIF}
-
-{ OpenUrl
-
-  Opens a given URL in the default web browser. }
 
 function OpenUrl(const AUrl: string): Boolean;
 {$IFNDEF MSWINDOWS}
@@ -332,11 +499,7 @@ begin
 end;
 
 {$IFDEF MSWINDOWS}
-{ StrToHKey
-
-  Converts short HKEY string into real HKEY type. }
-
-function StrToHKey(ARootKey: TRootKey): HKEY;
+function StrToHKey(const ARootKey: TRootKey): HKEY;
 begin
   if (ARootKey = 'HKCR') then
     Result := HKEY_CLASSES_ROOT
@@ -356,12 +519,8 @@ begin
             if (ARootKey = 'HKCC') then
               Result := HKEY_CURRENT_CONFIG
             else
-              raise EArgumentException.Create('Unknown HKEY: "'+ ARootKey +'"!');
+              raise EArgumentException.Create('Unknown HKEY: "'+ string(ARootKey) +'"!');
 end;
-
-{ Wow64FsRedirection
-
-  Disables or reverts the WOW64 file system redirection on 64 Bit Windows. }
 
 function Wow64FsRedirection(A64Bit: Boolean = True): Boolean;
 {$IFDEF WIN32}
@@ -408,12 +567,8 @@ begin
 {$ENDIF}
 end;
 
-{ Wow64RegistryRedirection
-
-  Disables or reverts the WOW64 registry redirection on 64 Bit Windows. }
-
-function Wow64RegistryRedirection(AAccessRight: Cardinal;
-  A64Bit: Boolean = True): Cardinal;
+function Wow64RegistryRedirection(AAccessRight: LongWord;
+  A64Bit: Boolean = True): LongWord;
 begin
   Result := AAccessRight;
 
