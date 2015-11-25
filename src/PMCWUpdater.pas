@@ -22,12 +22,29 @@ uses
 {$ENDIF}
 
 const
+  /// <summary>
+  ///   URL to the PHP web downloader script.
+  /// </summary>
   URL_DOWNLOAD = URL_DIR + 'downloader.php?file=';
 
-  { TFileProductVersion indices }
+  /// <summary>
+  ///   Extract the major version information out of a <see cref="TFileProductVersion"/>.
+  /// </summary>
   VERSION_MAJOR   = 0;
+
+  /// <summary>
+  ///   Extract the minor version information out of a <see cref="TFileProductVersion"/>.
+  /// </summary>
   VERSION_MINOR   = 1;
+
+  /// <summary>
+  ///   Extract the service version information out of a <see cref="TFileProductVersion"/>.
+  /// </summary>
   VERSION_SERVICE = 2;
+
+  /// <summary>
+  ///   Extract the build version information out of a <see cref="TFileProductVersion"/>.
+  /// </summary>
   VERSION_BUILD   = 3;
 
 {$IFDEF MSWINDOWS}
@@ -36,19 +53,47 @@ const
 
 type
 {$IFDEF MSWINDOWS}
-  TFileProductVersion = array[0..3] of Cardinal;
+  /// <summary>
+  ///   A <c>TFileProductVersion</c> contains version information: major, minor,
+  ///   service and build. To access each version information use the <c>VERSION_*</c>
+  ///   constants above.
+  /// </summary>
+  TFileProductVersion = array[VERSION_MAJOR..VERSION_BUILD] of Cardinal;
 {$ENDIF}
 
-  { IUpdateListener }
+  /// <summary>
+  ///   Receive update notfication when a newer version is available on website.
+  ///   Must be implemented by classes that use the <see cref="TUpdateCheck"/>.
+  /// </summary>
   IUpdateListener = interface
   ['{D1CDAE74-717A-4C5E-9152-15FBA4A15552}']
+    /// <summary>
+    ///   Is called when a new version is available on website.
+    /// </summary>
+    /// <param name="Sender">
+    ///    The caller.
+    /// </param>
+    /// <param name="ANewBuild">
+    ///    The new build number which is available.
+    /// </param>
     procedure OnUpdate(Sender: TObject; const ANewBuild: Cardinal);
   end;
 
-  { TUpdateCheck }
+  /// <summary>
+  ///   The <c>TUpdateCheck</c> is a light-weight async update notificator to
+  ///   inform a user that a new version of the current PMCW project is available.
+  ///   It uses HTTP to download a version.txt from the website that contains
+  ///   the latest build number and checks if it matches the current build.
+  ///   If the webside build number is higher all classes that implement
+  ///   <see cref="IUpdateListener"/> and are registered with
+  ///   <see cref="TUpdateCheck.AddListener"/> receive the <c>OnUpdate</c> event.
+  ///   If the build numbers match a message is shown saying that no update is
+  ///   available. It supports different UI translations.
+  /// </summary>
   TUpdateCheck = class(TObject)
   private
     FLang: TLanguageFile;
+    FListeners: TInterfaceList;
     FUserUpdate: Boolean;
     FRemoteDirName: string;
     FNewBuild: Cardinal;
@@ -57,18 +102,93 @@ type
       AResponseText: string);
     procedure OnNoUpdateAvailable(Sender: TObject);
     procedure OnUpdateAvailable(Sender: TThread; const ANewBuild: Cardinal);
-  protected
-    FListeners: TInterfaceList;
   public
-    constructor Create(ARemoteDirName: string; ALang: TLanguageFile); overload;
-    constructor Create(AOwner: TComponent; ARemoteDirName: string;
-      ALang: TLanguageFile); overload;
+    /// <summary>
+    ///    Constructor for creating a <c>TUpdateCheck</c> instance.
+    /// </summary>
+    /// <param name="ARemoteDirName">
+    ///   The directory on website which contains the version.txt file.
+    /// </param>
+    /// <param name="ALang">
+    ///   The specific user interface translation file to use.
+    /// </param>
+    constructor Create(ARemoteDirName: string; ALang: TLanguageFile); reintroduce; overload;
+
+    /// <summary>
+    ///    Constructor for creating a <c>TUpdateCheck</c> instance.
+    /// </summary>
+    /// <param name="AOwner">
+    ///   The owner which implements the <see cref="IUpdateListener"/> interface.
+    /// </param>
+    /// <param name="ARemoteDirName">
+    ///   The directory on website which contains the version.txt file.
+    /// </param>
+    /// <param name="ALang">
+    ///   The specific user interface translation file to use.
+    /// </param>
+    constructor Create(AOwner: IUpdateListener; ARemoteDirName: string;
+      ALang: TLanguageFile); reintroduce; overload;
+
+    /// <summary>
+    ///   Destructor for destroying an TUpdateCheck instance.
+    /// </summary>
     destructor Destroy; override;
+
+    /// <summary>
+    ///   Adds a listener to the notification list.
+    /// </summary>
+    /// <param name="AListener">
+    ///   A listener which implements the <see cref="IUpdateListener"/> interface.
+    /// </param>
     procedure AddListener(AListener: IUpdateListener);
-    procedure CheckForUpdate(AUserUpdate: Boolean; ACurrentBuild: Cardinal = 0);
+
+    /// <summary>
+    ///   Searches for update on an HTTP server.
+    /// </summary>
+    /// <param name="AUserUpdate">
+    ///   The search is initiated by user or program. If set to <c>True</c>
+    ///   a message is shown if no update is available. Otherwise no message is
+    ///   shown. Comes in handy when update should be searched on startup of
+    ///   application: User would get always the message that no update is avaiable.
+    ///   This can be annoying!
+    /// </param>
+    /// <param name="AOtherBuild">
+    ///   Use an other build number instead of the current. Usually this is not
+    ///   used!
+    /// </param>
+    procedure CheckForUpdate(AUserUpdate: Boolean; AOtherBuild: Cardinal = 0);
+
+    /// <summary>
+    ///   Gets the build number of current running program.
+    /// </summary>
+    /// <returns>
+    ///   The build number.
+    /// </returns>
     class function GetBuildNumber(): Cardinal;
+
+    /// <summary>
+    ///   Gets the complete version information of a file.
+    /// </summary>
+    /// <param name="AFileName">
+    ///   The file.
+    /// </param>
+    /// <param name="AVersionInfo">
+    ///   A <see cref="TFileProductVersion"/> version information that should
+    ///   receive the information.
+    /// </param>
+    /// <returns>
+    ///   <c>True</c> if the version information of the file could be retrieved
+    ///   successfully or <c>False</c> otherwise.
+    /// </returns>
     class function GetFileVersion(const AFileName: string;
       var AVersionInfo: TFileProductVersion): Boolean;
+
+    /// <summary>
+    ///   Removes a listener from the notification list.
+    /// </summary>
+    /// <param name="AListener">
+    ///   A listener which implements the <see cref="IUpdateListener"/> interface.
+    /// </param>
     procedure RemoveListener(AListener: IUpdateListener);
   end;
 
@@ -128,10 +248,6 @@ implementation
 
 { TUpdateCheck }
 
-{ public TUpdateCheck.Create
-
-  Constructor for creating an TUpdateCheck instance. }
-
 constructor TUpdateCheck.Create(ARemoteDirName: string; ALang: TLanguageFile);
 begin
   inherited Create;
@@ -140,11 +256,7 @@ begin
   FListeners := TInterfaceList.Create;
 end;
 
-{ public TUpdateCheck.Create
-
-  Constructor for creating an TUpdateCheck instance. }
-
-constructor TUpdateCheck.Create(AOwner: TComponent; ARemoteDirName: string;
+constructor TUpdateCheck.Create(AOwner: IUpdateListener; ARemoteDirName: string;
   ALang: TLanguageFile);
 begin
   Create(ARemoteDirName, ALang);
@@ -153,10 +265,6 @@ begin
   if Assigned(AOwner) then
     FListeners.Add(AOwner);
 end;
-
-{ public TUpdateCheck.Destroy
-
-  Destructor for destroying an TUpdateCheck instance. }
 
 destructor TUpdateCheck.Destroy;
 begin
@@ -209,20 +317,12 @@ begin
       Listener.OnUpdate(Self, ANewBuild);
 end;
 
-{ public TUpdateCheck.AddListener
-
-  Adds a listener to the notification list. }
-
 procedure TUpdateCheck.AddListener(AListener: IUpdateListener);
 begin
   FListeners.Add(AListener);
 end;
 
-{ public TUpdateCheck.CheckForUpdate
-
-  Searches for update on HTTP server. }
-
-procedure TUpdateCheck.CheckForUpdate(AUserUpdate: Boolean; ACurrentBuild: Cardinal = 0);
+procedure TUpdateCheck.CheckForUpdate(AUserUpdate: Boolean; AOtherBuild: Cardinal = 0);
 begin
   FUserUpdate := AUserUpdate;
 
@@ -233,11 +333,11 @@ begin
     Abort;
   end;  //of begin
 
-  if (ACurrentBuild = 0) then
-    ACurrentBuild := GetBuildNumber();
+  if (AOtherBuild = 0) then
+    AOtherBuild := GetBuildNumber();
 
   // Search for update
-  with TUpdateCheckThread.Create(ACurrentBuild, FRemoteDirName) do
+  with TUpdateCheckThread.Create(AOtherBuild, FRemoteDirName) do
   begin
     OnUpdate := OnUpdateAvailable;
     OnNoUpdate := OnNoUpdateAvailable;
@@ -245,10 +345,6 @@ begin
     Start();
   end;  //of with
 end;
-
-{ TUpdateCheck.GetFileVersion
-
-  Returns complete file version information. }
 
 class function TUpdateCheck.GetFileVersion(const AFileName: string;
   var AVersionInfo: TFileProductVersion): Boolean;
@@ -320,10 +416,6 @@ begin
 end;
 {$ENDIF}
 
-{ TUpdateCheck.GetBuildNumber
-
-  Returns build number of current running program. }
-
 class function TUpdateCheck.GetBuildNumber(): Cardinal;
 var
   VersionInfo: TFileProductVersion;
@@ -334,10 +426,6 @@ begin
   if GetFileVersion(Application.ExeName, VersionInfo) then
     Result := VersionInfo[VERSION_BUILD];
 end;
-
-{ public TUpdateCheck.RemoveListener
-
-  Removes a listener from the notification list. }
 
 procedure TUpdateCheck.RemoveListener(AListener: IUpdateListener);
 begin

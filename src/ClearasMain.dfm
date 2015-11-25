@@ -89,8 +89,6 @@ object Main: TMain
         Columns = <
           item
             Caption = 'Aktiviert'
-            MaxWidth = 53
-            MinWidth = 53
             Width = 53
           end
           item
@@ -103,7 +101,6 @@ object Main: TMain
           end
           item
             Caption = 'Schl'#252'ssel'
-            MaxWidth = 105
             Width = 75
           end>
         ReadOnly = True
@@ -296,8 +293,6 @@ object Main: TMain
         Columns = <
           item
             Caption = 'Aktiviert'
-            MaxWidth = 53
-            MinWidth = 53
             Width = 53
           end
           item
@@ -310,8 +305,6 @@ object Main: TMain
           end
           item
             Caption = 'Schl'#252'ssel'
-            MaxWidth = 65
-            MinWidth = 65
             Width = 65
           end>
         HideSelection = False
@@ -432,8 +425,6 @@ object Main: TMain
         Columns = <
           item
             Caption = 'Aktiviert'
-            MaxWidth = 53
-            MinWidth = 53
             Width = 53
           end
           item
@@ -446,8 +437,6 @@ object Main: TMain
           end
           item
             Caption = 'Typ'
-            MaxWidth = 75
-            MinWidth = 75
             Width = 75
           end>
         HideSelection = False
@@ -693,8 +682,6 @@ object Main: TMain
         Columns = <
           item
             Caption = 'Aktiviert'
-            MaxWidth = 53
-            MinWidth = 53
             Width = 53
           end
           item
@@ -707,8 +694,6 @@ object Main: TMain
           end
           item
             Caption = 'Ort'
-            MaxWidth = 75
-            MinWidth = 75
             Width = 75
           end>
         HideSelection = False
@@ -756,6 +741,7 @@ object Main: TMain
     end
     object pmRename: TMenuItem
       Caption = 'Umbenennen'
+      ShortCut = 113
       OnClick = pmRenameClick
     end
     object N5: TMenuItem
@@ -896,7 +882,7 @@ object Main: TMain
   object QuickSearchIconList: TImageList
     Left = 256
     Bitmap = {
-      494C010103000800C00110001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C010103000800C80110001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000001000000001002000000000000010
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000

@@ -81,6 +81,7 @@ type
   function ExecuteProgram(const AProgram: string; AArguments: string = '';
     AShow: Integer = SW_SHOWNORMAL; ARunAsAdmin: Boolean = False;
     AWait: Boolean = False): Boolean;
+
   /// <summary>
   ///   Expands an environment variable.
   /// </summary>
@@ -106,7 +107,7 @@ type
   function GetFolderPath(ACSIDL: Integer): string; overload; deprecated 'Use GetKnownFolderPath()';
 
   /// <summary>
-  ///   Retrieves the path of known folders identified by a GUID (Windows >= Vista!).
+  ///   Retrieves the path of default folders identified by a CSIDL.
   /// </summary>
   /// <param name="ACSIDL">
   ///    A <c>CSIDL</c> value that is used as identifier.
@@ -132,7 +133,7 @@ type
   function GetKnownFolderPath(AFolderId: TGUID): string; overload;
 
   /// <summary>
-  ///   Retrieves the path of default folders identified by a CSIDL.
+  ///   Retrieves the path of known folders identified by a GUID (Windows >= Vista!).
   /// </summary>
   /// <param name="AFolderId">
   ///    A GUID that is used as identifier.
@@ -538,6 +539,7 @@ var
 begin
   Result := False;
 
+{$IFNDEF DEBUG}
   // Init handle
   LibraryHandle := GetModuleHandle(kernel32);
 
@@ -562,6 +564,7 @@ begin
            Result := Wow64RevertWow64FsRedirection(nil);
        end;  //of begin
   end;  //of begin
+{$ENDIF}
 {$ELSE}
 begin
   // Nothing redirected on 64 bit Windows!
