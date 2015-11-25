@@ -163,6 +163,9 @@
         <DCCReference Include="PMCWAbout.pas">
             <Form>About</Form>
         </DCCReference>
+        <DCCReference Include="PMCWUpdater.pas">
+            <Form>Update</Form>
+        </DCCReference>
         <DCCReference Include="ClearasSearchThread.pas"/>
         <BuildConfiguration Include="Debug">
             <Key>Cfg_2</Key>
