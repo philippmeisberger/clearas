@@ -15,6 +15,9 @@ uses
   System.Net.URLClient, System.NetConsts, StrUtils;
 
 const
+  /// <summary>
+  ///   Error saying that something went wrong with server certificate validation.
+  /// </summary>
   ERROR_CERTIFICATE_VALIDATION = -2;
 
 type
@@ -24,7 +27,13 @@ type
     const FResponseText: string) of object;
   TDownloadFinishedEvent = procedure(Sender: TThread; const AFileName: string) of object;
 
-  { TDownloadThread }
+  /// <summary>
+  ///   A <c>TDownloadThread</c> downloads a file from an URL using TLS (default).
+  ///   In case of error a precise description will be returned in the
+  ///   <see cref="OnError"/> event. The progress of the download can be seen
+  ///   in the <see cref="OnDownloading"/> event. Of course the download can be
+  ///   canceled: Just use the <c>Terminate</c> method.
+  /// </summary>
   TDownloadThread = class(TThread)
   private
     FHttp: THttpClient;
@@ -39,7 +48,6 @@ type
     FResponseText: string;
     FResponseCode: Integer;
     FTLSEnabled: Boolean;
-    { Synchronized events }
     procedure DoNotifyOnCancel;
     procedure DoNotifyOnDownloading;
     procedure DoNotifyOnError;
@@ -52,24 +60,66 @@ type
   protected
     procedure Execute; override;
   public
+    /// <summary>
+    ///   Constructor for creating a <c>TDownloadThread</c> instance.
+    /// </summary>
+    /// <param name="AUrl">
+    ///   The complete URL to the file that should be downloaded.
+    /// </param>
+    /// <param name="AFileName">
+    ///   The filename under which the downloaded file should be stored.
+    /// </param>
+    /// <param name="AAllowOverwrite">
+    ///   If set to <c>True</c> and the file was already downloaded then this
+    ///   will be overwritten. Otherwise the existing file is kept and a new
+    ///   file with a number suffix is created.
+    /// </param>
     constructor Create(const AUrl, AFileName: string; AAllowOverwrite: Boolean = False);
+
+    /// <summary>
+    ///   Destructor for destroying a <c>TDownloadThread</c> instance.
+    /// </summary>
     destructor Destroy; override;
+
+    /// <summary>
+    ///   Creates an unique filename to be sure downloading to a non-existing
+    ///   file. If the file already exists a number suffix is appended to this
+    ///   filename.
+    /// </summary>
+    /// <returns>
+    ///   The unique filename
+    /// </returns>
     function GetUniqueFileName(const AFileName: string): string;
-    { external }
+
+    /// <summary>
+    ///   Occurs when download has been canceled by user.
+    /// </summary>
     property OnCancel: TNotifyEvent read FOnCancel write FOnCancel;
+
+    /// <summary>
+    ///   Occurs when download is in progress.
+    /// </summary>
     property OnDownloading: TDownloadingEvent read FOnDownloading write FOnDownloading;
+
+    /// <summary>
+    ///   Occurs when an error occurs while downloading.
+    /// </summary>
     property OnError: TRequestErrorEvent read FOnError write FOnError;
+
+    /// <summary>
+    ///   Occurs when download has finished.
+    /// </summary>
     property OnFinish: TDownloadFinishedEvent read FOnFinish write FOnFinish;
+
+    /// <summary>
+    ///   Gets or sets the usage of TLS.
+    /// </summary>
     property TLSEnabled: Boolean read FTLSEnabled write SetTlsEnabled;
   end;
 
 implementation
 
 { TDownloadThread }
-
-{ public TDownloadThread.Create
-
-  Constructor for creating a TDownloadThread instance. }
 
 constructor TDownloadThread.Create(const AUrl, AFileName: string;
   AAllowOverwrite: Boolean = False);
@@ -98,20 +148,11 @@ begin
   end;  //of begin
 end;
 
-{ public TDownloadThread.Destroy
-
-  Destructor for destroying a TDownloadThread instance. }
-
 destructor TDownloadThread.Destroy;
 begin
   FHttp.Free;
   inherited Destroy;
 end;
-
-{ private TDownloadThread.DoNotifyOnCancel
-
-  Synchronizable event method that is called when download has been canceled
-  by user. }
 
 procedure TDownloadThread.DoNotifyOnCancel;
 begin
@@ -119,19 +160,11 @@ begin
     OnCancel(Self);
 end;
 
-{ private TDownloadThread.DoNotifyOnDownloading
-
-  Synchronizable event method that is called when download is in progress. }
-
 procedure TDownloadThread.DoNotifyOnDownloading;
 begin
   if Assigned(FOnDownloading) then
     OnDownloading(Self, FContentLength, FReadCount);
 end;
-
-{ private TDownloadThread.DoNotifyOnError
-
-  Synchronizable event method that is called when an error occurs while downloading. }
 
 procedure TDownloadThread.DoNotifyOnError;
 begin
@@ -139,19 +172,11 @@ begin
     OnError(Self, FResponseCode, FResponseText);
 end;
 
-{ private TDownloadThread.DoNotifyOnFinish
-
-  Synchronizable event method that is called when download is finished. }
-
 procedure TDownloadThread.DoNotifyOnFinish;
 begin
   if Assigned(OnFinish) then
     OnFinish(Self, FFileName);
 end;
-
-{ private TDownloadThread.Downloading
-
-  Event method that is called when download is in progress. }
 
 procedure TDownloadThread.Downloading(const Sender: TObject; AContentLength,
   AReadCount: Int64; var AAbort: Boolean);
@@ -167,20 +192,12 @@ begin
   Synchronize(DoNotifyOnDownloading);
 end;
 
-{ private TDownloadThread.OnValidateServerCertificate
-
-  Event method that is called when certificate could not be validated. }
-
 procedure TDownloadThread.OnValidateServerCertificate(const Sender: TObject;
   const ARequest: TURLRequest; const ACertificate: TCertificate; var AAccepted: Boolean);
 begin
   // Anything went wrong: Do not accept server SSL certificate!
   AAccepted := False;
 end;
-
-{ private TDownloadThread.SetTlsEnabled
-
-  Changes the used URL protocol to HTTPS or HTTP. }
 
 procedure TDownloadThread.SetTlsEnabled(const AValue: Boolean);
 begin
@@ -195,10 +212,6 @@ begin
   FTLSEnabled := AValue;
 end;
 
-{ protected TDownloadThread.Execute
-
-  Thread main method that downloads a file from an HTTP source. }
-  
 procedure TDownloadThread.Execute;
 var
   FileStream: TFileStream;
@@ -252,10 +265,6 @@ begin
     end;
   end;  //of try
 end;
-
-{ public TDownloadThread.GetUniqueFileName
-
-  Returns an unique file name to be sure downloading to an non-existing file. }
 
 function TDownloadThread.GetUniqueFileName(const AFileName: string): string;
 var
