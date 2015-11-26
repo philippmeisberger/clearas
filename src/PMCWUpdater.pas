@@ -118,7 +118,7 @@ type
     ///    Constructor for creating a <c>TUpdateCheck</c> instance.
     /// </summary>
     /// <param name="AOwner">
-    ///   The owner which implements the <see cref="IUpdateListener"/> interface.
+    ///   A listener which implements the <see cref="IUpdateListener"/> interface.
     /// </param>
     /// <param name="ARemoteDirName">
     ///   The directory on website which contains the version.txt file.
@@ -152,11 +152,7 @@ type
     ///   application: User would get always the message that no update is avaiable.
     ///   This can be annoying!
     /// </param>
-    /// <param name="AOtherBuild">
-    ///   Use an other build number instead of the current. Usually this is not
-    ///   used!
-    /// </param>
-    procedure CheckForUpdate(AUserUpdate: Boolean; AOtherBuild: Cardinal = 0);
+    procedure CheckForUpdate(AUserUpdate: Boolean);
 
     /// <summary>
     ///   Gets the build number of current running program.
@@ -193,7 +189,11 @@ type
   end;
 
 {$IFDEF MSWINDOWS}
-  { TUpdate }
+  /// <summary>
+  ///   <c>TUpdate</c> is a form which downloads a file from the website and
+  ///   shows the progress in a <c>TProgressBar</c> and on the taskbar. The
+  ///   download is encrypted using TLS per default.
+  /// </summary>
   TUpdate = class(TForm)
     pbProgress: TProgressBar;
     bFinished: TButton;
@@ -218,23 +218,122 @@ type
     procedure OnDownloading(Sender: TThread; AContentLength, AReadCount: Int64);
     procedure Reset();
   protected
+    /// <summary>
+    ///   Starts downloading a file from the website.
+    /// </summary>
+    /// <param name="ARemoteFileName">
+    ///   The filename of the file on website.
+    /// </param>
+    /// <param name="ALocalFileName">
+    ///   The filename to use for the downloaded file.
+    /// </param>
+    /// <param name="ADownloadDirectory">
+    ///   Download the file into this directory. If an empty string is passed
+    ///   (default) a "search folder" dialog is displayed.
+    /// </param>
+    /// <param name="AUseTls">
+    ///   If set to <c>True</c> (default) use encrypted HTTPS instead of plain
+    ///   HTTP.
+    /// </param>
+    /// <returns>
+    ///   <c>True</c> if downloading was sucessful or <c>False</c> otherwise.
+    /// </returns>
     function Download(ARemoteFileName, ALocalFileName: string;
       ADownloadDirectory: string = ''; AUseTls: Boolean = True): Boolean;
   public
+    /// <summary>
+    ///   Constructor for creating a <c>TUpdate</c> instance.
+    /// </summary>
+    /// <param name="AOwner">
+    ///   The owner of the dialog which must implement the
+    ///   <see cref="IUpdateListener"/> interface.
+    /// </param>
+    /// <param name="ALang">
+    ///   The specific user interface translation file to use.
+    /// </param>
     constructor Create(AOwner: TComponent; ALang: TLanguageFile); reintroduce;
+
+    /// <summary>
+    ///   Destructor for destroying a <c>TUpdate</c> instance.
+    /// </summary>
     destructor Destroy; override;
+
+    /// <summary>
+    ///   Adds a listener to the notification list.
+    /// </summary>
+    /// <param name="AListener">
+    ///   A listener which implements the <see cref="IUpdateListener"/> interface.
+    /// </param>
     procedure AddListener(AListener: IUpdateListener);
+
+    /// <summary>
+    ///   Checks if the certificate exists in Windows certificate store.
+    /// </summary>
+    /// <returns>
+    ///   <c>True</c> if certificate exists or <c>False</c> otherwise.
+    /// </returns>
     function CertificateExists(): Boolean;
+
+    /// <summary>
+    ///   Executes the update progress.
+    /// </summary>
+    /// <returns>
+    ///   <c>True</c> if downloading was sucessful or <c>False</c> otherwise.
+    /// </returns>
     function Execute(): Boolean;
+
+    /// <summary>
+    ///   Installs the certificate for SSL updates and code signing verification.
+    /// </summary>
+    /// <returns>
+    ///   <c>True</c> if installing was sucessful or <c>False</c> otherwise.
+    /// </returns>
     function InstallCertificate(): Boolean;
+
+    /// <summary>
+    ///   Launches the downloaded setup.
+    /// </summary>
     procedure LaunchSetup();
+
+    /// <summary>
+    ///   Removes a listener from the notification list.
+    /// </summary>
+    /// <param name="AListener">
+    ///   A listener which implements the <see cref="IUpdateListener"/> interface.
+    /// </param>
     procedure RemoveListener(AListener: IUpdateListener);
+
+    /// <summary>
+    ///   Shows a dialog where user has the choice to install the certificate.
+    /// </summary>
+    /// <returns>
+    ///   <c>True</c> if installation was sucessful or <c>False</c> otherwise.
+    /// </returns>
     function ShowInstallCertificateDialog(): Boolean;
-    { external }
+
+    /// <summary>
+    ///   Download the file into this directory.
+    /// </summary>
     property DownloadDirectory: string read FDownloadDirectory write FDownloadDirectory;
+
+    /// <summary>
+    ///   The filename to use for the downloaded file.
+    /// </summary>
     property FileNameLocal: string read FLocalFileName write FLocalFileName;
+
+    /// <summary>
+    ///   The filename of the file on website.
+    /// </summary>
     property FileNameRemote: string read FRemoteFileName write FRemoteFileName;
+
+    /// <summary>
+    ///   The specific user interface translation file to use.
+    /// </summary>
     property LanguageFile: TLanguageFile read FLang write FLang;
+
+    /// <summary>
+    ///   Gets or sets the title to use in the dialog caption.
+    /// </summary>
     property Title: string read FTitle write FTitle;
   end;
 {$ENDIF}
@@ -272,11 +371,6 @@ begin
   inherited Destroy;
 end;
 
-{ private TUpdateCheck.OnCheckError
-
-  Event method that is called TUpdateCheckThread when error occurs while
-  searching for update. }
-
 procedure TUpdateCheck.OnCheckError(Sender: TThread; AResponseCode: Integer;
   AResponseText: string);
 begin
@@ -287,23 +381,15 @@ begin
       FLang.ShowMessage(12, 13, mtError);
 end;
 
-{ private TUpdateCheck.OnNoUpdateAvailable
-
-  Event method that is called when TUpdateCheckThread search returns no update. }
-
 procedure TUpdateCheck.OnNoUpdateAvailable(Sender: TObject);
 begin
   if FUserUpdate then
     FLang.ShowMessage(FLang.GetString(23));
 end;
 
-{ private TUpdateCheck.OnUpdateAvailable
-
-  Event method that is called when TUpdateCheckThread search returns an update. }
-
 procedure TUpdateCheck.OnUpdateAvailable(Sender: TThread; const ANewBuild: Cardinal);
 var
-  i: Word;
+  i: Integer;
   Listener: IUpdateListener;
 
 begin
@@ -322,7 +408,7 @@ begin
   FListeners.Add(AListener);
 end;
 
-procedure TUpdateCheck.CheckForUpdate(AUserUpdate: Boolean; AOtherBuild: Cardinal = 0);
+procedure TUpdateCheck.CheckForUpdate(AUserUpdate: Boolean);
 begin
   FUserUpdate := AUserUpdate;
 
@@ -333,11 +419,8 @@ begin
     Abort;
   end;  //of begin
 
-  if (AOtherBuild = 0) then
-    AOtherBuild := GetBuildNumber();
-
   // Search for update
-  with TUpdateCheckThread.Create(AOtherBuild, FRemoteDirName) do
+  with TUpdateCheckThread.Create(GetBuildNumber(), FRemoteDirName) do
   begin
     OnUpdate := OnUpdateAvailable;
     OnNoUpdate := OnNoUpdateAvailable;
@@ -436,40 +519,26 @@ end;
 
 { TUpdate }
 
-{ public TUpdate.Create
-
-  Constructor for creating an TUpdate instance. }
-
 constructor TUpdate.Create(AOwner: TComponent; ALang: TLanguageFile);
 begin
   inherited Create(AOwner);
   FLang := ALang;
-
-  // Init list of listeners
   FListeners := TInterfaceList.Create;
 
   // Add owner to list to receive events
   if Assigned(AOwner) then
-    FListeners.Add(AOwner);
+    AddListener(AOwner as IUpdateListener);
 
   FTaskBar := TTaskbar.Create(Self);
 end;
 
-{ public TUpdate.Destroy
-
-  Destructor for destroying an TUpdate instance. }
-
 destructor TUpdate.Destroy;
 begin
   FTaskBar.ProgressState := TTaskBarProgressState.None;
-  FTaskBar.Free;
+  FreeAndNil(FTaskBar);
   FreeAndNil(FListeners);
   inherited Destroy;
 end;
-
-{ private TUpdate.FormShow
-
-  Event that is called when form is shown. }
 
 procedure TUpdate.FormShow(Sender: TObject);
 begin
@@ -481,10 +550,6 @@ begin
   bFinished.Caption := FLang.GetString(6);
 end;
 
-{ private TUpdate.OnDownloadCancel
-
-  Event method that is called by TDownloadThread when user canceled downlad. }
-
 procedure TUpdate.OnDownloadCancel(Sender: TObject);
 begin
   FTaskBar.ProgressState := TTaskBarProgressState.Error;
@@ -493,11 +558,6 @@ begin
   FLang.ShowMessage(FLang.GetString(30));
   bFinished.ModalResult := mrCancel;
 end;
-
-{ private TUpdate.OnDownloadError
-
-  Event method that is called by TDownloadThread when an error occurs while
-  downloading the update. }
 
 procedure TUpdate.OnDownloadError(Sender: TThread; const AResponseCode: Integer;
   const AResponseText: string);
@@ -521,10 +581,6 @@ begin
   bFinished.ModalResult := mrAbort;
 end;
 
-{ private TUpdate.OnDownloadFinished
-
-  Event method that is called by TDownloadThread when download is finished. }
-
 procedure TUpdate.OnDownloadFinished(Sender: TThread; const AFileName: string);
 begin
   FTaskBar.ProgressState := TTaskBarProgressState.Normal;
@@ -533,10 +589,6 @@ begin
   FThread := nil;
   bFinished.ModalResult := mrOk;
 end;
-
-{ private TUpdate.OnDownloading
-
-  Event method that is called by TDownloadThread when download is in progress. }
 
 procedure TUpdate.OnDownloading(Sender: TThread; AContentLength, AReadCount: Int64);
 begin
@@ -547,20 +599,12 @@ begin
   lSize.Caption := Format('%d/%d KB', [AReadCount, AContentLength]);
 end;
 
-{ private TUpdate.Reset
-
-  Resets Update GUI. }
-
 procedure TUpdate.Reset();
 begin
   lSize.Caption := FLang.GetString(7);
   bFinished.Caption := FLang.GetString(8);
   FThread := nil;
 end;
-
-{ protected TUpdate.Download
-
-  Starts downloading a file. }
 
 function TUpdate.Download(ARemoteFileName, ALocalFileName: string;
   ADownloadDirectory: string = ''; AUseTls: Boolean = True): Boolean;
@@ -616,18 +660,10 @@ begin
   Result := (bFinished.ModalResult = mrOk);
 end;
 
-{ public TUpdate.AddListener
-
-  Adds a listener to the notification list. }
-
 procedure TUpdate.AddListener(AListener: IUpdateListener);
 begin
   FListeners.Add(AListener);
 end;
-
-{ public TUpdate.CertificateExists
-
-  Returns if the certificate exists in Windows certificate store. }
 
 function TUpdate.CertificateExists(): Boolean;
 const
@@ -652,10 +688,6 @@ begin
   end;  //of try
 end;
 
-{ public TUpdate.Execute
-
-  Executes the dialog. }
-
 function TUpdate.Execute(): Boolean;
 begin
   if ((FRemoteFileName = '') or (FLocalFileName = '')) then
@@ -663,10 +695,6 @@ begin
 
   Result := Download(FRemoteFileName, FLocalFileName, FDownloadDirectory);
 end;
-
-{ public TUpdate.InstallCertificate
-
-  Installs the certificate for SSL updates and code signing verification. }
 
 function TUpdate.InstallCertificate(): Boolean;
 var
@@ -694,10 +722,6 @@ begin
   end;  //of try
 end;
 
-{ public TUpdate.ShowInstallCertificateDialog
-
-  Shows a dialog where user has the choice to install the certificate. }
-
 function TUpdate.ShowInstallCertificateDialog(): Boolean;
 var
   Answer: Integer;
@@ -718,36 +742,20 @@ begin
   end;  //of case
 end;
 
-{ public TUpdate.LaunchSetup
-
-  Launches the downloaded setup. }
-
 procedure TUpdate.LaunchSetup();
 begin
   ShellExecute(0, 'open', PChar(FFileName), nil, nil, SW_SHOWNORMAL);
 end;
-
-{ public TUpdate.RemoveListener
-
-  Removes a listener from the notification list. }
 
 procedure TUpdate.RemoveListener(AListener: IUpdateListener);
 begin
   FListeners.Remove(AListener);
 end;
 
-{ TUpdate.bFinishedClick
-
-  Cancels download or closes update form when user clicks. }
-
 procedure TUpdate.bFinishedClick(Sender: TObject);
 begin
   Close;
 end;
-
-{ TUpdate.FormCloseQuery
-
-  VCL event that is called before destructor is called. }
 
 procedure TUpdate.FormCloseQuery(Sender: TObject; var CanClose: Boolean);
 begin
