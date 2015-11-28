@@ -531,11 +531,12 @@ type
   TWow64DisableWow64FsRedirection = function(OldValue: Pointer): BOOL; stdcall;
   TWow64RevertWow64FsRedirection = function(OldValue: Pointer): BOOL; stdcall;
 
+{$IFNDEF DEBUG}
 var
   LibraryHandle: HMODULE;
   Wow64DisableWow64FsRedirection: TWow64DisableWow64FsRedirection;
   Wow64RevertWow64FsRedirection: TWow64RevertWow64FsRedirection;
-
+{$ENDIF}
 begin
   Result := False;
 

@@ -354,11 +354,11 @@ var
   Updater: TUpdate;
 
 begin
-  mmUpdate.Caption := FLang.GetString(24);
+  mmUpdate.Caption := FLang.GetString(LID_UPDATE_DOWNLOAD);
 
   // Ask user to permit download
-  if (FLang.ShowMessage(FLang.Format(21, [ANewBuild]), FLang.GetString(22),
-    mtConfirmation) = IDYES) then
+  if (FLang.ShowMessage(FLang.Format(LID_UPDATE_AVAILABLE, [ANewBuild]),
+    FLang.GetString(LID_UPDATE_CONFIRM_DOWNLOAD), mtConfirmation) = IDYES) then
   begin
     // init TUpdate instance
     Updater := TUpdate.Create(Self, FLang);
@@ -374,7 +374,8 @@ begin
       {$ELSE}
         // Ask user to permit download of 64-Bit version
         if ((TOSVersion.Architecture = arIntelX64) and (FLang.ShowMessage(
-          FLang.Format([34, 35], ['Clearas']), mtConfirmation) = IDYES)) then
+          FLang.Format([LID_UPDATE_64BIT, LID_UPDATE_64BIT_CONFIRM], ['Clearas']),
+            mtConfirmation) = IDYES)) then
           FileNameRemote := 'clearas64.exe'
         else
           FileNameRemote := 'clearas.exe';
@@ -384,8 +385,7 @@ begin
       // Successfully downloaded update?
       if Updater.Execute() then
       begin
-        // Caption "Search for update"
-        mmUpdate.Caption := FLang.GetString(15);
+        mmUpdate.Caption := FLang.GetString(LID_UPDATE_SEARCH);
         mmUpdate.Enabled := False;
       end;  //of begin
 
@@ -1333,20 +1333,20 @@ begin
     mmDelBackup.Caption := GetString(76);
 
     // View menu labels
-    mmView.Caption := GetString(10);
+    mmView.Caption := GetString(LID_VIEW);
     mmRefresh.Caption := GetString(77);
     mmDefault.Caption := GetString(78);
     mmShowCaptions.Caption := GetString(124);
     mmDate.Caption := GetString(80);
     cbRunOnce.Caption := GetString(81);
-    mmLang.Caption := GetString(25);
+    mmLang.Caption := GetString(LID_SELECT_LANGUAGE);
 
     // Help menu labels
-    mmHelp.Caption := GetString(14);
-    mmUpdate.Caption := GetString(15);
-    mmInstallCertificate.Caption := GetString(16);
-    mmReport.Caption := GetString(26);
-    mmInfo.Caption := Format(17, [Application.Title]);
+    mmHelp.Caption := GetString(LID_HELP);
+    mmUpdate.Caption := GetString(LID_UPDATE_SEARCH);
+    mmInstallCertificate.Caption := GetString(LID_CERTIFICATE_INSTALL);
+    mmReport.Caption := GetString(LID_REPORT_BUG);
+    mmInfo.Caption := Format(LID_ABOUT, [Application.Title]);
 
     // "Startup" tab TButton labels
     tsStartup.Caption := GetString(83);
@@ -1361,7 +1361,7 @@ begin
     lwStartup.Columns[0].Caption := GetString(91);
     lwStartup.Columns[2].Caption := StripHotkey(mmFile.Caption);
     lwStartup.Columns[3].Caption := GetString(92);
-    lCopy1.Hint := GetString(29);
+    lCopy1.Hint := GetString(LID_TO_WEBSITE);
 
     // "Context menu" tab TButton labels
     tsContext.Caption := GetString(84);

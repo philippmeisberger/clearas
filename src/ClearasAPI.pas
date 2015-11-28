@@ -1677,6 +1677,8 @@ var
   Reg: TRegistry;
 
 begin
+  Result := False;
+
   if ((FEnabled or CheckWin32Version(6, 2)) and FWow64 and AReallyWow64) then
     Reg := TRegistry.Create(KEY_WOW64_32KEY or KEY_READ or KEY_WRITE)
   else
@@ -1729,6 +1731,8 @@ var
   Reg: TRegistry;
 
 begin
+  Result := False;
+
   if ((FEnabled or CheckWin32Version(6, 2)) and FWow64 and AReallyWow64) then
     Reg := TRegistry.Create(KEY_WOW64_32KEY or KEY_READ or KEY_WRITE)
   else
@@ -2092,6 +2096,8 @@ var
   Reg: TRegistry;
 
 begin
+  Result := False;
+
   if (FEnabled or CheckWin32Version(6, 2)) then
   begin
     Result := Rename(FLocation, ANewCaption, True);
@@ -2731,7 +2737,7 @@ var
 begin
   // Deprecated since Windows 8!
   if CheckWin32Version(6, 2) then
-    Exit;
+    Exit(-1);
 
   Item := TStartupUserItem.Create(Count, False, False);
 
@@ -3380,6 +3386,7 @@ var
   IconPath: string;
 
 begin
+  Result := 0;
   Icon := TIcon.Create;
   Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ);
 

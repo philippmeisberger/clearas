@@ -167,7 +167,6 @@ begin
       PopupMode := pmAuto;
       Position := poScreenCenter;
       CurPrompt := MulDiv(8, DialogUnits.Y, 8);
-      Combo := nil;
 
       // Init TLabel
       Prompt := TLabel.Create(Form);
@@ -205,7 +204,6 @@ begin
         Prompt.FocusControl := Combo;
       end;  //of with
 
-      CurPrompt := Combo.Top + Combo.Height + 5;
       ButtonTop := Combo.Top + Combo.Height + 15;
       ButtonWidth := MulDiv(50, DialogUnits.X, 4);
       ButtonHeight := MulDiv(14, DialogUnits.Y, 8);

@@ -1,6 +1,6 @@
 { *********************************************************************** }
 {                                                                         }
-{ PM Code Works Updater v3.0.1                                            }
+{ PM Code Works Updater v3.0.2                                            }
 {                                                                         }
 { Copyright (c) 2011-2015 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
@@ -130,7 +130,7 @@ type
       ALang: TLanguageFile); reintroduce; overload;
 
     /// <summary>
-    ///   Destructor for destroying an TUpdateCheck instance.
+    ///   Destructor for destroying an <c>TUpdateCheck</c> instance.
     /// </summary>
     destructor Destroy; override;
 
@@ -376,15 +376,16 @@ procedure TUpdateCheck.OnCheckError(Sender: TThread; AResponseCode: Integer;
 begin
   if FUserUpdate then
     if (AResponseCode > 0) then
-      FLang.ShowException(FLang.GetString([12, 13]), AResponseText + Format(' (%d)', [AResponseCode]))
+      FLang.ShowException(FLang.GetString([LID_UPDATE_NO_CONNECTION,
+        LID_UPDATE_CHECK_CONNECTION]), AResponseText + Format(' (%d)', [AResponseCode]))
     else
-      FLang.ShowMessage(12, 13, mtError);
+      FLang.ShowMessage(LID_UPDATE_NO_CONNECTION, LID_UPDATE_CHECK_CONNECTION, mtError);
 end;
 
 procedure TUpdateCheck.OnNoUpdateAvailable(Sender: TObject);
 begin
   if FUserUpdate then
-    FLang.ShowMessage(FLang.GetString(23));
+    FLang.ShowMessage(FLang.GetString(LID_UPDATE_NOT_AVAILABLE));
 end;
 
 procedure TUpdateCheck.OnUpdateAvailable(Sender: TThread; const ANewBuild: Cardinal);
@@ -545,9 +546,9 @@ begin
   if (FTitle <> '') then
     Caption := FTitle
   else
-    Caption := FLang.GetString(5);
+    Caption := FLang.GetString(LID_UPDATE);
 
-  bFinished.Caption := FLang.GetString(6);
+  bFinished.Caption := FLang.GetString(LID_CANCEL);
 end;
 
 procedure TUpdate.OnDownloadCancel(Sender: TObject);
@@ -555,7 +556,7 @@ begin
   FTaskBar.ProgressState := TTaskBarProgressState.Error;
   pbProgress.State := TProgressBarState.pbsError;
   Reset();
-  FLang.ShowMessage(FLang.GetString(30));
+  FLang.ShowMessage(FLang.GetString(LID_UPDATE_CANCELED));
   bFinished.ModalResult := mrCancel;
 end;
 
@@ -577,14 +578,14 @@ begin
     // HTTP error?
     MessageText := Format('HTTP/1.1 %d '+ AResponseText, [AResponseCode]);
 
-  FLang.ShowException(FLang.GetString([24, 18]), MessageText);
+  FLang.ShowException(FLang.GetString([LID_UPDATE_DOWNLOAD, LID_IMPOSSIBLE]), MessageText);
   bFinished.ModalResult := mrAbort;
 end;
 
 procedure TUpdate.OnDownloadFinished(Sender: TThread; const AFileName: string);
 begin
   FTaskBar.ProgressState := TTaskBarProgressState.Normal;
-  bFinished.Caption := FLang.GetString(8);
+  bFinished.Caption := FLang.GetString(LID_FINISHED);
   bFinished.SetFocus;
   FThread := nil;
   bFinished.ModalResult := mrOk;
@@ -601,8 +602,8 @@ end;
 
 procedure TUpdate.Reset();
 begin
-  lSize.Caption := FLang.GetString(7);
-  bFinished.Caption := FLang.GetString(8);
+  lSize.Caption := FLang.GetString(LID_CANCELED);
+  bFinished.Caption := FLang.GetString(LID_FINISHED);
   FThread := nil;
 end;
 
@@ -626,7 +627,7 @@ begin
   // Download folder not set yet?
   if (ADownloadDirectory = '') then
     // Show select directory dialog
-    Continue := SelectDirectory(FLang.GetString(9), '', FDownloadDirectory);
+    Continue := SelectDirectory(FLang.GetString(LID_UPDATE_SELECT_DIR), '', FDownloadDirectory);
 
   if Continue then
   begin
@@ -646,7 +647,7 @@ begin
       if UseTls then
       begin
         TLSEnabled := True;
-        Caption := FLang.GetString([33, 5]);
+        Caption := FLang.GetString(LID_UPDATE_SECURE);
       end;  //of begin
 
       Start();
@@ -673,7 +674,6 @@ var
   Reg: TRegistry;
 
 begin
-  Result := False;
   Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ);
 
   try
@@ -715,7 +715,8 @@ begin
       '-addstore ROOT "'+ FileName +'"'), nil, SW_HIDE) > 32) then
       Result := True
     else
-      FLang.ShowMessage(FLang.GetString([16, 18]), FLang.GetString(28), mtError);
+      FLang.ShowMessage(FLang.GetString([LID_CERTIFICATE_INSTALL, LID_IMPOSSIBLE]),
+        FLang.GetString(LID_CERTIFICATE_NO_CERTUTIL), mtError);
 
   finally
     ResourceStream.Free;
@@ -730,8 +731,9 @@ begin
   Result := False;
 
   // Ask user to install the certificate
-  Answer := TaskMessageDlg(FLang.GetString(37), FLang.GetString([38, 39,
-    NEW_LINE, 40]), mtConfirmation, mbYesNoCancel, 0, mbYes);
+  Answer := TaskMessageDlg(FLang.GetString(LID_UPDATE_SECURE), FLang.GetString(
+    [LID_UPDATE_SECURE_DESCRIPTION1, LID_UPDATE_SECURE_DESCRIPTION2, NEW_LINE,
+    LID_CERTIFICATE_INSTALL_CONFIRM]), mtConfirmation, mbYesNoCancel, 0, mbYes);
 
   case Answer of
     IDYES:
