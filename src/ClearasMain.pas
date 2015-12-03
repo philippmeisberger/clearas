@@ -20,6 +20,8 @@ uses
 const
   KEY_RECYCLEBIN = 'CLSID\{645FF040-5081-101B-9F08-00AA002F954E}\shell';
 
+{$I LanguageIDs.inc}
+
 type
   { TMain }
   TMain = class(TForm, IChangeLanguageListener, IUpdateListener)
@@ -440,7 +442,7 @@ begin
         if FStartup.Selected.Enabled then
         begin
           FStartup.Selected.ExportItem('');
-          FLang.ShowMessage(FLang.Format(42, [(FStartup.Selected as TStartupUserItem).LnkFile.BackupLnk]));
+          FLang.ShowMessage(FLang.Format(LID_BACKUP_CREATED, [(FStartup.Selected as TStartupUserItem).LnkFile.BackupLnk]));
           bExportStartupItem.Enabled := False;
           pmExport.Enabled := False;
           Result := True;
@@ -455,13 +457,13 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([95, 18]), FLang.GetString(53), mtWarning);
+      FLang.ShowMessage(FLang.GetString([LID_EXPORT, LID_IMPOSSIBLE]), FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
 
     on E: EStartupException do
-      FLang.ShowException(FLang.GetString([95, 18]), FLang.GetString(43));
+      FLang.ShowException(FLang.GetString([LID_EXPORT, LID_IMPOSSIBLE]), FLang.GetString(LID_BACKUP_NOT_CREATED));
 
     on E: Exception do
-      FLang.ShowException(FLang.GetString([95, 18]), E.Message);
+      FLang.ShowException(FLang.GetString([LID_EXPORT, LID_IMPOSSIBLE]), E.Message);
   end;  //of try
 end;
 
@@ -488,10 +490,11 @@ begin
 
     // Confirm deletion of item
     if (FLang.ShowMessage(FLang.Format([AConfirmMessageId],
-      [ListView.ItemFocused.SubItems[0]]), FLang.GetString([49, 50]), mtCustom) = IDYES) then
+      [ListView.ItemFocused.SubItems[0]]), FLang.GetString([LID_ITEM_DELETE_CONFIRM1,
+      LID_ITEM_DELETE_CONFIRM2]), mtCustom) = IDYES) then
     begin
       // Ask user to export item
-      Answer := FLang.ShowMessage(FLang.GetString(52), mtConfirmation);
+      Answer := FLang.ShowMessage(FLang.GetString(LID_ITEM_DELETE_STORE), mtConfirmation);
 
       // Abort if user clicks cancel!
       if (((Answer = IDYES) and ShowExportItemDialog()) or (Answer = IDNO)) then
@@ -509,16 +512,18 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([96, 18]), FLang.GetString(53), mtWarning);
+      FLang.ShowMessage(FLang.GetString([LID_DELETE, LID_IMPOSSIBLE]),
+        FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
 
     on E: EListBlocked do
-      FLang.ShowMessage(100, 101, mtWarning);
+      FLang.ShowMessage(LID_OPERATION_PENDING1, LID_OPERATION_PENDING2, mtWarning);
 
     on E: EWarning do
-      FLang.ShowMessage(FLang.GetString([96, 18]), E.Message, mtWarning);
+      FLang.ShowMessage(FLang.GetString([LID_DELETE, LID_IMPOSSIBLE]), E.Message,
+        mtWarning);
 
     on E: Exception do
-      FLang.ShowException(FLang.GetString([96, 18]), E.Message);
+      FLang.ShowException(FLang.GetString([LID_DELETE, LID_IMPOSSIBLE]), E.Message);
   end;  //of try
 end;
 
@@ -540,8 +545,9 @@ begin
       raise EInvalidItem.Create('No item selected!');
 
     // Confirm deletion of item
-    if (FLang.ShowMessage(FLang.Format([48], [FStartup.Selected.Name]),
-      FLang.GetString([49, 50]), mtCustom) = IDYES) then
+    if (FLang.ShowMessage(FLang.Format([LID_STARTUP_DELETE_CONFIRM],
+      [FStartup.Selected.Name]), FLang.GetString([LID_ITEM_DELETE_CONFIRM1,
+      LID_ITEM_DELETE_CONFIRM2]), mtCustom) = IDYES) then
     begin
       // Save the DeleteBackup flag
       DelBackup := FStartup.DeleteBackup;
@@ -552,7 +558,7 @@ begin
         and BackupExists) then
         Answer := IDCANCEL
       else
-        Answer := FLang.ShowMessage(FLang.GetString(52), mtConfirmation);
+        Answer := FLang.ShowMessage(FLang.GetString(LID_ITEM_DELETE_STORE), mtConfirmation);
 
       // Export item and only continue if this has succeeded
       if (Answer = IDYES) then
@@ -564,7 +570,7 @@ begin
       // Ask user to delete old existing backup
       if ((Answer = IDCANCEL) or ((FStartup.Selected is TStartupUserItem)
         and not FStartup.Selected.Enabled and BackupExists)) then
-        FStartup.DeleteBackup := (FLang.ShowMessage(FLang.GetString(44),
+        FStartup.DeleteBackup := (FLang.ShowMessage(FLang.GetString(LID_BACKUP_DELETE_CONFIRM),
           mtConfirmation) = IDYES);
 
       // Successfully deleted item physically?
@@ -580,16 +586,16 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([96, 18]), FLang.GetString(53), mtWarning);
+      FLang.ShowMessage(FLang.GetString([LID_DELETE, LID_IMPOSSIBLE]), FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
 
     on E: EListBlocked do
-      FLang.ShowMessage(100, 101, mtWarning);
+      FLang.ShowMessage(LID_OPERATION_PENDING1, LID_OPERATION_PENDING2, mtWarning);
 
     on E: EWarning do
-      FLang.ShowMessage(FLang.GetString([96, 18]), E.Message, mtWarning);
+      FLang.ShowMessage(FLang.GetString([LID_DELETE, LID_IMPOSSIBLE]), E.Message, mtWarning);
 
     on E: Exception do
-      FLang.ShowException(FLang.GetString([96, 18]), E.Message);
+      FLang.ShowException(FLang.GetString([LID_DELETE, LID_IMPOSSIBLE]), E.Message);
   end;  //of try
 
   // Restore the DeleteBackup flag
@@ -632,16 +638,16 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([94, 18]), FLang.GetString(53), mtWarning);
+      FLang.ShowMessage(FLang.GetString([LID_DISABLE, LID_IMPOSSIBLE]), FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
 
     on E: EListBlocked do
-      FLang.ShowMessage(100, 101, mtWarning);
+      FLang.ShowMessage(LID_OPERATION_PENDING1, LID_OPERATION_PENDING2, mtWarning);
 
     on E: EWarning do
-      FLang.ShowMessage(FLang.GetString([94, 18]), E.Message, mtWarning);
+      FLang.ShowMessage(FLang.GetString([LID_DISABLE, LID_IMPOSSIBLE]), E.Message, mtWarning);
 
     on E: Exception do
-      FLang.ShowException(FLang.GetString([94, 18]), E.Message);
+      FLang.ShowException(FLang.GetString([LID_DISABLE, LID_IMPOSSIBLE]), E.Message);
   end;  //of try
 end;
 
@@ -680,16 +686,16 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([93, 18]), FLang.GetString(53), mtWarning);
+      FLang.ShowMessage(FLang.GetString([LID_ENABLE, LID_IMPOSSIBLE]), FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
 
     on E: EListBlocked do
-      FLang.ShowMessage(100, 101, mtWarning);
+      FLang.ShowMessage(LID_OPERATION_PENDING1, LID_OPERATION_PENDING2, mtWarning);
 
     on E: EWarning do
-      FLang.ShowMessage(FLang.GetString([93, 18]), E.Message, mtWarning);
+      FLang.ShowMessage(FLang.GetString([LID_ENABLE, LID_IMPOSSIBLE]), E.Message, mtWarning);
 
     on E: Exception do
-      FLang.ShowException(FLang.GetString([93, 18]), E.Message);
+      FLang.ShowException(FLang.GetString([LID_ENABLE, LID_IMPOSSIBLE]), E.Message);
   end;  //of try
 end;
 
@@ -787,7 +793,7 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([77, 18]), FLang.GetString(53), mtWarning);
+      FLang.ShowMessage(FLang.GetString([LID_REFRESH, LID_IMPOSSIBLE]), FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
   end;  //of try
 end;
 
@@ -868,8 +874,8 @@ end;
 procedure TMain.OnContextItemChanged(Sender: TObject; ANewStatus: TItemStatus);
 begin
   // Refresh counter label
-  lwContext.Columns[1].Caption := FLang.Format(87, [FContext.Enabled,
-    FContext.Count]);
+  lwContext.Columns[1].Caption := FLang.Format(LID_CONTEXT_MENU_COUNTER,
+    [FContext.Enabled, FContext.Count]);
 
   // Change button states
   case ANewStatus of
@@ -965,7 +971,7 @@ end;
 
 procedure TMain.OnExportListError(Sender: TObject; AErrorMessage: string);
 begin
-  FLang.ShowException(FLang.GetString([95, 18]), AErrorMessage);
+  FLang.ShowException(FLang.GetString([LID_EXPORT, LID_IMPOSSIBLE]), AErrorMessage);
 end;
 
 { private TMain.OnStartupItemChanged
@@ -975,7 +981,7 @@ end;
 procedure TMain.OnStartupItemChanged(Sender: TObject; ANewStatus: TItemStatus);
 begin
   // Refresh counter label
-  lwStartup.Columns[1].Caption := FLang.Format(88, [FStartup.Enabled,
+  lwStartup.Columns[1].Caption := FLang.Format(LID_PROGRAM_COUNTER, [FStartup.Enabled,
     FStartup.Count]);
 
   // Change button states
@@ -1087,7 +1093,7 @@ end;
 procedure TMain.OnServiceItemChanged(Sender: TObject; ANewStatus: TItemStatus);
 begin
   // Refresh counter label
-  lwService.Columns[1].Caption := FLang.Format(56, [FService.Enabled,
+  lwService.Columns[1].Caption := FLang.Format(LID_SERVICE_COUNTER, [FService.Enabled,
     FService.Count]);
 
   // Change button states
@@ -1201,7 +1207,7 @@ end;
 
 procedure TMain.OnSearchError(Sender: TObject; AErrorMessage: string);
 begin
-  FLang.ShowException(FLang.GetString([77, 18]), AErrorMessage);
+  FLang.ShowException(FLang.GetString([LID_REFRESH, LID_IMPOSSIBLE]), AErrorMessage);
 end;
 
 { private TMain.OnTaskItemChanged
@@ -1211,7 +1217,8 @@ end;
 procedure TMain.OnTaskItemChanged(Sender: TObject; ANewStatus: TItemStatus);
 begin
   // Refresh counter label
-  lwTasks.Columns[1].Caption := FLang.Format(116, [FTasks.Enabled, FTasks.Count]);
+  lwTasks.Columns[1].Caption := FLang.Format(LID_TASKS_COUNTER, [FTasks.Enabled,
+    FTasks.Count]);
 
   // Change button states
   case ANewStatus of
@@ -1317,28 +1324,28 @@ begin
     mmFile.Caption := GetString(33);
 
     case PageControl.ActivePageIndex of
-      0,2: mmAdd.Caption := GetString(69);
-      1:   mmAdd.Caption := GetString(105);
-      3:   mmAdd.Caption := GetString(117);
+      0,2: mmAdd.Caption := GetString(LID_STARTUP_ADD);
+      1:   mmAdd.Caption := GetString(LID_CONTEXT_MENU_ADD);
+      3:   mmAdd.Caption := GetString(LID_TASKS_ADD);
     end;  //of case
 
-    mmImport.Caption := GetString(70);
-    mmExport.Caption := GetString(71);
-    mmExportlist.Caption := GetString(72);
-    mmClose.Caption := GetString(73);
+    mmImport.Caption := GetString(LID_BACKUP_IMPORT);
+    mmExport.Caption := GetString(LID_ITEM_EXPORT);
+    mmExportlist.Caption := GetString(LID_ITEMS_EXPORT);
+    mmClose.Caption := GetString(LID_QUIT);
 
     // Edit menu labels
-    mmEdit.Caption := GetString(74);
-    mmContext.Caption := GetString(75);
-    mmDelBackup.Caption := GetString(76);
+    mmEdit.Caption := GetString(LID_EDIT);
+    mmContext.Caption := GetString(LID_RECYCLEBIN_ENTRY);
+    mmDelBackup.Caption := GetString(LID_BACKUP_DELETE_ENABLED);
 
     // View menu labels
     mmView.Caption := GetString(LID_VIEW);
-    mmRefresh.Caption := GetString(77);
-    mmDefault.Caption := GetString(78);
-    mmShowCaptions.Caption := GetString(124);
-    mmDate.Caption := GetString(80);
-    cbRunOnce.Caption := GetString(81);
+    mmRefresh.Caption := GetString(LID_REFRESH);
+    mmDefault.Caption := GetString(LID_COLUMN_DEFAULT_SIZE);
+    mmShowCaptions.Caption := GetString(LID_DESCRIPTION_SHOW);
+    mmDate.Caption := GetString(LID_DATE_OF_DEACTIVATION);
+    cbRunOnce.Caption := GetString(LID_STARTUP_RUNONCE);
     mmLang.Caption := GetString(LID_SELECT_LANGUAGE);
 
     // Help menu labels
@@ -1349,39 +1356,39 @@ begin
     mmInfo.Caption := Format(LID_ABOUT, [Application.Title]);
 
     // "Startup" tab TButton labels
-    tsStartup.Caption := GetString(83);
-    bEnableStartupItem.Caption := GetString(93);
-    bDisableStartupItem.Caption := GetString(94);
-    bExportStartupItem.Caption := GetString(95);
-    bDeleteStartupItem.Caption := GetString(96);
+    tsStartup.Caption := GetString(LID_STARTUP);
+    bEnableStartupItem.Caption := GetString(LID_ENABLE);
+    bDisableStartupItem.Caption := GetString(LID_DISABLE);
+    bExportStartupItem.Caption := GetString(LID_EXPORT);
+    bDeleteStartupItem.Caption := GetString(LID_DELETE);
     bCloseStartup.Caption := mmClose.Caption;
 
     // "Startup" tab TListView labels
-    lStartup.Caption := GetString(82);
-    lwStartup.Columns[0].Caption := GetString(91);
+    lStartup.Caption := GetString(LID_STARTUP_HEADLINE);
+    lwStartup.Columns[0].Caption := GetString(LID_ENABLED);
     lwStartup.Columns[2].Caption := StripHotkey(mmFile.Caption);
-    lwStartup.Columns[3].Caption := GetString(92);
+    lwStartup.Columns[3].Caption := GetString(LID_KEY);
     lCopy1.Hint := GetString(LID_TO_WEBSITE);
 
     // "Context menu" tab TButton labels
-    tsContext.Caption := GetString(84);
+    tsContext.Caption := GetString(LID_CONTEXT_MENU);
     bEnableContextItem.Caption := bEnableStartupItem.Caption;
     bDisableContextItem.Caption := bDisableStartupItem.Caption;
     bExportContextItem.Caption := bExportStartupItem.Caption;
     bDeleteContextItem.Caption := bDeleteStartupItem.Caption;
     bCloseContext.Caption := bCloseStartup.Caption;
-    cbContextExpert.Caption := GetString(89);
-    eContextSearch.TextHint := GetString(63);
+    cbContextExpert.Caption := GetString(LID_EXPERT_MODE);
+    eContextSearch.TextHint := GetString(LID_SEARCH);
 
     // "Context menu" tab TListView labels
-    lContext.Caption := GetString(86);
+    lContext.Caption := GetString(LID_CONTEXT_MENU_HEADLINE);
     lwContext.Columns[0].Caption := lwStartup.Columns[0].Caption;
-    lwContext.Columns[2].Caption := GetString(90);
+    lwContext.Columns[2].Caption := GetString(LID_LOCATION);
     lwContext.Columns[3].Caption := lwStartup.Columns[3].Caption;
     lCopy2.Hint := lCopy1.Hint;
 
     // "Service" tab TButton labels
-    tsService.Caption := GetString(60);
+    tsService.Caption := GetString(LID_SERVICES);
     lService.Caption := lStartup.Caption;
     bEnableServiceItem.Caption := bEnableStartupItem.Caption;
     bDisableServiceItem.Caption := bDisableStartupItem.Caption;
@@ -1393,13 +1400,13 @@ begin
     // "Service" tab TListView labels
     lwService.Columns[0].Caption := lwStartup.Columns[0].Caption;
     lwService.Columns[2].Caption := lwStartup.Columns[2].Caption;
-    lwService.Columns[3].Caption := GetString(59);
+    lwService.Columns[3].Caption := GetString(LID_SERVICE_START);
     lCopy3.Hint := lCopy1.Hint;
     eServiceSearch.TextHint := eContextSearch.TextHint;
 
     // "Tasks" tab TButton labels
-    tsTasks.Caption := GetString(114);
-    lTasks.Caption := GetString(115);
+    tsTasks.Caption := GetString(LID_TASKS);
+    lTasks.Caption := GetString(LID_TASKS_HEADLINE);
     bEnableTaskItem.Caption := bEnableStartupItem.Caption;
     bDisableTaskitem.Caption := bDisableStartupItem.Caption;
     bExportTaskItem.Caption := bExportStartupItem.Caption;
@@ -1416,15 +1423,15 @@ begin
 
     // Popup menu labels
     pmChangeStatus.Caption := bDisableStartupItem.Caption;
-    pmOpenRegedit.Caption := GetString(66);
-    pmOpenExplorer.Caption := GetString(51);
-    pmEdit.Caption := GetString(104);
+    pmOpenRegedit.Caption := GetString(LID_OPEN_IN_REGEDIT);
+    pmOpenExplorer.Caption := GetString(LID_OPEN_IN_EXPLORER);
+    pmEdit.Caption := GetString(LID_PATH_EDIT);
     pmExport.Caption := mmExport.Caption;
     pmDelete.Caption := bDeleteStartupItem.Caption;
-    pmRename.Caption := GetString(55);
-    pmCopyLocation.Caption := GetString(106);
-    pmChangeIcon.Caption := GetString(121);
-    pmDeleteIcon.Caption := GetString(122);
+    pmRename.Caption := GetString(LID_RENAME);
+    pmCopyLocation.Caption := GetString(LID_LOCATION_COPY);
+    pmChangeIcon.Caption := GetString(LID_CONTEXT_MENU_ICON_CHANGE);
+    pmDeleteIcon.Caption := GetString(LID_CONTEXT_MENU_ICON_DELETE);
   end;  //of with
 
   // Invalidate all lists
@@ -1460,7 +1467,7 @@ begin
     if (AListView.Columns.Count = 4) then
       with AListView.Columns.Add do
       begin
-        Caption := FLang.GetString(80);
+        Caption := FLang.GetString(LID_DATE_OF_DEACTIVATION);
         Width := 120;
         LoadItems(False);
       end;  //of with
@@ -1481,7 +1488,7 @@ begin
   // Select file filter
   if (PageControl.ActivePageIndex = 3) then
   begin
-    Filter := FLang.GetString(118);
+    Filter := FLang.GetString(LID_FILTER_XML_FILES);
     DefaultExt := '.xml';
   end  //of begin
   else
@@ -1519,10 +1526,10 @@ begin
 
   except
     on E: EAccessViolation do
-      FLang.ShowMessage(FLang.GetString([95, 18]), FLang.GetString(53), mtWarning);
+      FLang.ShowMessage(FLang.GetString([LID_EXPORT, LID_IMPOSSIBLE]), FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
 
     on E: Exception do
-      FLang.ShowException(FLang.GetString([95, 18]), E.Message);
+      FLang.ShowException(FLang.GetString([LID_EXPORT, LID_IMPOSSIBLE]), E.Message);
   end;  //of try
 end;
 
@@ -1563,9 +1570,9 @@ procedure TMain.bDeleteItemClick(Sender: TObject);
 begin
   case PageControl.ActivePageIndex of
     0: DeleteStartupItem(Sender);
-    1: DeleteItem(85);
-    2: DeleteItem(58);
-    3: DeleteItem(120);
+    1: DeleteItem(LID_CONTEXT_MENU_DELETE_CONFIRM);
+    2: DeleteItem(LID_SERVICE_DELETE_CONFIRM);
+    3: DeleteItem(LID_TASKS_DELETE_CONFIRM);
   end;  //of case
 end;
 
@@ -1593,7 +1600,7 @@ begin
 
     // Warn if file does not exist
     if not FStartup.Selected.FileExists() then
-      FLang.ShowMessage(45, 46, mtWarning);
+      FLang.ShowMessage(LID_FILE_DOES_NOT_EXIST, LID_ENTRY_CAN_DE_DELETED, mtWarning);
   end;  //of begin
 end;
 
@@ -1608,7 +1615,7 @@ begin
   begin
     // Warn if file does not exist
     if (not (FContext.Selected is TShellNewItem) and not FContext.Selected.FileExists()) then
-      FLang.ShowMessage(45, 46, mtWarning);
+      FLang.ShowMessage(LID_FILE_DOES_NOT_EXIST, LID_ENTRY_CAN_DE_DELETED, mtWarning);
   end;  //of begin
 end;
 
@@ -1627,7 +1634,7 @@ begin
 
     // Warn if file does not exist
     if not FService.Selected.FileExists() then
-      FLang.ShowMessage(45, 46, mtWarning);
+      FLang.ShowMessage(LID_FILE_DOES_NOT_EXIST, LID_ENTRY_CAN_DE_DELETED, mtWarning);
   end;  //of begin
 end;
 
@@ -1664,7 +1671,7 @@ begin
 
   except
     on E: Exception do
-      FLang.ShowMessage(FLang.GetString([95, 18]), FLang.GetString(53), mtWarning);
+      FLang.ShowMessage(FLang.GetString([LID_EXPORT, LID_IMPOSSIBLE]), FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
   end;  //of try
 end;
 
@@ -1718,7 +1725,7 @@ begin
       if bDeleteContextItem.Enabled then
         bDeleteContextItem.Click
       else
-        FLang.ShowMessage(FLang.GetString(53), mtWarning);
+        FLang.ShowMessage(FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
 end;
 
 { TMain.lwContextSelectItem
@@ -1741,7 +1748,7 @@ begin
     if (Index = -1) then
     begin
       PopupMenu.AutoPopup := False;
-      FLang.ShowMessage(FLang.GetString(53), mtError);
+      FLang.ShowMessage(FLang.GetString(LID_NOTHING_SELECTED), mtError);
       Exit;
     end;  //of begin
 
@@ -1794,7 +1801,7 @@ begin
       if bDeleteServiceItem.Enabled then
         bDeleteServiceItem.Click
       else
-        FLang.ShowMessage(FLang.GetString(53), mtWarning);
+        FLang.ShowMessage(FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
 end;
 
 { TMain.lwServiceSelectItem
@@ -1817,7 +1824,7 @@ begin
     if (Index = -1) then
     begin
       PopupMenu.AutoPopup := False;
-      FLang.ShowMessage(FLang.GetString(53), mtError);
+      FLang.ShowMessage(FLang.GetString(LID_NOTHING_SELECTED), mtError);
       Exit;
     end;  //of begin
 
@@ -1870,7 +1877,7 @@ begin
       if bDeleteTaskItem.Enabled then
         bDeleteTaskItem.Click
       else
-        FLang.ShowMessage(FLang.GetString(53), mtWarning);
+        FLang.ShowMessage(FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
 end;
 
 { TMain.lwTasksSelectItem
@@ -1893,7 +1900,7 @@ begin
     if (Index = -1) then
     begin
       PopupMenu.AutoPopup := False;
-      FLang.ShowMessage(FLang.GetString(53), mtError);
+      FLang.ShowMessage(FLang.GetString(LID_NOTHING_SELECTED), mtError);
       Exit;
     end;  //of begin
 
@@ -2032,7 +2039,7 @@ begin
       if bDeleteStartupItem.Enabled then
         bDeleteStartupItem.Click
       else
-        FLang.ShowMessage(FLang.GetString(53), mtWarning);
+        FLang.ShowMessage(FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
 end;
 
 { TMain.ListViewKeyPress
@@ -2104,13 +2111,13 @@ begin
   if (Selected and Assigned(Item)) then
   begin
     // Find index of currently selected item in backend
-    Index := FStartup.IndexOf(Item.SubItems[0], (Item.Caption = FLang.GetString(102)));
+    Index := FStartup.IndexOf(Item.SubItems[0], (Item.Caption = FLang.GetString(LID_YES)));
 
     // Item not found?
     if (Index = -1) then
     begin
       PopupMenu.AutoPopup := False;
-      FLang.ShowMessage(FLang.GetString(53), mtError);
+      FLang.ShowMessage(FLang.GetString(LID_NOTHING_SELECTED), mtError);
       Exit;
     end;  //of begin
 
@@ -2203,10 +2210,12 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([121, 18]), FLang.GetString(53), mtWarning);
+      FLang.ShowMessage(FLang.GetString([LID_CONTEXT_MENU_ICON_CHANGE, LID_IMPOSSIBLE]),
+        FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
 
     on E: Exception do
-      FLang.ShowException(FLang.GetString([121, 18]), E.Message);
+      FLang.ShowException(FLang.GetString([LID_CONTEXT_MENU_ICON_CHANGE,
+        LID_IMPOSSIBLE]), E.Message);
   end;  //of try
 end;
 
@@ -2235,7 +2244,8 @@ begin
       Exit;
 
     // Show confimation
-    if (FLang.ShowMessage(FLang.GetString(123), mtConfirmation) = ID_YES) then
+    if (FLang.ShowMessage(FLang.GetString(LID_CONTEXT_MENU_ICON_DELETE_CONFIRM),
+      mtConfirmation) = ID_YES) then
     begin
       if not (FContext.Selected as TShellItem).DeleteIcon() then
         raise Exception.Create('Unknown error!');
@@ -2245,10 +2255,10 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([122, 18]), FLang.GetString(53), mtWarning);
+      FLang.ShowMessage(FLang.GetString([LID_CONTEXT_MENU_ICON_DELETE, LID_IMPOSSIBLE]), FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
 
     on E: Exception do
-      FLang.ShowException(FLang.GetString([122, 18]), E.Message);
+      FLang.ShowException(FLang.GetString([LID_CONTEXT_MENU_ICON_DELETE, LID_IMPOSSIBLE]), E.Message);
   end;  //of try
 end;
 
@@ -2263,10 +2273,11 @@ begin
 
   except
     on E: EWarning do
-      FLang.ShowMessage(45, 46, mtWarning);
+      FLang.ShowMessage(LID_FILE_DOES_NOT_EXIST, LID_ENTRY_CAN_DE_DELETED, mtWarning);
 
     on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([51, 18]), FLang.GetString(53), mtWarning);
+      FLang.ShowMessage(FLang.GetString([LID_OPEN_IN_EXPLORER, LID_IMPOSSIBLE]),
+        FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
   end;  //of try
 end;
 
@@ -2287,7 +2298,8 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([66, 18]), FLang.GetString(53), mtWarning);
+      FLang.ShowMessage(FLang.GetString([LID_OPEN_IN_REGEDIT, LID_IMPOSSIBLE]),
+        FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
   end;  //of try
 end;
 
@@ -2322,13 +2334,13 @@ begin
 
   except
     on E: EListBlocked do
-      FLang.ShowMessage(100, 101, mtWarning);
+      FLang.ShowMessage(LID_OPERATION_PENDING1, LID_OPERATION_PENDING2, mtWarning);
 
     on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([55, 18]), FLang.GetString(53), mtWarning);
+      FLang.ShowMessage(FLang.GetString([LID_RENAME, LID_IMPOSSIBLE]), FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
 
     on E: Exception do
-      FLang.ShowException(FLang.GetString([55, 18]), E.Message);
+      FLang.ShowException(FLang.GetString([LID_RENAME, LID_IMPOSSIBLE]), E.Message);
   end;  //of try
 end;
 
@@ -2355,7 +2367,8 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([106, 18]), FLang.GetString(53), mtWarning);
+      FLang.ShowMessage(FLang.GetString([LID_LOCATION_COPY, LID_IMPOSSIBLE]),
+        FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
   end;  //of try
 end;
 
@@ -2373,7 +2386,7 @@ begin
     Path := GetSelectedItem().FileName;
 
     // Show input box for editing path
-    EnteredPath := InputBox(FLang.GetString(104), FLang.GetString(54), Path);
+    EnteredPath := InputBox(FLang.GetString(LID_PATH_EDIT), FLang.GetString(LID_ITEM_CHANGE_PATH), Path);
 
     // Nothing entered or nothing changed
     if ((Trim(EnteredPath) = '') or (EnteredPath = Path)) then
@@ -2404,13 +2417,14 @@ begin
     
   except
     on E: EListBlocked do
-      FLang.ShowMessage(100, 101, mtWarning);
+      FLang.ShowMessage(LID_OPERATION_PENDING1, LID_OPERATION_PENDING2, mtWarning);
 
     on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([104, 18]), FLang.GetString(53), mtWarning);
+      FLang.ShowMessage(FLang.GetString([LID_PATH_EDIT, LID_IMPOSSIBLE]),
+        FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
 
     on E: Exception do
-      FLang.ShowException(FLang.GetString([104, 18]), E.Message);
+      FLang.ShowException(FLang.GetString([LID_PATH_EDIT, LID_IMPOSSIBLE]), E.Message);
   end;  //of try
 end;
 
@@ -2432,8 +2446,8 @@ begin
   end;  //of begin
 
   // Show open dialog
-  if not PromptForFileName(FileName, FLang.GetString(108), '',
-    StripHotKey(mmAdd.Caption), '%ProgramFiles%') then
+  if not PromptForFileName(FileName, FLang.GetString(LID_FILTER_EXE_BAT_FILES),
+    '', StripHotKey(mmAdd.Caption), '%ProgramFiles%') then
     Exit;
 
   try
@@ -2448,7 +2462,7 @@ begin
     end;  //of begin
 
     // User can edit the name
-    if not InputQuery(StripHotKey(mmAdd.Caption), FLang.GetString(97), Name) then
+    if not InputQuery(StripHotKey(mmAdd.Caption), FLang.GetString(LID_RENAME_PROMPT), Name) then
       Exit;
 
     // Name must not be empty!
@@ -2456,7 +2470,7 @@ begin
       raise EAssertionFailed.Create('Name must not be empty!');
 
     // Append optional parameters
-    if not InputQuery(StripHotKey(mmAdd.Caption), FLang.GetString(98), Args) then
+    if not InputQuery(StripHotKey(mmAdd.Caption), FLang.GetString(LID_PARAMETERS_PROMPT), Args) then
       Exit;
 
     // Add startup item?
@@ -2464,7 +2478,7 @@ begin
       0: begin
            // Startup item already exists?
            if not FStartup.Add(FileName, Args, Name) then
-             raise EWarning.Create(FLang.Format(110, [FileName]));
+             raise EWarning.Create(FLang.Format(LID_APPLICATION_EXISTS, [FileName]));
          end;
 
       1: begin
@@ -2475,18 +2489,21 @@ begin
              List.CommaText := CM_LOCATIONS_DEFAULT +', .txt, .zip';
 
              // Show dialog for location selection
-             if not InputCombo(FLang.GetString(105), FLang.GetString(90) +':',
-               List, Location, FLang.GetString(68), Extended, False) then
+             if not InputCombo(FLang.GetString(LID_CONTEXT_MENU_ADD),
+               FLang.GetString(LID_LOCATION) +':', List, Location,
+               FLang.GetString(LID_HIDE), Extended, False) then
                Exit;
 
              // Contextmenu item already exists?
              if not FContext.Add(FileName, Args, Location, Name, Extended) then
-               raise EWarning.Create(FLang.Format(41, [FileName]));
+               raise EWarning.Create(FLang.Format(LID_ENTRY_ALREADY_EXISTS, [FileName]));
 
              // User choice exists for selected file extension?
              if FContext.Last.UserChoiceExists(Location) then
                // Delete user choice?
-               if (FLang.ShowMessage(111, [112, 113], mtConfirmation) = ID_YES) then
+               if (FLang.ShowMessage(LID_CONTEXT_MENU_USER_CHOICE_WARNING1,
+                 [LID_CONTEXT_MENU_USER_CHOICE_WARNING2, LID_CONTEXT_MENU_USER_CHOICE_RESET],
+                 mtConfirmation) = ID_YES) then
                  FContext.Last.DeleteUserChoice(Location);
 
            finally
@@ -2497,24 +2514,24 @@ begin
       2: begin
            // Service item already exists?
            if not FService.Add(FileName, Args, Name) then
-             raise EWarning.Create(FLang.Format(110, [FileName]));
+             raise EWarning.Create(FLang.Format(LID_APPLICATION_EXISTS, [FileName]));
          end;
     end;  //of case
 
   except
     on E: EListBlocked do
-      FLang.ShowMessage(100, 101, mtWarning);
+      FLang.ShowMessage(LID_OPERATION_PENDING1, LID_OPERATION_PENDING2, mtWarning);
 
     on E: EWarning do
-      FLang.ShowMessage(StripHotKey(mmAdd.Caption) + FLang.GetString(18),
+      FLang.ShowMessage(StripHotKey(mmAdd.Caption) + FLang.GetString(LID_IMPOSSIBLE),
         E.Message, mtWarning);
 
     on E: EAssertionFailed do
-      FLang.ShowMessage(StripHotKey(mmAdd.Caption) + FLang.GetString(18),
+      FLang.ShowMessage(StripHotKey(mmAdd.Caption) + FLang.GetString(LID_IMPOSSIBLE),
         E.Message, mtError);
 
     on E: Exception do
-      FLang.ShowException(StripHotKey(mmAdd.Caption) + FLang.GetString(18),
+      FLang.ShowException(StripHotKey(mmAdd.Caption) + FLang.GetString(LID_IMPOSSIBLE),
         E.Message);
   end;  //of try
 end;
@@ -2579,7 +2596,7 @@ begin
     // Select file filter
     if (PageControl.ActivePageIndex = 3) then
     begin
-      Filter := FLang.GetString(119);
+      Filter := FLang.GetString(LID_FILTER_ZIP_FILES);
       DefaultExt := '.zip';
     end  //of begin
     else
@@ -2605,10 +2622,11 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([72, 18]), FLang.GetString(53), mtWarning);
+      FLang.ShowMessage(FLang.GetString([LID_ITEMS_EXPORT, LID_IMPOSSIBLE]),
+        FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
 
     on E: EListBlocked do
-      FLang.ShowMessage(100, 101, mtWarning);
+      FLang.ShowMessage(LID_OPERATION_PENDING1, LID_OPERATION_PENDING2, mtWarning);
   end;  //of try
 end;
 
@@ -2634,12 +2652,13 @@ begin
                ForceDirectories(BackupDir);
            end;  //of begin
 
-           Filter := Format(FLang.GetString(109), [EXT_USER, EXT_USER,
-             EXT_COMMON, EXT_COMMON]);
+           Filter := Format(FLang.GetString(LID_FILTER_STARTUP_FILES),
+             [EXT_USER, EXT_USER, EXT_COMMON, EXT_COMMON]);
          end;
 
-      3: Filter := FLang.GetString(118);
-         //Filter := Format('%s|%s', [FLang.GetString(118), FLang.GetString(119)]);
+      3: Filter := FLang.GetString(LID_FILTER_XML_FILES);
+         //Filter := Format('%s|%s', [FLang.GetString(LID_FILTER_XML_FILES),
+         //  FLang.GetString(LID_FILTER_ZIP_FILES)]);
 
       else
          Exit;
@@ -2649,20 +2668,23 @@ begin
     if PromptForFileName(FileName, Filter, '', StripHotkey(mmImport.Caption), BackupDir) then
       if (Supports(GetSelectedList(), IImportableList, ImportableList) and not
         ImportableList.ImportBackup(FileName)) then
-        raise EWarning.Create(FLang.GetString(41));
+        raise EWarning.Create(FLang.GetString(LID_ENTRY_ALREADY_EXISTS));
 
   except
     on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([70, 18]), FLang.GetString(53), mtWarning);
+      FLang.ShowMessage(FLang.GetString([LID_BACKUP_IMPORT, LID_IMPOSSIBLE]),
+        FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
 
     on E: EListBlocked do
-      FLang.ShowMessage(100, 101, mtWarning);
+      FLang.ShowMessage(LID_OPERATION_PENDING1, LID_OPERATION_PENDING2, mtWarning);
 
     on E: EWarning do
-      FLang.ShowMessage(FLang.GetString([70, 18]), E.Message, mtWarning);
+      FLang.ShowMessage(FLang.GetString([LID_BACKUP_IMPORT, LID_IMPOSSIBLE]),
+        E.Message, mtWarning);
 
     on E: Exception do
-      FLang.ShowException(FLang.GetString([70, 18]), E.Message);
+      FLang.ShowException(FLang.GetString([LID_BACKUP_IMPORT, LID_IMPOSSIBLE]),
+        E.Message);
   end;  //of try
 end;
 
@@ -2702,7 +2724,7 @@ begin
     try
       // Add recycle bin context menu entry
       Reg.OpenKey(KEY_RECYCLEBIN +'\Clearas', True);
-      Reg.WriteString('', FLang.GetString(107));
+      Reg.WriteString('', FLang.GetString(LID_OPEN_CLEARAS));
       Reg.CloseKey();
       Reg.OpenKey(KEY_RECYCLEBIN +'\Clearas\command', True);
       Reg.WriteString('', ParamStr(0));
@@ -2875,7 +2897,7 @@ procedure TMain.PageControlChange(Sender: TObject);
 begin
   case PageControl.ActivePageIndex of
     0: begin
-         mmAdd.Caption := FLang.GetString(69);
+         mmAdd.Caption := FLang.GetString(LID_STARTUP_ADD);
          mmImport.Enabled := True;
          mmDate.Enabled := ((Win32MajorVersion = 6) and (Win32MinorVersion < 2));
          mmShowCaptions.Enabled := True;
@@ -2895,7 +2917,7 @@ begin
        end;
 
     1: begin
-         mmAdd.Caption := FLang.GetString(105);
+         mmAdd.Caption := FLang.GetString(LID_CONTEXT_MENU_ADD);
          mmImport.Enabled := False;
          mmDate.Enabled := False;
          mmShowCaptions.Enabled := True;
@@ -2914,7 +2936,7 @@ begin
        end;
 
     2: begin
-         mmAdd.Caption := FLang.GetString(57);
+         mmAdd.Caption := FLang.GetString(LID_SERVICE_ADD);
          mmImport.Enabled := False;
          mmDate.Enabled := True;
          mmShowCaptions.Enabled := True;
@@ -2934,7 +2956,7 @@ begin
        end;
 
     3: begin
-         mmAdd.Caption := FLang.GetString(117);
+         mmAdd.Caption := FLang.GetString(LID_TASKS_ADD);
          mmImport.Enabled := True;
          mmDate.Enabled := False;
          mmShowCaptions.Enabled := False;
