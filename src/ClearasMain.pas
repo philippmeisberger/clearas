@@ -14,8 +14,8 @@ uses
   Winapi.Windows, System.SysUtils, System.Classes, Vcl.Controls, Vcl.Forms,
   Vcl.ComCtrls, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Dialogs, Vcl.Menus, Vcl.Graphics,
   Vcl.ClipBrd, Vcl.ImgList, Registry, StrUtils, System.ImageList, Winapi.CommCtrl,
-  ClearasAPI, ExportListThread, PMCWAbout, PMCWLanguageFile, PMCWOSUtils,
-  PMCWUpdater, PMCWDialogs;
+  System.UITypes, ClearasAPI, ExportListThread, PMCWAbout, PMCWLanguageFile,
+  PMCWOSUtils, PMCWUpdater, PMCWDialogs;
 
 const
   KEY_RECYCLEBIN = 'CLSID\{645FF040-5081-101B-9F08-00AA002F954E}\shell';

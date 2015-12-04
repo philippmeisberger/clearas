@@ -154,7 +154,7 @@ type
   private
     FWow64: Boolean;
   protected
-    function DeleteKey(ARootKey: TRootKey; AKeyPath, AKeyName: string;
+    function DeleteKey(AHKey: HKEY; AKeyPath, AKeyName: string;
       AFailIfNotExists: Boolean = True): Boolean;
     function GetRootKey(): HKEY; virtual; abstract;
     function GetWow64Key(): string;
@@ -378,6 +378,7 @@ type
     procedure GetSubCommands(var ASubCommands: TStrings);
   public
     function ChangeFilePath(const ANewFileName: string): Boolean; override;
+    function Delete(): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
     function Rename(const ANewCaption: string): Boolean; override;
   end;
@@ -1049,7 +1050,7 @@ end;
 
   Deletes a Registry key. }
 
-function TRegistryItem.DeleteKey(ARootKey: TRootKey; AKeyPath, AKeyName: string;
+function TRegistryItem.DeleteKey(AHKey: HKEY; AKeyPath, AKeyName: string;
   AFailIfNotExists: Boolean = True): Boolean;
 var
   Reg: TRegistry;
@@ -1059,7 +1060,7 @@ begin
   Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
 
   try
-    Reg.RootKey := StrToHKey(ARootKey);
+    Reg.RootKey := AHKey;
 
     if not Reg.OpenKey(AKeyPath, False) then
       raise Exception.Create('Key does not exist!');
@@ -1920,7 +1921,7 @@ begin
       Result := inherited Delete();
   end  //of begin
   else
-    Result := DeleteKey('HKLM', KEY_STARTUP_DISABLED, Name);
+    Result := DeleteKey(HKEY_LOCAL_MACHINE, KEY_STARTUP_DISABLED, Name);
 end;
 
 { public TStartupItem.Disable
@@ -2244,7 +2245,8 @@ begin
       Result := True;
   end  //of begin
   else
-    Result := DeleteKey('HKLM', KEY_STARTUP_USER_DISABLED, AddCircumflex(FLnkFile.FileName));
+    Result := DeleteKey(HKEY_LOCAL_MACHINE, KEY_STARTUP_USER_DISABLED,
+      AddCircumflex(FLnkFile.FileName));
 end;
 
 { public TStartupUserItem.Disable
@@ -2347,7 +2349,8 @@ begin
     end;  //of if
 
   // Do not abort if old key could not be deleted
-  if not DeleteKey('HKLM', KEY_STARTUP_USER_DISABLED, AddCircumflex(FLnkFile.FileName), False) then
+  if not DeleteKey(HKEY_LOCAL_MACHINE, KEY_STARTUP_USER_DISABLED,
+    AddCircumflex(FLnkFile.FileName), False) then
     raise EStartupException.Create('Could not delete key!');
 
   // Update information
@@ -2621,19 +2624,14 @@ function TStartupList.AddItem(AHKey: HKEY; AKeyPath, AName, AFileName: string;
   AWow64, ARunOnce: Boolean): Integer;
 var
   Item: TStartupItem;
-  RootKeyStr: string;
 
 begin
   Result := -1;
   Item := TStartupItem.Create(Count, True, AWow64);
 
   try
-    case AHKey of
-      HKEY_LOCAL_MACHINE: RootKeyStr := 'HKLM';
-      HKEY_CURRENT_USER:  RootKeyStr := 'HKCU';
-      else
-        raise EStartupException.Create('Invalid startup key!');
-    end;  //of case
+    if ((AHKey <> HKEY_LOCAL_MACHINE) and (AHKey <> HKEY_CURRENT_USER)) then
+      raise EStartupException.Create('Invalid startup key!');
 
     with Item do
     begin
@@ -2661,7 +2659,7 @@ begin
       end  //of begin
       else
       begin
-        TypeOf := RootKeyStr;
+        TypeOf := HKeyToStr(AHKey, False);
 
         // Windows 8?
         if CheckWin32Version(6, 2) then
@@ -3299,7 +3297,7 @@ end;
 
 function TContextListItem.Delete(): Boolean;
 begin
-  if not DeleteKey('HKCR', ExtractFileDir(GetKeyPath()), Name) then
+  if not DeleteKey(HKEY_CLASSES_ROOT, ExtractFileDir(GetKeyPath()), Name) then
     raise EContextMenuException.Create('Could not delete key!');
 
   Result := True;
@@ -3629,6 +3627,31 @@ begin
   end;  //of try
 end;
 
+{ public TShellCascadingItem.Delete
+
+  Deletes a TShellCascadingItem object and returns True if successful. }
+
+function TShellCascadingItem.Delete(): Boolean;
+var
+  i: Integer;
+  Commands: TStrings;
+
+begin
+  Commands := TStringList.Create;
+
+  try
+    GetSubCommands(Commands);
+
+    for i := 0 to Commands.Count - 1 do
+      DeleteKey(HKEY_LOCAL_MACHINE, KEY_COMMAND_STORE, Commands[i], False);
+
+    Result := inherited Delete();
+
+  finally
+    Commands.Free;
+  end;  //of try
+end;
+
 { public TShellCascadingItem.ChangeFilePath
 
   Changes the file path of a TShellCascadingItem item. }
@@ -3944,7 +3967,8 @@ end;
 
 function TShellNewItem.Delete(): Boolean;
 begin
-  if not DeleteKey('HKCR', ExtractFileDir(GetKeyPath()), ExtractFileName(GetKeyPath())) then
+  if not DeleteKey(HKEY_CLASSES_ROOT, ExtractFileDir(GetKeyPath()),
+    ExtractFileName(GetKeyPath())) then
     raise EContextMenuException.Create('Could not delete key!');
 
   Result := True;
