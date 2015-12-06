@@ -1,5 +1,5 @@
 v4.3
-- Cascading Shell submenus (ExtendedSubCommandsKey, SubCommands)
+- Cascading Shell submenus (ExtendedSubCommandsKey)
 - Counter bug
 
 v4.4

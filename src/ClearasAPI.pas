@@ -1205,10 +1205,7 @@ var
 begin
   // Deactivation timestamp only available for disabled items
   if FEnabled then
-  begin
-    Result := '';
-    Exit;
-  end;  //of begin
+    Exit('');
 
   try
     // At least one valid date entry exists?
@@ -3279,7 +3276,7 @@ end;
 
 function TContextListItem.GetFullLocation(): string;
 begin
-  Result := HKeyToStr(HKEY_CLASSES_ROOT) +'\'+ GetKeyPath();
+  Result := 'HKEY_CLASSES_ROOT\'+ GetKeyPath();
 end;
 
 { protected TContextListItem.GetRootKey
@@ -4588,7 +4585,7 @@ end;
 
 function TServiceListItem.GetFullLocation(): string;
 begin
-  Result := HKeyToStr(HKEY_LOCAL_MACHINE) +'\'+ GetLocation();
+  Result := 'HKEY_LOCAL_MACHINE\'+ GetLocation();
 end;
 
 { protected TServiceListItem.GetRootKey
