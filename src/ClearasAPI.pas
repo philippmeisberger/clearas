@@ -16,7 +16,7 @@ interface
 uses
   Windows, WinSvc, Classes, SysUtils, Registry, ShlObj, ActiveX, ComObj, Zip,
   Graphics, CommCtrl, ShellAPI, SyncObjs, StrUtils, Variants, Generics.Collections,
-  Taskschd, PMCWOSUtils, PMCWLanguageFile, PMCWIniFileParser, KnownFolders;
+  Taskschd, PMCWOSUtils, PMCWLanguageFile, PMCWIniFileParser, KnownFolders, Dialogs;
 
 const
   { Startup registry keys until Windows 7 }
@@ -5445,6 +5445,8 @@ begin
 
   try
     ZipFile.Open(AFileName, zmWrite);
+
+    // For validation purposes: "Clearas" is the comment
     ZipFile.Comment := 'Clearas';
     Path := IncludeTrailingPathDelimiter(Path);
 
@@ -5480,6 +5482,7 @@ var
   TaskFolder: ITaskFolder;
   NewTask: IRegisteredTask;
   ErrorCode: DWORD;
+  ZipFile: TZipFile;
 {$IFDEF WIN32}
   Win64: Boolean;
 {$ENDIF}
@@ -5540,7 +5543,32 @@ begin
 
       // Refresh TListView
       DoNotifyOnFinished();
-    end;  //of begin
+    end  //of begin
+    else
+    begin
+      ZipFile := TZipFile.Create;
+
+      try
+        ZipFile.Open(AFileName, zmRead);
+
+        // For validation purposes: "Clearas" is the comment
+        if (ZipFile.Comment <> 'Clearas') then
+          raise ETaskException.Create(SysErrorMessage(SCHED_E_INVALID_TASK_HASH));
+
+        Path := GetKnownFolderPath(FOLDERID_System) +'Tasks';
+
+        if not DirectoryExists(Path) then
+          raise ETaskException.Create('Task directory does not exist!');
+
+        ZipFile.ExtractAll(Path);
+        ZipFile.Close();
+        Load();
+        Result := True;
+
+      finally
+        ZipFile.Free;
+      end;  //of try
+    end;  //of if
 
   finally
   {$IFDEF WIN32}

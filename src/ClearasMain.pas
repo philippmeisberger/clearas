@@ -2656,9 +2656,8 @@ begin
              [EXT_USER, EXT_USER, EXT_COMMON, EXT_COMMON]);
          end;
 
-      3: Filter := FLang.GetString(LID_FILTER_XML_FILES);
-         //Filter := Format('%s|%s', [FLang.GetString(LID_FILTER_XML_FILES),
-         //  FLang.GetString(LID_FILTER_ZIP_FILES)]);
+      3: Filter := Format('%s|%s', [FLang.GetString(LID_FILTER_XML_FILES),
+           FLang.GetString(LID_FILTER_ZIP_FILES)]);
 
       else
          Exit;
