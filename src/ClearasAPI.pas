@@ -1004,33 +1004,27 @@ end;
 procedure TRootItem.OpenInExplorer();
 var
   PreparedFileName: string;
-{$IFDEF WIN32}
-  Win64: Boolean;
-{$ENDIF}
+  ItemIDList: PItemIDList;
 
 begin
-{$IFDEF WIN32}
-  // 64bit Windows?
-  Win64 := (TOSVersion.Architecture = arIntelX64);
-
-  // Deny WOW64 redirection only on 64bit Windows
-  if Win64 then
-    Wow64FsRedirection(True);
-{$ENDIF}
   // Extract the file path only (without arguments and quote chars)
   PreparedFileName := GetFileNameOnly();
 
-  // Open file in explorer
-  if ((PreparedFileName <> '') and SysUtils.FileExists(PreparedFileName)) then
-    ExecuteProgram('explorer.exe', '/select, '+ PreparedFileName)
-  else
-    raise EWarning.Create('File "'+ PreparedFileName +'" does not exist!');
+  if (PreparedFileName <> '') then
+  begin
+    ItemIDList := ILCreateFromPath(PChar(PreparedFileName));
 
-{$IFDEF WIN32}
-  // Allow WOW64 redirection only on 64bit Windows
-  if Win64 then
-    Wow64FsRedirection(False);
-{$ENDIF}
+    try
+      // Open file in explorer
+      if not Succeeded(SHOpenFolderAndSelectItems(ItemIDList, 0, nil, 0)) then
+        raise EWarning.Create('File "'+ PreparedFileName +'" does not exist!');
+
+    finally
+      ILFree(ItemIDList);
+    end;  //of try
+  end  //of begin
+  else
+    raise EWarning.Create('File does not exist!');
 end;
 
 
