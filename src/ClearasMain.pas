@@ -238,7 +238,6 @@ begin
   // Setup languages
   FLang := TLanguageFile.Create(Self);
   FLang.BuildLanguageMenu(MainMenu, mmLang);
-  FLang.Update();
 
   // Init update notificator
   FUpdateCheck := TUpdateCheck.Create(Self, 'Clearas', FLang);
@@ -305,20 +304,12 @@ end;
 
 procedure TMain.FormDestroy(Sender: TObject);
 begin
-  if Assigned(FTasks) then
-    FTasks.Free;
-
-  if Assigned(FService) then
-    FService.Free;
-
-  if Assigned(FContext) then
-    FContext.Free;
-
-  if Assigned(FStartup) then
-    FStartup.Free;
-
-  FUpdateCheck.Free;
-  FLang.Free;
+  FreeAndNil(FTasks);
+  FreeAndNil(FService);
+  FreeAndNil(FContext);
+  FreeAndNil(FStartup);
+  FreeAndNil(FUpdateCheck);
+  FreeAndNil(FLang);
 end;
 
 { TMain.FormShow
@@ -2255,10 +2246,12 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([LID_CONTEXT_MENU_ICON_DELETE, LID_IMPOSSIBLE]), FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
+      FLang.ShowMessage(FLang.GetString([LID_CONTEXT_MENU_ICON_DELETE, LID_IMPOSSIBLE]),
+        FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
 
     on E: Exception do
-      FLang.ShowException(FLang.GetString([LID_CONTEXT_MENU_ICON_DELETE, LID_IMPOSSIBLE]), E.Message);
+      FLang.ShowException(FLang.GetString([LID_CONTEXT_MENU_ICON_DELETE,
+        LID_IMPOSSIBLE]), E.Message);
   end;  //of try
 end;
 
@@ -2337,7 +2330,8 @@ begin
       FLang.ShowMessage(LID_OPERATION_PENDING1, LID_OPERATION_PENDING2, mtWarning);
 
     on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([LID_RENAME, LID_IMPOSSIBLE]), FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
+      FLang.ShowMessage(FLang.GetString([LID_RENAME, LID_IMPOSSIBLE]),
+        FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
 
     on E: Exception do
       FLang.ShowException(FLang.GetString([LID_RENAME, LID_IMPOSSIBLE]), E.Message);
@@ -2386,7 +2380,8 @@ begin
     Path := GetSelectedItem().FileName;
 
     // Show input box for editing path
-    EnteredPath := InputBox(FLang.GetString(LID_PATH_EDIT), FLang.GetString(LID_ITEM_CHANGE_PATH), Path);
+    EnteredPath := InputBox(FLang.GetString(LID_PATH_EDIT),
+      FLang.GetString(LID_ITEM_CHANGE_PATH), Path);
 
     // Nothing entered or nothing changed
     if ((Trim(EnteredPath) = '') or (EnteredPath = Path)) then

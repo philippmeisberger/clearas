@@ -159,10 +159,10 @@ type
     /// <param name="AMainMenu">
     ///   The application main menu to build the language menu in.
     /// </param>
-    /// <param name="AMenuItem">
+    /// <param name="ARootMenuItem">
     ///   The language selection submenu root item.
     /// </param>
-    procedure BuildLanguageMenu(AMainMenu: TMainMenu; AMenuItem: TMenuItem);
+    procedure BuildLanguageMenu(AMainMenu: TMainMenu; ARootMenuItem: TMenuItem);
 
     /// <summary>
     ///   Changes the language.
@@ -408,11 +408,6 @@ type
       AOptions: TTaskDialogFlags = []{$ENDIF});
 
     /// <summary>
-    ///   Uses the current selected language to notify all listeners.
-    /// </summary>
-    procedure Update();
-
-    /// <summary>
     ///   The current used language.
     /// </summary>
     property Id: TLocale read FLangId;
@@ -507,7 +502,7 @@ begin
   FListeners.Add(AListener);
 end;
 
-procedure TLanguageFile.BuildLanguageMenu(AMainMenu: TMainMenu; AMenuItem: TMenuItem);
+procedure TLanguageFile.BuildLanguageMenu(AMainMenu: TMainMenu; ARootMenuItem: TMenuItem);
 var
   MenuItem: TMenuItem;
 {$IFDEF MSWINDOWS}
@@ -520,7 +515,7 @@ begin
   if (FLangId = {$IFDEF MSWINDOWS}0{$ELSE}''{$ENDIF}) then
     Load();
 
-  FMenu := AMenuItem;
+  FMenu := ARootMenuItem;
 
   // Create submenu
 {$IFDEF MSWINDOWS}
@@ -546,8 +541,11 @@ begin
       OnClick := OnSelectLanguage;
     end;  //of with
 
-    AMenuItem.Add(MenuItem);
+    ARootMenuItem.Add(MenuItem);
   end;  //of for
+
+  // Try to select current user language
+  ChangeLanguage(FLocale);
 end;
 
 procedure TLanguageFile.ChangeLanguage(ALocale: TLocale);
@@ -899,11 +897,6 @@ begin
   ShowMessage(GetString(LID_FATAL_ERROR) +': '+ AText + sLineBreak + AInformation,
     mtError);
 {$ENDIF}
-end;
-
-procedure TLanguageFile.Update;
-begin
-  ChangeLanguage(FLocale);
 end;
 
 end.

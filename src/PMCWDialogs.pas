@@ -27,28 +27,123 @@ const
   tdiShieldOk            = 106;
   tdiShieldOkBanner      = 65528;
 
+/// <summary>
+///   Shows a dialog with a pre defined TComboBox list item selection. Similar
+///   to the InputQuery dialog.
+/// </summary>
+/// <param name="ACaption">
+///   The window caption to use.
+/// </param>
+/// <param name="APrompt">
+///   The prompt to show.
+/// </param>
+/// <param name="AList">
+///   The available items in the TComboBox.
+/// </param>
+/// <param name="AValue">
+///   The value from the TComboBox which was selected by the user. This can also
+///   be used as the initial value.
+/// </param>
+/// <param name="AReadOnly">
+///   If set to <c>True</c> the user cannot set a custom value and is forced to
+///   choose one of the items in the TComboBox. Otherwise custom values are possible.
+/// </param>
+/// <returns>
+///   <c>True</c> if the user clicks "OK" or <c>False</c> otherwise.
+/// </returns>
 function InputCombo(const ACaption, APrompt: string; AList: TStrings;
   var AValue: string; AReadOnly: Boolean = True): Boolean; overload;
 
+/// <summary>
+///   Shows a dialog with a pre defined TComboBox list item selection. Similar
+///   to the InputQuery dialog with optional verification TCheckBox.
+/// </summary>
+/// <param name="ACaption">
+///   The window caption to use.
+/// </param>
+/// <param name="APrompt">
+///   The prompt to show.
+/// </param>
+/// <param name="AList">
+///   The available items in the TComboBox.
+/// </param>
+/// <param name="AValue">
+///   The value from the TComboBox which was selected by the user. This can also
+///   be used as the initial value.
+/// </param>
+/// <param name="ACheckBoxCaption">
+///   The caption of the TCheckBox.
+/// </param>
+/// <param name="ACheckBoxChecked">
+///   The value from the TCheckBox which can be selected by the user. This can
+///   also be used as the initial value.
+/// </param>
+/// <param name="AReadOnly">
+///   If set to <c>True</c> the user cannot set a custom value and is forced to
+///   choose one of the items in the TComboBox. Otherwise custom values are possible.
+/// </param>
+/// <returns>
+///   <c>True</c> if the user clicks "OK" or <c>False</c> otherwise.
+/// </returns>
 function InputCombo(const ACaption, APrompt: string; AList: TStrings;
   var AValue: string; ACheckBoxCaption: string; var ACheckBoxChecked: Boolean;
   AReadOnly: Boolean = True): Boolean; overload;
 
+/// <summary>
+///   Shows the new task dialog of Windows Vista.
+/// </summary>
+/// <param name="AOwner">
+///   The owner of the window.
+/// </param>
+/// <param name="ACaption">
+///   The window caption to use.
+/// </param>
+/// <param name="ATitle">
+///   The title.
+/// </param>
+/// <param name="AText">
+///   The main text.
+/// </param>
+/// <param name="ACommonButtons">
+///   A set of buttons to use.
+/// </param>
+/// <param name="AIcon">
+///   The icon to use.
+/// </param>
+/// <param name="AFlags">
+///   <c>TTaskDialogFlags</c> to use.
+/// </param>
+/// <returns>
+///   The user choice.
+/// </returns>
 function ShowTaskDialog(AOwner: TComponent; ACaption, ATitle, AText: WideString;
   ACommonButtons: TTaskDialogCommonButtons; AIcon: TTaskDialogIcon;
   AFlags: TTaskDialogFlags = []): Integer;
 
+/// <summary>
+///   Shows an exception with additional information.
+/// </summary>
+/// <param name="AOwner">
+///   The owner of the window.
+/// </param>
+/// <param name="ACaption">
+///   The window caption to use.
+/// </param>
+/// <param name="AText">
+///   The main text.
+/// </param>
+/// <param name="AInformation">
+///   Debug information about the error.
+/// </param>
+/// <param name="AFlags">
+///   <c>TTaskDialogFlags</c> to use.
+/// </param>
 procedure ShowException(AOwner: TComponent; ACaption, AText, AInformation: WideString;
   AFlags: TTaskDialogFlags = [tfExpandFooterArea]);
 
 implementation
 
 uses Math;
-
-{ InputCombo
-
-  Shows a dialog with a pre defined TComboBox list item selection. Similar to
-  the InputQuery dialog. }
 
 function InputCombo(const ACaption, APrompt: string; AList: TStrings; var AValue: string;
   AReadOnly: Boolean = True): Boolean;
@@ -58,11 +153,6 @@ var
 begin
   Result := InputCombo(ACaption, APrompt, AList, AValue, '', Checked, AReadOnly);
 end;
-
-{ InputCombo
-
-  Shows a dialog with a pre defined TComboBox list item selection. Similar to
-  the InputQuery dialog with optional verification TCheckBox. }
 
 function InputCombo(const ACaption, APrompt: string; AList: TStrings;
   var AValue: string; ACheckBoxCaption: string; var ACheckBoxChecked: Boolean;
@@ -262,10 +352,6 @@ begin
     end;  //of try
 end;
 
-{ ShowTaskDialog
-
-  Shows the new task dialog of Windows Vista. }
-
 function ShowTaskDialog(AOwner: TComponent; ACaption, ATitle, AText: WideString;
   ACommonButtons: TTaskDialogCommonButtons; AIcon: TTaskDialogIcon;
   AFlags: TTaskDialogFlags = []): Integer;
@@ -299,10 +385,6 @@ begin
     TaskDialog.Free;
   end;  //of try
 end;
-
-{ ShowException
-
-  Shows an exception with additional information. }
 
 procedure ShowException(AOwner: TComponent; ACaption, AText, AInformation: WideString;
   AFlags: TTaskDialogFlags = [tfExpandFooterArea]);
