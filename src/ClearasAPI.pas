@@ -109,7 +109,6 @@ type
   private
     FIndex: Word;
     FName,
-    FType,
     FFileName: string;
     function GetArguments(): string;
     function GetFileNameOnly(): string;
@@ -146,7 +145,6 @@ type
     property Location: string read FLocation write FLocation;
     property LocationFull: string read GetFullLocation;
     property Name: string read FName write FName;
-    property TypeOf: string read FType write FType;
   end;
 
   { TRegistryItem }
@@ -238,7 +236,8 @@ type
   private
     FRootKey: HKEY;
     FApprovedLocation,
-    FTime: string;
+    FTime,
+    FType: string;
   protected
     function ChangeStatus(AKeyPath: string; var ANewStatus: TBytes): Boolean; reintroduce; overload;
     function DeleteValue(AKeyPath: string; AReallyWow64: Boolean = True): Boolean;
@@ -254,10 +253,12 @@ type
     procedure ExportItem(const AFileName: string); override;
     procedure OpenInRegEdit(); override;
     function Rename(const ANewCaption: string): Boolean; overload; override;
+    function ToString(): string; override;
     { external }
     property LocationApproved: string read FApprovedLocation write FApprovedLocation;
     property RootKey: HKEY read GetRootKey write FRootKey;
     property Time: string read FTime write FTime;
+    property TypeOf: string read FType write FType;
   end;
 
   { TStartupItem }
@@ -335,10 +336,6 @@ type
   { Exception class }
   EContextMenuException = class(Exception);
 
-  TShellItemType = (
-    stShell, stShellEx, stShellNew
-  );
-
   { TContextListItem }
   TContextListItem = class(TRegistryItem)
   private
@@ -370,6 +367,7 @@ type
     function Enable(): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
     function Rename(const ANewCaption: string): Boolean; overload; override;
+    function ToString(): string; override;
   end;
 
   { TShellCascadingItem }
@@ -381,6 +379,7 @@ type
     function Delete(): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
     function Rename(const ANewCaption: string): Boolean; override;
+    function ToString(): string; override;
   end;
 
   { TShellExItem }
@@ -394,6 +393,7 @@ type
     function Enable(): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
     function Rename(const ANewCaption: string): Boolean; override;
+    function ToString(): string; override;
   end;
 
   { TShellNewItem }
@@ -408,7 +408,12 @@ type
     function Enable(): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
     function Rename(const ANewCaption: string): Boolean; override;
+    function ToString(): string; override;
   end;
+
+  TShellItemType = (
+    stShell, stShellEx, stShellNew
+  );
 
   { TContextList }
   TContextList = class(TRootList<TContextListItem>)
@@ -438,8 +443,14 @@ type
   { Exception class }
   EServiceException = class(Exception);
 
-  { Service enums }
-  TServiceStart = (ssBoot, ssSystem, ssAutomatic, ssManual, ssDisabled);
+  { Service enum }
+  TServiceStart = (
+    ssBoot, ssSystem, ssAutomatic, ssManual, ssDisabled
+  );
+
+  TServiceStartHelper = record helper for TServiceStart
+    function ToString(ALangFile: TLanguageFile): string;
+  end;
 
   { TServiceListItem }
   TServiceListItem = class(TRegistryItem)
@@ -460,8 +471,8 @@ type
     function Disable(): Boolean; override;
     function Enable(): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
-    function GetStartText(ALangFile: TLanguageFile): string;
     function Rename(const ANewCaption: string): Boolean; override;
+    function ToString(): string; override;
     { external }
     property Location: string read GetLocation;
     property Manager: SC_HANDLE read FServiceManager write FServiceManager;
@@ -509,6 +520,7 @@ type
     function Enable(): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
     function Rename(const ANewCaption: string): Boolean; override;
+    function ToString(): string; override;
     { external }
     property Definition: ITaskDefinition read GetTaskDefinition;
   end;
@@ -1892,6 +1904,15 @@ end;
 function TStartupListItem.Rename(const ANewCaption: string): Boolean;
 begin
   Result := Rename(FApprovedLocation, ANewCaption, False);
+end;
+
+{ public TStartupListItem.ToString
+
+  Gets the object type as string. }
+
+function TStartupListItem.ToString(): string;
+begin
+  Result := TypeOf;
 end;
 
 
@@ -3587,6 +3608,15 @@ begin
   Result := Rename('', ANewCaption);
 end;
 
+{ public TShellItem.ToString
+
+  Gets the object type as string. }
+
+function TShellItem.ToString(): string;
+begin
+  Result := CM_SHELL;
+end;
+
 
 { TShellCascadingItem }
 
@@ -3689,6 +3719,15 @@ end;
 function TShellCascadingItem.Rename(const ANewCaption: string): Boolean;
 begin
   Result := Rename('MUIVerb', ANewCaption);
+end;
+
+{ public TShellCascadingItem.ToString
+
+  Gets the object type as string. }
+
+function TShellCascadingItem.ToString(): string;
+begin
+  Result := inherited ToString() +' Cascading';
 end;
 
 
@@ -3875,6 +3914,14 @@ begin
   Result := False;
 end;
 
+{ public TShellExItem.ToString
+
+  Gets the object type as string. }
+
+function TShellExItem.ToString(): string;
+begin
+  Result := CM_SHELLEX;
+end;
 
 { TShellNewItem }
 
@@ -4012,6 +4059,15 @@ begin
   Result := False;
 end;
 
+{ public TShellNewItem.ToString
+
+  Gets the object type as string. }
+
+function TShellNewItem.ToString(): string;
+begin
+  Result := CM_SHELLNEW;
+end;
+
 
 { TContextList }
 
@@ -4043,7 +4099,6 @@ begin
     LocationRoot := ALocationRoot;
     FileName := AFileName;
     Caption := ACaption;
-    TypeOf := CM_SHELL;
 
     if AEnabled then
       Inc(FActCount);
@@ -4069,7 +4124,6 @@ begin
     Name := AName;
     LocationRoot := ALocationRoot;
     Caption := ACaption;
-    TypeOf := CM_SHELL +' Cascading';
 
     if AEnabled then
       Inc(FActCount);
@@ -4095,7 +4149,6 @@ begin
     Name := AName;
     LocationRoot := ALocationRoot;
     FileName := AFileName;
-    TypeOf := CM_SHELLEX;
 
     if AEnabled then
       Inc(FActCount);
@@ -4121,7 +4174,6 @@ begin
     Name := AName;
     LocationRoot := ALocationRoot;
     Caption := ACaption;
-    TypeOf := CM_SHELLNEW;
 
     if AEnabled then
       Inc(FActCount);
@@ -4530,6 +4582,18 @@ begin
 end;
 
 
+{ TServiceStartHelper }
+
+function TServiceStartHelper.ToString(ALangFile: TLanguageFile): string;
+begin
+  case Self of
+    ssAutomatic: Result := ALangFile.GetString(61);
+    ssManual:    Result := ALangFile.GetString(62);
+    else         Result := 'Service';
+  end;  //of case
+end;
+
+
 { TServiceListItem }
 
 { public TServiceListItem.Create
@@ -4808,20 +4872,6 @@ begin
   end;  //of try
 end;
 
-{ public TServiceListItem.ExportItem
-
-  Returns the start type of service as string. }
-
-function TServiceListItem.GetStartText(ALangFile: TLanguageFile): string;
-begin
-  case FServiceStart of
-    ssAutomatic: Result := ALangFile.GetString(61);
-    ssManual:    Result := ALangFile.GetString(62);
-    else
-                 Result := TypeOf;
-  end;  //of case
-end;
-
 { public TServiceListItem.Rename
 
   Renames a TServiceListItem item. }
@@ -4847,6 +4897,15 @@ begin
   finally
     CloseServiceHandle(Service);
   end;  //of try
+end;
+
+{ public TServiceListItem.ToString
+
+  Gets the object type as string. }
+
+function TServiceListItem.ToString(): string;
+begin
+  Result := 'Service';
 end;
 
 
@@ -4894,7 +4953,6 @@ begin
       FileName := AFileName;
       Start := TServiceStart(AReg.ReadInteger(AName));
       Time := Item.GetTimestamp(AReg);
-      TypeOf := 'Service';
     end;  //of with
 
     Result := inherited Add(Item);
@@ -4924,7 +4982,6 @@ begin
       Caption := ACaption;
       FileName := AFileName;
       Start := AStart;
-      TypeOf := 'Service';
     end;  //of with
 
     Inc(FActCount);
@@ -5326,6 +5383,16 @@ begin
   Result := True;
 end;
 
+{ public TTaskListItem.ToString
+
+  Gets the object type as string. }
+
+function TTaskListItem.ToString(): string;
+begin
+  Result := 'Task';
+end;
+
+
 { TTaskList }
 
 { public TTaskList.Create
@@ -5400,8 +5467,6 @@ begin
           FileName := FileName +' '+ ExecAction.Arguments;
       end;  //of begin
     end;  //of while
-
-    TypeOf := 'Task';
   end;  //of with
 
   // Update active counter

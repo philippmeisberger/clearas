@@ -412,12 +412,12 @@ begin
       begin
         if (FStartup.Selected as TStartupUserItem).StartupUser then
         begin
-          Filter := FStartup.Selected.TypeOf +'|*'+ EXT_USER;
+          Filter := FStartup.Selected.ToString() +'|*'+ EXT_USER;
           FileName := FStartup.Selected.Name + EXT_USER;
         end  //of begin
         else
         begin
-          Filter := FStartup.Selected.TypeOf +'|*'+ EXT_COMMON;
+          Filter := FStartup.Selected.ToString() +'|*'+ EXT_COMMON;
           FileName := FStartup.Selected.Name + EXT_COMMON;
         end;  //of if
 
@@ -837,7 +837,7 @@ begin
         Caption := FContext[i].GetStatus(FLang);
         SubItems.Append(Text);
         SubItems.Append(FContext[i].LocationRoot);
-        SubItems.Append(FContext[i].TypeOf);
+        SubItems.Append(FContext[i].ToString());
       end; //of with
   end;  //of for
 
@@ -1051,7 +1051,7 @@ begin
           SubItems.Append(FStartup[i].Name);
 
         SubItems.Append(FStartup[i].FileName);
-        SubItems.Append(FStartup[i].TypeOf);
+        SubItems.Append(FStartup[i].ToString());
 
         // Show deactivation timestamp?
         if mmDate.Checked then
@@ -1168,7 +1168,7 @@ begin
         Caption := FService[i].GetStatus(FLang);
         SubItems.Append(Text);
         SubItems.Append(FService[i].FileName);
-        SubItems.Append(FService[i].GetStartText(FLang));
+        SubItems.Append(FService[i].Start.ToString(FLang));
 
         // Show deactivation timestamp?
         if mmDate.Checked then
