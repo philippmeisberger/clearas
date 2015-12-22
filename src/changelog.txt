@@ -17,6 +17,7 @@ Version 4.3  [??.12.15]
 - Bug fixes:
   - "Umbenennen" zeigt nun initial den korrekten Text
   - Nach "Umbenennen" wird der neue Anzeigename aktualisiert, wenn "Beschreibung anzeigen" ausgewählt ist
+  - Zähler der aktivierten Autostart Elemente funktioniert nun korrekt
 
 ---------------------------------
 

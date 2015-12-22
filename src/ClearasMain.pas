@@ -20,8 +20,6 @@ uses
 const
   KEY_RECYCLEBIN = 'CLSID\{645FF040-5081-101B-9F08-00AA002F954E}\shell';
 
-{$I LanguageIDs.inc}
-
 type
   { TMain }
   TMain = class(TForm, IChangeLanguageListener, IUpdateListener)
@@ -225,6 +223,7 @@ var
 
 implementation
 
+{$I LanguageIDs.inc}
 {$R *.dfm}
 
 { TMain }
@@ -410,16 +409,12 @@ begin
       // Windows 8?
       if CheckWin32Version(6, 2) then
       begin
+        Filter := FStartup.Selected.GetExportFilter(FLang);
+
         if (FStartup.Selected as TStartupUserItem).StartupUser then
-        begin
-          Filter := FStartup.Selected.ToString() +'|*'+ EXT_STARTUP_USER;
-          FileName := FStartup.Selected.Name + EXT_STARTUP_USER;
-        end  //of begin
+          FileName := FStartup.Selected.Name + EXT_STARTUP_USER
         else
-        begin
-          Filter := FStartup.Selected.ToString() +'|*'+ EXT_STARTUP_COMMON;
           FileName := FStartup.Selected.Name + EXT_STARTUP_COMMON;
-        end;  //of if
 
         // Show save dialog
         if PromptForFileName(FileName, Filter, '', bExportStartupItem.Caption,
@@ -448,10 +443,12 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([LID_EXPORT, LID_IMPOSSIBLE]), FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
+      FLang.ShowMessage(FLang.GetString([LID_EXPORT, LID_IMPOSSIBLE]),
+        FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
 
     on E: EStartupException do
-      FLang.ShowException(FLang.GetString([LID_EXPORT, LID_IMPOSSIBLE]), FLang.GetString(LID_BACKUP_NOT_CREATED));
+      FLang.ShowException(FLang.GetString([LID_EXPORT, LID_IMPOSSIBLE]),
+      FLang.GetString(LID_BACKUP_NOT_CREATED));
 
     on E: Exception do
       FLang.ShowException(FLang.GetString([LID_EXPORT, LID_IMPOSSIBLE]), E.Message);
@@ -577,7 +574,8 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([LID_DELETE, LID_IMPOSSIBLE]), FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
+      FLang.ShowMessage(FLang.GetString([LID_DELETE, LID_IMPOSSIBLE]),
+        FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
 
     on E: EListBlocked do
       FLang.ShowMessage(LID_OPERATION_PENDING1, LID_OPERATION_PENDING2, mtWarning);
@@ -629,7 +627,8 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([LID_DISABLE, LID_IMPOSSIBLE]), FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
+      FLang.ShowMessage(FLang.GetString([LID_DISABLE, LID_IMPOSSIBLE]),
+        FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
 
     on E: EListBlocked do
       FLang.ShowMessage(LID_OPERATION_PENDING1, LID_OPERATION_PENDING2, mtWarning);
@@ -677,7 +676,8 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([LID_ENABLE, LID_IMPOSSIBLE]), FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
+      FLang.ShowMessage(FLang.GetString([LID_ENABLE, LID_IMPOSSIBLE]),
+        FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
 
     on E: EListBlocked do
       FLang.ShowMessage(LID_OPERATION_PENDING1, LID_OPERATION_PENDING2, mtWarning);
@@ -784,7 +784,8 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([LID_REFRESH, LID_IMPOSSIBLE]), FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
+      FLang.ShowMessage(FLang.GetString([LID_REFRESH, LID_IMPOSSIBLE]),
+        FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
   end;  //of try
 end;
 
@@ -1476,18 +1477,6 @@ var
 begin
   Result := False;
 
-  // Select file filter
-  if (PageControl.ActivePageIndex = 3) then
-  begin
-    Filter := FLang.GetString(LID_FILTER_XML_FILES);
-    DefaultExt := '.xml';
-  end  //of begin
-  else
-  begin
-    Filter := FLang.GetString(LID_FILTER_REGISTRY_FILE);
-    DefaultExt := '.reg';
-  end;  //of if
-
   try
     SelectedList := GetSelectedList();
 
@@ -1505,7 +1494,14 @@ begin
     else
       FileName := SelectedList.Selected.Name;
 
+    // Select file filter
+    if (PageControl.ActivePageIndex = 3) then
+      DefaultExt := '.xml'
+    else
+      DefaultExt := '.reg';
+
     FileName := FileName + DefaultExt;
+    Filter := FContext.Selected.GetExportFilter(FLang);
 
     // Show save dialog
     if PromptForFileName(FileName, Filter, DefaultExt, StripHotkey(mmExport.Caption),
@@ -1517,7 +1513,8 @@ begin
 
   except
     on E: EAccessViolation do
-      FLang.ShowMessage(FLang.GetString([LID_EXPORT, LID_IMPOSSIBLE]), FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
+      FLang.ShowMessage(FLang.GetString([LID_EXPORT, LID_IMPOSSIBLE]),
+        FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
 
     on E: Exception do
       FLang.ShowException(FLang.GetString([LID_EXPORT, LID_IMPOSSIBLE]), E.Message);
@@ -1662,7 +1659,8 @@ begin
 
   except
     on E: Exception do
-      FLang.ShowMessage(FLang.GetString([LID_EXPORT, LID_IMPOSSIBLE]), FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
+      FLang.ShowMessage(FLang.GetString([LID_EXPORT, LID_IMPOSSIBLE]),
+        FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
   end;  //of try
 end;
 
@@ -2589,18 +2587,13 @@ begin
       raise EListBlocked.Create('Another operation is pending. Please wait!');
 
     // Select file filter
-    if (PageControl.ActivePageIndex = 3) then
-    begin
-      Filter := FLang.GetString(LID_FILTER_ZIP_FILES);
-      DefaultExt := '.zip';
-    end  //of begin
-    else
-    begin
-      Filter := FLang.GetString(LID_FILTER_REGISTRY_FILE);
-      DefaultExt := '.reg';
-    end;  //of if
+    Filter := SelectedList.GetExportFilter(FLang);
 
-    // Sets default file name
+    if (PageControl.ActivePageIndex = 3) then
+      DefaultExt := '.zip'
+    else
+      DefaultExt := '.reg';
+
     FileName := PageControl.ActivePage.Caption + DefaultExt;
 
     // Show save dialog
@@ -2636,32 +2629,23 @@ var
 
 begin
   try
-    case PageControl.ActivePageIndex of
-      0: begin
-           if not CheckWin32Version(6, 2) then
-           begin
-             BackupDir := TLnkFile.GetBackupDir();
+    if not Supports(GetSelectedList(), IImportableList, ImportableList) then
+      Exit;
 
-             // Create Backup directory if not exists
-             if not DirectoryExists(BackupDir) then
-               ForceDirectories(BackupDir);
-           end;  //of begin
+    Filter := ImportableList.GetImportFilter(FLang);
 
-           Filter := Format(FLang.GetString(LID_FILTER_STARTUP_FILES),
-             [EXT_STARTUP_USER, EXT_STARTUP_USER, EXT_STARTUP_COMMON, EXT_STARTUP_COMMON]);
-         end;
+    if ((PageControl.ActivePageIndex = 0) and not CheckWin32Version(6, 2)) then
+    begin
+      BackupDir := TLnkFile.GetBackupDir();
 
-      3: Filter := Format('%s|%s', [FLang.GetString(LID_FILTER_XML_FILES),
-           FLang.GetString(LID_FILTER_ZIP_FILES)]);
-
-      else
-         Exit;
-    end;  //of case
+      // Create Backup directory if not exists
+      if not DirectoryExists(BackupDir) then
+        ForceDirectories(BackupDir);
+    end;  //of begin
 
     // Show select file dialog
     if PromptForFileName(FileName, Filter, '', StripHotkey(mmImport.Caption), BackupDir) then
-      if (Supports(GetSelectedList(), IImportableList, ImportableList) and not
-        ImportableList.ImportBackup(FileName)) then
+      if not ImportableList.ImportBackup(FileName) then
         raise EWarning.Create(FLang.GetString(LID_ENTRY_ALREADY_EXISTS));
 
   except

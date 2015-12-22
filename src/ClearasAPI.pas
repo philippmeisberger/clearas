@@ -131,7 +131,8 @@ type
     function Enable(): Boolean; virtual; abstract;
     procedure ExportItem(const AFileName: string); virtual; abstract;
     function FileExists(): Boolean;
-    function GetStatus(ALangFile: TLanguageFile): string;
+    function GetExportFilter(ALanguageFile: TLanguageFile): string; virtual; abstract;
+    function GetStatus(ALanguageFile: TLanguageFile): string;
     procedure OpenInExplorer();
     function Rename(const ANewCaption: string): Boolean; virtual; abstract;
     { external }
@@ -160,6 +161,7 @@ type
     function WriteTimestamp(AReg: TRegistry): string;
   public
     constructor Create(AIndex: Word; AEnabled, AWow64: Boolean);
+    function GetExportFilter(ALanguageFile: TLanguageFile): string; override;
     function GetTimestamp(AReg: TRegistry): string;
     procedure OpenInRegEdit(); overload; virtual;
     { external }
@@ -180,6 +182,7 @@ type
   IImportableList = interface
   ['{19B8FB63-483A-4F54-80C4-A25FBBAC7891}']
     function ImportBackup(const AFileName: string): Boolean;
+    function GetImportFilter(ALanguageFile: TLanguageFile): string;
   end;
 
   { TRootList }
@@ -211,8 +214,9 @@ type
     function EnableItem(): Boolean; virtual;
     procedure ExportItem(const AFileName: string); virtual;
     procedure ExportList(const AFileName: string); virtual; abstract;
-    function IndexOf(ANameOrCaption: string): Integer; overload;
-    function IndexOf(ANameOrCaption: string; AEnabled: Boolean): Integer; overload;
+    function GetExportFilter(ALanguageFile: TLanguageFile): string; virtual;
+    function IndexOf(const ANameOrCaption: string): Integer; overload;
+    function IndexOf(const ANameOrCaption: string; AEnabled: Boolean): Integer; overload;
     procedure Invalidate();
     function IsLocked(): Boolean;
     procedure Load(AExpertMode: Boolean = False); virtual; abstract;
@@ -288,6 +292,7 @@ type
     function Disable(): Boolean; override;
     function Enable(): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
+    function GetExportFilter(ALanguageFile: TLanguageFile): string; override;
     function Rename(const ANewCaption: string): Boolean; override;
     function ToString(): string; override;
     { external }
@@ -317,6 +322,7 @@ type
     function DeleteItem(): Boolean; override;
     function EnableItem(): Boolean; override;
     procedure ExportList(const AFileName: string); override;
+    function GetImportFilter(ALanguageFile: TLanguageFile): string;
     function ImportBackup(const AFileName: string): Boolean;
     procedure Load(AExpertMode: Boolean = False); override;
     procedure LoadDisabled(AStartupUser: Boolean; AWow64: Boolean = False); deprecated 'Since Windows 8';
@@ -324,6 +330,7 @@ type
     procedure LoadStartup(AHKey: HKEY; ARunOnce: Boolean = False;
       AWow64: Boolean = False); overload;
     procedure LoadStatus(AHKey: HKEY; AKeyPath: string);
+    procedure RefreshCounter();
     { external }
     property DeleteBackup: Boolean read FDeleteBackup write FDeleteBackup;
   end;
@@ -517,6 +524,7 @@ type
     function Disable(): Boolean; override;
     function Enable(): Boolean; override;
     procedure ExportItem(const AFileName: string); override;
+    function GetExportFilter(ALanguageFile: TLanguageFile): string; override;
     function Rename(const ANewCaption: string): Boolean; override;
     function ToString(): string; override;
     { external }
@@ -533,6 +541,8 @@ type
     constructor Create;
     destructor Destroy; override;
     procedure ExportList(const AFileName: string); override;
+    function GetExportFilter(ALanguageFile: TLanguageFile): string; override;
+    function GetImportFilter(ALanguageFile: TLanguageFile): string;
     function ImportBackup(const AFileName: string): Boolean;
     procedure Load(AExpertMode: Boolean = False); override;
     procedure LoadTasks(ATaskFolder: ITaskFolder; AIncludeHidden: Boolean); overload;
@@ -543,6 +553,8 @@ type
 implementation
 
 uses StartupSearchThread, ContextSearchThread, ServiceSearchThread, TaskSearchThread;
+
+{$I LanguageIDs.inc}
 
 { TLnkFile }
 
@@ -984,7 +996,6 @@ begin
   if Win64 then
     Wow64FsRedirection(True);
 {$ENDIF}
-
   Result := SysUtils.FileExists(GetFileNameOnly());
 
 {$IFDEF WIN32}
@@ -998,12 +1009,12 @@ end;
 
   Returns the item status as text. }
 
-function TRootItem.GetStatus(ALangFile: TLanguageFile): string;
+function TRootItem.GetStatus(ALanguageFile: TLanguageFile): string;
 begin
   if FEnabled then
-    Result := ALangFile.GetString(102)
+    Result := ALanguageFile.GetString(LID_YES)
   else
-    Result := ALangFile.GetString(103);
+    Result := ALanguageFile.GetString(LID_NO);
 end;
 
 { public TRootItem.OpenInExplorer
@@ -1194,6 +1205,15 @@ end;
 procedure TRegistryItem.OpenInRegEdit();
 begin
   OpenInRegEdit(FWow64);
+end;
+
+{ public TRegistryItem.GetExportFilter
+
+  Returns the filter for file export. }
+
+function TRegistryItem.GetExportFilter(ALanguageFile: TLanguageFile): string;
+begin
+  Result := ALanguageFile.GetString(LID_FILTER_REGISTRY_FILE);
 end;
 
 { public TRegistryItem.GetTimestamp
@@ -1532,11 +1552,20 @@ begin
   end;  //of try
 end;
 
+{ public TRootList.GetExportFilter
+
+  Returns the filter for file export. }
+
+function TRootList<T>.GetExportFilter(ALanguageFile: TLanguageFile): string;
+begin
+  Result := ALanguageFile.GetString(LID_FILTER_REGISTRY_FILE);
+end;
+
 { public TRootList.IndexOf
 
   Returns the index of an item checking name only. }
 
-function TRootList<T>.IndexOf(ANameOrCaption: string): Integer;
+function TRootList<T>.IndexOf(const ANameOrCaption: string): Integer;
 var
   i: Integer;
   Item: TRootItem;
@@ -1560,7 +1589,7 @@ end;
 
   Returns the index of an item checking name or caption and status. }
 
-function TRootList<T>.IndexOf(ANameOrCaption: string; AEnabled: Boolean): Integer;
+function TRootList<T>.IndexOf(const ANameOrCaption: string; AEnabled: Boolean): Integer;
 var
   i: Integer;
   Item: TRootItem;
@@ -2231,6 +2260,18 @@ begin
       Result := inherited GetFullLocation();
 end;
 
+{ public TStartupUserItem.GetExportFilter
+
+  Returns the filter for file export. }
+
+function TStartupUserItem.GetExportFilter(ALanguageFile: TLanguageFile): string;
+begin
+  if FStartupUser then
+    Result := ToString() +'|*'+ EXT_STARTUP_USER
+  else
+    Result := ToString() +'|*'+ EXT_STARTUP_COMMON;
+end;
+
 { public TStartupUserItem.ChangeFilePath
 
   Changes the file path of a TStartupUserItem. }
@@ -2582,6 +2623,16 @@ begin
       FreeMem(Buffer, VersionSize);
     end;  //of try
   end;  //of begin
+end;
+
+{ public TStartupList.GetImportFilter
+
+  Returns the filter for file import. }
+
+function TStartupList.GetImportFilter(ALanguageFile: TLanguageFile): string;
+begin
+  Result := Format(ALanguageFile.GetString(LID_FILTER_STARTUP_FILES),
+    [EXT_STARTUP_USER, EXT_STARTUP_USER, EXT_STARTUP_COMMON, EXT_STARTUP_COMMON]);
 end;
 
 { protected TStartupList.AddItemDisabled
@@ -3252,13 +3303,8 @@ begin
       if (Items.IndexOf(Item.Name) <> -1) then
       begin
         SetLength(Data, Reg.GetDataSize(Item.Name));
-
-        // TODO: Counting bug when entry is not present
         Reg.ReadBinaryData(Item.Name, Data[0], Length(Data));
         Item.Enabled := (Data[0] = 2);
-
-        if Item.Enabled then
-          Inc(FActCount);
       end;  //of begin
     end;  //of for
 
@@ -3267,6 +3313,27 @@ begin
     Reg.Free;
     Items.Free;
   end;  //of try
+end;
+
+{ public TStartupList.RefreshCounter
+
+  Refreshes the internal enabled items counter. }
+
+procedure TStartupList.RefreshCounter();
+var
+  i: Integer;
+  Item: TStartupListItem;
+
+begin
+  FActCount := 0;
+
+  for i := 0 to Count - 1 do
+  begin
+    Item := Items[i];
+
+    if Item.Enabled then
+      Inc(FActCount);
+  end;  //of for
 end;
 
 
@@ -5354,6 +5421,15 @@ begin
   end;  //of try
 end;
 
+{ public TTaskListItem.GetExportFilter
+
+  Returns the filter for file export. }
+
+function TTaskListItem.GetExportFilter(ALanguageFile: TLanguageFile): string;
+begin
+  Result := ALanguageFile.GetString(LID_FILTER_XML_FILES);
+end;
+
 { public TTaskListItem.Rename
 
   Renames a TTaskListItem item. }
@@ -5513,6 +5589,25 @@ begin
   {$ENDIF}
     FLock.Release();
   end;  //of try
+end;
+
+{ public TTaskList.GetExportFilter
+
+  Returns the filter for file export. }
+
+function TTaskList.GetExportFilter(ALanguageFile: TLanguageFile): string;
+begin
+  Result := ALanguageFile.GetString(LID_FILTER_ZIP_FILES);
+end;
+
+{ public TTaskList.GetImportFilter
+
+  Returns the filter for file import. }
+
+function TTaskList.GetImportFilter(ALanguageFile: TLanguageFile): string;
+begin
+  Result := Format('%s|%s', [ALanguageFile.GetString(LID_FILTER_XML_FILES),
+    ALanguageFile.GetString(LID_FILTER_ZIP_FILES)]);
 end;
 
 { public TTaskList.ImportBackup

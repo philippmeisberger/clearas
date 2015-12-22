@@ -153,6 +153,7 @@ begin
           LoadStatus(HKEY_CURRENT_USER, KEY_STARTUP_USER_APPROVED);
           LoadStatus(HKEY_CURRENT_USER, KEY_STARTUP_RUN_APPROVED);
           LoadStatus(HKEY_LOCAL_MACHINE, KEY_STARTUP_RUN_APPROVED);
+          RefreshCounter();
         end;  //of begin
 
     finally
