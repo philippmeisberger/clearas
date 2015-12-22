@@ -412,13 +412,13 @@ begin
       begin
         if (FStartup.Selected as TStartupUserItem).StartupUser then
         begin
-          Filter := FStartup.Selected.ToString() +'|*'+ EXT_USER;
-          FileName := FStartup.Selected.Name + EXT_USER;
+          Filter := FStartup.Selected.ToString() +'|*'+ EXT_STARTUP_USER;
+          FileName := FStartup.Selected.Name + EXT_STARTUP_USER;
         end  //of begin
         else
         begin
-          Filter := FStartup.Selected.ToString() +'|*'+ EXT_COMMON;
-          FileName := FStartup.Selected.Name + EXT_COMMON;
+          Filter := FStartup.Selected.ToString() +'|*'+ EXT_STARTUP_COMMON;
+          FileName := FStartup.Selected.Name + EXT_STARTUP_COMMON;
         end;  //of if
 
         // Show save dialog
@@ -1484,7 +1484,7 @@ begin
   end  //of begin
   else
   begin
-    Filter := FLang.GetString(36);
+    Filter := FLang.GetString(LID_FILTER_REGISTRY_FILE);
     DefaultExt := '.reg';
   end;  //of if
 
@@ -2596,7 +2596,7 @@ begin
     end  //of begin
     else
     begin
-      Filter := FLang.GetString(36);
+      Filter := FLang.GetString(LID_FILTER_REGISTRY_FILE);
       DefaultExt := '.reg';
     end;  //of if
 
@@ -2648,7 +2648,7 @@ begin
            end;  //of begin
 
            Filter := Format(FLang.GetString(LID_FILTER_STARTUP_FILES),
-             [EXT_USER, EXT_USER, EXT_COMMON, EXT_COMMON]);
+             [EXT_STARTUP_USER, EXT_STARTUP_USER, EXT_STARTUP_COMMON, EXT_STARTUP_COMMON]);
          end;
 
       3: Filter := Format('%s|%s', [FLang.GetString(LID_FILTER_XML_FILES),
