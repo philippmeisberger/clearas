@@ -144,80 +144,136 @@ const
   {$EXTERNALSYM CLSID_TaskScheduler}
 
   SCHED_S_TASK_READY                    = $00041300;   // The task is ready to run at its next scheduled time.
+  {$EXTERNALSYM SCHED_S_TASK_READY}
   SCHED_S_TASK_RUNNING                  = $00041301;   // The task is currently running.
+  {$EXTERNALSYM SCHED_S_TASK_RUNNING}
   SCHED_S_TASK_DISABLED                 = $00041302;   // The task will not run at the scheduled times because it has been disabled.
+  {$EXTERNALSYM SCHED_S_TASK_DISABLED}
   SCHED_S_TASK_HAS_NOT_RUN              = $00041303;   // The task has not yet run.
+  {$EXTERNALSYM SCHED_S_TASK_HAS_NOT_RUN}
   SCHED_S_TASK_NO_MORE_RUNS             = $00041304;   // There are no more runs scheduled for this task.
+  {$EXTERNALSYM SCHED_S_TASK_NO_MORE_RUNS}
   SCHED_S_TASK_NOT_SCHEDULED            = $00041305;   // One or more of the properties that are needed to run this task on a schedule have not been set.
+  {$EXTERNALSYM SCHED_S_TASK_NOT_SCHEDULED}
   SCHED_S_TASK_TERMINATED               = $00041306;   // The last run of the task was terminated by the user.
+  {$EXTERNALSYM SCHED_S_TASK_TERMINATED}
   SCHED_S_TASK_NO_VALID_TRIGGERS        = $00041307;   // Either the task has no triggers or the existing triggers are disabled or not set.
+  {$EXTERNALSYM SCHED_S_TASK_NO_VALID_TRIGGERS}
   SCHED_S_EVENT_TRIGGER                 = $00041308;   // Event triggers do not have set run times.
+  {$EXTERNALSYM SCHED_S_EVENT_TRIGGER}
   SCHED_E_TRIGGER_NOT_FOUND             = $80041309;   // A task's trigger is not found.
+  {$EXTERNALSYM SCHED_E_TRIGGER_NOT_FOUND}
   SCHED_E_TASK_NOT_READY                = $8004130A;   // One or more of the properties required to run this task have not been set.
+  {$EXTERNALSYM SCHED_E_TASK_NOT_READY}
   SCHED_E_TASK_NOT_RUNNING              = $8004130B;   // There is no running instance of the task.
+  {$EXTERNALSYM SCHED_E_TASK_NOT_RUNNING}
   SCHED_E_SERVICE_NOT_INSTALLED         = $8004130C;   // The Task Scheduler service is not installed on this computer.
+  {$EXTERNALSYM SCHED_E_SERVICE_NOT_INSTALLED}
   SCHED_E_CANNOT_OPEN_TASK              = $8004130D;   // The task object could not be opened.
+  {$EXTERNALSYM SCHED_E_CANNOT_OPEN_TASK}
   SCHED_E_INVALID_TASK                  = $8004130E;   // The object is either an invalid task object or is not a task object.
+  {$EXTERNALSYM SCHED_E_INVALID_TASK}
   SCHED_E_ACCOUNT_INFORMATION_NOT_SET   = $8004130F;   // No account information could be found in the Task Scheduler security database for the task indicated.
+  {$EXTERNALSYM SCHED_E_ACCOUNT_INFORMATION_NOT_SET}
   SCHED_E_ACCOUNT_NAME_NOT_FOUND        = $80041310;   // Unable to establish existence of the account specified.
+  {$EXTERNALSYM SCHED_E_ACCOUNT_NAME_NOT_FOUND}
   SCHED_E_ACCOUNT_DBASE_CORRUPT         = $80041311;   // Corruption was detected in the Task Scheduler security database; the database has been reset.
+  {$EXTERNALSYM SCHED_E_ACCOUNT_DBASE_CORRUPT}
   SCHED_E_NO_SECURITY_SERVICES          = $80041312;   // Task Scheduler security services are available only on Windows NT.
+  {$EXTERNALSYM SCHED_E_NO_SECURITY_SERVICES}
   SCHED_E_UNKNOWN_OBJECT_VERSION        = $80041313;   // The task object version is either unsupported or invalid.
+  {$EXTERNALSYM SCHED_E_UNKNOWN_OBJECT_VERSION}
   SCHED_E_UNSUPPORTED_ACCOUNT_OPTION    = $80041314;   // The task has been configured with an unsupported combination of account settings and run time options.
+  {$EXTERNALSYM SCHED_E_UNSUPPORTED_ACCOUNT_OPTION}
   SCHED_E_SERVICE_NOT_RUNNING           = $80041315;   // The Task Scheduler Service is not running.
+  {$EXTERNALSYM SCHED_E_SERVICE_NOT_RUNNING}
   SCHED_E_UNEXPECTEDNODE                = $80041316;   // The task XML contains an unexpected node.
+  {$EXTERNALSYM SCHED_E_UNEXPECTEDNODE}
   SCHED_E_NAMESPACE                     = $80041317;   // The task XML contains an element or attribute from an unexpected namespace.
+  {$EXTERNALSYM SCHED_E_NAMESPACE}
   SCHED_E_INVALIDVALUE                  = $80041318;   // The task XML contains a value which is incorrectly formatted or out of range.
+  {$EXTERNALSYM SCHED_E_INVALIDVALUE}
   SCHED_E_MISSINGNODE                   = $80041319;   // The task XML is missing a required element or attribute.
+  {$EXTERNALSYM SCHED_E_MISSINGNODE}
   SCHED_E_MALFORMEDXML                  = $8004131A;   // The task XML is malformed.
+  {$EXTERNALSYM SCHED_E_MALFORMEDXML}
   SCHED_S_SOME_TRIGGERS_FAILED          = $0004131B;   // The task is registered, but not all specified triggers will start the task.
+  {$EXTERNALSYM SCHED_S_SOME_TRIGGERS_FAILED}
   SCHED_S_BATCH_LOGON_PROBLEM           = $0004131C;   // The task is registered, but may fail to start. Batch logon privilege needs to be enabled for the task principal.
+  {$EXTERNALSYM SCHED_S_BATCH_LOGON_PROBLEM}
   SCHED_E_TOO_MANY_NODES                = $8004131D;   // The task XML contains too many nodes of the same type.
+  {$EXTERNALSYM SCHED_E_TOO_MANY_NODES}
   SCHED_E_PAST_END_BOUNDARY             = $8004131E;   // The task cannot be started after the trigger end boundary.
+  {$EXTERNALSYM SCHED_E_PAST_END_BOUNDARY}
   SCHED_E_ALREADY_RUNNING               = $8004131F;   // An instance of this task is already running.
+  {$EXTERNALSYM SCHED_E_ALREADY_RUNNING}
   SCHED_E_USER_NOT_LOGGED_ON            = $80041320;   // The task will not run because the user is not logged on.
+  {$EXTERNALSYM SCHED_E_USER_NOT_LOGGED_ON}
   SCHED_E_INVALID_TASK_HASH             = $80041321;   // The task image is corrupt or has been tampered with.
+  {$EXTERNALSYM SCHED_E_INVALID_TASK_HASH}
   SCHED_E_SERVICE_NOT_AVAILABLE         = $80041322;   // The Task Scheduler service is not available.
+  {$EXTERNALSYM SCHED_E_SERVICE_NOT_AVAILABLE}
   SCHED_E_SERVICE_TOO_BUSY              = $80041323;   // The Task Scheduler service is too busy to handle your request. Please try again later.
+  {$EXTERNALSYM SCHED_E_SERVICE_TOO_BUSY}
   SCHED_E_TASK_ATTEMPTED                = $80041324;   // The Task Scheduler service attempted to run the task, but the task did not run due to one of the constraints in the task definition.
+  {$EXTERNALSYM SCHED_E_TASK_ATTEMPTED}
   SCHED_S_TASK_QUEUED                   = $00041325;   // The Task Scheduler service has asked the task to run.
+  {$EXTERNALSYM SCHED_S_TASK_QUEUED}
   SCHED_E_TASK_DISABLED                 = $80041326;   // The task is disabled.
+  {$EXTERNALSYM SCHED_E_TASK_DISABLED}
   SCHED_E_TASK_NOT_V1_COMPAT            = $80041327;   // The task has properties that are not compatible with earlier versions of Windows.
+  {$EXTERNALSYM SCHED_E_TASK_NOT_V1_COMPAT}
   SCHED_E_START_ON_DEMAND               = $80041328;   // The task settings do not allow the task to start on demand.
+  {$EXTERNALSYM SCHED_E_START_ON_DEMAND}
 
   // Authentication capabilities for CoInitializeSecurity()
   EOAC_NONE                             = 0;
+  {$EXTERNALSYM EOAC_NONE}
 
   // Authentication level constants for CoInitializeSecurity()
   RPC_C_AUTHN_LEVEL_DEFAULT             = 0;
+  {$EXTERNALSYM RPC_C_AUTHN_LEVEL_DEFAULT}
   RPC_C_AUTHN_LEVEL_NONE                = 1;
+  {$EXTERNALSYM RPC_C_AUTHN_LEVEL_NONE}
   RPC_C_AUTHN_LEVEL_CONNECT             = 2;
+  {$EXTERNALSYM RPC_C_AUTHN_LEVEL_CONNECT}
   RPC_C_AUTHN_LEVEL_CALL                = 3;
+  {$EXTERNALSYM RPC_C_AUTHN_LEVEL_CALL}
   RPC_C_AUTHN_LEVEL_PKT                 = 4;
+  {$EXTERNALSYM RPC_C_AUTHN_LEVEL_PKT}
   RPC_C_AUTHN_LEVEL_PKT_INTEGRITY       = 5;
+  {$EXTERNALSYM RPC_C_AUTHN_LEVEL_PKT_INTEGRITY}
   RPC_C_AUTHN_LEVEL_PKT_PRIVACY         = 6;
+  {$EXTERNALSYM RPC_C_AUTHN_LEVEL_PKT_PRIVACY}
 
   // Impersonation level constants for CoInitializeSecurity()
   RPC_C_IMP_LEVEL_DEFAULT               = 0;
+  {$EXTERNALSYM RPC_C_IMP_LEVEL_DEFAULT}
   RPC_C_IMP_LEVEL_ANONYMOUS             = 1;
+  {$EXTERNALSYM RPC_C_IMP_LEVEL_ANONYMOUS}
   RPC_C_IMP_LEVEL_IDENTIFY              = 2;
+  {$EXTERNALSYM RPC_C_IMP_LEVEL_IDENTIFY}
   RPC_C_IMP_LEVEL_IMPERSONATE           = 3;
+  {$EXTERNALSYM RPC_C_IMP_LEVEL_IMPERSONATE}
   RPC_C_IMP_LEVEL_DELEGATE              = 4;
+  {$EXTERNALSYM RPC_C_IMP_LEVEL_DELEGATE}
 
 type
   TASK_RUN_FLAGS = (
-    TASK_RUN_NO_FLAGS   = $0,
-    TASK_RUN_AS_SELF    = $1,
+    TASK_RUN_NO_FLAGS = $0,
+    TASK_RUN_AS_SELF = $1,
     TASK_RUN_IGNORE_CONSTRAINTS = $2,
     TASK_RUN_USE_SESSION_ID = $4,
-    TASK_RUN_USER_SID   = $8
+    TASK_RUN_USER_SID = $8
   );
   TTaskRunFlags = TASK_RUN_FLAGS;
+  {$EXTERNALSYM TASK_RUN_FLAGS}
 
   TASK_ENUM_FLAGS = (
     TASK_ENUM_HIDDEN = $1
   );
   TTaskEnumFlags = TASK_ENUM_FLAGS;
+  {$EXTERNALSYM TASK_ENUM_FLAGS}
 
   TASK_LOGON_TYPE = (
     TASK_LOGON_NONE,
@@ -229,12 +285,14 @@ type
     TASK_LOGON_INTERACTIVE_TOKEN_OR_PASSWORD
   );
   TTaskLogonType = TASK_LOGON_TYPE;
+  {$EXTERNALSYM TASK_LOGON_TYPE}
 
   TASK_RUNLEVEL_TYPE = (
     TASK_RUNLEVEL_LUA,
     TASK_RUNLEVEL_HIGHEST
   );
   TTaskRunLevelType = TASK_RUNLEVEL_TYPE;
+  {$EXTERNALSYM TASK_RUNLEVEL_TYPE}
 
   TASK_STATE = (
     TASK_STATE_UNKNOWN,
@@ -244,6 +302,7 @@ type
     TASK_STATE_RUNNING
   );
   TTaskState = TASK_STATE;
+  {$EXTERNALSYM TASK_STATE}
 
   TASK_CREATION = (
     TASK_VALIDATE_ONLY = $1,
@@ -255,6 +314,7 @@ type
     TASK_IGNORE_REGISTRATION_TRIGGERS = $20
   );
   TTaskCreation = TASK_CREATION;
+  {$EXTERNALSYM TASK_CREATION}
 
   TASK_TRIGGER_TYPE2 = (
     TASK_TRIGGER_EVENT  = 0,
@@ -272,6 +332,7 @@ type
   TTaskTriggerType2 = TASK_TRIGGER_TYPE2;
   PTASK_TRIGGER_TYPE2 = ^TASK_TRIGGER_TYPE2;
   PTaskTriggerType2 = PTASK_TRIGGER_TYPE2;
+  {$EXTERNALSYM TASK_TRIGGER_TYPE2}
 
   TASK_SESSION_STATE_CHANGE_TYPE = (
     TASK_CONSOLE_CONNECT    = 1,
@@ -282,6 +343,7 @@ type
     TASK_SESSION_UNLOCK     = 8
   );
   TTaskSessionStateChangeType = TASK_SESSION_STATE_CHANGE_TYPE;
+  {$EXTERNALSYM TASK_SESSION_STATE_CHANGE_TYPE}
 
   TASK_ACTION_TYPE = (
     TASK_ACTION_EXEC         = 0,
@@ -290,6 +352,7 @@ type
     TASK_ACTION_SHOW_MESSAGE = 7
   );
   TTaskActionType = TASK_ACTION_TYPE;
+  {$EXTERNALSYM TASK_ACTION_TYPE}
 
   TASK_INSTANCES_POLICY = (
     TASK_INSTANCES_PARALLEL      = 0,
@@ -298,6 +361,7 @@ type
     TASK_INSTANCES_STOP_EXISTING = 3
   );
   TTaskInstancesPolicy = TASK_INSTANCES_POLICY;
+  {$EXTERNALSYM TASK_INSTANCES_POLICY}
 
   TASK_COMPATIBILITY = (
     TASK_COMPATIBILITY_AT   = 0,
@@ -305,17 +369,20 @@ type
     TASK_COMPATIBILITY_V2   = 2
   );
   TTaskCompatibility = TASK_COMPATIBILITY;
+  {$EXTERNALSYM TASK_COMPATIBILITY}
 
   DAILY = packed record
     DaysInterval: Word;
   end;
   TDaily = DAILY;
+  {$EXTERNALSYM DAILY}
 
   MONTHLYDATE = packed record
     rgfDays: DWORD;
     rgfMonths: WORD;
   end;
   TMonthlyDate = MONTHLYDATE;
+  {$EXTERNALSYM MONTHLYDATE}
 
   MONTHLYDOW = packed record
     wWhichWeek: WORD;
@@ -323,12 +390,14 @@ type
     rgfMonths: WORD;
   end;
   TMonthlyDow = MONTHLYDOW;
+  {$EXTERNALSYM MONTHLYDOW}
 
   WEEKLY = packed record
     WeeksInterval: WORD;
     rgfDaysOfTheWeek: WORD;
   end;
   TWeekly = WEEKLY;
+  {$EXTERNALSYM WEEKLY}
 
   TRIGGER_TYPE_UNION = record
     case Integer of
@@ -338,10 +407,13 @@ type
       3: ( MonthlyDOW: MONTHLYDOW; );
   end;
   TTriggerTypeUnion = TRIGGER_TYPE_UNION;
+  {$EXTERNALSYM TRIGGER_TYPE_UNION}
 
 type
   IActionCollection = interface;
+  {$EXTERNALSYM IActionCollection}
   ITaskFolderCollection = interface;
+  {$EXTERNALSYM ITaskFolderCollection}
 
   IRepetitionPattern = interface(IDispatch)
     [SID_IRepetitionPattern]
@@ -356,6 +428,7 @@ type
     property Duration: TBStr read get_Duration write set_Duration;
     property StopAtDurationEnd: WordBool read get_StopAtDurationEnd write set_StopAtDurationEnd;
   end;
+  {$EXTERNALSYM IRepetitionPattern}
 
   ITaskNamedValuePair = interface(IDispatch)
     [SID_ITaskNamedValuePair]
@@ -367,6 +440,7 @@ type
     property Name: TBStr read get_Name write set_Name;
     property Value: TBStr read get_Value write set_Value;
   end;
+  {$EXTERNALSYM ITaskNamedValuePair}
 
   ITaskNamedValueCollection = interface(IDispatch)
     [SID_ITaskNamedValueCollection]
@@ -381,6 +455,7 @@ type
     property Item[index: LONG]: ITaskNamedValuePair read get_Item; default;
     property _NewEnum: IUnknown read get__NewEnum;
   end;
+  {$EXTERNALSYM ITaskNamedValueCollection}
 
   IRegistrationInfo = interface(IDispatch)
     [SID_IRegistrationInfo]
@@ -413,6 +488,7 @@ type
     property SecurityDescriptor: OleVariant read get_SecurityDescriptor write set_SecurityDescriptor;
     property Source: TBStr read get_Source write set_Source;
   end;
+  {$EXTERNALSYM IRegistrationInfo}
 
   ITrigger = interface(IDispatch)
     [SID_ITrigger]
@@ -438,6 +514,7 @@ type
     property EndBoundary: TBStr read get_EndBoundary write set_EndBoundary;
     property Enabled: WordBool read get_Enabled write set_Enabled;
   end;
+  {$EXTERNALSYM ITrigger}
 
   IBootTrigger = interface(ITrigger)
     [SID_IBootTrigger]
@@ -446,6 +523,7 @@ type
     { external }
     property Delay: TBStr read get_Delay write set_Delay;
   end;
+  {$EXTERNALSYM IBootTrigger}
 
   IDailyTrigger = interface(ITrigger)
     [SID_IDailyTrigger]
@@ -457,6 +535,7 @@ type
     property DaysInterval: Smallint read get_DaysInterval write set_DaysInterval;
     property RandomDelay: TBStr read get_RandomDelay write set_RandomDelay;
   end;
+  {$EXTERNALSYM IDailyTrigger}
 
   IEventTrigger = interface(ITrigger)
     [SID_IEventTrigger]
@@ -471,10 +550,12 @@ type
     property Delay: TBStr read get_Delay write set_Delay;
     property ValueQueries: ITaskNamedValueCollection read get_ValueQueries write set_ValueQueries;
   end;
+  {$EXTERNALSYM IEventTrigger}
 
   IIdleTrigger = interface(ITrigger)
     [SID_IIdleTrigger]
   end;
+  {$EXTERNALSYM IIdleTrigger}
 
   ILogonTrigger = interface(ITrigger)
     [SID_ILogonTrigger]
@@ -486,6 +567,7 @@ type
     property Delay: TBStr read get_Delay write set_Delay;
     property UserId: TBStr read get_UserId write set_UserId;
   end;
+  {$EXTERNALSYM ILogonTrigger}
 
   IMonthlyTrigger = interface(ITrigger)
     [SID_IMonthlyTrigger]
@@ -503,6 +585,7 @@ type
     property RunOnLastDayOfMonth: WordBool read get_RunOnLastDayOfMonth write set_RunOnLastDayOfMonth;
     property RandomDelay: TBStr read get_RandomDelay write set_RandomDelay;
   end;
+  {$EXTERNALSYM IMonthlyTrigger}
 
   IMonthlyDOWTrigger = interface(ITrigger)
     [SID_IMonthlyDOWTrigger]
@@ -523,6 +606,7 @@ type
     property RunOnLastWeekOfMonth: WordBool read get_RunOnLastWeekOfMonth write set_RunOnLastWeekOfMonth;
     property RandomDelay: TBStr read get_RandomDelay write set_RandomDelay;
   end;
+  {$EXTERNALSYM IMonthlyDOWTrigger}
 
   IRegistrationTrigger = interface(ITrigger)
     [SID_IRegistrationTrigger]
@@ -531,6 +615,7 @@ type
     { external }
     property Delay: TBStr read get_Delay write set_Delay;
   end;
+  {$EXTERNALSYM IRegistrationTrigger}
 
   ISessionStateChangeTrigger = interface(ITrigger)
     [SID_ISessionStateChangeTrigger]
@@ -545,6 +630,7 @@ type
     property UserId: TBStr read get_UserId write set_UserId;
     property StateChange: TASK_SESSION_STATE_CHANGE_TYPE read get_StateChange write set_StateChange;
   end;
+  {$EXTERNALSYM ISessionStateChangeTrigger}
 
   ITimeTrigger = interface(ITrigger)
     [SID_ITimeTrigger]
@@ -553,6 +639,7 @@ type
     { external }
     property RandomDelay: TBStr read get_RandomDelay write set_RandomDelay;
   end;
+  {$EXTERNALSYM ITimeTrigger}
 
   IWeeklyTrigger = interface(ITrigger)
     [SID_IWeeklyTrigger]
@@ -567,6 +654,7 @@ type
     property WeeksInterval: Smallint read get_WeeksInterval write set_WeeksInterval;
     property RandomDelay: TBStr read get_RandomDelay write set_RandomDelay;
   end;
+  {$EXTERNALSYM IWeeklyTrigger}
 
   ITriggerCollection = interface(IDispatch)
     [SID_ITriggerCollection]
@@ -581,6 +669,7 @@ type
     property Item[index: LONG]: ITrigger read get_Item; default;
     property _NewEnum: IUnknown read get__NewEnum;
   end;
+  {$EXTERNALSYM ITriggerCollection}
 
   IIdleSettings = interface(IDispatch)
     [SID_IIdleSettings]
@@ -598,6 +687,7 @@ type
     property StopOnIdleEnd: WordBool read get_StopOnIdleEnd write set_StopOnIdleEnd;
     property RestartOnIdle: WordBool read get_RestartOnIdle write set_RestartOnIdle;
   end;
+  {$EXTERNALSYM IIdleSettings}
 
   INetworkSettings = interface(IDispatch)
     [SID_INetworkSettings]
@@ -609,6 +699,7 @@ type
     property Name: TBStr read get_Name write set_Name;
     property Id: TBStr read get_Id write set_Id;
   end;
+  {$EXTERNALSYM INetworkSettings}
 
   ITaskSettings = interface(IDispatch)
     [SID_ITaskSettings]
@@ -674,6 +765,7 @@ type
     property WakeToRun: WordBool read get_WakeToRun write set_WakeToRun;
     property NetworkSettings: INetworkSettings read get_NetworkSettings write set_NetworkSettings;
   end;
+  {$EXTERNALSYM ITaskSettings}
 
   ITaskSettings2 = interface(IDispatch)
     [SID_ITaskSettings2]
@@ -685,6 +777,7 @@ type
     property DisallowStartOnRemoteAppSession: WordBool read get_DisallowStartOnRemoteAppSession write set_DisallowStartOnRemoteAppSession;
     property UseUnifiedSchedulingEngine: WordBool read get_UseUnifiedSchedulingEngine write set_UseUnifiedSchedulingEngine;
   end;
+  {$EXTERNALSYM ITaskSettings2}
 
   IPrincipal = interface(IDispatch)
     [SID_IPrincipal]
@@ -708,6 +801,7 @@ type
     property GroupId: TBStr read get_GroupId write set_GroupId;
     property RunLevel: TASK_RUNLEVEL_TYPE read get_RunLevel write set_RunLevel;
   end;
+  {$EXTERNALSYM IPrincipal}
 
   IAction = interface(IDispatch)
     [SID_IAction]
@@ -717,6 +811,7 @@ type
     property Id: TBStr read get_Id write set_Id;
     property ActionType: TASK_ACTION_TYPE read get_type;
   end;
+  {$EXTERNALSYM IAction}
 
   IComHandlerAction = interface(IAction)
     [SID_IComHandlerAction]
@@ -728,6 +823,7 @@ type
     property ClassId: TBStr read get_ClassId write set_ClassId;
     property Data: TBStr read get_Data write set_Data;
   end;
+  {$EXTERNALSYM IComHandlerAction}
 
   IEmailAction = interface(IAction)
     [SID_IEmailAction]
@@ -763,6 +859,7 @@ type
     property Body: TBStr read get_Body write set_Body;
     property Attachments: PSafeArray read get_Attachments write set_Attachments;
   end;
+  {$EXTERNALSYM IEmailAction}
 
   IExecAction = interface(IAction)
     [SID_IExecAction]
@@ -777,6 +874,7 @@ type
     property Arguments: TBStr read get_Arguments write set_Arguments;
     property WorkingDirectory: TBStr read get_WorkingDirectory write set_WorkingDirectory;
   end;
+  {$EXTERNALSYM IExecAction}
 
   IShowMessageAction = interface(IAction)
     [SID_IShowMessageAction]
@@ -788,6 +886,7 @@ type
     property Title: TBStr read get_Title write set_Title;
     property MessageBody: TBStr read get_MessageBody write set_MessageBody;
   end;
+  {$EXTERNALSYM IShowMessageAction}
 
   IActionCollection = interface(IDispatch)
     [SID_IActionCollection]
@@ -808,6 +907,7 @@ type
     property XmlText: TBStr read get_XmlText write set_XmlText;
     property Context: TBStr read get_Context write set_Context;
   end;
+  {$EXTERNALSYM IActionCollection}
 
   ITaskVariables = interface(IUnknown)
     [SID_ITaskVariables]
@@ -815,6 +915,7 @@ type
     function SetOutput(input: TBStr): HRESULT; stdcall;
     function GetContext(out pContext: TBStr): HRESULT; stdcall;
   end;
+  {$EXTERNALSYM ITaskVariables}
 
   ITaskDefinition = interface(IDispatch)
     [SID_ITaskDefinition]
@@ -841,6 +942,7 @@ type
     property Actions: IActionCollection read get_Actions write set_Actions;
     property XmlText: TBStr read get_XmlText write set_XmlText;
   end;
+  {$EXTERNALSYM ITaskDefinition}
 
   IRunningTask = interface(IDispatch)
     [SID_IRunningTask]
@@ -860,6 +962,7 @@ type
     property CurrentAction: TBStr read get_CurrentAction;
     property EnginePID: LongWord read get_EnginePID;
   end;
+  {$EXTERNALSYM IRunningTask}
 
   IRunningTaskCollection = interface(IDispatch)
     [SID_IRunningTaskCollection]
@@ -871,6 +974,7 @@ type
     property Item[index: OleVariant]: IRunningTask read get_Item; default;
     property _NewEnum: IUnknown read get__NewEnum;
   end;
+  {$EXTERNALSYM IRunningTaskCollection}
 
   IRegisteredTask = interface(IDispatch)
     [SID_IRegisteredTask]
@@ -909,6 +1013,7 @@ type
     property Definition: ITaskDefinition read get_Definition;
     property XML: TBStr read get_Xml;
   end;
+  {$EXTERNALSYM IRegisteredTask}
 
   IRegisteredTaskCollection = interface(IDispatch)
     [SID_IRegisteredTaskCollection]
@@ -920,6 +1025,7 @@ type
     property Item[index: OleVariant]: IRegisteredTask read get_Item; default;
     property _NewEnum: IUnknown read get__NewEnum;
   end;
+  {$EXTERNALSYM IRegisteredTaskCollection}
 
   ITaskHandler = interface(IUnknown)
     [SID_ITaskHandler]
@@ -928,12 +1034,14 @@ type
     function Pause: HRESULT; stdcall;
     function Resume: HRESULT; stdcall;
   end;
+  {$EXTERNALSYM ITaskHandler}
 
   ITaskHandlerStatus = interface(IUnknown)
     [SID_ITaskHandlerStatus]
     function UpdateStatus(percentComplete: SHORT; statusMessage: TBStr): HRESULT; stdcall;
     function TaskCompleted(taskErrCode: HRESULT): HRESULT; stdcall;
   end;
+  {$EXTERNALSYM ITaskHandlerStatus}
 
   ITaskFolder = interface(IDispatch)
     [SID_ITaskFolder]
@@ -960,6 +1068,7 @@ type
     property Name: TBStr read get_Name;
     property Path: TBStr read get_Path;
   end;
+  {$EXTERNALSYM ITaskFolder}
 
   ITaskFolderCollection = interface(IDispatch)
     [SID_ITaskFolderCollection]
@@ -971,6 +1080,7 @@ type
     property Item[index: OleVariant]: ITaskFolder read get_Item; default;
     property _NewEnum: IUnknown read get__NewEnum;
   end;
+  {$EXTERNALSYM ITaskFolderCollection}
 
   ITaskService = interface(IDispatch)
     [SID_ITaskService]
@@ -990,6 +1100,7 @@ type
     property ConnectedDomain: TBStr read get_ConnectedDomain;
     property HighestVersion: LongWord read get_HighestVersion;
   end;
+  {$EXTERNALSYM ITaskService}
 
 implementation
 

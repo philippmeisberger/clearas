@@ -22,7 +22,7 @@ type
     FOnSearching: TSearchEvent;
     FOnFinish: TNotifyEvent;
     FOnError: TSearchErrorEvent;
-    FOnChanged: TChangeEvent;
+    FOnChanged: TItemChangeEvent;
   protected
     FSelectedList: TRootList<TRootItem>;
     FLock: TCriticalSection;

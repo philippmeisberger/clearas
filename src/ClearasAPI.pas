@@ -75,8 +75,8 @@ type
     function GetFullPath(): string;
     function GetFullPathEscaped(): string;
   public
-    constructor Create(AFileName, ABackupExtension: string); overload;
-    constructor Create(AName: string; ACommonStartup: Boolean); overload;
+    constructor Create(AFileName, ABackupExtension: string); reintroduce; overload;
+    constructor Create(AName: string; ACommonStartup: Boolean); reintroduce; overload;
     function BackupExists(): Boolean; deprecated 'Since Windows 8';
     procedure CreateBackup(); deprecated 'Since Windows 8';
     function Delete(): Boolean;
@@ -176,7 +176,7 @@ type
   { Events }
   TSearchEvent = procedure(Sender: TObject; const ACount: Cardinal) of object;
   TSearchErrorEvent = procedure(Sender: TObject; AErrorMessage: string) of object;
-  TChangeEvent = procedure(Sender: TObject; ANewStatus: TItemStatus) of object;
+  TItemChangeEvent = procedure(Sender: TObject; ANewStatus: TItemStatus) of object;
 
   { IImportableList }
   IImportableList = interface
@@ -191,7 +191,7 @@ type
     FItem: T;
     FOnSearchStart,
     FOnSearching: TSearchEvent;
-    FOnChanged: TChangeEvent;
+    FOnChanged: TItemChangeEvent;
     FOnSearchFinish: TNotifyEvent;
     FOnSearchError: TSearchErrorEvent;
   protected
@@ -224,7 +224,7 @@ type
     { external }
     property Enabled: Word read FActCount;
     property IsInvalid: Boolean read FInvalid write FInvalid;
-    property OnChanged: TChangeEvent read FOnChanged write FOnChanged;
+    property OnChanged: TItemChangeEvent read FOnChanged write FOnChanged;
     property OnSearching: TSearchEvent read FOnSearching write FOnSearching;
     property OnSearchError: TSearchErrorEvent read FOnSearchError write FOnSearchError;
     property OnSearchFinish: TNotifyEvent read FOnSearchFinish write FOnSearchFinish;
@@ -268,13 +268,14 @@ type
   private
     FRunOnce: Boolean;
   public
+    constructor Create(AIndex: Word; AEnabled, AWow64, ARunOnce: Boolean);
     function Delete(): Boolean; override;
     function Disable(): Boolean; override;
     function Enable(): Boolean; override;
     function Rename(const ANewCaption: string): Boolean; override;
     function ToString(): string; override;
     { external }
-    property RunOnce: Boolean read FRunOnce write FRunOnce;
+    property RunOnce: Boolean read FRunOnce;
   end;
 
   { TStartupUserItem }
@@ -1965,6 +1966,13 @@ end;
 
 { TStartupItem }
 
+constructor TStartupItem.Create(AIndex: Word; AEnabled, AWow64,
+  ARunOnce: Boolean);
+begin
+  inherited Create(AIndex, AEnabled, AWow64);
+  FRunOnce := ARunOnce;
+end;
+
 { public TStartupItem.Delete
 
   Deletes a TStartupItem object and returns True if successful. }
@@ -2642,13 +2650,21 @@ end;
 function TStartupList.AddItemDisabled(AReg: TRegistry; AWow64: Boolean): Integer;
 var
   Item: TStartupItem;
+  RunOnce: Boolean;
 
 begin
   // Deprecated since Windows 8!
   if CheckWin32Version(6, 2) then
     Exit(-1);
 
-  Item := TStartupItem.Create(Count, False, AWow64);
+  try
+    RunOnce := (ExtractFileName(AReg.ReadString('key')) = 'RunOnce');
+
+  except
+    Exit(-1);
+  end;  //of try
+
+  Item := TStartupItem.Create(Count, False, AWow64, RunOnce);
 
   try
     with Item do
@@ -2659,7 +2675,6 @@ begin
       FileName := AReg.ReadString('command');
       Caption := GetFileDescription(FileNameOnly);
       Time := GetTimestamp(AReg);
-      RunOnce := (ExtractFileName(AReg.ReadString('key')) = 'RunOnce');
     end;  //of with
 
     Result := inherited Add(Item);
@@ -2680,8 +2695,7 @@ var
   Item: TStartupItem;
 
 begin
-  Result := -1;
-  Item := TStartupItem.Create(Count, True, AWow64);
+  Item := TStartupItem.Create(Count, True, AWow64, ARunOnce);
 
   try
     if ((AHKey <> HKEY_LOCAL_MACHINE) and (AHKey <> HKEY_CURRENT_USER)) then
@@ -2694,7 +2708,6 @@ begin
       Name := AName;
       FileName := AFileName;
       Time := '';
-      RunOnce := ARunOnce;
       Caption := GetFileDescription(FileNameOnly);
 
       // RunOnce item?
@@ -2731,6 +2744,7 @@ begin
 
   except
     Item.Free;
+    Result := -1;
   end;  //of try
 end;
 
@@ -5606,8 +5620,9 @@ end;
 
 function TTaskList.GetImportFilter(ALanguageFile: TLanguageFile): string;
 begin
-  Result := Format('%s|%s', [ALanguageFile.GetString(LID_FILTER_XML_FILES),
-    ALanguageFile.GetString(LID_FILTER_ZIP_FILES)]);
+//  Result := Format('%s|%s', [ALanguageFile.GetString(LID_FILTER_XML_FILES),
+//    ALanguageFile.GetString(LID_FILTER_ZIP_FILES)]);
+  Result := ALanguageFile.GetString(LID_FILTER_XML_FILES);
 end;
 
 { public TTaskList.ImportBackup
@@ -5620,7 +5635,7 @@ var
   TaskFolder: ITaskFolder;
   NewTask: IRegisteredTask;
   ErrorCode: DWORD;
-  ZipFile: TZipFile;
+  //ZipFile: TZipFile;
 {$IFDEF WIN32}
   Win64: Boolean;
 {$ENDIF}
@@ -5668,7 +5683,7 @@ begin
       begin
         ErrorCode := GetLastError();
 
-        if (ErrorCode = 0) then
+        if (ErrorCode = ERROR_SUCCESS) then
           ErrorCode := SCHED_E_MALFORMEDXML;
 
         raise ETaskException.Create(SysErrorMessage(ErrorCode));
@@ -5681,8 +5696,9 @@ begin
 
       // Refresh TListView
       DoNotifyOnFinished();
-    end  //of begin
-    else
+    end;  //of begin
+    // TODO: ZIP file import
+    {else
     begin
       ZipFile := TZipFile.Create;
 
@@ -5706,7 +5722,7 @@ begin
       finally
         ZipFile.Free;
       end;  //of try
-    end;  //of if
+    end;  //of if}
 
   finally
   {$IFDEF WIN32}
@@ -5743,7 +5759,7 @@ var
 begin
   // Show hidden?
   if AIncludeHidden then
-    Flags := Ord(TASK_ENUM_HIDDEN)
+    Flags := LONG(TASK_ENUM_HIDDEN)
   else
     Flags := 0;
 
