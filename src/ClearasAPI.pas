@@ -16,7 +16,7 @@ interface
 uses
   Windows, WinSvc, Classes, SysUtils, Registry, ShlObj, ActiveX, ComObj, Zip,
   Graphics, CommCtrl, ShellAPI, SyncObjs, StrUtils, Variants, Generics.Collections,
-  Taskschd, PMCWOSUtils, PMCWLanguageFile, PMCWIniFileParser, KnownFolders, Dialogs;
+  Taskschd, PMCWOSUtils, PMCWLanguageFile, PMCWIniFileParser, KnownFolders;
 
 const
   { Startup registry keys until Windows 7 }
@@ -158,11 +158,11 @@ type
     function GetRootKey(): HKEY; virtual; abstract;
     function GetWow64Key(): string;
     procedure OpenInRegEdit(AWow64: Boolean); overload;
-    function WriteTimestamp(AReg: TRegistry): string;
+    function WriteTimestamp(AReg: TRegistry): TDateTime;
   public
     constructor Create(AIndex: Word; AEnabled, AWow64: Boolean);
     function GetExportFilter(ALanguageFile: TLanguageFile): string; override;
-    function GetTimestamp(AReg: TRegistry): string;
+    function GetTimestamp(AReg: TRegistry): TDateTime;
     procedure OpenInRegEdit(); overload; virtual;
     { external }
     property RootKey: HKEY read GetRootKey;
@@ -251,8 +251,9 @@ type
   TStartupListItem = class(TRegistryItem)
   private
     FRootKey: HKEY;
-    FApprovedLocation,
-    FTime: string;
+    FApprovedLocation: string;
+    FTime: TDateTime;
+    function GetTime(): TDateTime;
   protected
     function ChangeStatus(AKeyPath: string; var ANewStatus: TStartupItemStatus): Boolean; reintroduce; overload;
     function DateTimeToFileTime(const AFileTime: TDateTime): TFileTime;
@@ -274,7 +275,7 @@ type
     { external }
     property LocationApproved: string read FApprovedLocation write FApprovedLocation;
     property RootKey: HKEY read GetRootKey write FRootKey;
-    property Time: string read FTime write FTime;
+    property Time: TDateTime read GetTime write FTime;
   end;
 
   { TStartupItem }
@@ -349,9 +350,6 @@ type
     { external }
     property DeleteBackup: Boolean read FDeleteBackup write FDeleteBackup;
   end;
-
-  { Alias class }
-  TAutostart = TStartupList;
 
   { Exception class }
   EContextMenuException = class(Exception);
@@ -431,6 +429,7 @@ type
     function ToString(): string; override;
   end;
 
+  { Contextmenu enum }
   TShellItemType = (
     stShell, stShellEx, stShellNew
   );
@@ -476,10 +475,11 @@ type
   TServiceListItem = class(TRegistryItem)
   private
     FServiceManager: SC_HANDLE;
-    FTime: string;
+    FTime: TDateTime;
     FServiceStart: TServiceStart;
     function GetLocation(): string;
     function GetHandle(AAccess: DWORD): SC_HANDLE;
+    function GetTime(): TDateTime;
   protected
     function GetFullLocation(): string; override;
     function GetRootKey(): HKEY; override;
@@ -497,7 +497,7 @@ type
     property Location: string read GetLocation;
     property Manager: SC_HANDLE read FServiceManager write FServiceManager;
     property Start: TServiceStart read FServiceStart write FServiceStart;
-    property Time: string read FTime write FTime;
+    property Time: TDateTime read GetTime write FTime;
   end;
 
   { TServiceList }
@@ -1067,7 +1067,7 @@ end;
 
 { public TRegistryItem.Create
 
-  General constructor for creating a TRootRegItem instance. }
+  General constructor for creating a TRegistryItem instance. }
 
 constructor TRegistryItem.Create(AIndex: Word; AEnabled, AWow64: Boolean);
 begin
@@ -1174,38 +1174,31 @@ end;
 
 { protected TRegistryItem.WriteTimestamp
 
-  Writes the deactivation timestamp. }
+  Writes the deactivation timestamp and returns it. }
 
-function TRegistryItem.WriteTimestamp(AReg: TRegistry): string;
+function TRegistryItem.WriteTimestamp(AReg: TRegistry): TDateTime;
 var
-  Year, Month, Day, Hour, Min, Sec, MSec: Word;
+  Timestamp: TSystemTime;
   TimeNow: TDateTime;
 
 begin
+  TimeNow := Now();
+  Result := TimeNow;
+  DateTimeToSystemTime(TimeNow, Timestamp);
+
   try
-    // Read current time and update current deactivation timestamp
-    TimeNow := Now();
-    Result := FormatDateTime('c', TimeNow);
-
-    // Split current date
-    DecodeDate(TimeNow, Year, Month, Day);
-
-    // Split current time
-    DecodeTime(TimeNow, Hour, Min, Sec, MSec);
-
-    // Write time stamp
     with AReg do
     begin
-      WriteInteger('YEAR', Year);
-      WriteInteger('MONTH', Month);
-      WriteInteger('DAY', Day);
-      WriteInteger('HOUR', Hour);
-      WriteInteger('MINUTE', Min);
-      WriteInteger('SECOND', Sec);
+      WriteInteger('YEAR', Timestamp.wYear);
+      WriteInteger('MONTH', Timestamp.wMonth);
+      WriteInteger('DAY', Timestamp.wDay);
+      WriteInteger('HOUR', Timestamp.wHour);
+      WriteInteger('MINUTE', Timestamp.wMinute);
+      WriteInteger('SECOND', Timestamp.wSecond);
     end;  //of with
 
   except
-    on E: Exception do
+    on E: ERegistryException do
     begin
       E.Message := 'Error while writing deactivation timestamp: '+ E.Message;
       raise;
@@ -1235,12 +1228,13 @@ end;
 
   Returns the deactivation timestamp. }
 
-function TRegistryItem.GetTimestamp(AReg: TRegistry): string;
+function TRegistryItem.GetTimestamp(AReg: TRegistry): TDateTime;
 var
-  Year, Month, Day, Hour, Min, Sec: Word;
-  Date, Time: string;
+  Timestamp: TSystemTime;
 
 begin
+  Result := 0;
+
   // Deactivation timestamp only available for disabled items
   if FEnabled then
     Exit;
@@ -1249,20 +1243,22 @@ begin
     // At least one valid date entry exists?
     if AReg.ValueExists('YEAR') then
     begin
-      Year := AReg.ReadInteger('YEAR');
-      Month := AReg.ReadInteger('MONTH');
-      Day := AReg.ReadInteger('DAY');
-      Hour := AReg.ReadInteger('HOUR');
-      Min := AReg.ReadInteger('MINUTE');
-      Sec := AReg.ReadInteger('SECOND');
-      Date := FormatDateTime('c', EncodeDate(Year, Month, Day));
-      Time := FormatDateTime('tt', EncodeTime(Hour, Min, Sec, 0));
-      Result := Date +'  '+ Time;
+      with Timestamp do
+      begin
+        wYear := AReg.ReadInteger('YEAR');
+        wMonth := AReg.ReadInteger('MONTH');
+        wDay := AReg.ReadInteger('DAY');
+        wHour := AReg.ReadInteger('HOUR');
+        wMinute := AReg.ReadInteger('MINUTE');
+        wSecond := AReg.ReadInteger('SECOND');
+      end;  //of with
+
+      Result := SystemTimeToDateTime(Timestamp);
     end;  //of if
 
   except
     // Do not raise exception: Corrupted date is not fatal!
-    Result := '';
+    Result := 0;
   end;  //of try
 end;
 
@@ -1683,6 +1679,19 @@ end;
 
 { TStartupListItem }
 
+{ private TStartupListItem.GetTime
+
+  Returns the deactivation time of an disabled item. }
+
+function TStartupListItem.GetTime(): TDateTime;
+begin
+  if not FEnabled then
+    Result := FTime
+  else
+    // No deactivation time for enabled items!
+    Result := 0;
+end;
+
 { protected TStartupListItem.ChangeStatus
 
   Changes the status of a TStartupListItem object and returns True if successful. }
@@ -1912,7 +1921,7 @@ begin
   if ChangeStatus(FApprovedLocation, ItemStatus) then
   begin
     FEnabled := False;
-    FTime := DateTimeToStr(TimeNow);
+    FTime := TimeNow;
     Result := True;
   end;  //of begin
 end;
@@ -1932,7 +1941,7 @@ begin
   if ChangeStatus(FApprovedLocation, ItemStatus) then
   begin
     FEnabled := True;
-    FTime := '';
+    FTime := 0;
     Result := True;
   end;  //of begin
 end;
@@ -2019,6 +2028,10 @@ end;
 
 
 { TStartupItem }
+
+{ public TStartupItem.Create
+
+  General constructor for creating a TStartupItem instance. }
 
 constructor TStartupItem.Create(AIndex: Word; AEnabled, AWow64,
   ARunOnce: Boolean);
@@ -2194,7 +2207,7 @@ begin
     FRootKey := StrToHKey(NewHKey);
     FLocation := NewKeyPath;
     FEnabled := True;
-    FTime := '';
+    FTime := 0;
     Result := True;
 
   finally
@@ -2761,7 +2774,6 @@ begin
       Location := AKeyPath;
       Name := AName;
       FileName := AFileName;
-      Time := '';
       Caption := GetFileDescription(FileNameOnly);
 
       // RunOnce item?
@@ -2911,7 +2923,6 @@ begin
       LnkFile := ALnkFile;
       Name := ExtractFileName(ALnkFile.FileName);
       Caption := GetFileDescription(FileNameOnly);
-      Time := '';
       StartupUser := not ACommonStartup;
 
       // Windows 8?
@@ -3376,8 +3387,9 @@ begin
         Reg.ReadBinaryData(Item.Name, ItemStatus, SizeOf(TStartupItemStatus));
         Item.Enabled := (ItemStatus.Status = ST_ENABLED);
 
+        // Get deactivation time
         if not Item.Enabled then
-          Item.Time := DateTimeToStr(Item.FileTimeToDateTime(ItemStatus.DeactivationTime));
+          Item.Time := Item.FileTimeToDateTime(ItemStatus.DeactivationTime);
       end;  //of begin
     end;  //of for
 
@@ -4752,6 +4764,19 @@ begin
   Result := Handle;
 end;
 
+{ private TServiceListItem.GetTime
+
+  Returns the deactivation time of an disabled item. }
+
+function TServiceListItem.GetTime(): TDateTime;
+begin
+  if not FEnabled then
+    Result := FTime
+  else
+    // No deactivation time for enabled items!
+    Result := 0;
+end;
+
 { private TServiceListItem.GetLocation
 
   Returns the Registry path to a TServiceListItem. }
@@ -4954,7 +4979,7 @@ begin
 
     // Update information
     FEnabled := True;
-    FTime := '';
+    FTime := 0;
     Result := True;
 
   finally

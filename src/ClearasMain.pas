@@ -998,8 +998,8 @@ begin
         pmChangeStatus.Caption := bEnableStartupItem.Caption;
 
         // Append deactivation timestamp if necassary
-        if (mmDate.Enabled and mmDate.Checked) then
-          lwStartup.ItemFocused.SubItems[3] := FStartup.Selected.Time;
+        if (mmDate.Enabled and mmDate.Checked and (FStartup.Selected.Time <> 0)) then
+          lwStartup.ItemFocused.SubItems[3] := DateTimeToStr(FStartup.Selected.Time);
       end;
 
     stDeleted:
@@ -1055,8 +1055,8 @@ begin
         SubItems.Append(FStartup[i].ToString());
 
         // Show deactivation timestamp?
-        if mmDate.Checked then
-          SubItems.Append(FStartup[i].Time);
+        if (mmDate.Checked and (FStartup[i].Time <> 0)) then
+          SubItems.Append(DateTimeToStr(FStartup[i].Time));
 
         // Get icon of program
         Icon.Handle := FStartup[i].Icon;
@@ -1108,8 +1108,8 @@ begin
         pmChangeStatus.Caption := bEnableServiceItem.Caption;
 
         // Append deactivation timestamp if necassary
-        if (mmDate.Enabled and mmDate.Checked) then
-          lwService.ItemFocused.SubItems[3] := FService.Selected.Time;
+        if (mmDate.Enabled and mmDate.Checked and (FService.Selected.Time <> 0)) then
+          lwService.ItemFocused.SubItems[3] := DateTimeToStr(FService.Selected.Time);
       end;
 
     stDeleted:
@@ -1172,8 +1172,8 @@ begin
         SubItems.Append(FService[i].Start.ToString(FLang));
 
         // Show deactivation timestamp?
-        if mmDate.Checked then
-          SubItems.Append(FService[i].Time);
+        if (mmDate.Checked and (FService[i].Time <> 0)) then
+          SubItems.Append(DateTimeToStr(FService[i].Time));
       end;  //of with
     end;  //of for
 
