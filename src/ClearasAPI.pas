@@ -64,7 +64,9 @@ const
   STARTUP_USER_XP             = 'Startup' deprecated;
 
 type
-  { TLnkFile }
+  /// <summary>
+  ///   A <c>TLnkFile</c> represents a symbolic link file.
+  /// </summary>
   TLnkFile = class(TObject)
   private
     FFileName,
@@ -104,7 +106,13 @@ type
   EListBlocked = class(EAbort);
   EWarning = class(EAbort);
 
-  { TRootItem }
+  /// <summary>
+  ///   A <c>TRootItem</c> represents an basic list item that can be added to a
+  ///   <see cref="TRootList"/>.
+  /// </summary>
+  /// <remarks>
+  ///   This class is intended to be only ancenstor for items.
+  /// </remarks>
   TRootItem = class(TObject)
   private
     FIndex: Word;
@@ -148,7 +156,11 @@ type
     property Name: string read FName write FName;
   end;
 
-  { TRegistryItem }
+  /// <summary>
+  ///   A <c>TRegistryItem</c> represents a basic list item that is located in
+  ///   the Windows Registry. This class extends the capabilities of
+  ///   <see cref="TRootItem"/>.
+  /// </summary>
   TRegistryItem = class(TRootItem)
   private
     FWow64: Boolean;
@@ -171,21 +183,52 @@ type
   end;
 
   { TItemStatus }
-  TItemStatus = (stNone, stEnabled, stDisabled, stDeleted);
+  TItemStatus = (
+    stNone, stEnabled, stDisabled, stDeleted
+  );
 
   { Events }
+  TItemChangeEvent = procedure(Sender: TObject; ANewStatus: TItemStatus) of object;
   TSearchEvent = procedure(Sender: TObject; const ACount: Cardinal) of object;
   TSearchErrorEvent = procedure(Sender: TObject; AErrorMessage: string) of object;
-  TItemChangeEvent = procedure(Sender: TObject; ANewStatus: TItemStatus) of object;
 
-  { IImportableList }
+  /// <summary>
+  ///   This interface declares the capability to import an exported backup file.
+  /// </summary>
   IImportableList = interface
   ['{19B8FB63-483A-4F54-80C4-A25FBBAC7891}']
-    function ImportBackup(const AFileName: string): Boolean;
+    /// <summary>
+    ///   Imports a backup file.
+    /// </summary>
+    /// <param name="AFileName">
+    ///   The backup file.
+    ///  </param>
+    /// <returns>
+    ///   <c>True</c> if the import was successful or <c>False</c> otherwise.
+    /// </returns>
+    function ImportBackup(const AFileName: TFileName): Boolean;
+
+    /// <summary>
+    ///   Gets the file filter for an <c>TOpenDialogy</c> from a <c>TLanguageFile</c>.
+    /// </summary>
+    /// <param name="ALanguageFile">
+    ///   A <c>TLanguageFile</c> for multi-language support.
+    /// </param>
+    /// <returns>
+    ///   The import file filter.
+    /// </returns>
     function GetImportFilter(ALanguageFile: TLanguageFile): string;
   end;
 
-  { TRootList }
+  /// <summary>
+  ///   A <c>TRootList</c> is the basic list that contains a set of
+  ///   <see cref="TRootItem"/>s. The list is thread-safe and supports locking.
+  ///   You can use the <see cref="IsLocked"/> method to see if the list is
+  ///   locked.
+  /// </summary>
+  /// <remarks>
+  ///   This class is intended to be used only as ancestor for other classes.
+  /// </remarks>
   TRootList<T: TRootItem> = class(TObjectList<T>, IInterface)
   private
     FItem: T;
@@ -236,18 +279,41 @@ type
   EStartupException = class(Exception);
 
 const
-  { Possible values for TStartupItemStatus.Status }
+  /// <summary>
+  ///  Signals that a startup item is enabled.
+  /// </summary>
   ST_ENABLED  = $2;
+
+  /// <summary>
+  ///  Signals that a startup item is disabled.
+  /// </summary>
   ST_DISABLED = $3;
 
 type
-  { The item status since Windows 8 }
+  /// <summary>
+  ///   A <c>TStartupItemStatus</c> represents the new status of startup items
+  ///   since Windows 8. The status of startup items is a binary value of 12.
+  ///   digits. The first 4 bytes contain the enabled value. This can be
+  ///   <c>ST_ENABLED</c> or <c>ST_DISABLED</c>. In case the value is
+  ///   <c>ST_DISABLED</c> the last 8 bytes are a timestamp containing the
+  ///   deactivation time as <c>TFileTime</c>.
+  /// </summary>
   TStartupItemStatus = record
+    /// <summary>
+    ///   The status value. Can be either <see cref="ST_ENABLED"/> or
+    ///   <see cref="ST_DISABLED"/>.
+    /// </summary>
     Status: UINT;
+    /// <summary>
+    ///   The deactivation time.
+    /// </summary>
     DeactivationTime: TFileTime;
   end;
 
-  { TStartupListItem }
+  /// <summary>
+  ///   A <c>TStartupListItem</c> represents a basic startup item that can be
+  ///   added to a <see cref="TStartupList"/>.
+  /// </summary>
   TStartupListItem = class(TRegistryItem)
   private
     FRootKey: HKEY;
@@ -278,7 +344,10 @@ type
     property Time: TDateTime read GetTime write FTime;
   end;
 
-  { TStartupItem }
+  /// <summary>
+  ///   A <c>TStartupItem</c> represents a default startup item that can be
+  ///   added to a <see cref="TStartupList"/> and are located in the Registry.
+  /// </summary>
   TStartupItem = class(TStartupListItem)
   private
     FRunOnce: Boolean;
@@ -293,7 +362,11 @@ type
     property RunOnce: Boolean read FRunOnce;
   end;
 
-  { TStartupUserItem }
+  /// <summary>
+  ///   A <c>TStartupItem</c> represents a user startup item that can be added
+  ///   to a <see cref="TStartupList"/>. Those items are located in the autostart
+  ///   filesystem folder.
+  /// </summary>
   TStartupUserItem = class(TStartupListItem)
   private
     FStartupUser: Boolean;
@@ -316,7 +389,12 @@ type
     property LnkFile: TLnkFile read FLnkFile write FLnkFile;
   end;
 
-  { TStartupList }
+  /// <summary>
+  ///   A <c>TStartupList</c> is the list that contains a set of
+  ///   <see cref="TStartupListItem"/>s. The list is thread-safe and supports
+  ///   locking. You can use the <see cref="IsLocked"/> method to see if the
+  ///   list is locked.
+  /// </summary>
   TStartupList = class(TRootList<TStartupListItem>, IImportableList)
   private
     FDeleteBackup: Boolean;
@@ -354,7 +432,11 @@ type
   { Exception class }
   EContextMenuException = class(Exception);
 
-  { TContextListItem }
+  /// <summary>
+  ///   A <c>TContextListItem</c> represents a basic context menu item that can
+  ///   be added to a <see cref="TContextList"/>. All context menu items are
+  ///   in the Registry.
+  /// </summary>
   TContextListItem = class(TRegistryItem)
   private
     function GetKeyPath(): string; virtual; abstract;
@@ -370,7 +452,10 @@ type
     property LocationRoot: string read FLocation write FLocation;
   end;
 
-  { TShellItem }
+  /// <summary>
+  ///   A <c>TShellItem</c> represents a shell context menu item that can be
+  ///   added to a <see cref="TContextList"/>. Those items are in plain-text.
+  /// </summary>
   TShellItem = class(TContextListItem)
   private
     function GetKeyPath(): string; override;
@@ -388,7 +473,11 @@ type
     function ToString(): string; override;
   end;
 
-  { TShellCascadingItem }
+  /// <summary>
+  ///   A <c>TShellItem</c> represents a shell cascading context menu item that
+  ///   can be added to a <see cref="TContextList"/>. Those items contain a
+  ///   set of shell context menu items.
+  /// </summary>
   TShellCascadingItem = class(TShellItem)
   private
     procedure GetSubCommands(var ASubCommands: TStrings);
@@ -400,7 +489,11 @@ type
     function ToString(): string; override;
   end;
 
-  { TShellExItem }
+  /// <summary>
+  ///   A <c>TShellItem</c> represents a shell extension context menu item that
+  ///   can be added to a <see cref="TContextList"/>. Those items are identified
+  ///   by a GUID.
+  /// </summary>
   TShellExItem = class(TContextListItem)
   private
     function ChangeStatus(ANewStatus: Boolean): Boolean; reintroduce; overload;
@@ -414,7 +507,11 @@ type
     function ToString(): string; override;
   end;
 
-  { TShellNewItem }
+  /// <summary>
+  ///   A <c>TShellNewItem</c> represents a shell new context menu item that
+  ///   can be added to a <see cref="TContextList"/>. Those items are shown
+  ///   in the background context menu "new".
+  /// </summary>
   TShellNewItem = class(TContextListItem)
   private
     function ChangeStatus(ANewStatus: Boolean): Boolean; reintroduce; overload;
@@ -434,7 +531,12 @@ type
     stShell, stShellEx, stShellNew
   );
 
-  { TContextList }
+  /// <summary>
+  ///   A <c>TContextList</c> is the list that contains a set of
+  ///   <see cref="TContextListItem"/>s. The list is thread-safe and supports
+  ///   locking. You can use the <see cref="IsLocked"/> method to see if the
+  ///   list is locked.
+  /// </summary>
   TContextList = class(TRootList<TContextListItem>)
   protected
     function AddCascadingShellItem(const AName, ALocationRoot, ACaption: string;
@@ -471,7 +573,10 @@ type
     function ToString(ALangFile: TLanguageFile): string;
   end;
 
-  { TServiceListItem }
+  /// <summary>
+  ///   A <c>TServiceListItem</c> represents a service item that can be added
+  ///   to a <see cref="TServiceList"/>.
+  /// </summary>
   TServiceListItem = class(TRegistryItem)
   private
     FServiceManager: SC_HANDLE;
@@ -500,7 +605,12 @@ type
     property Time: TDateTime read GetTime write FTime;
   end;
 
-  { TServiceList }
+  /// <summary>
+  ///   A <c>TServiceList</c> is the list that contains a set of
+  ///   <see cref="TServiceListItem"/>s. The list is thread-safe and supports
+  ///   locking. You can use the <see cref="IsLocked"/> method to see if the
+  ///   list is locked.
+  /// </summary>
   TServiceList = class(TRootList<TServiceListItem>)
   private
     FManager: SC_HANDLE;
@@ -522,7 +632,10 @@ type
   { Exception class }
   ETaskException = class(EOleError);
 
-  { TTaskItem }
+  /// <summary>
+  ///   A <c>TTaskListItem</c> represents a scheduled task item that can be
+  ///   added to a <see cref="TTaskList"/>.
+  /// </summary>
   TTaskListItem = class(TRootItem)
   private
     FTask: IRegisteredTask;
@@ -546,7 +659,12 @@ type
     property Definition: ITaskDefinition read GetTaskDefinition;
   end;
 
-  { TTaskList }
+  /// <summary>
+  ///   A <c>TTaskList</c> is the list that contains a set of
+  ///   <see cref="TTaskListItem"/>s. The list is thread-safe and supports
+  ///   locking. You can use the <see cref="IsLocked"/> method to see if the
+  ///   list is locked.
+  /// </summary>
   TTaskList = class(TRootList<TTaskListItem>, IImportableList)
   private
     FTaskService: ITaskService;
