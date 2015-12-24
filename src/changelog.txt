@@ -14,6 +14,7 @@ Version 4.3  [??.12.15]
 - Änderungen auf der Seite "Kontextmenü":
   - Kontextmenü-Einträge "Cascading", die ein Menü beinhalten, werden nun gefunden
 - "Umbenennen" ist nun auch über Tastenkürzel "F2" möglich
+- Deaktivierungsdatum kann nun auch ab Windows 8 angezeigt werden
 - Bug fixes:
   - "Umbenennen" zeigt nun initial den korrekten Text
   - Nach "Umbenennen" wird der neue Anzeigename aktualisiert, wenn "Beschreibung anzeigen" ausgewählt ist

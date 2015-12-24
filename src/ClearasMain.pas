@@ -2877,7 +2877,7 @@ begin
     0: begin
          mmAdd.Caption := FLang.GetString(LID_STARTUP_ADD);
          mmImport.Enabled := True;
-         mmDate.Enabled := ((Win32MajorVersion = 6) and (Win32MinorVersion < 2));
+         mmDate.Enabled := True;
          mmShowCaptions.Enabled := True;
          ShowColumnDate(lwStartup, (mmDate.Enabled and mmDate.Checked));
 

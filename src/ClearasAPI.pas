@@ -235,6 +235,18 @@ type
   { Exception class }
   EStartupException = class(Exception);
 
+const
+  { Possible values for TStartupItemStatus.Status }
+  ST_ENABLED  = $2;
+  ST_DISABLED = $3;
+
+type
+  { The item status since Windows 8 }
+  TStartupItemStatus = record
+    Status: UINT;
+    DeactivationTime: TFileTime;
+  end;
+
   { TStartupListItem }
   TStartupListItem = class(TRegistryItem)
   private
@@ -242,8 +254,10 @@ type
     FApprovedLocation,
     FTime: string;
   protected
-    function ChangeStatus(AKeyPath: string; var ANewStatus: TBytes): Boolean; reintroduce; overload;
+    function ChangeStatus(AKeyPath: string; var ANewStatus: TStartupItemStatus): Boolean; reintroduce; overload;
+    function DateTimeToFileTime(const AFileTime: TDateTime): TFileTime;
     function DeleteValue(AKeyPath: string; AReallyWow64: Boolean = True): Boolean;
+    function FileTimeToDateTime(const AFileTime: TFileTime): TDateTime;
     function GetFullLocation(): string; override;
     function GetRootKey(): HKEY; override;
     function Rename(const AKeyPath, ANewCaption: string;
@@ -1673,7 +1687,7 @@ end;
 
   Changes the status of a TStartupListItem object and returns True if successful. }
 
-function TStartupListItem.ChangeStatus(AKeyPath: string; var ANewStatus: TBytes): Boolean;
+function TStartupListItem.ChangeStatus(AKeyPath: string; var ANewStatus: TStartupItemStatus): Boolean;
 var
   Reg: TRegistry;
 
@@ -1689,13 +1703,30 @@ begin
     if not Reg.OpenKey(AKeyPath, False) then
       raise EStartupException.Create('Key '''+ AKeyPath +''' does not exist!');
 
-    Reg.WriteBinaryData(Name, ANewStatus[0], Length(ANewStatus));
-    Result := True;
+    Reg.WriteBinaryData(Name, ANewStatus, SizeOf(TStartupItemStatus));
+    Result := (Reg.LastError = ERROR_SUCCESS);
 
   finally
     Reg.CloseKey();
     Reg.Free;
   end;  //of try
+end;
+
+{ protected TStartupListItem.DateTimeToFileTime
+
+  Converts a TDateTime to a TFileTime. }
+
+function TStartupListItem.DateTimeToFileTime(const AFileTime: TDateTime): TFileTime;
+var
+  LocalFileTime: TFileTime;
+  SystemTime: TSystemTime;
+
+begin
+  Result.dwLowDateTime := 0;
+  Result.dwHighDateTime := 0;
+  DateTimeToSystemTime(AFileTime, SystemTime);
+  SystemTimeToFileTime(SystemTime, LocalFileTime);
+  LocalFileTimeToFileTime(LocalFileTime, Result);
 end;
 
 { protected TStartupListItem.Delete
@@ -1731,6 +1762,29 @@ begin
   finally
     Reg.CloseKey();
     Reg.Free;
+  end;  //of try
+end;
+
+{ protected TStartupListItem.FileTimeToDateTime
+
+  Converts a TFileTime to a TDateTime. }
+
+function TStartupListItem.FileTimeToDateTime(const AFileTime: TFileTime): TDateTime;
+var
+  ModifiedTime: TFileTime;
+  SystemTime: TSystemTime;
+
+begin
+  try
+    if ((AFileTime.dwLowDateTime = 0) and (AFileTime.dwHighDateTime = 0)) then
+      Abort;
+
+    FileTimeToLocalFileTime(AFileTime, ModifiedTime);
+    FileTimeToSystemTime(ModifiedTime, SystemTime);
+    Result := SystemTimeToDateTime(SystemTime);
+
+  except
+    Result := 0;
   end;  //of try
 end;
 
@@ -1846,19 +1900,19 @@ end;
 
 function TStartupListItem.Disable(): Boolean;
 var
-  Data: TBytes;
+  ItemStatus: TStartupItemStatus;
+  TimeNow: TDateTime;
 
 begin
   Result := False;
-  SetLength(Data, 12);
-  Data[0] := 3;
+  TimeNow := Now();
+  ItemStatus.Status := ST_DISABLED;
+  ItemStatus.DeactivationTime := DateTimeToFileTime(TimeNow);
 
-  // TODO: Check the binary coded data (maybe a timestamp)
-  //BinToHex(BytesOf(DateTimeToStr(Now())), 0, Data, 4, Length(Data) - 4);
-
-  if ChangeStatus(FApprovedLocation, Data) then
+  if ChangeStatus(FApprovedLocation, ItemStatus) then
   begin
     FEnabled := False;
+    FTime := DateTimeToStr(TimeNow);
     Result := True;
   end;  //of begin
 end;
@@ -1869,16 +1923,16 @@ end;
 
 function TStartupListItem.Enable(): Boolean;
 var
-  Data: TBytes;
+  ItemStatus: TStartupItemStatus;
 
 begin
   Result := False;
-  SetLength(Data, 12);
-  Data[0] := 2;
+  ItemStatus.Status := ST_ENABLED;
 
-  if ChangeStatus(FApprovedLocation, Data) then
+  if ChangeStatus(FApprovedLocation, ItemStatus) then
   begin
     FEnabled := True;
+    FTime := '';
     Result := True;
   end;  //of begin
 end;
@@ -3297,7 +3351,7 @@ var
   i: Integer;
   Items: TStringList;
   Item: TStartupListItem;
-  Data: TBytes;
+  ItemStatus: TStartupItemStatus;
 
 begin
   Items := TStringList.Create;
@@ -3316,9 +3370,14 @@ begin
 
       if (Items.IndexOf(Item.Name) <> -1) then
       begin
-        SetLength(Data, Reg.GetDataSize(Item.Name));
-        Reg.ReadBinaryData(Item.Name, Data[0], Length(Data));
-        Item.Enabled := (Data[0] = 2);
+        if (Reg.GetDataSize(Item.Name) <> SizeOf(TStartupItemStatus)) then
+          Continue;
+
+        Reg.ReadBinaryData(Item.Name, ItemStatus, SizeOf(TStartupItemStatus));
+        Item.Enabled := (ItemStatus.Status = ST_ENABLED);
+
+        if not Item.Enabled then
+          Item.Time := DateTimeToStr(Item.FileTimeToDateTime(ItemStatus.DeactivationTime));
       end;  //of begin
     end;  //of for
 
