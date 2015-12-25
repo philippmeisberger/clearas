@@ -167,7 +167,7 @@ type
   protected
     function DeleteKey(AHKey: HKEY; AKeyPath, AKeyName: string;
       AFailIfNotExists: Boolean = True): Boolean;
-    function GetRootKey(): HKEY; virtual; abstract;
+    function GetRootKey(): TRootKey; virtual; abstract;
     function GetWow64Key(): string;
     procedure OpenInRegEdit(AWow64: Boolean); overload;
     function WriteTimestamp(AReg: TRegistry): TDateTime;
@@ -177,7 +177,7 @@ type
     function GetTimestamp(AReg: TRegistry): TDateTime;
     procedure OpenInRegEdit(); overload; virtual;
     { external }
-    property RootKey: HKEY read GetRootKey;
+    property RootKey: TRootKey read GetRootKey;
     property Wow64: Boolean read FWow64;
     property Wow64Location: string read GetWow64Key;
   end;
@@ -316,9 +316,9 @@ type
   /// </summary>
   TStartupListItem = class(TRegistryItem)
   private
-    FRootKey: HKEY;
     FApprovedLocation: string;
     FTime: TDateTime;
+    FRootKey: TRootKey;
     function GetTime(): TDateTime;
   protected
     function ChangeStatus(AKeyPath: string; var ANewStatus: TStartupItemStatus): Boolean; reintroduce; overload;
@@ -326,7 +326,7 @@ type
     function DeleteValue(AKeyPath: string; AReallyWow64: Boolean = True): Boolean;
     function FileTimeToDateTime(const AFileTime: TFileTime): TDateTime;
     function GetFullLocation(): string; override;
-    function GetRootKey(): HKEY; override;
+    function GetRootKey(): TRootKey; override;
     function Rename(const AKeyPath, ANewCaption: string;
       AReallyWow64: Boolean = True): Boolean; reintroduce; overload;
   public
@@ -340,7 +340,7 @@ type
     function ToString(): string; override;
     { external }
     property LocationApproved: string read FApprovedLocation write FApprovedLocation;
-    property RootKey: HKEY read GetRootKey write FRootKey;
+    property RootKey: TRootKey read GetRootKey write FRootKey;
     property Time: TDateTime read GetTime write FTime;
   end;
 
@@ -402,7 +402,7 @@ type
     function GetFileDescription(const AFileName: string): string;
   protected
     function AddItemDisabled(AReg: TRegistry; AWow64: Boolean): Integer; deprecated 'Since Windows 8';
-    function AddItem(AHKey: HKEY; AKeyPath, AName, AFileName: string; AWow64,
+    function AddItem(ARootKey: TRootKey; AKeyPath, AName, AFileName: string; AWow64,
       ARunOnce: Boolean): Integer;
     function AddNewStartupUserItem(AName, AFilePath: string; AArguments: string = '';
       ACommonStartup: Boolean = False): Boolean;
@@ -417,13 +417,13 @@ type
     function EnableItem(): Boolean; override;
     procedure ExportList(const AFileName: string); override;
     function GetImportFilter(ALanguageFile: TLanguageFile): string;
-    function ImportBackup(const AFileName: string): Boolean;
+    function ImportBackup(const AFileName: TFileName): Boolean;
     procedure Load(AExpertMode: Boolean = False); override;
     procedure LoadDisabled(AStartupUser: Boolean; AWow64: Boolean = False); deprecated 'Since Windows 8';
     procedure LoadStartup(ACommonStartup: Boolean); overload;
-    procedure LoadStartup(AHKey: HKEY; ARunOnce: Boolean = False;
+    procedure LoadStartup(ARootKey: TRootKey; ARunOnce: Boolean = False;
       AWow64: Boolean = False); overload;
-    procedure LoadStatus(AHKey: HKEY; AKeyPath: string);
+    procedure LoadStatus(ARootKey: TRootKey; AKeyPath: string);
     procedure RefreshCounter();
     { external }
     property DeleteBackup: Boolean read FDeleteBackup write FDeleteBackup;
@@ -442,7 +442,7 @@ type
     function GetKeyPath(): string; virtual; abstract;
   protected
     function GetFullLocation(): string; override;
-    function GetRootKey(): HKEY; override;
+    function GetRootKey(): TRootKey; override;
   public
     function Delete(): Boolean; override;
     function DeleteUserChoice(AFileExtension: string): Boolean;
@@ -587,7 +587,7 @@ type
     function GetTime(): TDateTime;
   protected
     function GetFullLocation(): string; override;
-    function GetRootKey(): HKEY; override;
+    function GetRootKey(): TRootKey; override;
   public
     constructor Create(AIndex: Word; AEnabled: Boolean;
       AServiceManager: SC_HANDLE);
@@ -676,7 +676,7 @@ type
     procedure ExportList(const AFileName: string); override;
     function GetExportFilter(ALanguageFile: TLanguageFile): string; override;
     function GetImportFilter(ALanguageFile: TLanguageFile): string;
-    function ImportBackup(const AFileName: string): Boolean;
+    function ImportBackup(const AFileName: TFileName): Boolean;
     procedure Load(AExpertMode: Boolean = False); override;
     procedure LoadTasks(ATaskFolder: ITaskFolder; AIncludeHidden: Boolean); overload;
     procedure LoadTasks(APath: string = '\'; ARecursive: Boolean = False;
@@ -1825,7 +1825,7 @@ begin
   Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
 
   try
-    Reg.RootKey := FRootKey;
+    Reg.RootKey := FRootKey.ToHKey();
 
     if not Reg.OpenKey(AKeyPath, False) then
       raise EStartupException.Create('Key '''+ AKeyPath +''' does not exist!');
@@ -1874,7 +1874,7 @@ begin
     Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
 
   try
-    Reg.RootKey := FRootKey;
+    Reg.RootKey := FRootKey.ToHKey();
 
     // Key invalid?
     if not Reg.OpenKey(AKeyPath, False) then
@@ -1921,14 +1921,14 @@ end;
 
 function TStartupListItem.GetFullLocation(): string;
 begin
-  Result := HKeyToStr(FRootKey) +'\'+ FLocation;
+  Result := FRootKey.ToString() +'\'+ FLocation;
 end;
 
 { protected TStartupListItem.GetRootKey
 
   Returns the HKEY of an TStartupListItem. }
 
-function TStartupListItem.GetRootKey(): HKEY;
+function TStartupListItem.GetRootKey(): TRootKey;
 begin
   Result := FRootKey;
 end;
@@ -1951,7 +1951,7 @@ begin
     Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
 
   try
-    Reg.RootKey := FRootKey;
+    Reg.RootKey := FRootKey.ToHKey();
 
     if not Reg.OpenKey(AKeyPath, False) then
       raise EStartupException.Create('Key does not exist!');
@@ -1986,7 +1986,7 @@ begin
     Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
 
   try
-    Reg.RootKey := FRootKey;
+    Reg.RootKey := FRootKey.ToHKey();
 
     // Invalid key?
     if not Reg.OpenKey(FLocation, False) then
@@ -2078,14 +2078,14 @@ begin
   try
     if (FEnabled or CheckWin32Version(6, 2)) then
     begin
-      RegFile.ExportReg(FRootKey, GetWow64Key(), Name);
+      RegFile.ExportReg(FRootKey.ToHKey(), GetWow64Key(), Name);
 
       // Windows 8?
       if CheckWin32Version(6, 2) then
-        RegFile.ExportReg(FRootKey, FApprovedLocation, Name);
+        RegFile.ExportReg(FRootKey.ToHKey(), FApprovedLocation, Name);
     end  //of begin
     else
-      RegFile.ExportReg(FRootKey, FLocation, False);
+      RegFile.ExportReg(FRootKey.ToHKey(), FLocation, False);
 
   finally
     RegFile.Free;
@@ -2138,7 +2138,7 @@ begin
     end;  //of try
   end  //of begin
   else
-    Result := HKeyToStr(RootKey, False);
+    Result := RootKey.ToString(False);
 
   if Wow64 then
     Result := Result +'32';
@@ -2209,7 +2209,8 @@ begin
     end;  //of begin
 
     // Write values
-    Reg.WriteString('hkey', HKeyToStr(FRootKey, False));
+    RootKey.FromHKey(FRootKey.ToHKey());
+    Reg.WriteString('hkey', RootKey.ToString(False));
     Reg.WriteString('key', FLocation);
     Reg.WriteString('item', Name);
     Reg.WriteString('command', FileName);
@@ -2227,7 +2228,7 @@ begin
     if FWow64 then
       Reg.Access := KEY_WOW64_32KEY or KEY_READ or KEY_WRITE;
 
-    Reg.RootKey := FRootKey;
+    Reg.RootKey := FRootKey.ToHKey();
     Reg.OpenKey(FLocation, False);
 
     // Delete old value, but do not fail if old value does not exist!
@@ -2235,7 +2236,7 @@ begin
       raise EStartupException.Create('Could not delete value!');
 
     // Update information
-    FRootKey := HKEY_LOCAL_MACHINE;
+    FRootKey := rkHKLM;
     FLocation := KEY_STARTUP_DISABLED + Name;
     FEnabled := False;
     Result := True;
@@ -2277,10 +2278,10 @@ begin
         +'''hkey'' or ''key''!');
 
     // Set new values
-    NewHKey := TRootKey(Reg.ReadString('hkey'));
+    NewHKey.FromString(Reg.ReadString('hkey'));
     NewKeyPath := Reg.ReadString('key');
 
-    if ((NewHKey = '') or (NewKeyPath = '')) then
+    if ((NewKeyPath = '') or (NewHKey = rkUnknown)) then
       raise EStartupException.Create('Invalid destination Registry values for '
         +'hkey or key!');
 
@@ -2300,7 +2301,7 @@ begin
     else
       Reg.Access := Access64 or KEY_WRITE;
 
-    Reg.RootKey := StrToHKey(NewHKey);
+    Reg.RootKey := NewHKey.ToHKey();
 
     // Failed to create new key?
     if not Reg.OpenKey(NewKeyPath, True) then
@@ -2322,7 +2323,7 @@ begin
       raise EStartupException.Create('Could not delete old key '''+ Name +'''!');
 
     // Update information
-    FRootKey := StrToHKey(NewHKey);
+    FRootKey := NewHKey;
     FLocation := NewKeyPath;
     FEnabled := True;
     FTime := 0;
@@ -2360,14 +2361,14 @@ begin
   Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
 
   try
-    Reg.RootKey := FRootKey;
+    Reg.RootKey := FRootKey.ToHKey();
 
     if not Reg.OpenKey(FLocation, False) then
       raise EStartupException.Create('Key does not exist!');
 
     if not FEnabled then
     begin
-      if (FRootKey <> HKEY_LOCAL_MACHINE) then
+      if (FRootKey <> rkHKLM) then
         raise EStartupException.Create('Wrong HKEY!');
 
       Reg.WriteString('item', ANewCaption);
@@ -2448,7 +2449,7 @@ begin
   else
     // Windows 8?
     if CheckWin32Version(6, 2) then
-      Result := HKeyToStr(FRootKey) +'\'+ LocationApproved
+      Result := FRootKey.ToString() +'\'+ LocationApproved
     else
       Result := inherited GetFullLocation();
 end;
@@ -2582,7 +2583,7 @@ begin
 
     // Update information
     FLocation := KEY_STARTUP_USER_DISABLED + KeyName;
-    FRootKey := HKEY_LOCAL_MACHINE;
+    FRootKey := rkHKLM;
     FEnabled := False;
     Result := True;
 
@@ -2624,7 +2625,7 @@ begin
 
   // Update information
   FLocation := FLnkFile.FileName;
-  FRootKey := 0;
+  FRootKey := rkUnknown;
   FEnabled := True;
   Result := True;
 end;
@@ -2854,7 +2855,7 @@ begin
   try
     with Item do
     begin
-      RootKey := HKEY_LOCAL_MACHINE;
+      RootKey := rkHKLM;
       Location := AReg.CurrentPath;
       Name := ExtractFileName(Location);
       FileName := AReg.ReadString('command');
@@ -2874,7 +2875,7 @@ end;
 
   Adds a enabled default startup item to the list. }
 
-function TStartupList.AddItem(AHKey: HKEY; AKeyPath, AName, AFileName: string;
+function TStartupList.AddItem(ARootKey: TRootKey; AKeyPath, AName, AFileName: string;
   AWow64, ARunOnce: Boolean): Integer;
 var
   Item: TStartupItem;
@@ -2883,12 +2884,12 @@ begin
   Item := TStartupItem.Create(Count, True, AWow64, ARunOnce);
 
   try
-    if ((AHKey <> HKEY_LOCAL_MACHINE) and (AHKey <> HKEY_CURRENT_USER)) then
+    if not (ARootKey in [rkHKLM, rkHKCU]) then
       raise EStartupException.Create('Invalid startup key!');
 
     with Item do
     begin
-      RootKey := AHKey;
+      RootKey := ARootKey;
       Location := AKeyPath;
       Name := AName;
       FileName := AFileName;
@@ -2987,7 +2988,7 @@ begin
   try
     with (Item as TStartupUserItem) do
     begin
-      RootKey := HKEY_LOCAL_MACHINE;
+      RootKey := rkHKLM;
       Location := AReg.CurrentPath;
       Name := ExtractFileName(StringReplace(Location, '^', '\', [rfReplaceAll]));
       FileName := AReg.ReadString('command');
@@ -3047,15 +3048,15 @@ begin
       if CheckWin32Version(6, 2) then
       begin
         if ACommonStartup then
-          RootKey := HKEY_LOCAL_MACHINE
+          RootKey := rkHKLM
         else
-          RootKey := HKEY_CURRENT_USER;
+          RootKey := rkHKCU;
 
         LocationApproved := KEY_STARTUP_USER_APPROVED;
       end  //of begin
       else
       begin
-        RootKey := 0;
+        RootKey := rkUnknown;
         Inc(FActCount);
       end;  //of if
     end;  //of with
@@ -3127,8 +3128,7 @@ begin
         Reg.WriteString(ACaption, FullPath);
 
         // Adds item to list
-        if (AddItem(HKEY_CURRENT_USER, KEY_STARTUP_RUN, ACaption, FullPath,
-          False, False) <> -1) then
+        if (AddItem(rkHKCU, KEY_STARTUP_RUN, ACaption, FullPath, False, False) <> -1) then
         begin
           // Windows 8?
           if CheckWin32Version(6, 2) then
@@ -3231,7 +3231,7 @@ begin
       if ((Item is TStartupUserItem) and (Item.Enabled or Win8)) then
         Continue;
 
-      RegFile.ExportKey(Item.RootKey, Item.Wow64Location, True);
+      RegFile.ExportKey(Item.RootKey.ToHKey(), Item.Wow64Location, True);
     end;  //of for
 
     // Windows 8?
@@ -3254,7 +3254,7 @@ end;
 
   Imports a startup user backup file and adds it to the list. }
 
-function TStartupList.ImportBackup(const AFileName: string): Boolean;
+function TStartupList.ImportBackup(const AFileName: TFileName): Boolean;
 var
   Name, Ext: string;
   i: Integer;
@@ -3431,7 +3431,7 @@ end;
 
   Searches for enabled items in ARootKey and AKeyPath and adds them to the list. }
 
-procedure TStartupList.LoadStartup(AHKey: HKEY; ARunOnce: Boolean = False;
+procedure TStartupList.LoadStartup(ARootKey: TRootKey; ARunOnce: Boolean = False;
   AWow64: Boolean = False);
 var
   Reg: TRegistry;
@@ -3455,13 +3455,13 @@ begin
     KeyPath := KEY_STARTUP_RUN;
 
   try
-    Reg.RootKey := AHKey;
+    Reg.RootKey := ARootKey.ToHKey();
     Reg.OpenKey(KeyPath, False);
     Reg.GetValueNames(Items);
 
     for i := 0 to Items.Count - 1 do
       // Read path to .exe and add item to list
-      AddItem(AHKey, KeyPath, Items[i], Reg.ReadString(Items[i]), AWow64, ARunOnce);
+      AddItem(ARootKey, KeyPath, Items[i], Reg.ReadString(Items[i]), AWow64, ARunOnce);
 
   finally
     Reg.CloseKey();
@@ -3474,7 +3474,7 @@ end;
 
   Loads and refreshes the status of all list items (since Windows 8). }
 
-procedure TStartupList.LoadStatus(AHKey: HKEY; AKeyPath: string);
+procedure TStartupList.LoadStatus(ARootKey: TRootKey; AKeyPath: string);
 var
   Reg: TRegistry;
   i: Integer;
@@ -3483,13 +3483,16 @@ var
   ItemStatus: TStartupItemStatus;
 
 begin
+  if not (ARootKey in [rkHKCU, rkHKLM]) then
+    Exit;
+
   Items := TStringList.Create;
 
   // Status is stored in 64-Bit registry
   Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ);
 
   try
-    Reg.RootKey := AHKey;
+    Reg.RootKey := ARootKey.ToHKey();
     Reg.OpenKey(AKeyPath, False);
     Reg.GetValueNames(Items);
 
@@ -3548,16 +3551,16 @@ end;
 
 function TContextListItem.GetFullLocation(): string;
 begin
-  Result := 'HKEY_CLASSES_ROOT\'+ GetKeyPath();
+  Result := GetRootKey().ToString() +'\'+ GetKeyPath();
 end;
 
 { protected TContextListItem.GetRootKey
 
   Returns the HKEY of an TContextListItem. }
 
-function TContextListItem.GetRootKey(): HKEY;
+function TContextListItem.GetRootKey(): TRootKey;
 begin
-  Result := HKEY_CLASSES_ROOT;
+  Result := rkHKCR;
 end;
 
 { public TContextListItem.Delete
@@ -4910,16 +4913,16 @@ end;
 
 function TServiceListItem.GetFullLocation(): string;
 begin
-  Result := 'HKEY_LOCAL_MACHINE\'+ GetLocation();
+  Result := GetRootKey().ToString() +'\'+ GetLocation();
 end;
 
 { protected TServiceListItem.GetRootKey
 
   Returns the HKEY of an TServiceListItem. }
 
-function TServiceListItem.GetRootKey(): HKEY;
+function TServiceListItem.GetRootKey(): TRootKey;
 begin
-  Result := HKEY_LOCAL_MACHINE;
+  Result := rkHKLM;
 end;
 
 { public TServiceListItem.ChangeFilePath
@@ -5831,7 +5834,7 @@ end;
 
   Imports an exported task item as .xml file and adds it to the list. }
 
-function TTaskList.ImportBackup(const AFileName: string): Boolean;
+function TTaskList.ImportBackup(const AFileName: TFileName): Boolean;
 var
   Ext, Path: string;
   TaskFolder: ITaskFolder;

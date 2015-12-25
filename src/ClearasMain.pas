@@ -2343,17 +2343,13 @@ end;
 procedure TMain.pmCopyLocationClick(Sender: TObject);
 var
   Item: TRootItem;
-  RootKey: string;
 
 begin
   try
     Item := GetSelectedItem();
 
     if (Item is TStartupItem) then
-    begin
-      RootKey := HKeyToStr((Item as TStartupItem).RootKey);
-      Clipboard.AsText := RootKey +'\'+ (Item as TStartupItem).Wow64Location;
-    end  //of begin
+      Clipboard.AsText := TStartupItem(Item).RootKey.ToString() +'\'+ TStartupItem(Item).Wow64Location
     else
       Clipboard.AsText := Item.LocationFull;
 

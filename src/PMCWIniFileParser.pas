@@ -1,6 +1,6 @@
 { *********************************************************************** }
 {                                                                         }
-{ PM Code Works Initialization file parser Unit v1.2.1                    }
+{ PM Code Works Initialization file parser Unit v1.2.2                    }
 {                                                                         }
 { Copyright (c) 2011-2015 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
@@ -16,7 +16,7 @@ uses
 {$IFDEF MSWINDOWS}
   Windows, Registry,
 {$ENDIF}
-  Classes, SysUtils, StrUtils, PMCWOSUtils;
+  Classes, SysUtils, StrUtils;
 
 {$IFDEF MSWINDOWS}
 const
@@ -1180,8 +1180,19 @@ end;
   Returns the concat of AHKEY and AKeyPath. }
 
 function TRegistryFile.GetSection(AHKey: HKEY; AKeyPath: string): string;
+var
+  Reg: TRegistry;
+
 begin
-  Result := ExcludeTrailingPathDelimiter(HKeyToStr(AHKey) +'\'+ AKeyPath);
+  Reg := TRegistry.Create;
+
+  try
+    Reg.RootKey := AHKey;
+    Result := ExcludeTrailingPathDelimiter(Reg.RootKeyName +'\'+ AKeyPath);
+
+  finally
+    Reg.Free;
+  end;  //of try
 end;
 
 { public TRegistryFile.MakeHeadline

@@ -13,7 +13,8 @@ unit StartupSearchThread;
 interface
 
 uses
-  Windows, Classes, SysUtils, SyncObjs, ClearasSearchThread, ClearasAPI;
+  Windows, Classes, SysUtils, SyncObjs, ClearasSearchThread, ClearasAPI,
+  PMCWOSUtils;
 
 type
   { TStartupSearchThread }
@@ -22,7 +23,7 @@ type
     FIncludeRunOnce,
     FWin64: Boolean;
     procedure LoadEnabled(AAllUsers: Boolean); overload;
-    procedure LoadEnabled(AHKey: HKEY; ARunOnce: Boolean = False;
+    procedure LoadEnabled(ARootKey: TRootKey; ARunOnce: Boolean = False;
       AWow64: Boolean = False); overload;
     procedure LoadDisabled(AStartupUser: Boolean; AIncludeWow64: Boolean = False);
   protected
@@ -62,11 +63,11 @@ end;
 
   Searches for enabled startup items and adds them to the list. }
 
-procedure TStartupSearchThread.LoadEnabled(AHKey: HKEY;
+procedure TStartupSearchThread.LoadEnabled(ARootKey: TRootKey;
   ARunOnce: Boolean = False; AWow64: Boolean = False);
 begin
   Synchronize(DoNotifyOnSearching);
-  TStartupList(FSelectedList).LoadStartup(AHKey, ARunOnce, AWow64);
+  TStartupList(FSelectedList).LoadStartup(ARootKey, ARunOnce, AWow64);
 end;
 
 { private TStartupSearchThread.LoadDisabled
@@ -112,23 +113,23 @@ begin
       Synchronize(DoNotifyOnStart);
 
       // Start loading...
-      LoadEnabled(HKEY_LOCAL_MACHINE);
+      LoadEnabled(rkHKLM);
 
       // Load WOW6432 Registry key only on 64bit Windows
       if FWin64 then
-        LoadEnabled(HKEY_LOCAL_MACHINE, False, True);
+        LoadEnabled(rkHKLM, False, True);
 
-      LoadEnabled(HKEY_CURRENT_USER);
+      LoadEnabled(rkHKCU);
 
       // Read RunOnce entries?
       if FIncludeRunOnce then
       begin
-        LoadEnabled(HKEY_LOCAL_MACHINE, True);
-        LoadEnabled(HKEY_CURRENT_USER, True);
+        LoadEnabled(rkHKLM, True);
+        LoadEnabled(rkHKCU, True);
 
         // Load WOW6432 Registry keys only on 64bit Windows
         if FWin64 then
-          LoadEnabled(HKEY_LOCAL_MACHINE, True, True);
+          LoadEnabled(rkHKLM, True, True);
       end;  //of begin
 
       // Load WOW6432 Registry key only on 64-Bit Windows (deprecated since Windows 8!)
@@ -145,14 +146,14 @@ begin
         begin
           if FWin64 then
           begin
-            LoadStatus(HKEY_CURRENT_USER, KEY_STARTUP_RUN32_APPROVED);
-            LoadStatus(HKEY_LOCAL_MACHINE, KEY_STARTUP_RUN32_APPROVED);
+            LoadStatus(rkHKCU, KEY_STARTUP_RUN32_APPROVED);
+            LoadStatus(rkHKLM, KEY_STARTUP_RUN32_APPROVED);
           end;  //of begin
 
-          LoadStatus(HKEY_LOCAL_MACHINE, KEY_STARTUP_USER_APPROVED);
-          LoadStatus(HKEY_CURRENT_USER, KEY_STARTUP_USER_APPROVED);
-          LoadStatus(HKEY_CURRENT_USER, KEY_STARTUP_RUN_APPROVED);
-          LoadStatus(HKEY_LOCAL_MACHINE, KEY_STARTUP_RUN_APPROVED);
+          LoadStatus(rkHKLM, KEY_STARTUP_USER_APPROVED);
+          LoadStatus(rkHKCU, KEY_STARTUP_USER_APPROVED);
+          LoadStatus(rkHKCU, KEY_STARTUP_RUN_APPROVED);
+          LoadStatus(rkHKLM, KEY_STARTUP_RUN_APPROVED);
           RefreshCounter();
         end;  //of begin
 

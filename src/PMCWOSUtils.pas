@@ -1,6 +1,6 @@
 { *********************************************************************** }
 {                                                                         }
-{ PM Code Works Operating System Utilities Unit v2.2.5                    }
+{ PM Code Works Operating System Utilities Unit v2.3                      }
 {                                                                         }
 { Copyright (c) 2011-2015 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
@@ -37,9 +37,72 @@ type
   EArgumentException = class(Exception);
 {$ELSE}
   /// <summary>
-  ///   The four letter short spelling of a <c>HKEY</c> string representation.
+  ///   The root <c>HKEY</c>s used in the Windows Registry.
   /// </summary>
-  TRootKey = string[4];
+  TRootKey = (
+    /// <summary>
+    ///   Unknown <c>HKEY</c>.
+    /// </summary>
+    rkUnknown,
+    /// <summary>
+    ///   HKEY_CURRENT_USER
+    /// </summary>
+    rkHKCU,
+    /// <summary>
+    ///   HKEY_LOCAL_MACHINE
+    /// </summary>
+    rkHKLM,
+    /// <summary>
+    ///   HKEY_CLASSES_ROOT
+    /// </summary>
+    rkHKCR,
+    /// <summary>
+    ///   HKEY_USERS
+    /// </summary>
+    rkHKU,
+    /// <summary>
+    ///   HKEY_CURRENT_CONFIG
+    /// </summary>
+    rkHKCC
+  );
+
+  TRootKeyHelper = record helper for TRootKey
+    /// <summary>
+    ///   Converts a <c>HKEY</c> into a <see cref="TRootKey"/>.
+    /// </summary>
+    /// <param name="AHKey">
+    ///   The <c>HKEY</c>.
+    /// </param>
+    procedure FromHKey(AHKey: HKEY);
+
+    /// <summary>
+    ///   Converts a <c>HKEY</c> short string representation into a <see cref="TRootKey"/>.
+    /// </summary>
+    /// <param name="AHKey">
+    ///   The <c>HKEY</c>.
+    /// </param>
+    procedure FromString(AShortHKey: string);
+
+    /// <summary>
+    ///   Gets the string representation.
+    /// </summary>
+    /// <param name="ALongFormat">
+    ///   If set to <c>True</c> the complete string representaion is returned.
+    ///   Otherwise only the four main letters e.g. HKLM are returned.
+    /// </param>
+    /// <returns>
+    ///   The string representation.
+    /// </returns>
+    function ToString(ALongFormat: Boolean = True): string;
+
+    /// <summary>
+    ///   Gets the <c>HKEY</c> representation.
+    /// </summary>
+    /// <returns>
+    ///   The <c>HKEY</c>.
+    /// </returns>
+    function ToHKey(): HKEY;
+  end;
 
   /// <summary>
   ///   Creates an new folder in the temporay directory.
@@ -167,24 +230,6 @@ type
   ///   The path.
   /// </returns>
   function GetTempDir(): string;
-
-  /// <summary>
-  ///   Converts a <c>HKEY</c> into its string representation.
-  /// </summary>
-  /// <param name="AHKey">
-  ///   The <c>HKEY</c>.
-  /// </param>
-  /// <param name="ALongFormat">
-  ///   If set to <c>True</c> the complete string representaion is returned.
-  ///   Otherwise only the four main letters e.g. HKLM are returned.
-  /// </param>
-  /// <returns>
-  ///   The string representation.
-  /// </returns>
-  /// <remarks>
-  ///   Raises a <see cref="EArgumentException"/> if the <c>HKEY</c> is invalid.
-  /// </remarks>
-  function HKeyToStr(AHKey: HKey; ALongFormat: Boolean = True): string;
 {$ENDIF}
 
   /// <summary>
@@ -198,20 +243,6 @@ type
   /// </returns>
   function OpenUrl(const AUrl: string): Boolean;
 {$IFDEF MSWINDOWS}
-  /// <summary>
-  ///   Converts short <c>HKEY</c> string representation into real <c>HKEY</c> type.
-  /// </summary>
-  /// <param name="ARootKey">
-  ///    A <see cref="TRootKey"/> short string.
-  /// </param>
-  /// <returns>
-  ///   The <c>HKEY</c>.
-  /// </returns>
-  /// <remarks>
-  ///   Raises a <see cref="EArgumentException"/> if the root key is invalid.
-  /// </remarks>
-  function StrToHKey(const ARootKey: TRootKey): HKEY;
-
   /// <summary>
   ///   Disables or reverts the WOW64 filesystem redirection on 64-bit Windows.
   /// </summary>
@@ -408,60 +439,6 @@ begin
   if ExpandEnvironmentVar(Path) then
     Result := IncludeTrailingBackslash(Path);
 end;
-
-function HKeyToStr(AHKey: HKey; ALongFormat: Boolean = True): string;
-begin
-  // DONE: Using a case leads to warning W1012
-  if (AHKey = HKEY_CLASSES_ROOT) then
-  begin
-    if ALongFormat then
-      Result := 'HKEY_CLASSES_ROOT'
-    else
-      Result := 'HKCR';
-  end  //of begin
-  else
-  if (AHKey = HKEY_CURRENT_USER) then
-  begin
-    if ALongFormat then
-      Result := 'HKEY_CURRENT_USER'
-    else
-      Result := 'HKCU';
-  end  //of begin
-  else
-  if (AHKey = HKEY_LOCAL_MACHINE) then
-  begin
-    if ALongFormat then
-      Result := 'HKEY_LOCAL_MACHINE'
-    else
-      Result := 'HKLM';
-  end  //of begin
-  else
-  if (AHKey = HKEY_USERS) then
-  begin
-    if ALongFormat then
-      Result := 'HKEY_USERS'
-    else
-      Result := 'HKU';
-  end  //of begin
-  else
-  if (AHKey = HKEY_PERFORMANCE_DATA) then
-  begin
-    if ALongFormat then
-      Result := 'HKEY_PERFORMANCE_DATA'
-    else
-      Result := 'HKPD';
-  end  //of begin
-  else
-  if (AHKey = HKEY_CURRENT_CONFIG) then
-  begin
-    if ALongFormat then
-      Result := 'HKEY_CURRENT_CONFIG'
-    else
-      Result := 'HKCC';
-  end  //of begin
-  else
-    raise EArgumentException.Create('Unknown HKEY!');
-end;
 {$ENDIF}
 
 function OpenUrl(const AUrl: string): Boolean;
@@ -502,29 +479,6 @@ begin
 end;
 
 {$IFDEF MSWINDOWS}
-function StrToHKey(const ARootKey: TRootKey): HKEY;
-begin
-  if (ARootKey = 'HKCR') then
-    Result := HKEY_CLASSES_ROOT
-  else
-    if (ARootKey = 'HKCU') then
-      Result := HKEY_CURRENT_USER
-    else
-      if (ARootKey = 'HKLM') then
-        Result := HKEY_LOCAL_MACHINE
-      else
-        if (ARootKey = 'HKU') then
-          Result := HKEY_USERS
-        else
-          if (ARootKey = 'HKPD') then
-            Result := HKEY_PERFORMANCE_DATA
-          else
-            if (ARootKey = 'HKCC') then
-              Result := HKEY_CURRENT_CONFIG
-            else
-              raise EArgumentException.Create('Unknown HKEY: "'+ string(ARootKey) +'"!');
-end;
-
 function Wow64FsRedirection(A64Bit: Boolean = True): Boolean;
 {$IFDEF WIN32}
 type
@@ -587,6 +541,86 @@ begin
     // Enable redirection to 64 Bit registry hive
     Result := Result or KEY_WOW64_64KEY;
 {$ENDIF}
+end;
+
+{ TRootKeyHelper }
+const
+  cShortHKeys: array[TRootKey] of string = (
+    '',
+    'HKCU',
+    'HKLM',
+    'HKCR',
+    'HKU',
+    'HKCC'
+  );
+
+  cLongHKeys: array[TRootKey] of string = (
+    '',
+    'HKEY_CURRENT_USER',
+    'HKEY_LOCAL_MACHINE',
+    'HKEY_CLASSES_ROOT',
+    'HKEY_USERS',
+    'HKEY_CURRENT_CONFIG'
+  );
+
+procedure TRootKeyHelper.FromHKey(AHKey: HKEY);
+begin
+  if (AHKey = HKEY_CURRENT_USER) then
+    Self := rkHKCU
+  else
+  if (AHKey = HKEY_LOCAL_MACHINE) then
+    Self := rkHKLM
+  else
+  if (AHKey = HKEY_CLASSES_ROOT) then
+    Self := rkHKCR
+  else
+  if (AHKey = HKEY_USERS) then
+    Self := rkHKU
+  else
+  if (AHKey = HKEY_CURRENT_CONFIG) then
+    Self := rkHKCC
+  else
+    raise EArgumentException.Create('Unknown HKEY!');
+end;
+
+procedure TRootKeyHelper.FromString(AShortHKey: string);
+var
+  RootKey, FoundKey: TRootKey;
+
+begin
+  FoundKey := rkUnknown;
+
+  for RootKey := Low(cShortHKeys) to High(cShortHKeys) do
+    if (cShortHKeys[RootKey] = AShortHKey) then
+    begin
+      FoundKey := RootKey;
+      Break;
+    end;  //of begin
+
+  if (FoundKey = rkUnknown) then
+    raise EArgumentException.Create('Unknown HKEY: "'+ AShortHKey +'"!');
+
+  Self := FoundKey;
+end;
+
+function TRootKeyHelper.ToHKey(): HKEY;
+begin
+  case Self of
+    rkHKCU: Result := HKEY_CURRENT_USER;
+    rkHKLM: Result := HKEY_LOCAL_MACHINE;
+    rkHKCR: Result := HKEY_CLASSES_ROOT;
+    rkHKU:  Result := HKEY_USERS;
+    rkHKCC: Result := HKEY_CURRENT_CONFIG;
+    else    raise EArgumentException.Create('Unknown HKEY!');
+  end;  //of case
+end;
+
+function TRootKeyHelper.ToString(ALongFormat: Boolean = True): string;
+begin
+  if ALongFormat then
+    Result := cLongHKeys[Self]
+  else
+    Result := cShortHKeys[Self];
 end;
 {$ENDIF}
 
