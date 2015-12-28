@@ -1501,7 +1501,7 @@ begin
       DefaultExt := '.reg';
 
     FileName := FileName + DefaultExt;
-    Filter := FContext.Selected.GetExportFilter(FLang);
+    Filter := SelectedList.Selected.GetExportFilter(FLang);
 
     // Show save dialog
     if PromptForFileName(FileName, Filter, DefaultExt, StripHotkey(mmExport.Caption),
@@ -1512,7 +1512,7 @@ begin
     end;  //of begin
 
   except
-    on E: EAccessViolation do
+    on E: EInvalidItem do
       FLang.ShowMessage(FLang.GetString([LID_EXPORT, LID_IMPOSSIBLE]),
         FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
 
