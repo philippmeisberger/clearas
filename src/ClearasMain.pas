@@ -1055,8 +1055,13 @@ begin
         SubItems.Append(FStartup[i].ToString());
 
         // Show deactivation timestamp?
-        if (mmDate.Checked and (FStartup[i].Time <> 0)) then
-          SubItems.Append(DateTimeToStr(FStartup[i].Time));
+        if mmDate.Checked then
+        begin
+          if (FStartup[i].Time <> 0) then
+            SubItems.Append(DateTimeToStr(FStartup[i].Time))
+          else
+            SubItems.Append('');
+        end;  //of begin
 
         // Get icon of program
         Icon.Handle := FStartup[i].Icon;
