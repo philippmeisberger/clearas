@@ -13,9 +13,9 @@ interface
 uses
   Winapi.Windows, System.SysUtils, System.Classes, Vcl.Controls, Vcl.Forms,
   Vcl.ComCtrls, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Dialogs, Vcl.Menus, Vcl.Graphics,
-  Vcl.ClipBrd, Vcl.ImgList, Registry, StrUtils, System.ImageList, Winapi.CommCtrl,
+  Vcl.ClipBrd, Registry, StrUtils, System.ImageList, Winapi.CommCtrl,
   System.UITypes, ClearasAPI, ExportListThread, PMCWAbout, PMCWLanguageFile,
-  PMCWOSUtils, PMCWUpdater, PMCWDialogs;
+  PMCWOSUtils, PMCWUpdater, PMCWDialogs, Vcl.ImgList;
 
 const
   KEY_RECYCLEBIN = 'CLSID\{645FF040-5081-101B-9F08-00AA002F954E}\shell';
@@ -1960,22 +1960,22 @@ begin
     Header_GetItem(Header, i, Item);
     Item.fmt := Item.fmt and not (HDF_SORTUP or HDF_SORTDOWN);
     Header_SetItem(Header, i, Item);
-    List.Columns[i].Tag := 0;
+    List.Columns[i].Tag := HDF_SORTUP;
   end;  //of begin
 
   // Current column
   Header_GetItem(Header, Column.Index, Item);
 
-  // Sorted ascending?
+  // Sorted descending?
   if (Item.fmt and HDF_SORTUP <> 0) then
   begin
     Item.fmt := Item.fmt and not HDF_SORTUP or HDF_SORTDOWN;
-    Column.Tag := 1;
+    Column.Tag := HDF_SORTDOWN;
   end  //of begin
   else
   begin
     Item.fmt := Item.fmt and not HDF_SORTDOWN or HDF_SORTUP;
-    Column.Tag := 0;
+    Column.Tag := HDF_SORTUP;
   end;  //of if
 
   // Include sort icon
@@ -2003,8 +2003,8 @@ begin
   // Status column?
   if (ColumnToSort = 0) then
     case List.Columns[ColumnToSort].Tag of
-      0: Compare := CompareText(Item1.Caption, Item2.Caption);
-      1: Compare := CompareText(Item2.Caption, Item1.Caption);
+      HDF_SORTUP:   Compare := CompareText(Item1.Caption, Item2.Caption);
+      HDF_SORTDOWN: Compare := CompareText(Item2.Caption, Item1.Caption);
     end  //of case
   else
   begin
@@ -2012,8 +2012,8 @@ begin
 
     if (Data < 3) then
       case List.Columns[ColumnToSort].Tag of
-        0: Compare := CompareText(Item1.SubItems[Data], Item2.SubItems[Data]);
-        1: Compare := CompareText(Item2.SubItems[Data], Item1.SubItems[Data]);
+        HDF_SORTUP:   Compare := CompareText(Item1.SubItems[Data], Item2.SubItems[Data]);
+        HDF_SORTDOWN: Compare := CompareText(Item2.SubItems[Data], Item1.SubItems[Data]);
       end;  //of case
   end;  //of if
 end;
