@@ -238,7 +238,7 @@ type
     FOnSearchFinish: TNotifyEvent;
     FOnSearchError: TSearchErrorEvent;
   protected
-    FActCount: Word;
+    FActCount: Integer;
     FInvalid: Boolean;
     FLock: TCriticalSection;
     procedure DoNotifyOnChanged(ANewStatus: TItemStatus);
@@ -265,7 +265,7 @@ type
     procedure Load(AExpertMode: Boolean = False); virtual; abstract;
     function RenameItem(const ANewCaption: string): Boolean; virtual;
     { external }
-    property Enabled: Word read FActCount;
+    property Enabled: Integer read FActCount;
     property IsInvalid: Boolean read FInvalid write FInvalid;
     property OnChanged: TItemChangeEvent read FOnChanged write FOnChanged;
     property OnSearching: TSearchEvent read FOnSearching write FOnSearching;
@@ -375,6 +375,7 @@ type
   protected
     function GetFullLocation(): string; override;
   public
+    constructor Create(AIndex: Word; AEnabled, AStartupUser: Boolean);
     destructor Destroy; override;
     function ChangeFilePath(const ANewFileName: string): Boolean; override;
     function Delete(): Boolean; override;
@@ -385,7 +386,7 @@ type
     function Rename(const ANewCaption: string): Boolean; override;
     function ToString(): string; override;
     { external }
-    property StartupUser: Boolean read FStartupUser write FStartupUser;
+    property StartupUser: Boolean read FStartupUser;
     property LnkFile: TLnkFile read FLnkFile write FLnkFile;
   end;
 
@@ -548,7 +549,6 @@ type
     function AddShellNewItem(const AName, ALocationRoot, ACaption: string;
       AEnabled, AWow64: Boolean): Integer;
   public
-    constructor Create;
     function Add(AFileName, AArguments, ALocationRoot, ACaption: string;
       AExtended: Boolean = False): Boolean; reintroduce;
     procedure ExportList(const AFileName: string); override;
@@ -1518,7 +1518,9 @@ begin
     else
     begin
       NewStatus := stDisabled;
-      Dec(FActCount);
+
+      if (FActCount > 0) then
+        Dec(FActCount);
     end;  //of if
 
     // Notify status change
@@ -1553,7 +1555,7 @@ begin
     if Deleted then
     begin
       // Item was enabled
-      if FItem.Enabled then
+      if (FItem.Enabled and (FActCount > 0)) then
         // Update active counter
         Dec(FActCount);
 
@@ -1597,7 +1599,8 @@ begin
     if Disabled then
     begin
       // Update active counter
-      Dec(FActCount);
+      if (FActCount > 0) then
+        Dec(FActCount);
 
       // Notify disable
       DoNotifyOnChanged(stDisabled);
@@ -2428,6 +2431,12 @@ end;
 
 { TStartupUserItem }
 
+constructor TStartupUserItem.Create(AIndex: Word; AEnabled, AStartupUser: Boolean);
+begin
+  inherited Create(AIndex, AEnabled, False);
+  FStartupUser := AStartupUser;
+end;
+
 { public TStartupUserItem.Destroy
 
   General destructor for destroying a TStartupUserItem instance. }
@@ -2986,13 +2995,22 @@ function TStartupList.AddUserItemDisabled(AReg: TRegistry): Integer;
 var
   Item: TStartupListItem;
   Path, Ext: string;
+  IsStartupUser: Boolean;
 
 begin
+  Result := -1;
+
   // Deprecated since Windows 8!
   if CheckWin32Version(6, 2) then
     Exit(-1);
 
-  Item := TStartupUserItem.Create(Count, False, False);
+  // Windows >= Vista?
+  if CheckWin32Version(6) then
+    IsStartupUser := not AnsiSameText(AReg.ReadString('backupExtension'), EXT_STARTUP_COMMON)
+  else
+    IsStartupUser := AnsiSameText(AReg.ReadString('location'), STARTUP_USER_XP);
+
+  Item := TStartupUserItem.Create(Count, False, IsStartupUser);
 
   try
     with (Item as TStartupUserItem) do
@@ -3003,12 +3021,6 @@ begin
       FileName := AReg.ReadString('command');
       Time := GetTimestamp(AReg);
       Path := AReg.ReadString('path');
-
-      // Windows >= Vista?
-      if CheckWin32Version(6) then
-        StartupUser := not AnsiSameText(AReg.ReadString('backupExtension'), EXT_STARTUP_COMMON)
-      else
-        StartupUser := AnsiSameText(AReg.ReadString('location'), STARTUP_USER_XP);
 
       if StartupUser then
         Ext := EXT_STARTUP_USER
@@ -3038,7 +3050,7 @@ var
   Item: TStartupUserItem;
 
 begin
-  Item := TStartupUserItem.Create(Count, True, False);
+  Item := TStartupUserItem.Create(Count, True, not ACommonStartup);
 
   try
     // Read .lnk file
@@ -3051,7 +3063,6 @@ begin
       LnkFile := ALnkFile;
       Name := ExtractFileName(ALnkFile.FileName);
       Caption := GetFileDescription(FileNameOnly);
-      StartupUser := not ACommonStartup;
 
       // Windows 8?
       if CheckWin32Version(6, 2) then
@@ -4336,16 +4347,6 @@ end;
 
 
 { TContextList }
-
-{ public TContextList.Create
-
-  General constructor for creating a TContextList instance. }
-
-constructor TContextList.Create;
-begin
-  inherited Create;
-  FActCount := 0;
-end;
 
 { protected TContextList.AddShellItem
 
