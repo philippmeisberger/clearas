@@ -226,6 +226,10 @@ implementation
 {$I LanguageIDs.inc}
 {$R *.dfm}
 
+const
+  SORT_ASCENDING  = 0;
+  SORT_DESCENDING = 1;
+
 { TMain }
 
 { TMain.FormCreate
@@ -1960,22 +1964,22 @@ begin
     Header_GetItem(Header, i, Item);
     Item.fmt := Item.fmt and not (HDF_SORTUP or HDF_SORTDOWN);
     Header_SetItem(Header, i, Item);
-    List.Columns[i].Tag := HDF_SORTUP;
+    List.Columns[i].Tag := SORT_ASCENDING;
   end;  //of begin
 
   // Current column
   Header_GetItem(Header, Column.Index, Item);
 
-  // Sorted descending?
+  // Sorted ascending?
   if (Item.fmt and HDF_SORTUP <> 0) then
   begin
     Item.fmt := Item.fmt and not HDF_SORTUP or HDF_SORTDOWN;
-    Column.Tag := HDF_SORTDOWN;
+    Column.Tag := SORT_DESCENDING;
   end  //of begin
   else
   begin
     Item.fmt := Item.fmt and not HDF_SORTDOWN or HDF_SORTUP;
-    Column.Tag := HDF_SORTUP;
+    Column.Tag := SORT_ASCENDING;
   end;  //of if
 
   // Include sort icon
@@ -1994,7 +1998,7 @@ procedure TMain.ListViewCompare(Sender: TObject; Item1, Item2: TListItem;
   Data: Integer; var Compare: Integer);
 var
   List: TListView;
-  ColumnToSort: Byte;
+  ColumnToSort: NativeInt;
 
 begin
   List := (Sender as TListView);
@@ -2003,8 +2007,8 @@ begin
   // Status column?
   if (ColumnToSort = 0) then
     case List.Columns[ColumnToSort].Tag of
-      HDF_SORTUP:   Compare := CompareText(Item1.Caption, Item2.Caption);
-      HDF_SORTDOWN: Compare := CompareText(Item2.Caption, Item1.Caption);
+      SORT_ASCENDING:  Compare := CompareText(Item1.Caption, Item2.Caption);
+      SORT_DESCENDING: Compare := CompareText(Item2.Caption, Item1.Caption);
     end  //of case
   else
   begin
@@ -2012,8 +2016,8 @@ begin
 
     if (Data < 3) then
       case List.Columns[ColumnToSort].Tag of
-        HDF_SORTUP:   Compare := CompareText(Item1.SubItems[Data], Item2.SubItems[Data]);
-        HDF_SORTDOWN: Compare := CompareText(Item2.SubItems[Data], Item1.SubItems[Data]);
+        SORT_ASCENDING:  Compare := CompareText(Item1.SubItems[Data], Item2.SubItems[Data]);
+        SORT_DESCENDING: Compare := CompareText(Item2.SubItems[Data], Item1.SubItems[Data]);
       end;  //of case
   end;  //of if
 end;

@@ -1666,7 +1666,7 @@ end;
 
 procedure TRootList<T>.ExportItem(const AFileName: string);
 begin
-    // List locked?
+  // List locked?
   if not FLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
 
@@ -2055,6 +2055,8 @@ var
 begin
   Result := False;
   ItemStatus.Status := ST_ENABLED;
+  ItemStatus.DeactivationTime.dwLowDateTime := 0;
+  ItemStatus.DeactivationTime.dwHighDateTime := 0;
 
   if ChangeStatus(FApprovedLocation, ItemStatus) then
   begin
@@ -2080,9 +2082,16 @@ begin
     begin
       RegFile.ExportReg(FRootKey.ToHKey(), GetWow64Key(), Name);
 
-      // Windows 8?
-      if CheckWin32Version(6, 2) then
-        RegFile.ExportReg(FRootKey.ToHKey(), FApprovedLocation, Name);
+      try
+        // Windows 8?
+        if CheckWin32Version(6, 2) then
+          RegFile.ExportReg(FRootKey.ToHKey(), FApprovedLocation, Name);
+
+      except
+        // Approved item does not exist?
+        on E: ERegistryException do
+          // Just continue!
+      end;
     end  //of begin
     else
       RegFile.ExportReg(FRootKey.ToHKey(), FLocation, False);

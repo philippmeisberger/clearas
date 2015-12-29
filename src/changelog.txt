@@ -4,7 +4,7 @@ Ein Open-Source Projekt von PM Code Works
 Changelog
 =========
 
-Version 4.3  [??.12.15]
+Version 4.3  [??.01.16]
 
 - Neues Feature "Aufgaben":
   - Ermöglicht Bearbeiten von geplanten Aufgaben
@@ -19,6 +19,7 @@ Version 4.3  [??.12.15]
   - "Umbenennen" zeigt nun initial den korrekten Text
   - Nach "Umbenennen" wird der neue Anzeigename aktualisiert, wenn "Beschreibung anzeigen" ausgewählt ist
   - Zähler der aktivierten Autostart Elemente funktioniert nun korrekt
+  - Export von Autostart Elementen schlägt fehl, wenn noch kein Eintrag im Schlüssel StartupApproved vorhanden ist
 
 ---------------------------------
 
