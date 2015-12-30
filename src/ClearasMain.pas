@@ -2328,7 +2328,7 @@ begin
         Exit;
 
       // Names are visible instead of captions?
-      if (GetSelectedList().RenameItem(Name) and mmShowCaptions.Checked) then
+      if (GetSelectedList().RenameItem(Name) and not mmShowCaptions.Checked) then
         GetSelectedListView().ItemFocused.SubItems[0] := Name;
     end;  //of begin
 
@@ -2641,7 +2641,7 @@ begin
 
     if ((PageControl.ActivePageIndex = 0) and not CheckWin32Version(6, 2)) then
     begin
-      BackupDir := TLnkFile.GetBackupDir();
+      BackupDir := TStartupLnkFile.GetBackupDir();
 
       // Create Backup directory if not exists
       if not DirectoryExists(BackupDir) then
