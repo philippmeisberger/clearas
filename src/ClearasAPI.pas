@@ -78,20 +78,100 @@ type
     procedure SetExeFileName(const AExeFileName: TFileName);
     procedure SetFileName(const AFileName: TFileName);
   protected
+    /// <summary>
+    ///   Saves a .lnk file.
+    /// </summary>
+    /// <param name="AFileName">
+    ///   The filename to a non-existent .lnk file.
+    /// </param>
+    /// <param name="AExeFileName">
+    ///   The filename to a .exe file.
+    /// </param>
+    /// <param name="AArguments">
+    ///  Optional arguments to a .exe file.
+    /// </param>
+    /// <returns>
+    ///   <c>True</c> if the .lnk file was successfully written or <c>False</c>
+    ///   otherwise.
+    /// </returns>
     function Save(AFileName, AExeFileName: TFileName;
       AArguments: string = ''): Boolean; overload;
   public
+    /// <summary>
+    ///   Constructor for creating a <c>TLnkFile</c> instance.
+    /// </summary>
+    /// <param name="AFileName">
+    ///   The filename of the .lnk file.
+    /// </param>
     constructor Create(AFileName: TFileName); reintroduce;
+
+    /// <summary>
+    ///   Deletes the .lnk file.
+    /// </summary>
+    /// <returns>
+    ///   <c>True</c> if the .lnk file was successfully deleted or <c>False</c>
+    ///   otherwise.
+    /// </returns>
     function Delete(): Boolean;
+
+    /// <summary>
+    ///   Checks if the .lnk file exists.
+    /// </summary>
+    /// <returns>
+    ///   <c>True</c> if the .lnk file exists or <c>False</c> otherwise.
+    /// </returns>
     function Exists(): Boolean;
+
+    /// <summary>
+    ///   Checks if arguments are specified.
+    /// </summary>
+    /// <returns>
+    ///   <c>True</c> if arguments are specified or <c>False</c> otherwise.
+    /// </returns>
     function HasArguments(): Boolean;
+
+    /// <summary>
+    ///    Reads the contents from a .lnk file. Only after all properties can be
+    ///    used.
+    /// </summary>
+    /// <returns>
+    ///   <c>True</c> if the .lnk file was successfully read or <c>False</c>
+    ///   otherwise.
+    /// </returns>
     function Read(): Boolean;
+
+    /// <summary>
+    ///   Saves the .lnk file.
+    /// </summary>
+    /// <returns>
+    ///   <c>True</c> if the .lnk file was successfully written or <c>False</c>
+    ///   otherwise.
+    /// </returns>
     function Save(): Boolean; overload;
-    { external }
+
+    /// <summary>
+    ///   Gets or sets the command line arguments to the target .exe file.
+    /// </summary>
     property Arguments: string read FArguments write SetArguments;
+
+    /// <summary>
+    ///   Gets or sets the filename to the .exe file.
+    /// </summary>
     property ExeFileName: TFileName read FExeFileName write SetExeFileName;
+
+    /// <summary>
+    ///   Gets or sets the filename to the .lnk file.
+    /// </summary>
     property FileName: TFileName read FFileName write SetFileName;
+
+    /// <summary>
+    ///   Returns the concatenation of filename and arguments.
+    /// </summary>
     property FullPath: string read GetFullPath;
+
+    /// <summary>
+    ///   Returns the concatenation of file name and arguments escaped in quotes.
+    /// </summary>
     property FullPathEscaped: string read GetFullPathEscaped;
   end;
 
@@ -709,10 +789,6 @@ uses StartupSearchThread, ContextSearchThread, ServiceSearchThread, TaskSearchTh
 
 { TLnkFile }
 
-{ public TLnkFile.Create
-
-  Constructor for creating a TLnkFile instance. }
-
 constructor TLnkFile.Create(AFileName: TFileName);
 begin
   inherited Create;
@@ -722,10 +798,6 @@ begin
     Read();
 end;
 
-{ private TLnkFile.GetFullPath
-
-  Returns the concatenation of file name and arguments. }
-
 function TLnkFile.GetFullPath(): string;
 begin
   if HasArguments() then
@@ -733,10 +805,6 @@ begin
   else
     Result := FExeFileName;
 end;
-
-{ private TLnkFile.GetFullPathEscaped
-
-  Returns the concatenation of file name and arguments escaped with quotes. }
 
 function TLnkFile.GetFullPathEscaped(): string;
 begin
@@ -746,19 +814,11 @@ begin
     Result := '"'+ FFileName +'"';
 end;
 
-{ private TLnkFile.SetArguments
-
-  Sets the arguments. }
-
 procedure TLnkFile.SetArguments(const AArguments: string);
 begin
   FArguments := AArguments;
   Save();
 end;
-
-{ private TLnkFile.SetExeFileName
-
-  Sets the .exe target. }
 
 procedure TLnkFile.SetExeFileName(const AExeFileName: TFileName);
 begin
@@ -774,36 +834,20 @@ begin
   FFileName := AFileName;
 end;
 
-{ public TLnkFile.Delete
-
-  Deletes the .lnk file. }
-
 function TLnkFile.Delete(): Boolean;
 begin
   Result := DeleteFile(FFileName);
 end;
-
-{ public TLnkFile.Exists
-
-  Returns True if the .lnk file exists. }
 
 function TLnkFile.Exists(): Boolean;
 begin
   Result := FileExists(FFileName);
 end;
 
-{ public TLnkFile.HasArguments
-
-  Returns if arguments are specified. }
-
 function TLnkFile.HasArguments(): Boolean;
 begin
   Result := (FArguments <> '');
 end;
-
-{ public TLnkFile.Read
-
-  Reads the .exe file path and arguments from a .lnk file. }
 
 function TLnkFile.Read(): Boolean;
 var
@@ -844,18 +888,10 @@ begin
   end;  //of try
 end;
 
-{ public TLnkFile.Save
-
-  Creates a new .lnk file. }
-
 function TLnkFile.Save(): Boolean;
 begin
   Result := Save(FFileName, FExeFileName, FArguments);
 end;
-
-{ public TLnkFile.Save
-
-  Creates a new .lnk file. }
 
 function TLnkFile.Save(AFileName, AExeFileName: TFileName;
   AArguments: string = ''): Boolean;
