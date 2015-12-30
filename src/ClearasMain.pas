@@ -195,20 +195,20 @@ type
     function GetSelectedList(): TRootList<TRootItem>;
     function GetSelectedListView(): TListView;
     procedure LoadItems(ATotalRefresh: Boolean = True);
-    procedure OnContextSearchStart(Sender: TObject; const AMax: Cardinal);
+    procedure OnContextSearchStart(Sender: TObject; AMax: Cardinal);
     procedure OnContextSearchEnd(Sender: TObject);
     procedure OnContextItemChanged(Sender: TObject; ANewStatus: TItemStatus);
-    procedure OnExportListStart(Sender: TObject; const APageControlIndex: Cardinal);
-    procedure OnExportListEnd(Sender: TObject; const APageControlIndex: Cardinal);
+    procedure OnExportListStart(Sender: TObject; APageControlIndex: Cardinal);
+    procedure OnExportListEnd(Sender: TObject; APageControlIndex: Cardinal);
     procedure OnExportListError(Sender: TObject; AErrorMessage: string);
     procedure OnSearchError(Sender: TObject; AErrorMessage: string);
-    procedure OnStartupSearchStart(Sender: TObject; const AMax: Cardinal);
+    procedure OnStartupSearchStart(Sender: TObject; AMax: Cardinal);
     procedure OnStartupSearchEnd(Sender: TObject);
     procedure OnStartupItemChanged(Sender: TObject; ANewStatus: TItemStatus);
-    procedure OnServiceSearchStart(Sender: TObject; const AMax: Cardinal);
+    procedure OnServiceSearchStart(Sender: TObject; AMax: Cardinal);
     procedure OnServiceSearchEnd(Sender: TObject);
     procedure OnServiceItemChanged(Sender: TObject; ANewStatus: TItemStatus);
-    procedure OnTaskSearchStart(Sender: TObject; const AMax: Cardinal);
+    procedure OnTaskSearchStart(Sender: TObject; AMax: Cardinal);
     procedure OnTaskSearchEnd(Sender: TObject);
     procedure OnTaskItemChanged(Sender: TObject; ANewStatus: TItemStatus);
     procedure OnUpdate(Sender: TObject; const ANewBuild: Cardinal);
@@ -797,7 +797,7 @@ end;
 
   Event that is called when search starts. }
 
-procedure TMain.OnContextSearchStart(Sender: TObject; const AMax: Cardinal);
+procedure TMain.OnContextSearchStart(Sender: TObject; AMax: Cardinal);
 begin
   mmLang.Enabled := False;
   cbContextExpert.Enabled := False;
@@ -903,7 +903,7 @@ end;
 
   Event that is called when export list starts. }
 
-procedure TMain.OnExportListStart(Sender: TObject; const APageControlIndex: Cardinal);
+procedure TMain.OnExportListStart(Sender: TObject; APageControlIndex: Cardinal);
 begin
   PageControl.Pages[APageControlIndex].Cursor := crHourGlass;
 
@@ -934,7 +934,7 @@ end;
 
   Event that is called when export list ends. }
 
-procedure TMain.OnExportListEnd(Sender: TObject; const APageControlIndex: Cardinal);
+procedure TMain.OnExportListEnd(Sender: TObject; APageControlIndex: Cardinal);
 begin
   PageControl.Pages[APageControlIndex].Cursor := crDefault;
 
@@ -1020,7 +1020,7 @@ end;
 
   Event that is called when search starts. }
 
-procedure TMain.OnStartupSearchStart(Sender: TObject; const AMax: Cardinal);
+procedure TMain.OnStartupSearchStart(Sender: TObject; AMax: Cardinal);
 begin
   mmLang.Enabled := False;
   mmImport.Enabled := False;
@@ -1135,7 +1135,7 @@ end;
 
   Event that is called when search starts. }
 
-procedure TMain.OnServiceSearchStart(Sender: TObject; const AMax: Cardinal);
+procedure TMain.OnServiceSearchStart(Sender: TObject; AMax: Cardinal);
 begin
   mmLang.Enabled := False;
   cbServiceExpert.Enabled := False;
@@ -1298,7 +1298,7 @@ end;
 
   Event that is called when search starts. }
 
-procedure TMain.OnTaskSearchStart(Sender: TObject; const AMax: Cardinal);
+procedure TMain.OnTaskSearchStart(Sender: TObject; AMax: Cardinal);
 begin
   mmLang.Enabled := False;
   mmImport.Enabled := False;
