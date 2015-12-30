@@ -147,7 +147,7 @@ type
     function ExtractPathToFile(const APath: TFileName): TFileName;
     function GetFullLocation(): string; virtual; abstract;
     function GetIcon(): HICON; overload; virtual;
-    function GetIcon(AExeFileName: string): HICON; overload;
+    function GetIcon(AExeFileName: TFileName): HICON; overload;
   public
     constructor Create(AIndex: Word; AEnabled: Boolean);
     function ChangeFilePath(const ANewFileName: string): Boolean; virtual; abstract;
@@ -423,8 +423,8 @@ type
     function AddItemDisabled(AReg: TRegistry; AWow64: Boolean): Integer; deprecated 'Since Windows 8';
     function AddItem(ARootKey: TRootKey; AKeyPath, AName, AFileName: string; AWow64,
       ARunOnce: Boolean): Integer;
-    function AddNewStartupUserItem(AName, AFilePath: string; AArguments: string = '';
-      ACommonStartup: Boolean = False): Boolean;
+    function AddNewStartupUserItem(AName: string; AFileName: TFileName;
+      AArguments: string = ''; ACommonStartup: Boolean = False): Boolean;
     function AddUserItemDisabled(AReg: TRegistry): Integer; deprecated 'Since Windows 8';
     function AddUserItem(ALnkFile: TStartupLnkFile; ACommonStartup: Boolean): Integer;
   public
@@ -902,7 +902,8 @@ end;
 
 constructor TStartupLnkFile.Create(AFileName: TFileName);
 begin
-  Create(AFileName, ExtractFileExt(AFileName) = EXT_STARTUP_COMMON);
+  inherited Create(AFileName);
+  FStartupUser := not (ExtractFileExt(AFileName) = EXT_STARTUP_COMMON);
 end;
 
 { public TStartupUserLnkFile.Create
@@ -1139,7 +1140,7 @@ end;
 
   Returns the icon handle to the executable. }
 
-function TRootItem.GetIcon(AExeFileName: string): HICON;
+function TRootItem.GetIcon(AExeFileName: TFileName): HICON;
 var
   FileInfo: TSHFileInfo;
 {$IFDEF WIN32}
@@ -3021,19 +3022,24 @@ end;
 
   Adds a new startup user item to the autostart. }
 
-function TStartupList.AddNewStartupUserItem(AName, AFilePath: string;
+function TStartupList.AddNewStartupUserItem(AName: string; AFileName: TFileName;
   AArguments: string = ''; ACommonStartup: Boolean = False): Boolean;
 var
+  i: Integer;
   LnkFile: TStartupLnkFile;
 
 begin
   Result := False;
 
-  // Init .lnk file
-  LnkFile := TStartupLnkFile.Create(AName, ACommonStartup);
+  // File path already exists in another item?
+  for i := 0 to Count - 1 do
+    if AnsiContainsStr(Items[i].FileName, AFileName) then
+      Exit(False);
+
+  LnkFile := TStartupLnkFile.Create(AName, ACommonStartup, AFileName, AArguments);
 
   // Link file created successfully?
-  if not LnkFile.Save(LnkFile.FileName, AFilePath, AArguments) then
+  if not LnkFile.Save() then
     raise EStartupException.Create('Could not create .lnk file '''+ LnkFile.FileName +'''!');
 
   // Add item to list
@@ -3105,7 +3111,8 @@ end;
 
   Adds a enabled startup user item to the list. }
 
-function TStartupList.AddUserItem(ALnkFile: TStartupLnkFile; ACommonStartup: Boolean): Integer;
+function TStartupList.AddUserItem(ALnkFile: TStartupLnkFile;
+  ACommonStartup: Boolean): Integer;
 var
   Item: TStartupUserItem;
 
@@ -3113,9 +3120,6 @@ begin
   Item := TStartupUserItem.Create(Count, True, not ACommonStartup);
 
   try
-    // Read .lnk file
-    ALnkFile.Read();
-
     with Item do
     begin
       Location := ALnkFile.FileName;
@@ -3156,7 +3160,6 @@ end;
 function TStartupList.Add(AFileName, AArguments, ACaption: string): Boolean;
 var
   Name, Ext, FullPath: string;
-  i: Word;
   Reg: TRegistry;
 
 begin
@@ -3173,11 +3176,6 @@ begin
     raise EListBlocked.Create('Another operation is pending. Please wait!');
 
   try
-    // File path already exists in another item?
-    for i := 0 to Count - 1 do
-      if AnsiContainsStr(Items[i].FileName, AFileName) then
-        Exit;
-
     // Add new startup user item?
     if (Ext = '.exe') then
     begin
@@ -3227,7 +3225,8 @@ begin
     end;  //of begin
 
     // Refresh TListView
-    DoNotifyOnFinished();
+    if Result then
+      DoNotifyOnFinished();
 
   finally
     FLock.Release();
@@ -3337,7 +3336,6 @@ end;
 function TStartupList.ImportBackup(const AFileName: TFileName): Boolean;
 var
   Name, Ext: string;
-  i: Integer;
   LnkFile: TLnkFile;
 
 begin
@@ -3358,26 +3356,20 @@ begin
 
   // Set the name of item
   Name := ExtractFileName(ChangeFileExt(AFileName, ''));
-
-  // Append extension if not exist
   Name := ChangeFileExt(Name, '.lnk');
 
   try
     // Extract path to .exe
-    if not LnkFile.Read() then
+    if (LnkFile.ExeFileName = '') then
       raise EStartupException.Create('Could not read backup file!');
-
-    // File path already exists in another item?
-    for i := 0 to Count - 1 do
-      if (Items[i].FileName = LnkFile.ExeFileName) then
-        Exit;
 
     // Create .lnk file and add it to list
     Result := AddNewStartupUserItem(Name, LnkFile.ExeFileName, LnkFile.Arguments,
       (Ext = EXT_STARTUP_COMMON));
 
     // Refresh TListView
-    DoNotifyOnFinished();
+    if Result then
+      DoNotifyOnFinished();
 
   finally
     LnkFile.Free;
