@@ -602,7 +602,7 @@ type
     FOnSearchFinish: TNotifyEvent;
     FOnSearchError: TSearchErrorEvent;
   protected
-    FActCount: Integer;
+    FEnabledItemsCount: Integer;
     FInvalid: Boolean;
     FLock: TCriticalSection;
     procedure DoNotifyOnChanged(ANewStatus: TItemStatus);
@@ -720,7 +720,7 @@ type
     /// </param>
     function RenameItem(const ANewName: string): Boolean; virtual;
     { external }
-    property Enabled: Integer read FActCount;
+    property EnabledItemsCount: Integer read FEnabledItemsCount;
     property IsInvalid: Boolean read FInvalid write FInvalid;
     property OnChanged: TItemChangeEvent read FOnChanged write FOnChanged;
     property OnSearching: TSearchEvent read FOnSearching write FOnSearching;
@@ -1301,6 +1301,7 @@ type
     ///   The absolute filename to the file.
     /// </param>
     procedure ExportList(const AFileName: string); override;
+
     function IndexOf(AName, ALocationRoot: string): Integer; overload;
 
     /// <summary>
@@ -1404,10 +1405,25 @@ type
     ///   The item type.
     /// </returns>
     function ToString(): string; override;
-    { external }
+
+    /// <summary>
+    ///   Gets the Registry location.
+    /// </summary>
     property Location: string read GetLocation;
-    property Manager: SC_HANDLE read FServiceManager write FServiceManager;
-    property Start: TServiceStart read FServiceStart write FServiceStart;
+
+    /// <summary>
+    ///   Gets the handle to the current service manager.
+    /// </summary>
+    property Manager: SC_HANDLE read FServiceManager;
+
+    /// <summary>
+    ///   Gets the start type.
+    /// </summary>
+    property Start: TServiceStart read FServiceStart;
+
+    /// <summary>
+    ///   Gets or sets the deactivation timestamp.
+    /// </summary>
     property Time: TDateTime read GetTime write FTime;
   end;
 
@@ -1454,7 +1470,23 @@ type
     ///   <see cref="OnSearchFinish"/> event occurs.
     /// </remarks>
     procedure Load(AExpertMode: Boolean = False); override;
-    function LoadService(AName: string; AService: SC_HANDLE;
+
+    /// <summary>
+    ///   Loads and adds a service item to the list.
+    /// </summary>
+    /// <param name="AName">
+    ///   The name of the service.
+    /// </param>
+    /// <param name="AServiceHandle">
+    ///   The handle to the service.
+    /// </param>
+    /// <param name="AIncludeDemand">
+    ///   If set to <c>True</c> services that are started on demand are included.
+    /// </param>
+    /// <returns>
+    ///   The index on which the item was added.
+    /// </returns>
+    function LoadService(const AName: string; AServiceHandle: SC_HANDLE;
       AIncludeDemand: Boolean = False): Integer;
   end;
 
@@ -1470,7 +1502,7 @@ type
     FTask: IRegisteredTask;
     FTaskFolder: ITaskFolder;
     function GetTaskDefinition(): ITaskDefinition;
-    procedure UpdateTask(AName: string; ANewDefinition: ITaskDefinition);
+    procedure UpdateTask(const AName: string; ANewDefinition: ITaskDefinition);
   protected
     procedure ChangeFilePath(const ANewFilePath: string); override;
     procedure ChangeStatus(const ANewStatus: Boolean); override;
@@ -1536,7 +1568,10 @@ type
     ///   The item type.
     /// </returns>
     function ToString(): string; override;
-    { external }
+
+    /// <summary>
+    ///   Gets the definition of the task.
+    /// </summary>
     property Definition: ITaskDefinition read GetTaskDefinition;
   end;
 
@@ -1616,7 +1651,33 @@ type
     ///   <see cref="OnSearchFinish"/> event occurs.
     /// </remarks>
     procedure Load(AExpertMode: Boolean = False); override;
+
+    /// <summary>
+    ///   Adds task items to the list.
+    /// </summary>
+    /// <param name="ATaskFolder">
+    ///
+    /// </param>
+    /// <param name="AIncludeHidden">
+    ///   If set to <c>True</c> include hidden tasks. Otherwise hidden tasks are
+    ///   skipped.
+    /// </param>
     procedure LoadTasks(ATaskFolder: ITaskFolder; AIncludeHidden: Boolean); overload;
+
+    /// <summary>
+    ///   Searches for task items in specific folder and adds them to the list.
+    /// </summary>
+    /// <param name="APath">
+    ///   The relative path to the task folder. The root is <c>\</c>.
+    /// </param>
+    /// <param name="ARecursive">
+    ///   If set to <c>True</c> tasks in subfolders are included. Otherwise
+    ///   only the tasks in the folder specified in <c>APath</c> are included.
+    /// </param>
+    /// <param name="AIncludeHidden">
+    ///   If set to <c>True</c> include hidden tasks. Otherwise hidden tasks are
+    ///   skipped.
+    /// </param>
     procedure LoadTasks(APath: string = '\'; ARecursive: Boolean = False;
       AIncludeHidden: Boolean = False); overload;
   end;
@@ -2264,7 +2325,7 @@ end;
 constructor TRootList<T>.Create;
 begin
   inherited Create;
-  FActCount := 0;
+  FEnabledItemsCount := 0;
   FInvalid := True;
   FLock := TCriticalSection.Create;
 end;
@@ -2303,7 +2364,7 @@ end;
 procedure TRootList<T>.Clear();
 begin
   inherited Clear;
-  FActCount := 0;
+  FEnabledItemsCount := 0;
   FItem := nil;
 end;
 
@@ -2347,7 +2408,7 @@ begin
 
       // Enable item
       FItem.ChangeStatus(ANewStatus);
-      Inc(FActCount);
+      Inc(FEnabledItemsCount);
       DoNotifyOnChanged(stEnabled);
     end
     else
@@ -2359,8 +2420,8 @@ begin
       FItem.ChangeStatus(ANewStatus);
 
       // Update active counter
-      if (FActCount > 0) then
-        Dec(FActCount);
+      if (FEnabledItemsCount > 0) then
+        Dec(FEnabledItemsCount);
 
       // Notify disable
       DoNotifyOnChanged(stDisabled);
@@ -2391,9 +2452,9 @@ begin
     if Deleted then
     begin
       // Item was enabled
-      if (FItem.Enabled and (FActCount > 0)) then
+      if (FItem.Enabled and (FEnabledItemsCount > 0)) then
         // Update active counter
-        Dec(FActCount);
+        Dec(FEnabledItemsCount);
 
       // Remove item from list
       Remove(FItem);
@@ -3500,7 +3561,7 @@ begin
     // < Windows 8?
     // Note: Since Windows 8 LoadStatus() is used to refresh counter!
     if not CheckWin32Version(6, 2) then
-      Inc(FActCount);
+      Inc(FEnabledItemsCount);
 
     Result := inherited Add(Item);
 
@@ -3541,7 +3602,7 @@ begin
     if CheckWin32Version(6, 2) then
     begin
       Last.Enabled := True;
-      Inc(FActCount);
+      Inc(FEnabledItemsCount);
     end  //of begin
     else
       Result := True;
@@ -3617,7 +3678,7 @@ begin
     else
     begin
       RootKey := rkUnknown;
-      Inc(FActCount);
+      Inc(FEnabledItemsCount);
     end;  //of if
 
   except
@@ -3688,7 +3749,7 @@ begin
           if CheckWin32Version(6, 2) then
           begin
             Last.Enabled := True;
-            Inc(FActCount);
+            Inc(FEnabledItemsCount);
           end  //of begin
           else
             Result := True;
@@ -4031,14 +4092,14 @@ var
   Item: TStartupListItem;
 
 begin
-  FActCount := 0;
+  FEnabledItemsCount := 0;
 
   for i := 0 to Count - 1 do
   begin
     Item := Items[i];
 
     if Item.Enabled then
-      Inc(FActCount);
+      Inc(FEnabledItemsCount);
   end;  //of for
 end;
 
@@ -4697,7 +4758,7 @@ begin
   Result := inherited Add(Item);
 
   if AEnabled then
-    Inc(FActCount);
+    Inc(FEnabledItemsCount);
 end;
 
 { protected TContextList.AddShellExItem
@@ -4715,7 +4776,7 @@ begin
   Result := inherited Add(Item);
 
   if AEnabled then
-    Inc(FActCount);
+    Inc(FEnabledItemsCount);
 end;
 
 { protected TContextList.AddShellExItem
@@ -4732,7 +4793,7 @@ begin
   Result := inherited Add(Item);
 
   if AEnabled then
-    Inc(FActCount);
+    Inc(FEnabledItemsCount);
 end;
 
 { protected TContextList.AddShellItem
@@ -4749,7 +4810,7 @@ begin
   Result := inherited Add(Item);
 
   if AEnabled then
-    Inc(FActCount);
+    Inc(FEnabledItemsCount);
 end;
 
 { public TContextList.Add
@@ -5535,7 +5596,7 @@ var
 begin
   Item := TServiceListItem.Create(AName, ACaption, AFileName, (AStart <> ssDisabled), AStart, FManager);
   Result := inherited Add(Item);
-  Inc(FActCount);
+  Inc(FEnabledItemsCount);
 end;
 
 { public TServiceList.Add
@@ -5653,11 +5714,7 @@ begin
   end;  //of with
 end;
 
-{ public TServiceList.LoadService
-
-  Loads and adds a service item to the list. }
-
-function TServiceList.LoadService(AName: string; AService: SC_HANDLE;
+function TServiceList.LoadService(const AName: string; AServiceHandle: SC_HANDLE;
   AIncludeDemand: Boolean = False): Integer;
 var
   ServiceConfig: PQueryServiceConfig;
@@ -5670,7 +5727,7 @@ begin
   ServiceConfig := nil;
 
   // Determine the required size for buffer
-  QueryServiceConfig(AService, ServiceConfig, 0, BytesNeeded);
+  QueryServiceConfig(AServiceHandle, ServiceConfig, 0, BytesNeeded);
   LastError := GetLastError();
 
   // ERROR_INSUFFICIENT_BUFFER will be fired normally
@@ -5681,7 +5738,7 @@ begin
 
   try
     // Read service config
-    if not QueryServiceConfig(AService, ServiceConfig, BytesNeeded, BytesNeeded) then
+    if not QueryServiceConfig(AServiceHandle, ServiceConfig, BytesNeeded, BytesNeeded) then
       raise EServiceException.Create(SysErrorMessage(GetLastError()));
 
     // Determine status and filter services
@@ -5753,20 +5810,12 @@ begin
   inherited ChangeStatus(ANewStatus);
 end;
 
-{ private TTaskListItem.GetTaskDefinition
-
-  Returns the definition of the task. }
-
 function TTaskListItem.GetTaskDefinition(): ITaskDefinition;
 begin
   Result := FTask.Definition;
 end;
 
-{ private TTaskListItem.UpdateTask
-
-  Updates a task definition. }
-
-procedure TTaskListItem.UpdateTask(AName: string; ANewDefinition: ITaskDefinition);
+procedure TTaskListItem.UpdateTask(const AName: string; ANewDefinition: ITaskDefinition);
 var
   TempLocation: string;
   TaskFile: TStringList;
@@ -5810,10 +5859,6 @@ begin
   if GetFolderPath(CSIDL_SYSTEM, Result) then
     Result := IncludeTrailingBackslash(Result +'Tasks'+ Location) + Name;
 end;
-
-{ public TTaskListItem.ChangeFilePath
-
-  Changes the file path of an TTaskListItem item. }
 
 procedure TTaskListItem.ChangeFilePath(const ANewFilePath: string);
 var
@@ -5897,10 +5942,6 @@ end;
 
 { TTaskList }
 
-{ public TTaskList.Create
-
-  General constructor for creating a TTaskList instance. }
-
 constructor TTaskList.Create;
 begin
   inherited Create;
@@ -5919,10 +5960,6 @@ begin
   if Failed(FTaskService.Connect(Null, Null, Null, Null)) then
     raise ETaskException.Create('Could not connect to task service!');
 end;
-
-{ public TTaskList.Destroy
-
-  Destructor for destroying a TTaskList instance. }
 
 destructor TTaskList.Destroy;
 begin
@@ -5975,7 +6012,7 @@ begin
 
   // Update active counter
   if Item.Enabled then
-    Inc(FActCount);
+    Inc(FEnabledItemsCount);
 end;
 
 procedure TTaskList.ExportList(const AFileName: string);
@@ -6146,18 +6183,10 @@ begin
   end;  //of try
 end;
 
-{ public TTaskList.Load
-
-  Searches for task items in default or expert mode. }
-
 procedure TTaskList.Load(AExpertMode: Boolean = False);
 begin
   LoadTasks('\', AExpertMode, AExpertMode);
 end;
-
-{ public TTaskList.LoadTasks
-
-  Adds task items to the list. }
 
 procedure TTaskList.LoadTasks(ATaskFolder: ITaskFolder; AIncludeHidden: Boolean);
 var
@@ -6190,10 +6219,6 @@ begin
       Continue;
     end;  //of try
 end;
-
-{ public TTaskList.LoadTasks
-
-  Searches for task items in specific folder and adds them to the list. }
 
 procedure TTaskList.LoadTasks(APath: string = '\'; ARecursive: Boolean = False;
   AIncludeHidden: Boolean = False);

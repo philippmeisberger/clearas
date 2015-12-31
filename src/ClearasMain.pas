@@ -863,7 +863,7 @@ procedure TMain.OnContextItemChanged(Sender: TObject; ANewStatus: TItemStatus);
 begin
   // Refresh counter label
   lwContext.Columns[1].Caption := FLang.Format(LID_CONTEXT_MENU_COUNTER,
-    [FContext.Enabled, FContext.Count]);
+    [FContext.EnabledItemsCount, FContext.Count]);
 
   // Change button states
   case ANewStatus of
@@ -969,7 +969,7 @@ end;
 procedure TMain.OnStartupItemChanged(Sender: TObject; ANewStatus: TItemStatus);
 begin
   // Refresh counter label
-  lwStartup.Columns[1].Caption := FLang.Format(LID_PROGRAM_COUNTER, [FStartup.Enabled,
+  lwStartup.Columns[1].Caption := FLang.Format(LID_PROGRAM_COUNTER, [FStartup.EnabledItemsCount,
     FStartup.Count]);
 
   // Change button states
@@ -1086,7 +1086,7 @@ end;
 procedure TMain.OnServiceItemChanged(Sender: TObject; ANewStatus: TItemStatus);
 begin
   // Refresh counter label
-  lwService.Columns[1].Caption := FLang.Format(LID_SERVICE_COUNTER, [FService.Enabled,
+  lwService.Columns[1].Caption := FLang.Format(LID_SERVICE_COUNTER, [FService.EnabledItemsCount,
     FService.Count]);
 
   // Change button states
@@ -1210,7 +1210,7 @@ end;
 procedure TMain.OnTaskItemChanged(Sender: TObject; ANewStatus: TItemStatus);
 begin
   // Refresh counter label
-  lwTasks.Columns[1].Caption := FLang.Format(LID_TASKS_COUNTER, [FTasks.Enabled,
+  lwTasks.Columns[1].Caption := FLang.Format(LID_TASKS_COUNTER, [FTasks.EnabledItemsCount,
     FTasks.Count]);
 
   // Change button states
