@@ -2391,8 +2391,7 @@ begin
       Exit;
 
     // Try to change the file path
-    if not GetSelectedList().ChangeItemFilePath(EnteredPath) then
-      raise Exception.Create('Error while changing path!');
+    GetSelectedList().ChangeItemFilePath(EnteredPath);
 
     // Update icon path in TListView
     if (PageControl.ActivePageIndex = 0) then
