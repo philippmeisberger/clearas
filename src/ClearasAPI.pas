@@ -182,7 +182,7 @@ type
   private
     FStartupUser: Boolean;
     function GetBackupLnk(): string; deprecated 'Since Windows 8';
-    function GetBackupExt(): string; deprecated 'Since Windows 8';
+    function GetBackupExt(): string;
   public
     /// <summary>
     ///   Constructor for creating a <c>TStartupLnkFile</c> instance.
@@ -273,6 +273,9 @@ type
     /// <summary>
     ///   Gets the path to the backup .lnk file in <c>C:\Windows\pss\</c>.
     /// </summary>
+    /// <remarks>
+    ///   Deprecated since Windows 8!
+    /// </remarks>
     property BackupLnk: string read GetBackupLnk;
 
     /// <summary>
@@ -616,13 +619,47 @@ type
     ///   Destructor for destroying a <c>TRootList</c> instance.
     /// </summary>
     destructor Destroy; override;
+
+    /// <summary>
+    ///   Changes the file path of the current selected item.
+    /// </summary>
     procedure ChangeItemFilePath(const ANewFilePath: string); virtual;
+
+    /// <summary>
+    ///   Changes the item status of the current selected item.
+    /// </summary>
+    /// <param name="ANewStatus">
+    ///   The new status.
+    /// </param>
     procedure ChangeItemStatus(const ANewStatus: Boolean); virtual;
-    procedure Clear;
+
+    /// <summary>
+    ///   Removes all items from the list.
+    /// </summary>
+    procedure Clear();
+
+    /// <summary>
+    ///   Deletes the current selected item.
+    /// </summary>
+    /// <returns>
+    ///   <c>>True</c> if item was successfully deleted or <c>False</c> otherwise.
+    /// </returns>
     function DeleteItem(): Boolean; virtual;
-    function DisableItem(): Boolean; virtual;
+
+    /// <summary>
+    ///   Disables the current selected item.
+    /// </summary>
+    procedure DisableItem();
+
+    /// <summary>
+    ///   Notifies that the list needs a visual update.
+    /// </summary>
     procedure DoNotifyOnFinished();
-    function EnableItem(): Boolean; virtual;
+
+    /// <summary>
+    ///   Enables the current selected item.
+    /// </summary>
+    procedure EnableItem();
 
     /// <summary>
     ///   Exports the current selected item as file.
@@ -631,6 +668,13 @@ type
     ///   The absolute filename to the file.
     /// </param>
     procedure ExportItem(const AFileName: string); virtual;
+
+    /// <summary>
+    ///   Exports the complete list as file.
+    /// </summary>
+    /// <param name="AFileName">
+    ///   The absolute filename to the file.
+    /// </param>
     procedure ExportList(const AFileName: string); virtual; abstract;
 
     /// <summary>
@@ -645,10 +689,36 @@ type
     function GetExportFilter(ALanguageFile: TLanguageFile): string; virtual;
     function IndexOf(const ANameOrCaption: string): Integer; overload;
     function IndexOf(const ANameOrCaption: string; AEnabled: Boolean): Integer; overload;
+
+    /// <summary>
+    ///   Signals that list needs an visual update.
+    /// </summary>
     procedure Invalidate();
+
+    /// <summary>
+    ///   Checks if the list is currently locked.
+    /// </summary>
+    /// <returns>
+    ///   <c>True</c> if the list is locked or <c>False</c> otherwise.
+    /// </returns>
     function IsLocked(): Boolean;
+
+    /// <summary>
+    ///   Searches items and adds them to the list.
+    /// </summary>
+    /// <param name="AExpertMode">
+    ///   If set to <c>True</c> use the expert search mode. Otherwise use the
+    ///   default search mode.
+    /// </param>
     procedure Load(AExpertMode: Boolean = False); virtual; abstract;
-    function RenameItem(const ANewCaption: string): Boolean; virtual;
+
+    /// <summary>
+    ///   Renames the current selected item.
+    /// </summary>
+    /// <param name="ANewCaption">
+    ///   The new name.
+    /// </param>
+    function RenameItem(const ANewName: string): Boolean; virtual;
     { external }
     property Enabled: Integer read FActCount;
     property IsInvalid: Boolean read FInvalid write FInvalid;
@@ -657,6 +727,10 @@ type
     property OnSearchError: TSearchErrorEvent read FOnSearchError write FOnSearchError;
     property OnSearchFinish: TNotifyEvent read FOnSearchFinish write FOnSearchFinish;
     property OnSearchStart: TSearchEvent read FOnSearchStart write FOnSearchStart;
+
+    /// <summary>
+    ///   Gets or sets the current selected item.
+    /// </summary>
     property Selected: T read FItem write FItem;
   end;
 
@@ -665,12 +739,12 @@ type
 
 const
   /// <summary>
-  ///  Signals that a startup item is enabled.
+  ///   Signals that a startup item is enabled.
   /// </summary>
   ST_ENABLED  = $2;
 
   /// <summary>
-  ///  Signals that a startup item is disabled.
+  ///   Signals that a startup item is disabled.
   /// </summary>
   ST_DISABLED = $3;
 
@@ -701,7 +775,6 @@ type
   /// </summary>
   TStartupListItem = class(TRegistryItem)
   private
-    FApprovedLocation: string;
     FTime: TDateTime;
     FRootKey: TRootKey;
     function GetTime(): TDateTime;
@@ -713,6 +786,7 @@ type
     function DateTimeToFileTime(const AFileTime: TDateTime): TFileTime;
     function DeleteValue(AKeyPath: string; AReallyWow64: Boolean = True): Boolean;
     function FileTimeToDateTime(const AFileTime: TFileTime): TDateTime;
+    function GetApprovedLocation(): string; virtual;
     function GetFullLocation(): string; override;
     function GetRootKey(): TRootKey; override;
     procedure Rename(const ANewName: string); overload; override;
@@ -772,8 +846,6 @@ type
     ///   The item type.
     /// </returns>
     function ToString(): string; override;
-    { external }
-    property LocationApproved: string read FApprovedLocation write FApprovedLocation;
 
     /// <summary>
     ///   Gets the root Registry key.
@@ -858,6 +930,7 @@ type
     procedure ChangeFilePath(const ANewFileName: string); override;
     function Disable(): Boolean; override;
     function Enable(): Boolean; override;
+    function GetApprovedLocation(): string; override;
     function GetFullLocation(): string; override;
     procedure Rename(const ANewName: string); override;
   public
@@ -954,9 +1027,29 @@ type
     constructor Create;
     function Add(const AFileName, AArguments, ACaption: string): Boolean; reintroduce;
     function BackupExists(): Boolean; deprecated 'Since Windows 8';
+
+    /// <summary>
+    ///   Changes the item status of the current selected item.
+    /// </summary>
+    /// <param name="ANewStatus">
+    ///   The new status.
+    /// </param>
     procedure ChangeItemStatus(const ANewStatus: Boolean); override;
+
+    /// <summary>
+    ///   Deletes the current selected item.
+    /// </summary>
+    /// <returns>
+    ///   <c>>True</c> if item was successfully deleted or <c>False</c> otherwise.
+    /// </returns>
     function DeleteItem(): Boolean; override;
-    function EnableItem(): Boolean; override;
+
+    /// <summary>
+    ///   Exports the complete list as file.
+    /// </summary>
+    /// <param name="AFileName">
+    ///   The absolute filename to the file.
+    /// </param>
     procedure ExportList(const AFileName: string); override;
 
     /// <summary>
@@ -969,7 +1062,30 @@ type
     ///   The import file filter.
     /// </returns>
     function GetImportFilter(ALanguageFile: TLanguageFile): string;
+
+    /// <summary>
+    ///   Imports a backup file.
+    /// </summary>
+    /// <param name="AFileName">
+    ///   The backup file.
+    ///  </param>
+    /// <returns>
+    ///   <c>True</c> if the import was successful or <c>False</c> otherwise.
+    /// </returns>
     function ImportBackup(const AFileName: TFileName): Boolean;
+
+    /// <summary>
+    ///   Searches items and adds them to the list.
+    /// </summary>
+    /// <param name="AExpertMode">
+    ///   If set to <c>True</c> use the expert search mode. Otherwise use the
+    ///   default search mode.
+    /// </param>
+    /// <remarks>
+    ///   Asynchronous: A thread is launched! The <see cref="OnSearchStart"/>
+    ///   event occurs when the search starts. At the end the
+    ///   <see cref="OnSearchFinish"/> event occurs.
+    /// </remarks>
     procedure Load(AExpertMode: Boolean = False); override;
     procedure LoadDisabled(AStartupUser: Boolean; AWow64: Boolean = False); deprecated 'Since Windows 8';
     procedure LoadStartup(AStartupUser: Boolean); overload;
@@ -1177,8 +1293,28 @@ type
   public
     function Add(AFileName, AArguments, ALocationRoot, ACaption: string;
       AExtended: Boolean = False): Boolean; reintroduce;
+
+    /// <summary>
+    ///   Exports the complete list as file.
+    /// </summary>
+    /// <param name="AFileName">
+    ///   The absolute filename to the file.
+    /// </param>
     procedure ExportList(const AFileName: string); override;
     function IndexOf(AName, ALocationRoot: string): Integer; overload;
+
+    /// <summary>
+    ///   Searches items and adds them to the list.
+    /// </summary>
+    /// <param name="AExpertMode">
+    ///   If set to <c>True</c> use the expert search mode. Otherwise use the
+    ///   default search mode.
+    /// </param>
+    /// <remarks>
+    ///   Asynchronous: A thread is launched! The <see cref="OnSearchStart"/>
+    ///   event occurs when the search starts. At the end the
+    ///   <see cref="OnSearchFinish"/> event occurs.
+    /// </remarks>
     procedure Load(AExpertMode: Boolean = False); override;
     procedure LoadContextmenu(const ALocationRoot: string;
       AWow64: Boolean); overload;
@@ -1296,7 +1432,27 @@ type
     constructor Create;
     destructor Destroy(); override;
     function Add(AFileName, AArguments, ACaption: string): Boolean; reintroduce;
+
+    /// <summary>
+    ///   Exports the complete list as file.
+    /// </summary>
+    /// <param name="AFileName">
+    ///   The absolute filename to the file.
+    /// </param>
     procedure ExportList(const AFileName: string); override;
+
+    /// <summary>
+    ///   Searches items and adds them to the list.
+    /// </summary>
+    /// <param name="AExpertMode">
+    ///   If set to <c>True</c> use the expert search mode. Otherwise use the
+    ///   default search mode.
+    /// </param>
+    /// <remarks>
+    ///   Asynchronous: A thread is launched! The <see cref="OnSearchStart"/>
+    ///   event occurs when the search starts. At the end the
+    ///   <see cref="OnSearchFinish"/> event occurs.
+    /// </remarks>
     procedure Load(AExpertMode: Boolean = False); override;
     function LoadService(AName: string; AService: SC_HANDLE;
       AIncludeDemand: Boolean = False): Integer;
@@ -1405,6 +1561,13 @@ type
     ///   Destructor for destroying a <c>TTaskList</c> instance.
     /// </summary>
     destructor Destroy; override;
+
+    /// <summary>
+    ///   Exports the complete list as file.
+    /// </summary>
+    /// <param name="AFileName">
+    ///   The absolute filename to the file.
+    /// </param>
     procedure ExportList(const AFileName: string); override;
 
     /// <summary>
@@ -1428,7 +1591,30 @@ type
     ///   The import file filter.
     /// </returns>
     function GetImportFilter(ALanguageFile: TLanguageFile): string;
+
+    /// <summary>
+    ///   Imports a backup file.
+    /// </summary>
+    /// <param name="AFileName">
+    ///   The backup file.
+    ///  </param>
+    /// <returns>
+    ///   <c>True</c> if the import was successful or <c>False</c> otherwise.
+    /// </returns>
     function ImportBackup(const AFileName: TFileName): Boolean;
+
+    /// <summary>
+    ///   Searches items and adds them to the list.
+    /// </summary>
+    /// <param name="AExpertMode">
+    ///   If set to <c>True</c> use the expert search mode. Otherwise use the
+    ///   default search mode.
+    /// </param>
+    /// <remarks>
+    ///   Asynchronous: A thread is launched! The <see cref="OnSearchStart"/>
+    ///   event occurs when the search starts. At the end the
+    ///   <see cref="OnSearchFinish"/> event occurs.
+    /// </remarks>
     procedure Load(AExpertMode: Boolean = False); override;
     procedure LoadTasks(ATaskFolder: ITaskFolder; AIncludeHidden: Boolean); overload;
     procedure LoadTasks(APath: string = '\'; ARecursive: Boolean = False;
@@ -1642,19 +1828,11 @@ end;
 
 function TStartupLnkFile.GetBackupExt(): string;
 begin
-  // Deprecated since Windows 8!
-  if CheckWin32Version(6, 2) then
-    Exit;
-
   if FStartupUser then
     Result := EXT_STARTUP_USER
   else
     Result := EXT_STARTUP_COMMON;
 end;
-
-{ private TStartupUserLnkFile.GetBackupLnk
-
-  Returns the absoulte path to the backup lnk file. }
 
 function TStartupLnkFile.GetBackupLnk(): string;
 begin
@@ -1696,18 +1874,10 @@ begin
   FEnabled := AEnabled;
 end;
 
-{ private TRootItem.GetArguments
-
-  Returns the arguments of the item file path. }
-
 function TRootItem.GetArguments(): string;
 begin
   Result := DeleteQuoteChars(ExtractArguments(FFileName));
 end;
-
-{ private TRootItem.GetFileNameOnly
-
-  Returns only the file name of the item (without arguments). }
 
 function TRootItem.GetFileNameOnly(): string;
 var
@@ -1722,10 +1892,6 @@ begin
 
   Result := Path;
 end;
-
-{ private TRootItem.GetFileDescription
-
-  Returns the executable file description of an TRootItem object. }
 
 function TRootItem.GetFileDescription(AFileName: TFileName): string;
 var
@@ -1768,18 +1934,10 @@ begin
   FFileName := ANewFileName;
 end;
 
-{ protected TRootItem.DeleteQuoteChars
-
-  Deletes quote chars from a file path. }
-
 function TRootItem.DeleteQuoteChars(const APath: string): string;
 begin
   Result := StringReplace(APath , '"', '', [rfReplaceAll]);
 end;
-
-{ protected TRootItem.ExtractArguments
-
-  Extracts the arguments from a file path. }
 
 function TRootItem.ExtractArguments(const APath: string): string;
 var
@@ -1807,10 +1965,6 @@ begin
   Result := Trim(Copy(ExtWithArguments, SpaceDelimiter, Length(ExtWithArguments)));
 end;
 
-{ protected TRootItem.ExtractPathToFile
-
-  Extracts the absolute file path + name without arguments from a path. }
-
 function TRootItem.ExtractPathToFile(const APath: string): string;
 var
   ArgumentsIndex: Integer;
@@ -1830,18 +1984,10 @@ begin
     Result := Result +'"';
 end;
 
-{ protected TRootItem.GetIcon
-
-  Returns the icon handle to the item file path. }
-
 function TRootItem.GetIcon(): HICON;
 begin
   Result := GetIcon(GetFileNameOnly());
 end;
-
-{ protected TRootItem.GetIcon
-
-  Returns the icon handle to the executable. }
 
 function TRootItem.GetIcon(AExeFileName: TFileName): HICON;
 var
@@ -1871,10 +2017,6 @@ begin
     Wow64FsRedirection(False);
 {$ENDIF}
 end;
-
-{ public TRootItem.ChangeStatus
-
-  Changes the item status. }
 
 procedure TRootItem.ChangeStatus(const ANewStatus: Boolean);
 begin
@@ -1953,10 +2095,6 @@ begin
   inherited Create(AName, ACaption, AFileName, ALocation, AEnabled);
   FWow64 := AWow64;
 end;
-
-{ protected TRegistryItem.DeleteKey
-
-  Deletes a Registry key. }
 
 function TRegistryItem.DeleteKey(AHKey: HKEY; AKeyPath, AKeyName: string;
   AFailIfNotExists: Boolean = True): Boolean;
@@ -2123,10 +2261,6 @@ end;
 
 { TRootList }
 
-{ public TRootList.Create
-
-  General constructor for creating a TRootList instance. }
-
 constructor TRootList<T>.Create;
 begin
   inherited Create;
@@ -2135,10 +2269,6 @@ begin
   FLock := TCriticalSection.Create;
 end;
 
-{ public TRootList.Destroy
-
-  General destructor for destroying a TRootList instance. }
-
 destructor TRootList<T>.Destroy;
 begin
   FLock.Free;
@@ -2146,19 +2276,11 @@ begin
   inherited Destroy;
 end;
 
-{ protected TRootList.DoNotifyOnChanged
-
-  Notifies if an item has been changed. }
-
 procedure TRootList<T>.DoNotifyOnChanged(ANewStatus: TItemStatus);
 begin
   if Assigned(FOnChanged) then
     FOnChanged(Self, ANewStatus);
 end;
-
-{ protected TRootList.QueryInterface
-
-  Returns the pointer to an implemention of an interface specified by a GUID. }
 
 function TRootList<T>.QueryInterface(const IID: TGUID; out Obj): HResult;
 begin
@@ -2168,38 +2290,22 @@ begin
     Result := E_NOINTERFACE;
 end;
 
-{ protected TRootList._AddRef
-
-  Increments the reference count for this interface. }
-
 function TRootList<T>._AddRef(): Integer;
 begin
   Result := -1;
 end;
-
-{ protected TRootList._Release
-
-  Decrements the reference count for this interface. }
 
 function TRootList<T>._Release(): Integer;
 begin
   Result := -1;
 end;
 
-{ public TRootList.Clear
-
-  Deletes all items in the list. }
-
-procedure TRootList<T>.Clear;
+procedure TRootList<T>.Clear();
 begin
   inherited Clear;
   FActCount := 0;
   FItem := nil;
 end;
-
-{ public TRootList.ChangeItemFilePath
-
-  Changes the file path of an item. }
 
 procedure TRootList<T>.ChangeItemFilePath(const ANewFilePath: string);
 begin
@@ -2220,10 +2326,6 @@ begin
     FLock.Release();
   end;  //of try
 end;
-
-{ public TRootList.ChangeItemStatus
-
-  Changes the item status. }
 
 procedure TRootList<T>.ChangeItemStatus(const ANewStatus: Boolean);
 var
@@ -2269,10 +2371,6 @@ begin
   end;  //of try
 end;
 
-{ public TRootList.DeleteItem
-
-  Deletes an item from location and list. }
-
 function TRootList<T>.DeleteItem(): Boolean;
 var
   Deleted: Boolean;
@@ -2311,19 +2409,10 @@ begin
   end;  //of try
 end;
 
-{ public TRootList.DisableItem
-
-  Disables the current selected item. }
-
-function TRootList<T>.DisableItem(): Boolean;
+procedure TRootList<T>.DisableItem();
 begin
   ChangeItemStatus(False);
-  Result := True;
 end;
-
-{ public TRootList.DoNotifyOnFinished
-
-  Notifies if the current list needs a visual update. }
 
 procedure TRootList<T>.DoNotifyOnFinished();
 begin
@@ -2334,14 +2423,9 @@ begin
   FInvalid := False;
 end;
 
-{ public TRootList.EnableItem
-
-  Enables the current selected item. }
-
-function TRootList<T>.EnableItem(): Boolean;
+procedure TRootList<T>.EnableItem();
 begin
   ChangeItemStatus(True);
-  Result := True;
 end;
 
 procedure TRootList<T>.ExportItem(const AFileName: string);
@@ -2415,18 +2499,10 @@ begin
   end;  //of for
 end;
 
-{ public TRootList.Invalidate
-
-  Signals that list needs an visual update. }
-
 procedure TRootList<T>.Invalidate();
 begin
   FInvalid := True;
 end;
-
-{ public TRootList.IsLocked
-
-  Checks if the list is currently locked. }
 
 function TRootList<T>.IsLocked(): Boolean;
 var
@@ -2441,7 +2517,7 @@ begin
   Result := not Entered;
 end;
 
-function TRootList<T>.RenameItem(const ANewCaption: string): Boolean;
+function TRootList<T>.RenameItem(const ANewName: string): Boolean;
 begin
   // List locked?
   if not FLock.TryEnter() then
@@ -2451,7 +2527,7 @@ begin
     if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
       raise EInvalidItem.Create('No item selected!');
 
-    FItem.Rename(ANewCaption);
+    FItem.Rename(ANewName);
     DoNotifyOnChanged(stNone);
 
   finally
@@ -2520,8 +2596,8 @@ begin
   try
     Reg.RootKey := FRootKey.ToHKey();
 
-    if not Reg.OpenKey(FApprovedLocation, False) then
-      raise EStartupException.Create('Key '''+ FApprovedLocation +''' does not exist!');
+    if not Reg.OpenKey(GetApprovedLocation(), False) then
+      raise EStartupException.Create('Key '''+ GetApprovedLocation() +''' does not exist!');
 
     if ANewStatus then
     begin
@@ -2623,6 +2699,18 @@ begin
   end;  //of try
 end;
 
+function TStartupListItem.GetApprovedLocation(): string;
+begin
+  // Only since Windows 8!
+  if not CheckWin32Version(6, 2) then
+    Exit;
+
+  if Wow64 then
+    Result := KEY_STARTUP_RUN32_APPROVED
+  else
+    Result := KEY_STARTUP_RUN_APPROVED;
+end;
+
 { protected TStartupListItem.GetFullLocation
 
   Returns the full Registry path to a TStartupListItem. }
@@ -2719,7 +2807,7 @@ end;
 
 function TStartupListItem.Delete(): Boolean;
 begin
-  Result := DeleteValue(FApprovedLocation, False);
+  Result := DeleteValue(GetApprovedLocation(), False);
 end;
 
 procedure TStartupListItem.ExportItem(const AFileName: string);
@@ -2737,7 +2825,7 @@ begin
       try
         // Windows 8?
         if CheckWin32Version(6, 2) then
-          RegFile.ExportReg(FRootKey.ToHKey(), FApprovedLocation, Name);
+          RegFile.ExportReg(FRootKey.ToHKey(), GetApprovedLocation(), Name);
 
       except
         // Approved item does not exist?
@@ -2768,7 +2856,7 @@ end;
 
 procedure TStartupListItem.Rename(const ANewName: string);
 begin
-  if Rename(FApprovedLocation, ANewName, False) then
+  if Rename(GetApprovedLocation(), ANewName, False) then
     inherited Rename(ANewName);
 end;
 
@@ -3051,9 +3139,6 @@ constructor TStartupUserItem.Create(const AName, AFileName, ALocation: string;
 begin
   inherited Create(AName, AFileName, ALocation, ARootKey, AEnabled, False);
   FStartupUser := AStartupUser;
-
-  if CheckWin32Version(6, 2) then
-    FApprovedLocation := KEY_STARTUP_USER_APPROVED;
 end;
 
 destructor TStartupUserItem.Destroy;
@@ -3082,9 +3167,16 @@ begin
   else
     // Windows 8?
     if CheckWin32Version(6, 2) then
-      Result := FRootKey.ToString() +'\'+ LocationApproved
+      Result := FRootKey.ToString() +'\'+ GetApprovedLocation()
     else
       Result := inherited GetFullLocation();
+end;
+
+function TStartupUserItem.GetApprovedLocation(): string;
+begin
+  // Only since Windows 8!
+  if CheckWin32Version(6, 2) then
+    Result := KEY_STARTUP_USER_APPROVED;
 end;
 
 function TStartupUserItem.GetExportFilter(ALanguageFile: TLanguageFile): string;
@@ -3405,30 +3497,6 @@ begin
     if not (ARootKey in [rkHKLM, rkHKCU]) then
       raise EStartupException.Create('Invalid startup key!');
 
-    // RunOnce item?
-    if ARunOnce then
-    begin
-      // Windows 8?
-      if CheckWin32Version(6, 2) then
-      begin
-        if AWow64 then
-          Item.LocationApproved := KEY_STARTUP_RUN32_APPROVED
-        else
-          Item.LocationApproved := KEY_STARTUP_RUN_APPROVED;
-      end;  //of begin
-    end  //of begin
-    else
-    begin
-      // Windows 8?
-      if CheckWin32Version(6, 2) then
-      begin
-        if AWow64 then
-          Item.LocationApproved := KEY_STARTUP_RUN32_APPROVED
-        else
-          Item.LocationApproved := KEY_STARTUP_RUN_APPROVED;
-      end;  //of begin
-    end;  //of if
-
     // < Windows 8?
     // Note: Since Windows 8 LoadStatus() is used to refresh counter!
     if not CheckWin32Version(6, 2) then
@@ -3656,10 +3724,6 @@ begin
     Result := False;
 end;
 
-{ public TStartupList.ChangeItemStatus
-
-  Changes the item status. }
-
 procedure TStartupList.ChangeItemStatus(const ANewStatus: Boolean);
 begin
   inherited ChangeItemStatus(ANewStatus);
@@ -3669,31 +3733,11 @@ begin
     DeleteBackupFile();
 end;
 
-{ public TStartupList.DeleteItem
-
-  Deletes an item from Registry and list. }
-
 function TStartupList.DeleteItem(): Boolean;
 begin
   DeleteBackupFile();
   Result := inherited DeleteItem();
 end;
-
-{ public TStartupList.EnableItem
-
-  Enables the current selected item. }
-
-function TStartupList.EnableItem(): Boolean;
-begin
-  Result := inherited EnableItem();
-
-  if Result then
-    DeleteBackupFile();
-end;
-
-{ public TStartupList.ExportList
-
-  Exports the complete list as .reg file. }
 
 procedure TStartupList.ExportList(const AFileName: string);
 var
@@ -3736,10 +3780,6 @@ begin
     FLock.Release();
   end;  //of try
 end;
-
-{ public TStartupList.ImportBackup
-
-  Imports a startup user backup file and adds it to the list. }
 
 function TStartupList.ImportBackup(const AFileName: TFileName): Boolean;
 var
@@ -3784,10 +3824,6 @@ begin
     FLock.Release();
   end;  //of try
 end;
-
-{ public TStartupList.Load
-
-  Searches for startup items in default or expert mode. }
 
 procedure TStartupList.Load(AExpertMode: Boolean = False);
 var
@@ -4824,10 +4860,6 @@ begin
   end;  //of try
 end;
 
-{ public TContextList.ExportList
-
-  Exports the complete list as .reg file. }
-
 procedure TContextList.ExportList(const AFileName: string);
 var
   i: Integer;
@@ -5567,10 +5599,6 @@ begin
   end;  //of try
 end;
 
-{ public TServiceList.ExportList
-
-  Exports the complete list as .reg file. }
-
 procedure TServiceList.ExportList(const AFileName: string);
 var
   i: Integer;
@@ -5950,10 +5978,6 @@ begin
     Inc(FActCount);
 end;
 
-{ public TTaskList.ExportList
-
-  Exports the complete list as .zip file. }
-
 procedure TTaskList.ExportList(const AFileName: string);
 var
   i: Integer;
@@ -6016,10 +6040,6 @@ begin
 //    ALanguageFile.GetString(LID_FILTER_ZIP_FILES)]);
   Result := ALanguageFile.GetString(LID_FILTER_XML_FILES);
 end;
-
-{ public TTaskList.ImportBackup
-
-  Imports an exported task item as .xml file and adds it to the list. }
 
 function TTaskList.ImportBackup(const AFileName: TFileName): Boolean;
 var

@@ -616,18 +616,14 @@ begin
     if not Assigned(ListView.ItemFocused) then
       raise EInvalidItem.Create('No item selected!');
 
-    // Successfully disabled item?
-    if RootList.DisableItem() then
-    begin
-      // Change item visual status
-      ListView.ItemFocused.Caption := RootList.Selected.GetStatus(FLang);
+    RootList.DisableItem();
 
-      // Update TListView
-      ListView.OnSelectItem(Self, ListView.ItemFocused, True);
-      Result := True;
-    end  //of begin
-    else
-      raise Exception.Create('Unknown error!');
+    // Change item visual status
+    ListView.ItemFocused.Caption := RootList.Selected.GetStatus(FLang);
+
+    // Update TListView
+    ListView.OnSelectItem(Self, ListView.ItemFocused, True);
+    Result := True;
 
   except
     on E: EInvalidItem do
@@ -665,18 +661,14 @@ begin
     if not Assigned(ListView.ItemFocused) then
       raise EInvalidItem.Create('No item selected!');
 
-    // Successfully activated item?
-    if RootList.EnableItem() then
-    begin
-      // Change item visual status
-      ListView.ItemFocused.Caption := RootList.Selected.GetStatus(FLang);
+    RootList.EnableItem();
 
-      // Update TListView
-      ListView.OnSelectItem(Self, ListView.ItemFocused, True);
-      Result := True;
-    end  //of begin
-    else
-      raise Exception.Create('Unknown error!');
+    // Change item visual status
+    ListView.ItemFocused.Caption := RootList.Selected.GetStatus(FLang);
+
+    // Update TListView
+    ListView.OnSelectItem(Self, ListView.ItemFocused, True);
+    Result := True;
 
   except
     on E: EInvalidItem do
