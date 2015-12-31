@@ -184,18 +184,101 @@ type
     function GetBackupLnk(): string; deprecated 'Since Windows 8';
     function GetBackupExt(): string; deprecated 'Since Windows 8';
   public
+    /// <summary>
+    ///   Constructor for creating a <c>TStartupLnkFile</c> instance.
+    /// </summary>
+    /// <param name="AFileName">
+    ///   The filename of the .lnk file.
+    /// </param>
     constructor Create(AFileName: TFileName); reintroduce; overload;
-    constructor Create(AName: string; AStartupUser: Boolean); overload;
-    constructor Create(AName: string; AStartupUser: Boolean;
+
+    /// <summary>
+    ///   Constructor for creating a <c>TStartupLnkFile</c> instance.
+    /// </summary>
+    /// <param name="AName">
+    ///   The name of the .lnk file.
+    /// </param>
+    /// <param name="AStartupUser">
+    ///   If set to <c>True</c> the startup location for the current user is
+    ///   used. Otherwise the startup location for all users is used.
+    /// </param>
+    constructor Create(const AName: string; AStartupUser: Boolean); overload;
+
+    /// <summary>
+    ///   Constructor for creating a <c>TStartupLnkFile</c> instance.
+    /// </summary>
+    /// <param name="AName">
+    ///   The name of the .lnk file.
+    /// </param>
+    /// <param name="AStartupUser">
+    ///   If set to <c>True</c> the startup location for the current user is
+    ///   used. Otherwise the startup location for all users is used.
+    /// </param>
+    /// <param name="AExeFileName">
+    ///   The absolute .exe filename.
+    /// </param>
+    /// <param name="AArguments">
+    ///   Optional arguments passed to the .exe.
+    /// </param>
+    constructor Create(const AName: string; AStartupUser: Boolean;
       AExeFileName: TFileName; AArguments: string = ''); overload;
+
+    /// <summary>
+    ///   Checks if the backup .lnk file in <c>C:\Windows\pss\</c> exists.
+    /// </summary>
+    /// <returns>
+    ///   <c>True</c> if the backup exists or <c>False</c> otherwise.
+    /// </returns>
     function BackupExists(): Boolean; deprecated 'Since Windows 8';
+
+    /// <summary>
+    ///   Creates a backup .lnk file in <c>C:\Windows\pss\</c>.
+    /// </summary>
     procedure CreateBackup(); deprecated 'Since Windows 8';
+
+    /// <summary>
+    ///   Deletes the backup .lnk file in <c>C:\Windows\pss\</c>.
+    /// </summary>
+    /// <returns>
+    ///   <c>True</c> if the backup was successfully deleted or <c>False</c>
+    ///   otherwise.
+    /// </returns>
     function DeleteBackup(): Boolean; deprecated 'Since Windows 8';
+
+    /// <summary>
+    ///   Gets the path to the backup directory.
+    /// </summary>
+    /// <returns>
+    ///   The backup directory.
+    /// </returns>
     class function GetBackupDir(): string; deprecated 'Since Windows 8';
+
+    /// <summary>
+    ///   Gets the file system startup location.
+    /// </summary>
+    /// <param name="AStartupUser">
+    ///   If set to <c>True</c> the startup location for the current user is
+    ///   returned. Otherwise the startup location for all users is returned.
+    /// </param>
+    /// <returns>
+    ///   The backup directory.
+    /// </returns>
     class function GetStartUpDir(AStartupUser: Boolean): string;
-    { external }
+
+    /// <summary>
+    ///   Gets extension of the backup file.
+    /// </summary>
     property BackupExt: string read GetBackupExt;
+
+    /// <summary>
+    ///   Gets the path to the backup .lnk file in <c>C:\Windows\pss\</c>.
+    /// </summary>
     property BackupLnk: string read GetBackupLnk;
+
+    /// <summary>
+    ///   The .lnk file is located in the startup folder of the current user
+    ///   or located in startup folder of all users.
+    /// </summary>
     property StartupUser: Boolean read FStartupUser;
   end;
 
@@ -213,13 +296,13 @@ type
   /// </remarks>
   TRootItem = class(TObject)
   private
-    FName,
-    FFileName: string;
     function GetArguments(): string;
     function GetFileNameOnly(): string;
   protected
     FEnabled: Boolean;
-    FLocation,
+    FFileName: string;
+    FName: string;
+    FLocation: string;
     FCaption: string;
     procedure ChangeFilePath(const ANewFileName: string); virtual;
     procedure ChangeStatus(const ANewStatus: Boolean); virtual;
@@ -230,6 +313,7 @@ type
     function GetFileDescription(AFileName: TFileName): string;
     function GetIcon(): HICON; overload; virtual;
     function GetIcon(AExeFileName: TFileName): HICON; overload;
+    procedure Rename(const ANewName: string); virtual;
   public
     /// <summary>
     ///   Constructor for creating a <c>TRootItem</c> instance.
@@ -251,13 +335,61 @@ type
     /// </param>
     constructor Create(const AName, ACaption, AFileName, ALocation: string;
       AEnabled: Boolean); reintroduce;
+
+    /// <summary>
+    ///   Deletes the item.
+    /// </summary>
+    /// <returns>
+    ///   <c>True</c> if the item was successfully deleted or <c>False</c>
+    ///   otherwise.
+    /// </returns>
     function Delete(): Boolean; virtual; abstract;
+
+    /// <summary>
+    ///   Exports the item as file.
+    /// </summary>
+    /// <param name="AFileName">
+    ///   The absolute filename to the file.
+    /// </param>
     procedure ExportItem(const AFileName: string); virtual; abstract;
+
+    /// <summary>
+    ///   Checks if the .exe file exists.
+    /// </summary>
+    /// <returns>
+    ///   <c>True</c> if the file in property <see cref="FileName"/> exists or
+    ///   <c>False</c> otherwise.
+    /// </returns>
     function FileExists(): Boolean;
+
+    /// <summary>
+    ///   Gets the filter for file export.
+    /// </summary>
+    /// <param name="ALanguageFile">
+    ///   A <c>TLanguageFile</c> that contains the translations.
+    /// </param>
+    /// <returns>
+    ///   The filter formatted as <c>"File type *.ext|*.ext"</c>
+    /// </returns>
     function GetExportFilter(ALanguageFile: TLanguageFile): string; virtual; abstract;
+
+    /// <summary>
+    ///   Gets the item status as translated text.
+    /// </summary>
+    /// <param name="ALanguageFile">
+    ///   A <c>TLanguageFile</c> that contains the translations.
+    /// </param>
+    /// <returns>
+    ///   The status as text.
+    /// </returns>
     function GetStatus(ALanguageFile: TLanguageFile): string;
+
+    /// <summary>
+    ///   Opens the folder that contains the .exe file in Windows Explorer and
+    ///   selects this file. If the file does not exist a <see cref="EWarning"/>
+    ///   is raised.
+    /// </summary>
     procedure OpenInExplorer();
-    function Rename(const ANewCaption: string): Boolean; virtual; abstract;
 
     /// <summary>
     ///   Extracts the arguments to the .exe file in <see cref="FileName"/>.
@@ -302,7 +434,7 @@ type
     /// <summary>
     ///   Gets or sets the internal name.
     /// </summary>
-    property Name: string read FName write FName;
+    property Name: string read FName write Rename;
   end;
 
   /// <summary>
@@ -318,8 +450,25 @@ type
       AFailIfNotExists: Boolean = True): Boolean;
     function GetRootKey(): TRootKey; virtual; abstract;
     function GetWow64Key(): string;
+
+    /// <summary>
+    ///   Opens the item location in either 32 or 64 bit RegEdit.
+    /// </summary>
+    /// <param name="AWow64">
+    ///   If set to <c>True</c> use the 32 bit RegEdit otherwise use the 64 bit.
+    /// </param>
     procedure OpenInRegEdit(AWow64: Boolean); overload;
-    function WriteTimestamp(AReg: TRegistry): TDateTime;
+
+    /// <summary>
+    ///   Writes the deactivation timestamp to the Registry and returns it.
+    /// </summary>
+    /// <param name="AReg">
+    ///   A <c>TRegistry</c> instance.
+    /// </param>
+    /// <returns>
+    ///   The deactivation timestamp.
+    /// </returns>
+    function WriteTimestamp(const AReg: TRegistry): TDateTime;
   public
     /// <summary>
     ///   Constructor for creating a <c>TRegistryItem</c> instance.
@@ -344,12 +493,53 @@ type
     /// </param>
     constructor Create(const AName, ACaption, AFileName, ALocation: string;
       AEnabled, AWow64: Boolean); reintroduce;
+
+    /// <summary>
+    ///   Gets the filter for file export.
+    /// </summary>
+    /// <param name="ALanguageFile">
+    ///   A <c>TLanguageFile</c> that contains the translations.
+    /// </param>
+    /// <returns>
+    ///   The filter formatted as <c>"File type *.ext|*.ext"</c>
+    /// </returns>
     function GetExportFilter(ALanguageFile: TLanguageFile): string; override;
+
+    /// <summary>
+    ///   Gets the deactivation timestamp which is stored in the Registry.
+    /// </summary>
+    /// <param name="AReg">
+    ///   A <c>TRegistry</c> instance.
+    /// </param>
+    /// <returns>
+    ///   The deactivation timestamp.
+    /// </returns>
     function GetTimestamp(AReg: TRegistry): TDateTime;
+
+    /// <summary>
+    ///   Opens the item location in RegEdit.
+    /// </summary>
     procedure OpenInRegEdit(); overload; virtual;
-    { external }
+
+    /// <summary>
+    ///   Gets the root Registry key.
+    /// </summary>
+    /// <returns>
+    ///    The root Registry key.
+    /// </returns>
     property RootKey: TRootKey read GetRootKey;
+
+    /// <summary>
+    ///   Item is redirected by WOW64.
+    /// </summary>
     property Wow64: Boolean read FWow64;
+
+    /// <summary>
+    ///   Gets the virtual Registry key redirected by WOW64.
+    /// </summary>
+    /// <returns>
+    ///    The WOW64 Registry key.
+    /// </returns>
     property Wow64Location: string read GetWow64Key;
   end;
 
@@ -383,7 +573,7 @@ type
     ///   Gets the file filter for an <c>TOpenDialogy</c> from a <c>TLanguageFile</c>.
     /// </summary>
     /// <param name="ALanguageFile">
-    ///   A <c>TLanguageFile</c> for multi-language support.
+    ///   A <c>TLanguageFile</c> that contains the translations.
     /// </param>
     /// <returns>
     ///   The import file filter.
@@ -421,6 +611,10 @@ type
     ///   Constructor for creating a <c>TRootList</c> instance.
     /// </summary>
     constructor Create;
+
+    /// <summary>
+    ///   Destructor for destroying a <c>TRootList</c> instance.
+    /// </summary>
     destructor Destroy; override;
     procedure ChangeItemFilePath(const ANewFilePath: string); virtual;
     procedure ChangeItemStatus(const ANewStatus: Boolean); virtual;
@@ -429,8 +623,25 @@ type
     function DisableItem(): Boolean; virtual;
     procedure DoNotifyOnFinished();
     function EnableItem(): Boolean; virtual;
+
+    /// <summary>
+    ///   Exports the current selected item as file.
+    /// </summary>
+    /// <param name="AFileName">
+    ///   The absolute filename to the file.
+    /// </param>
     procedure ExportItem(const AFileName: string); virtual;
     procedure ExportList(const AFileName: string); virtual; abstract;
+
+    /// <summary>
+    ///   Gets the filter for file export.
+    /// </summary>
+    /// <param name="ALanguageFile">
+    ///   A <c>TLanguageFile</c> that contains the translations.
+    /// </param>
+    /// <returns>
+    ///   The filter formatted as <c>"File type *.ext|*.ext"</c>
+    /// </returns>
     function GetExportFilter(ALanguageFile: TLanguageFile): string; virtual;
     function IndexOf(const ANameOrCaption: string): Integer; overload;
     function IndexOf(const ANameOrCaption: string; AEnabled: Boolean): Integer; overload;
@@ -496,8 +707,7 @@ type
     function GetTime(): TDateTime;
   protected
     procedure ChangeFilePath(const ANewFileName: string); override;
-    procedure ChangeStatus(const ANewStatus: Boolean); overload; override;
-    procedure ChangeStatus(const ANewStatus: Boolean; const AKeyPath: string); reintroduce; overload;
+    procedure ChangeStatus(const ANewStatus: Boolean); override;
     function Disable(): Boolean; virtual; deprecated 'Since Windows 8'; abstract;
     function Enable(): Boolean; virtual; deprecated 'Since Windows 8'; abstract;
     function DateTimeToFileTime(const AFileTime: TDateTime): TFileTime;
@@ -505,7 +715,8 @@ type
     function FileTimeToDateTime(const AFileTime: TFileTime): TDateTime;
     function GetFullLocation(): string; override;
     function GetRootKey(): TRootKey; override;
-    function Rename(const AKeyPath, ANewCaption: string;
+    procedure Rename(const ANewName: string); overload; override;
+    function Rename(const AKeyPath, ANewName: string;
       AReallyWow64: Boolean = True): Boolean; reintroduce; overload;
   public
     /// <summary>
@@ -531,13 +742,45 @@ type
     /// </param>
     constructor Create(const AName, AFileName, ALocation: string;
       ARootKey: TRootKey; AEnabled, AWow64: Boolean); reintroduce;
+
+    /// <summary>
+    ///   Deletes the item.
+    /// </summary>
+    /// <returns>
+    ///   <c>True</c> if the item was successfully deleted or <c>False</c>
+    ///   otherwise.
+    /// </returns>
     function Delete(): Boolean; override;
+
+    /// <summary>
+    ///   Exports the item as file.
+    /// </summary>
+    /// <param name="AFileName">
+    ///   The absolute filename to the file.
+    /// </param>
     procedure ExportItem(const AFileName: string); override;
+
+    /// <summary>
+    ///   Opens the item location in RegEdit.
+    /// </summary>
     procedure OpenInRegEdit(); override;
-    function Rename(const ANewCaption: string): Boolean; overload; override;
+
+    /// <summary>
+    ///   Gets the item type as string.
+    /// </summary>
+    /// <returns>
+    ///   The item type.
+    /// </returns>
     function ToString(): string; override;
     { external }
     property LocationApproved: string read FApprovedLocation write FApprovedLocation;
+
+    /// <summary>
+    ///   Gets the root Registry key.
+    /// </summary>
+    /// <returns>
+    ///    The root Registry key.
+    /// </returns>
     property RootKey: TRootKey read GetRootKey write FRootKey;
     property Time: TDateTime read GetTime write FTime;
   end;
@@ -552,6 +795,7 @@ type
   protected
     function Disable(): Boolean; override;
     function Enable(): Boolean; override;
+    procedure Rename(const ANewName: string); override;
   public
     /// <summary>
     ///   Constructor for creating a <c>TStartupItem</c> instance.
@@ -579,8 +823,22 @@ type
     /// </param>
     constructor Create(const AName, AFileName, ALocation: string;
       ARootKey: TRootKey; AEnabled, AWow64, ARunOnce: Boolean);
+
+    /// <summary>
+    ///   Deletes the item.
+    /// </summary>
+    /// <returns>
+    ///   <c>True</c> if the item was successfully deleted or <c>False</c>
+    ///   otherwise.
+    /// </returns>
     function Delete(): Boolean; override;
-    function Rename(const ANewCaption: string): Boolean; override;
+
+    /// <summary>
+    ///   Gets the item type as string.
+    /// </summary>
+    /// <returns>
+    ///   The item type.
+    /// </returns>
     function ToString(): string; override;
     { external }
     property RunOnce: Boolean read FRunOnce;
@@ -601,6 +859,7 @@ type
     function Disable(): Boolean; override;
     function Enable(): Boolean; override;
     function GetFullLocation(): string; override;
+    procedure Rename(const ANewName: string); override;
   public
     /// <summary>
     ///   Constructor for creating a <c>TStartupUserItem</c> instance.
@@ -625,11 +884,45 @@ type
     /// </param>
     constructor Create(const AName, AFileName, ALocation: string;
       ARootKey: TRootKey; AEnabled, AStartupUser: Boolean);
+
+    /// <summary>
+    ///   Destructor for destroying a <c>TStartupUserItem</c> instance.
+    /// </summary>
     destructor Destroy; override;
+    /// <summary>
+    ///   Deletes the item.
+    /// </summary>
+    /// <returns>
+    ///   <c>True</c> if the item was successfully deleted or <c>False</c>
+    ///   otherwise.
+    /// </returns>
     function Delete(): Boolean; override;
+
+    /// <summary>
+    ///   Exports the item as file.
+    /// </summary>
+    /// <param name="AFileName">
+    ///   The absolute filename to the file.
+    /// </param>
     procedure ExportItem(const AFileName: string); override;
+
+    /// <summary>
+    ///   Gets the filter for file export.
+    /// </summary>
+    /// <param name="ALanguageFile">
+    ///   A <c>TLanguageFile</c> that contains the translations.
+    /// </param>
+    /// <returns>
+    ///   The filter formatted as <c>"File type *.ext|*.ext"</c>
+    /// </returns>
     function GetExportFilter(ALanguageFile: TLanguageFile): string; override;
-    function Rename(const ANewCaption: string): Boolean; override;
+
+    /// <summary>
+    ///   Gets the item type as string.
+    /// </summary>
+    /// <returns>
+    ///   The item type.
+    /// </returns>
     function ToString(): string; override;
     { external }
     property StartupUser: Boolean read FStartupUser;
@@ -651,7 +944,7 @@ type
     function AddItem(ARootKey: TRootKey; const AKeyPath, AName, AFileName: string;
       AWow64, ARunOnce: Boolean): Integer;
     function AddNewStartupUserItem(AName: string; AFileName: TFileName;
-      AArguments: string = ''; ACommonStartup: Boolean = False): Boolean;
+      AArguments: string = ''; AStartupUser: Boolean = True): Boolean;
     function AddUserItemDisabled(AReg: TRegistry): Integer; deprecated 'Since Windows 8';
     function AddUserItem(ALnkFile: TStartupLnkFile; AStartupUser: Boolean): Integer;
   public
@@ -665,6 +958,16 @@ type
     function DeleteItem(): Boolean; override;
     function EnableItem(): Boolean; override;
     procedure ExportList(const AFileName: string); override;
+
+    /// <summary>
+    ///   Gets the file filter for an <c>TOpenDialogy</c> from a <c>TLanguageFile</c>.
+    /// </summary>
+    /// <param name="ALanguageFile">
+    ///   A <c>TLanguageFile</c> that contains the translations.
+    /// </param>
+    /// <returns>
+    ///   The import file filter.
+    /// </returns>
     function GetImportFilter(ALanguageFile: TLanguageFile): string;
     function ImportBackup(const AFileName: TFileName): Boolean;
     procedure Load(AExpertMode: Boolean = False); override;
@@ -692,7 +995,15 @@ type
   protected
     function GetFullLocation(): string; override;
     function GetRootKey(): TRootKey; override;
+    procedure Rename(const ANewName: string); override;
   public
+    /// <summary>
+    ///   Deletes the item.
+    /// </summary>
+    /// <returns>
+    ///   <c>True</c> if the item was successfully deleted or <c>False</c>
+    ///   otherwise.
+    /// </returns>
     function Delete(): Boolean; override;
     function DeleteUserChoice(AFileExtension: string): Boolean;
     function UserChoiceExists(AFileExtension: string): Boolean;
@@ -710,14 +1021,28 @@ type
     function GetKeyPath(): string; override;
   protected
     procedure ChangeFilePath(const ANewFileName: string); override;
-    procedure ChangeStatus(const ANewStatus: Boolean); overload; override;
+    procedure ChangeStatus(const ANewStatus: Boolean); override;
     function GetIcon(): HICON; override;
-    function Rename(const AValueName, ANewCaption: string): Boolean; reintroduce; overload;
+    procedure Rename(const AValueName, ANewCaption: string); reintroduce; overload;
+    procedure Rename(const ANewName: string); overload; override;
   public
     function ChangeIcon(const ANewIconFileName: string): Boolean;
     function DeleteIcon(): Boolean;
+
+    /// <summary>
+    ///   Exports the item as file.
+    /// </summary>
+    /// <param name="AFileName">
+    ///   The absolute filename to the file.
+    /// </param>
     procedure ExportItem(const AFileName: string); override;
-    function Rename(const ANewCaption: string): Boolean; overload; override;
+
+    /// <summary>
+    ///   Gets the item type as string.
+    /// </summary>
+    /// <returns>
+    ///   The item type.
+    /// </returns>
     function ToString(): string; override;
   end;
 
@@ -731,10 +1056,31 @@ type
     procedure GetSubCommands(var ASubCommands: TStrings);
   protected
     procedure ChangeFilePath(const ANewFileName: string); override;
+    procedure Rename(const ANewName: string); override;
   public
+    /// <summary>
+    ///   Deletes the item.
+    /// </summary>
+    /// <returns>
+    ///   <c>True</c> if the item was successfully deleted or <c>False</c>
+    ///   otherwise.
+    /// </returns>
     function Delete(): Boolean; override;
+
+    /// <summary>
+    ///   Exports the item as file.
+    /// </summary>
+    /// <param name="AFileName">
+    ///   The absolute filename to the file.
+    /// </param>
     procedure ExportItem(const AFileName: string); override;
-    function Rename(const ANewCaption: string): Boolean; override;
+
+    /// <summary>
+    ///   Gets the item type as string.
+    /// </summary>
+    /// <returns>
+    ///   The item type.
+    /// </returns>
     function ToString(): string; override;
   end;
 
@@ -749,9 +1095,22 @@ type
   protected
     procedure ChangeFilePath(const ANewFileName: string); override;
     procedure ChangeStatus(const ANewStatus: Boolean); override;
+    procedure Rename(const ANewName: string); override;
   public
+    /// <summary>
+    ///   Exports the item as file.
+    /// </summary>
+    /// <param name="AFileName">
+    ///   The absolute filename to the file.
+    /// </param>
     procedure ExportItem(const AFileName: string); override;
-    function Rename(const ANewCaption: string): Boolean; override;
+
+    /// <summary>
+    ///   Gets the item type as string.
+    /// </summary>
+    /// <returns>
+    ///   The item type.
+    /// </returns>
     function ToString(): string; override;
   end;
 
@@ -766,10 +1125,31 @@ type
   protected
     procedure ChangeFilePath(const ANewFileName: string); override;
     procedure ChangeStatus(const ANewStatus: Boolean); override;
+    procedure Rename(const ANewName: string); override;
   public
+    /// <summary>
+    ///   Deletes the item.
+    /// </summary>
+    /// <returns>
+    ///   <c>True</c> if the item was successfully deleted or <c>False</c>
+    ///   otherwise.
+    /// </returns>
     function Delete(): Boolean; override;
+
+    /// <summary>
+    ///   Exports the item as file.
+    /// </summary>
+    /// <param name="AFileName">
+    ///   The absolute filename to the file.
+    /// </param>
     procedure ExportItem(const AFileName: string); override;
-    function Rename(const ANewCaption: string): Boolean; override;
+
+    /// <summary>
+    ///   Gets the item type as string.
+    /// </summary>
+    /// <returns>
+    ///   The item type.
+    /// </returns>
     function ToString(): string; override;
   end;
 
@@ -838,6 +1218,7 @@ type
     procedure ChangeStatus(const ANewStatus: Boolean); override;
     function GetFullLocation(): string; override;
     function GetRootKey(): TRootKey; override;
+    procedure Rename(const ANewName: string); override;
   public
     /// <summary>
     ///   Constructor for creating a <c>TServiceListItem</c> instance.
@@ -862,9 +1243,30 @@ type
     /// </param>
     constructor Create(const AName, ACaption, AFileName: string; AEnabled: Boolean;
       AServiceStart: TServiceStart; AServiceManager: SC_HANDLE);
+
+    /// <summary>
+    ///   Deletes the item.
+    /// </summary>
+    /// <returns>
+    ///   <c>True</c> if the item was successfully deleted or <c>False</c>
+    ///   otherwise.
+    /// </returns>
     function Delete(): Boolean; override;
+
+    /// <summary>
+    ///   Exports the item as file.
+    /// </summary>
+    /// <param name="AFileName">
+    ///   The absolute filename to the file.
+    /// </param>
     procedure ExportItem(const AFileName: string); override;
-    function Rename(const ANewCaption: string): Boolean; override;
+
+    /// <summary>
+    ///   Gets the item type as string.
+    /// </summary>
+    /// <returns>
+    ///   The item type.
+    /// </returns>
     function ToString(): string; override;
     { external }
     property Location: string read GetLocation;
@@ -917,6 +1319,7 @@ type
     procedure ChangeFilePath(const ANewFilePath: string); override;
     procedure ChangeStatus(const ANewStatus: Boolean); override;
     function GetFullLocation(): string; override;
+    procedure Rename(const ANewName: string); override;
   public
     /// <summary>
     ///   Constructor for creating a <c>TTaskListItem</c> instance.
@@ -941,10 +1344,41 @@ type
     /// </param>
     constructor Create(const AName, AFileName, ALocation: string; AEnabled: Boolean;
       ATask: IRegisteredTask; ATaskFolder: ITaskFolder);
+
+    /// <summary>
+    ///   Deletes the item.
+    /// </summary>
+    /// <returns>
+    ///   <c>True</c> if the item was successfully deleted or <c>False</c>
+    ///   otherwise.
+    /// </returns>
     function Delete(): Boolean; override;
+
+    /// <summary>
+    ///   Exports the item as file.
+    /// </summary>
+    /// <param name="AFileName">
+    ///   The absolute filename to the file.
+    /// </param>
     procedure ExportItem(const AFileName: string); override;
+
+    /// <summary>
+    ///   Gets the filter for file export.
+    /// </summary>
+    /// <param name="ALanguageFile">
+    ///   A <c>TLanguageFile</c> that contains the translations.
+    /// </param>
+    /// <returns>
+    ///   The filter formatted as <c>"File type *.ext|*.ext"</c>
+    /// </returns>
     function GetExportFilter(ALanguageFile: TLanguageFile): string; override;
-    function Rename(const ANewCaption: string): Boolean; override;
+
+    /// <summary>
+    ///   Gets the item type as string.
+    /// </summary>
+    /// <returns>
+    ///   The item type.
+    /// </returns>
     function ToString(): string; override;
     { external }
     property Definition: ITaskDefinition read GetTaskDefinition;
@@ -966,9 +1400,33 @@ type
     ///   Constructor for creating a <c>TTaskList</c> instance.
     /// </summary>
     constructor Create;
+
+    /// <summary>
+    ///   Destructor for destroying a <c>TTaskList</c> instance.
+    /// </summary>
     destructor Destroy; override;
     procedure ExportList(const AFileName: string); override;
+
+    /// <summary>
+    ///   Gets the filter for file export.
+    /// </summary>
+    /// <param name="ALanguageFile">
+    ///   A <c>TLanguageFile</c> that contains the translations.
+    /// </param>
+    /// <returns>
+    ///   The filter formatted as <c>"File type *.ext|*.ext"</c>
+    /// </returns>
     function GetExportFilter(ALanguageFile: TLanguageFile): string; override;
+
+    /// <summary>
+    ///   Gets the file filter for an <c>TOpenDialogy</c> from a <c>TLanguageFile</c>.
+    /// </summary>
+    /// <param name="ALanguageFile">
+    ///   A <c>TLanguageFile</c> that contains the translations.
+    /// </param>
+    /// <returns>
+    ///   The import file filter.
+    /// </returns>
     function GetImportFilter(ALanguageFile: TLanguageFile): string;
     function ImportBackup(const AFileName: TFileName): Boolean;
     procedure Load(AExpertMode: Boolean = False); override;
@@ -1128,41 +1586,25 @@ end;
 
 { TStartupUserLnkFile }
 
-{ public TStartupUserLnkFile.Create
-
-  Constructor for creating a TStartupUserLnkFile instance. }
-
 constructor TStartupLnkFile.Create(AFileName: TFileName);
 begin
   inherited Create(AFileName);
   FStartupUser := not (ExtractFileExt(AFileName) = EXT_STARTUP_COMMON);
 end;
 
-{ public TStartupUserLnkFile.Create
-
-  Constructor for creating a TStartupUserLnkFile instance. }
-
-constructor TStartupLnkFile.Create(AName: string; AStartupUser: Boolean);
+constructor TStartupLnkFile.Create(const AName: string; AStartupUser: Boolean);
 begin
   inherited Create(GetStartUpDir(AStartupUser) + ChangeFileExt(AName, '.lnk'));
   FStartupUser := AStartupUser;
 end;
 
-{ public TStartupUserLnkFile.Create
-
-  Constructor for creating a TStartupUserLnkFile instance. }
-
-constructor TStartupLnkFile.Create(AName: string; AStartupUser: Boolean;
+constructor TStartupLnkFile.Create(const AName: string; AStartupUser: Boolean;
   AExeFileName: TFileName; AArguments: string);
 begin
   Create(AName, AStartupUser);
   FExeFileName := AExeFileName;
   FArguments := AArguments;
 end;
-
-{ public TStartupUserLnkFile.BackupExists
-
-  Returns True if the backup .lnk file in C:\Windows\pss\ exists. }
 
 function TStartupLnkFile.BackupExists(): Boolean;
 begin
@@ -1172,10 +1614,6 @@ begin
 
   Result := FileExists(GetBackupLnk());
 end;
-
-{ public TStartupUserLnkFile.CreateBackup
-
-  Creates a backup .lnk file in C:\Windows\pss\. }
 
 procedure TStartupLnkFile.CreateBackup();
 begin
@@ -1187,10 +1625,6 @@ begin
     raise EStartupException.Create('Backup could not be created!');
 end;
 
-{ public TStartupUserLnkFile.DeleteBackup
-
-  Deletes the backup .lnk file. }
-
 function TStartupLnkFile.DeleteBackup(): Boolean;
 begin
   // Deprecated since Windows 8!
@@ -1199,10 +1633,6 @@ begin
 
   Result := DeleteFile(GetBackupLnk());
 end;
-
-{ public TStartupUserLnkFile.GetBackupDir
-
-  Returns the path to the backup directory. }
 
 class function TStartupLnkFile.GetBackupDir(): string;
 begin
@@ -1234,10 +1664,6 @@ begin
 
   Result := GetBackupDir() + ExtractFileName(FFileName) + GetBackupExt();
 end;
-
-{ public TStartupUserLnkFile.GetStartUpDir
-
-  Returns the file system startup location of current user or all. }
 
 class function TStartupLnkFile.GetStartUpDir(AStartupUser: Boolean): string;
 begin
@@ -1455,10 +1881,6 @@ begin
   FEnabled := ANewStatus;
 end;
 
-{ public TRootItem.FileExists
-
-  Returns True if the file exists. }
-
 function TRootItem.FileExists(): Boolean;
 {$IFDEF WIN32}
 var
@@ -1483,10 +1905,6 @@ begin
 {$ENDIF}
 end;
 
-{ public TRootItem.GetStatus
-
-  Returns the item status as text. }
-
 function TRootItem.GetStatus(ALanguageFile: TLanguageFile): string;
 begin
   if FEnabled then
@@ -1494,10 +1912,6 @@ begin
   else
     Result := ALanguageFile.GetString(LID_NO);
 end;
-
-{ public TRootItem.OpenInExplorer
-
-  Opens an TRootItem object in Explorer. }
 
 procedure TRootItem.OpenInExplorer();
 var
@@ -1523,6 +1937,11 @@ begin
   end  //of begin
   else
     raise EWarning.Create(SysErrorMessage(ERROR_FILE_NOT_FOUND));
+end;
+
+procedure TRootItem.Rename(const ANewName: string);
+begin
+  FName := ANewName;
 end;
 
 
@@ -1568,10 +1987,6 @@ begin
   end;  //of try
 end;
 
-{ protected TRegistryItem.GetWow64Key
-
-  Returns the virtualized Registry key by WOW64. }
-
 function TRegistryItem.GetWow64Key(): string;
 begin
   if ((FEnabled or CheckWin32Version(6, 2)) and FWow64) then
@@ -1584,10 +1999,6 @@ begin
   else
     Result := FLocation;
 end;
-
-{ protected TRegistryItem.OpenInRegEdit
-
-  Opens a TRegistryItem object in either 32- or 64-Bit RegEdit. }
 
 procedure TRegistryItem.OpenInRegEdit(AWow64: Boolean);
 const
@@ -1632,11 +2043,7 @@ begin
   end;  //of try
 end;
 
-{ protected TRegistryItem.WriteTimestamp
-
-  Writes the deactivation timestamp and returns it. }
-
-function TRegistryItem.WriteTimestamp(AReg: TRegistry): TDateTime;
+function TRegistryItem.WriteTimestamp(const AReg: TRegistry): TDateTime;
 var
   Timestamp: TSystemTime;
   TimeNow: TDateTime;
@@ -1647,6 +2054,9 @@ begin
   DateTimeToSystemTime(TimeNow, Timestamp);
 
   try
+    if not Assigned(AReg) then
+      raise ERegistryException.Create('Registry instance was not initialized!');
+
     with AReg do
     begin
       WriteInteger('YEAR', Timestamp.wYear);
@@ -1666,27 +2076,15 @@ begin
   end;  //of try
 end;
 
-{ public TRegistryItem.OpenInRegEdit
-
-  Opens a TRegistryItem object in RegEdit. }
-
 procedure TRegistryItem.OpenInRegEdit();
 begin
   OpenInRegEdit(FWow64);
 end;
 
-{ public TRegistryItem.GetExportFilter
-
-  Returns the filter for file export. }
-
 function TRegistryItem.GetExportFilter(ALanguageFile: TLanguageFile): string;
 begin
   Result := ALanguageFile.GetString(LID_FILTER_REGISTRY_FILE);
 end;
-
-{ public TRegistryItem.GetTimestamp
-
-  Returns the deactivation timestamp. }
 
 function TRegistryItem.GetTimestamp(AReg: TRegistry): TDateTime;
 var
@@ -1946,10 +2344,6 @@ begin
   Result := True;
 end;
 
-{ public TRootList.ExportItem
-
-  Exports an item as file. }
-
 procedure TRootList<T>.ExportItem(const AFileName: string);
 begin
   // List locked?
@@ -1966,10 +2360,6 @@ begin
     FLock.Release();
   end;  //of try
 end;
-
-{ public TRootList.GetExportFilter
-
-  Returns the filter for file export. }
 
 function TRootList<T>.GetExportFilter(ALanguageFile: TLanguageFile): string;
 begin
@@ -2051,14 +2441,7 @@ begin
   Result := not Entered;
 end;
 
-{ public TRootList.RenameItem
-
-  Renames the current selected item. }
-
 function TRootList<T>.RenameItem(const ANewCaption: string): Boolean;
-var
-  Renamed: Boolean;
-
 begin
   // List locked?
   if not FLock.TryEnter() then
@@ -2068,15 +2451,11 @@ begin
     if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
       raise EInvalidItem.Create('No item selected!');
 
-    Renamed := FItem.Rename(ANewCaption);
-
-    // Notify changed
-    if Renamed then
-      DoNotifyOnChanged(stNone);
+    FItem.Rename(ANewCaption);
+    DoNotifyOnChanged(stNone);
 
   finally
     FLock.Release();
-    Result := Renamed;
   end;  //of try
 end;
 
@@ -2111,58 +2490,53 @@ begin
 end;
 
 procedure TStartupListItem.ChangeStatus(const ANewStatus: Boolean);
-begin
-  // Windows 8?
-  if CheckWin32Version(6, 2) then
-  begin
-    ChangeStatus(ANewStatus, FApprovedLocation);
-    Exit;
-  end;  //of begin
-
-  if (FEnabled and not ANewStatus) then
-  begin
-    if not Disable() then
-      raise Exception.Create('Unknown error!');
-  end  //of begin
-  else
-    if (not FEnabled and ANewStatus) then
-    begin
-      if not Enable() then
-        raise Exception.Create('Unknown error!');
-    end;  //of if
-
-  inherited ChangeStatus(ANewStatus);
-end;
-
-procedure TStartupListItem.ChangeStatus(const ANewStatus: Boolean;
-  const AKeyPath: string);
 var
   Reg: TRegistry;
   ItemStatus: TStartupItemStatus;
   TimeNow: TDateTime;
 
 begin
+  if not CheckWin32Version(6, 2) then
+  begin
+    if (FEnabled and not ANewStatus) then
+    begin
+      if not Disable() then
+        raise Exception.Create('Unknown error!');
+    end  //of begin
+    else
+      if (not FEnabled and ANewStatus) then
+      begin
+        if not Enable() then
+          raise Exception.Create('Unknown error!');
+      end;  //of if
+
+    inherited ChangeStatus(ANewStatus);
+    Exit;
+  end;  //of begin
+
   // Status is stored in 64-Bit registry
   Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
 
   try
     Reg.RootKey := FRootKey.ToHKey();
 
-    if not Reg.OpenKey(AKeyPath, False) then
-      raise EStartupException.Create('Key '''+ AKeyPath +''' does not exist!');
+    if not Reg.OpenKey(FApprovedLocation, False) then
+      raise EStartupException.Create('Key '''+ FApprovedLocation +''' does not exist!');
 
     if ANewStatus then
     begin
       TimeNow := 0;
       ItemStatus.Status := ST_ENABLED;
+      ItemStatus.DeactivationTime.dwLowDateTime := 0;
+      ItemStatus.DeactivationTime.dwHighDateTime := 0;
     end  //of begin
     else
     begin
       TimeNow := Now();
       ItemStatus.Status := ST_DISABLED;
+      ItemStatus.DeactivationTime := DateTimeToFileTime(TimeNow);
     end;  //of if
 
-    ItemStatus.DeactivationTime := DateTimeToFileTime(TimeNow);
     Reg.WriteBinaryData(Name, ItemStatus, SizeOf(TStartupItemStatus));
     FTime := TimeNow;
     inherited ChangeStatus(ANewStatus);
@@ -2267,11 +2641,7 @@ begin
   Result := FRootKey;
 end;
 
-{ protected TStartupListItem.Rename
-
-  Renames a TStartupListItem item. }
-
-function TStartupListItem.Rename(const AKeyPath, ANewCaption: string;
+function TStartupListItem.Rename(const AKeyPath, ANewName: string;
   AReallyWow64: Boolean = True): Boolean;
 var
   Reg: TRegistry;
@@ -2293,8 +2663,12 @@ begin
     if not Reg.ValueExists(Name) then
       ChangeStatus(True);
 
-    Reg.RenameValue(Name, ANewCaption);
-    Result := Reg.ValueExists(ANewCaption);
+    Reg.RenameValue(Name, ANewName);
+
+    if not Reg.ValueExists(ANewName) then
+      raise EStartupException.Create('Value was not renamed!');
+
+    Result := True;
 
   finally
     Reg.CloseKey();
@@ -2343,18 +2717,10 @@ begin
   end;  //of try
 end;
 
-{ public TStartupListItem.Delete
-
-  Deletes a TStartupListItem object and returns True if successful. }
-
 function TStartupListItem.Delete(): Boolean;
 begin
   Result := DeleteValue(FApprovedLocation, False);
 end;
-
-{ public TStartupListItem.ExportItem
-
-  Exports an list item as .reg file. }
 
 procedure TStartupListItem.ExportItem(const AFileName: string);
 var
@@ -2400,18 +2766,11 @@ begin
     OpenInRegEdit(False);
 end;
 
-{ public TStartupListItem.Rename
-
-  Renames a TStartupListItem item. }
-
-function TStartupListItem.Rename(const ANewCaption: string): Boolean;
+procedure TStartupListItem.Rename(const ANewName: string);
 begin
-  Result := Rename(FApprovedLocation, ANewCaption, False);
+  if Rename(FApprovedLocation, ANewName, False) then
+    inherited Rename(ANewName);
 end;
-
-{ public TStartupListItem.ToString
-
-  Gets the object type as string. }
 
 function TStartupListItem.ToString(): string;
 var
@@ -2504,7 +2863,7 @@ begin
     Reg.WriteString('inimapping', '0');
 
     // Windows >= Vista?
-    if TOSVersion.Check(6) then
+    if CheckWin32Version(6) then
       // Save deactivation timestamp
       FTime := WriteTimestamp(Reg);
 
@@ -2618,26 +2977,21 @@ begin
   end;  //of try
 end;
 
-{ public TStartupItem.Rename
-
-  Renames a TStartupItem item. }
-
-function TStartupItem.Rename(const ANewCaption: string): Boolean;
+procedure TStartupItem.Rename(const ANewName: string);
 var
   Reg: TRegistry;
 
 begin
-  Result := False;
-
   if (FEnabled or CheckWin32Version(6, 2)) then
   begin
-    Result := Rename(FLocation, ANewCaption, True);
+    Rename(FLocation, ANewName, True);
 
     // Windows 8?
-    if (Result and CheckWin32Version(6, 2)) then
-      Result := inherited Rename(ANewCaption);
+    if CheckWin32Version(6, 2) then
+      inherited Rename(ANewName)
+    else
+      FName := ANewName;
 
-    Name := ANewCaption;
     Exit;
   end;  //of begin
 
@@ -2649,42 +3003,32 @@ begin
     if not Reg.OpenKey(FLocation, False) then
       raise EStartupException.Create('Key does not exist!');
 
-    if not FEnabled then
-    begin
-      if (FRootKey <> rkHKLM) then
-        raise EStartupException.Create('Wrong HKEY!');
+    if (FRootKey <> rkHKLM) then
+      raise EStartupException.Create('Wrong HKEY!');
 
-      Reg.WriteString('item', ANewCaption);
-      Reg.CloseKey;
+    Reg.WriteString('item', ANewName);
+    Reg.CloseKey;
 
-      if not Reg.OpenKey(ExtractFileDir(FLocation), False) then
-        raise EStartupException.Create('Key does not exist!');
+    if not Reg.OpenKey(ExtractFileDir(FLocation), False) then
+      raise EStartupException.Create('Key does not exist!');
 
-      if Reg.KeyExists(ANewCaption) then
-        raise EStartupException.Create('Key already exists!');
+    if Reg.KeyExists(ANewName) then
+      raise EStartupException.Create('Key already exists!');
 
-      // Rename key and delete old key
-      Reg.MoveKey(Name, ANewCaption, True);
+    // Rename key and ANewName old key
+    Reg.MoveKey(Name, ANewName, True);
 
-      if not Reg.KeyExists(ANewCaption) then
-        raise EStartupException.Create('Key was not renamed!');
+    if not Reg.KeyExists(ANewName) then
+      raise EStartupException.Create('Key was not renamed!');
 
-      FLocation := KEY_STARTUP_DISABLED + ANewCaption;
-    end;  //of begin
-
-    // Update caption
-    Name := ANewCaption;
-    Result := True;
+    FLocation := KEY_STARTUP_DISABLED + ANewName;
+    FName := ANewName;
 
   finally
     Reg.CloseKey();
     Reg.Free;
   end;  //of try
 end;
-
-{ public TStartupItem.ToString
-
-  Gets the object type as string. }
 
 function TStartupItem.ToString(): string;
 begin
@@ -2707,11 +3051,10 @@ constructor TStartupUserItem.Create(const AName, AFileName, ALocation: string;
 begin
   inherited Create(AName, AFileName, ALocation, ARootKey, AEnabled, False);
   FStartupUser := AStartupUser;
+
+  if CheckWin32Version(6, 2) then
+    FApprovedLocation := KEY_STARTUP_USER_APPROVED;
 end;
-
-{ public TStartupUserItem.Destroy
-
-  General destructor for destroying a TStartupUserItem instance. }
 
 destructor TStartupUserItem.Destroy;
 begin
@@ -2743,10 +3086,6 @@ begin
     else
       Result := inherited GetFullLocation();
 end;
-
-{ public TStartupUserItem.GetExportFilter
-
-  Returns the filter for file export. }
 
 function TStartupUserItem.GetExportFilter(ALanguageFile: TLanguageFile): string;
 begin
@@ -2892,10 +3231,6 @@ begin
   Result := True;
 end;
 
-{ public TStartupUserItem.ExportItem
-
-  Exports a TStartupUserItem object as .reg or .lnk backup file. }
-
 procedure TStartupUserItem.ExportItem(const AFileName: string);
 begin
   if CheckWin32Version(6, 2) then
@@ -2907,20 +3242,15 @@ begin
       FLnkFile.CreateBackup();
 end;
 
-{ public TStartupUserItem.Rename
-
-  Renames a TStartupUserItem item. }
-
-function TStartupUserItem.Rename(const ANewCaption: string): Boolean;
+procedure TStartupUserItem.Rename(const ANewName: string);
 var
   OldFileName, NewFileName, NewName, OldKeyName, NewKeyName: string;
   Reg: TRegistry;
   Win8: Boolean;
 
 begin
-  Result := False;
   OldFileName := FLnkFile.FileName;
-  NewName := ChangeFileExt(ANewCaption, '.lnk');
+  NewName := ChangeFileExt(ANewName, '.lnk');
   NewFileName := ReplaceText(OldFileName, ExtractFileName(OldFileName), NewName);
 
   // Rename .lnk file
@@ -2932,9 +3262,9 @@ begin
     FLocation := NewFileName;
 
     if Win8 then
-      Result := inherited Rename(NewName)
+      inherited Rename(ANewName)
     else
-      Result := True;
+      FName := ANewName;
   end  //of begin
   else
   begin
@@ -2966,22 +3296,14 @@ begin
       Reg.OpenKey(FLocation, False);
       Reg.WriteString('path', NewFileName);
       Reg.WriteString('item', ChangeFileExt(NewName, ''));
-      Result := True;
+      FName := ANewName;
 
     finally
       Reg.CloseKey();
       Reg.Free;
     end;  //of try
   end;  //of if
-
-  // Update caption
-  if Result then
-    Name := NewName;
 end;
-
-{ public TStartupUserItem.ToString
-
-  Gets the object type as string. }
 
 function TStartupUserItem.ToString(): string;
 begin
@@ -3028,10 +3350,6 @@ begin
   if (FDeleteBackup and (Selected is TStartupUserItem)) then
     Result := (Selected as TStartupUserItem).LnkFile.DeleteBackup();
 end;
-
-{ public TStartupList.GetImportFilter
-
-  Returns the filter for file import. }
 
 function TStartupList.GetImportFilter(ALanguageFile: TLanguageFile): string;
 begin
@@ -3129,7 +3447,7 @@ end;
   Adds a new startup user item to the autostart. }
 
 function TStartupList.AddNewStartupUserItem(AName: string; AFileName: TFileName;
-  AArguments: string = ''; ACommonStartup: Boolean = False): Boolean;
+  AArguments: string = ''; AStartupUser: Boolean = True): Boolean;
 var
   i: Integer;
   LnkFile: TStartupLnkFile;
@@ -3142,19 +3460,19 @@ begin
     if AnsiContainsStr(Items[i].FileName, AFileName) then
       Exit(False);
 
-  LnkFile := TStartupLnkFile.Create(AName, ACommonStartup, AFileName, AArguments);
+  LnkFile := TStartupLnkFile.Create(AName, AStartupUser, AFileName, AArguments);
 
   // Link file created successfully?
   if not LnkFile.Save() then
     raise EStartupException.Create('Could not create .lnk file '''+ LnkFile.FileName +'''!');
 
   // Add item to list
-  if (AddUserItem(LnkFile, ACommonStartup) <> -1) then
+  if (AddUserItem(LnkFile, AStartupUser) <> -1) then
   begin
     // Windows 8?
     if CheckWin32Version(6, 2) then
     begin
-      Last.Enable();
+      Last.Enabled := True;
       Inc(FActCount);
     end  //of begin
     else
@@ -3182,8 +3500,6 @@ begin
     Location := AReg.CurrentPath;
     Name := ExtractFileName(StringReplace(Location, '^', '\', [rfReplaceAll]));
     FileName := AReg.ReadString('command');
-    // TODO:
-    //Time := GetTimestamp(AReg);
     LnkFileName := AReg.ReadString('path');
 
     // Windows >= Vista?
@@ -3201,6 +3517,7 @@ begin
   ExeArguments := Item.ExtractArguments(FileName);
   Item.LnkFile := TStartupLnkFile.Create(LnkFileName, not StartupUser,
     ExeFileName, ExeArguments);
+  Item.Time := Item.GetTimestamp(AReg);
   Result := inherited Add(Item);
 end;
 
@@ -3212,7 +3529,7 @@ function TStartupList.AddUserItem(ALnkFile: TStartupLnkFile;
   AStartupUser: Boolean): Integer;
 var
   Item: TStartupUserItem;
-  Location, Name, FileName, LocationApproved: string;
+  Location, Name, FileName: string;
   RootKey: TRootKey;
 
 begin
@@ -3228,8 +3545,6 @@ begin
         RootKey := rkHKCU
       else
         RootKey := rkHKLM;
-
-      LocationApproved := KEY_STARTUP_USER_APPROVED;
     end  //of begin
     else
     begin
@@ -3304,7 +3619,7 @@ begin
           // Windows 8?
           if CheckWin32Version(6, 2) then
           begin
-            Last.Enable();
+            Last.Enabled := True;
             Inc(FActCount);
           end  //of begin
           else
@@ -3712,9 +4027,11 @@ begin
   Result := rkHKCR;
 end;
 
-{ public TContextListItem.Delete
-
-  Deletes a TContextListItem object and returns True if successful. }
+procedure TContextListItem.Rename(const ANewName: string);
+begin
+  // Important: It is only possible to rename the caption of context items!
+  FCaption := ANewName;
+end;
 
 function TContextListItem.Delete(): Boolean;
 begin
@@ -3760,16 +4077,11 @@ begin
   Result := FLocation +'\'+ CM_SHELL +'\'+ Name;
 end;
 
-{ protected TShellItem.Rename
-
-  Renames a TShellItem item. }
-
-function TShellItem.Rename(const AValueName, ANewCaption: string): Boolean;
+procedure TShellItem.Rename(const AValueName, ANewCaption: string);
 var
   Reg: TRegistry;
 
 begin
-  Result := False;
   Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
 
   try
@@ -3783,10 +4095,8 @@ begin
     if (Reg.GetDataType(AValueName) <> rdString) then
       raise EContextMenuException.Create('Invalid data type!');
 
-    // Rename
     Reg.WriteString(AValueName, ANewCaption);
-    FCaption := ANewCaption;
-    Result := True;
+    inherited Rename(ANewCaption);
 
   finally
     Reg.CloseKey();
@@ -3952,10 +4262,6 @@ begin
   Result := ChangeIcon('');
 end;
 
-{ public TShellItem.ExportItem
-
-  Exports a TShellItem object as .reg file. }
-
 procedure TShellItem.ExportItem(const AFileName: string);
 var
   RegFile: TRegistryFile;
@@ -3971,18 +4277,10 @@ begin
   end;  //of try
 end;
 
-{ public TShellItem.Rename
-
-  Renames a TShellItem item. }
-
-function TShellItem.Rename(const ANewCaption: string): Boolean;
+procedure TShellItem.Rename(const ANewName: string);
 begin
-  Result := Rename('', ANewCaption);
+  Rename('', ANewName);
 end;
-
-{ public TShellItem.ToString
-
-  Gets the object type as string. }
 
 function TShellItem.ToString(): string;
 begin
@@ -4025,10 +4323,6 @@ begin
   raise EAbstractError.Create('Impossible!');
 end;
 
-{ public TShellCascadingItem.Delete
-
-  Deletes a TShellCascadingItem object and returns True if successful. }
-
 function TShellCascadingItem.Delete(): Boolean;
 var
   i: Integer;
@@ -4049,10 +4343,6 @@ begin
     Commands.Free;
   end;  //of try
 end;
-
-{ public TShellCascadingItem.ExportItem
-
-  Exports a TShellCascadingItem object as .reg file. }
 
 procedure TShellCascadingItem.ExportItem(const AFileName: string);
 var
@@ -4079,18 +4369,10 @@ begin
   end;  //of try
 end;
 
-{ public TShellItem.Rename
-
-  Renames a TShellCascadingItem item. }
-
-function TShellCascadingItem.Rename(const ANewCaption: string): Boolean;
+procedure TShellCascadingItem.Rename(const ANewName: string);
 begin
-  Result := Rename('MUIVerb', ANewCaption);
+  Rename('MUIVerb', ANewName);
 end;
-
-{ public TShellCascadingItem.ToString
-
-  Gets the object type as string. }
 
 function TShellCascadingItem.ToString(): string;
 begin
@@ -4207,10 +4489,6 @@ begin
   end;  //of try
 end;
 
-{ public TShellExItem.ExportItem
-
-  Exports a TShellExItem object as .reg file. }
-
 procedure TShellExItem.ExportItem(const AFileName: string);
 var
   RegFile: TRegistryFile;
@@ -4248,19 +4526,10 @@ begin
   end;  //of try
 end;
 
-{ public TShellExItem.Rename
-
-  Renames a TShellExItem item. }
-
-function TShellExItem.Rename(const ANewCaption: string): Boolean;
+procedure TShellExItem.Rename(const ANewName: string);
 begin
-  // Impossible!
-  Result := False;
+  raise EAbstractError.Create('Impossible!');
 end;
-
-{ public TShellExItem.ToString
-
-  Gets the object type as string. }
 
 function TShellExItem.ToString(): string;
 begin
@@ -4340,10 +4609,6 @@ begin
   raise EAbstractError.Create('Impossible!');
 end;
 
-{ public TShellNewItem.Delete
-
-  Deletes a TShellNewItem object and returns True if successful. }
-
 function TShellNewItem.Delete(): Boolean;
 begin
   if not DeleteKey(HKEY_CLASSES_ROOT, ExtractFileDir(GetKeyPath()),
@@ -4352,10 +4617,6 @@ begin
 
   Result := True;
 end;
-
-{ public TShellNewItem.ExportItem
-
-  Exports a TShellNewItem object as .reg file. }
 
 procedure TShellNewItem.ExportItem(const AFileName: string);
 var
@@ -4372,19 +4633,10 @@ begin
   end;  //of try
 end;
 
-{ public TShellNewItem.Rename
-
-  Renames a TShellNewItem item. }
-
-function TShellNewItem.Rename(const ANewCaption: string): Boolean;
+procedure TShellNewItem.Rename(const ANewName: string);
 begin
-  // Impossible!
-  Result := False;
+  raise EAbstractError.Create('Impossible!');
 end;
-
-{ public TShellNewItem.ToString
-
-  Gets the object type as string. }
 
 function TShellNewItem.ToString(): string;
 begin
@@ -4988,10 +5240,6 @@ begin
   inherited ChangeStatus(ANewStatus);
 end;
 
-{ public TServiceListItem.Delete
-
-  Deletes a TServiceListItem object and returns True if successful. }
-
 function TServiceListItem.Delete(): Boolean;
 const
   SERVICE_DELETE = $00010000;
@@ -5072,9 +5320,6 @@ begin
 
     // Write last status
     Reg.WriteInteger(Name, Ord(Start));
-
-    // Update information
-    FEnabled := False;
     Result := True;
 
   finally
@@ -5135,7 +5380,6 @@ begin
         raise EServiceException.Create('Could not delete last status!');
 
     // Update information
-    FEnabled := True;
     FTime := 0;
     Result := True;
 
@@ -5145,10 +5389,6 @@ begin
     CloseServiceHandle(Service);
   end;  //of try
 end;
-
-{ public TServiceListItem.ExportItem
-
-  Exports a list item as .reg file. }
 
 procedure TServiceListItem.ExportItem(const AFileName: string);
 var
@@ -5178,36 +5418,26 @@ begin
   end;  //of try
 end;
 
-{ public TServiceListItem.Rename
-
-  Renames a TServiceListItem item. }
-
-function TServiceListItem.Rename(const ANewCaption: string): Boolean;
+procedure TServiceListItem.Rename(const ANewName: string);
 var
   Service: SC_HANDLE;
 
 begin
-  Result := False;
   Service := GetHandle(SERVICE_CHANGE_CONFIG);
 
   try
     // Rename service
     if not ChangeServiceConfig(Service, SERVICE_NO_CHANGE, SERVICE_NO_CHANGE,
-      SERVICE_NO_CHANGE, nil, nil, nil, nil, nil, nil, PChar(ANewCaption)) then
+      SERVICE_NO_CHANGE, nil, nil, nil, nil, nil, nil, PChar(ANewName)) then
       raise EServiceException.Create(SysErrorMessage(GetLastError()));
 
-    // Update information
-    FCaption := ANewCaption;
-    Result := True;
+    // Important: It is only possible to rename the caption of service items!
+    FCaption := ANewName;
 
   finally
     CloseServiceHandle(Service);
   end;  //of try
 end;
-
-{ public TServiceListItem.ToString
-
-  Gets the object type as string. }
 
 function TServiceListItem.ToString(): string;
 begin
@@ -5591,19 +5821,11 @@ begin
   end;  //of while
 end;
 
-{ public TTaskListItem.Delete
-
-  Deletes a TTaskListItem object and returns True if successful. }
-
 function TTaskListItem.Delete(): Boolean;
 begin
   OleCheck(FTaskFolder.DeleteTask(PChar(Name), 0));
   Result := True;
 end;
-
-{ public TTaskListItem.ExportItem
-
-  Exports a TTaskListItem object as .xml backup file. }
 
 procedure TTaskListItem.ExportItem(const AFileName: string);
 var
@@ -5628,31 +5850,16 @@ begin
   end;  //of try
 end;
 
-{ public TTaskListItem.GetExportFilter
-
-  Returns the filter for file export. }
-
 function TTaskListItem.GetExportFilter(ALanguageFile: TLanguageFile): string;
 begin
   Result := ALanguageFile.GetString(LID_FILTER_XML_FILES);
 end;
 
-{ public TTaskListItem.Rename
-
-  Renames a TTaskListItem item. }
-
-function TTaskListItem.Rename(const ANewCaption: string): Boolean;
+procedure TTaskListItem.Rename(const ANewName: string);
 begin
-  UpdateTask(ANewCaption, FTask.Definition);
-
-  // Update information
-  Name := ANewCaption;
-  Result := True;
+  UpdateTask(ANewName, FTask.Definition);
+  inherited Rename(ANewName);
 end;
-
-{ public TTaskListItem.ToString
-
-  Gets the object type as string. }
 
 function TTaskListItem.ToString(): string;
 begin
@@ -5798,18 +6005,10 @@ begin
   end;  //of try
 end;
 
-{ public TTaskList.GetExportFilter
-
-  Returns the filter for file export. }
-
 function TTaskList.GetExportFilter(ALanguageFile: TLanguageFile): string;
 begin
   Result := ALanguageFile.GetString(LID_FILTER_ZIP_FILES);
 end;
-
-{ public TTaskList.GetImportFilter
-
-  Returns the filter for file import. }
 
 function TTaskList.GetImportFilter(ALanguageFile: TLanguageFile): string;
 begin
