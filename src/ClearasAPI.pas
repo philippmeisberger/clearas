@@ -687,7 +687,33 @@ type
     ///   The filter formatted as <c>"File type *.ext|*.ext"</c>
     /// </returns>
     function GetExportFilter(ALanguageFile: TLanguageFile): string; virtual;
+
+    /// <summary>
+    ///   Searches for an item in the list identified by name or caption.
+    /// </summary>
+    /// <param name="ANameOrCaption">
+    ///   The name or caption of the item.
+    /// </param>
+    /// <returns>
+    ///   The index of the item in the list. If the item does not exist <c>-1</c>
+    ///   is returned.
+    /// </returns>
     function IndexOf(const ANameOrCaption: string): Integer; overload;
+
+    /// <summary>
+    ///   Searches for an item in the list identified by name or caption and
+    ///   status.
+    /// </summary>
+    /// <param name="ANameOrCaption">
+    ///   The name or caption of the item.
+    /// </param>
+    /// <param name="AEnabled">
+    ///   The item status.
+    /// </param>
+    /// <returns>
+    ///   The index of the item in the list. If the item does not exist <c>-1</c>
+    ///   is returned.
+    /// </returns>
     function IndexOf(const ANameOrCaption: string; AEnabled: Boolean): Integer; overload;
 
     /// <summary>
@@ -719,13 +745,41 @@ type
     ///   The new name.
     /// </param>
     function RenameItem(const ANewName: string): Boolean; virtual;
-    { external }
+
+    /// <summary>
+    ///   Gets the count of enabled items in the list.
+    /// </summary>
     property EnabledItemsCount: Integer read FEnabledItemsCount;
+
+    /// <summary>
+    ///   Gets or sets the list visual state. If set to <c>True</c> and the list
+    ///   is selected on UI the content is refreshed visually.
+    /// </summary>
     property IsInvalid: Boolean read FInvalid write FInvalid;
+
+    /// <summary>
+    ///   Occurs when an item has changed.
+    /// </summary>
     property OnChanged: TItemChangeEvent read FOnChanged write FOnChanged;
+
+    /// <summary>
+    ///   Occurs when item search is in progress.
+    /// </summary>
     property OnSearching: TSearchEvent read FOnSearching write FOnSearching;
+
+    /// <summary>
+    ///   Occurs when item search has failed.
+    /// </summary>
     property OnSearchError: TSearchErrorEvent read FOnSearchError write FOnSearchError;
+
+    /// <summary>
+    ///   Occurs when item search has finished.
+    /// </summary>
     property OnSearchFinish: TNotifyEvent read FOnSearchFinish write FOnSearchFinish;
+
+    /// <summary>
+    ///   Occurs when item search has started.
+    /// </summary>
     property OnSearchStart: TSearchEvent read FOnSearchStart write FOnSearchStart;
 
     /// <summary>
@@ -854,6 +908,10 @@ type
     ///    The root Registry key.
     /// </returns>
     property RootKey: TRootKey read GetRootKey write FRootKey;
+
+    /// <summary>
+    ///   Gets or sets the deactivation timstamp.
+    /// </summary>
     property Time: TDateTime read GetTime write FTime;
   end;
 
@@ -912,14 +970,18 @@ type
     ///   The item type.
     /// </returns>
     function ToString(): string; override;
-    { external }
+
+    /// <summary>
+    ///   If <c>True</c> then item is located in a <c>RunOnce</c> Registry key.
+    ///   Otherwise the item is located in a <c>Run</c> Registry key (default).
+    /// </summary>
     property RunOnce: Boolean read FRunOnce;
   end;
 
   /// <summary>
   ///   A <c>TStartupItem</c> represents a user startup item that can be added
   ///   to a <see cref="TStartupList"/>. Those items are located in the autostart
-  ///   filesystem folder.
+  ///   filesystem folder and are a .lnk file.
   /// </summary>
   TStartupUserItem = class(TStartupListItem)
   private
@@ -962,6 +1024,7 @@ type
     ///   Destructor for destroying a <c>TStartupUserItem</c> instance.
     /// </summary>
     destructor Destroy; override;
+
     /// <summary>
     ///   Deletes the item.
     /// </summary>
@@ -997,8 +1060,17 @@ type
     ///   The item type.
     /// </returns>
     function ToString(): string; override;
-    { external }
+
+    /// <summary>
+    ///   If <c>True</c> the item is located in the startup folder of the
+    ///   current user. Otherwise the item is located in startup folder of all
+    ///   users.
+    /// </summary>
     property StartupUser: Boolean read FStartupUser;
+
+    /// <summary>
+    ///   Gets or sets the .lnk file.
+    /// </summary>
     property LnkFile: TStartupLnkFile read FLnkFile write FLnkFile;
   end;
 
@@ -1026,6 +1098,13 @@ type
     /// </summary>
     constructor Create;
     function Add(const AFileName, AArguments, ACaption: string): Boolean; reintroduce;
+
+    /// <summary>
+    ///   Checks if a startup user backup file already exists.
+    /// </summary>
+    /// <returns>
+    ///   <c>True</c> if the backup file already exists or <c>False</c> otherwise.
+    /// </returns>
     function BackupExists(): Boolean; deprecated 'Since Windows 8';
 
     /// <summary>
@@ -1075,7 +1154,7 @@ type
     function ImportBackup(const AFileName: TFileName): Boolean;
 
     /// <summary>
-    ///   Searches items and adds them to the list.
+    ///   Searches for items and adds them to the list.
     /// </summary>
     /// <param name="AExpertMode">
     ///   If set to <c>True</c> use the expert search mode. Otherwise use the
@@ -1087,13 +1166,66 @@ type
     ///   <see cref="OnSearchFinish"/> event occurs.
     /// </remarks>
     procedure Load(AExpertMode: Boolean = False); override;
+
+    /// <summary>
+    ///   Searches for disabled items and adds them to the list.
+    /// </summary>
+    /// <param name="AStartupUser">
+    ///   If set to <c>True</c> only search for startup user items. If set to
+    ///   <c>False</c> only search for default startup items.
+    /// </param>
+    /// <param name="AWow64">
+    ///   If set to <c>True</c> search for WOW64 items. Otherwise skip them.
+    /// </param>
     procedure LoadDisabled(AStartupUser: Boolean; AWow64: Boolean = False); deprecated 'Since Windows 8';
+
+    /// <summary>
+    ///   Searches for enabled startup user items and adds them to the list.
+    /// </summary>
+    /// <param name="AStartupUser">
+    ///   If set to <c>True</c> only search for startup user items. If set to
+    ///   <c>False</c> only search for common startup items.
+    /// </param>
     procedure LoadStartup(AStartupUser: Boolean); overload;
+
+    /// <summary>
+    ///   Searches for items and adds them to the list.
+    /// </summary>
+    /// <param name="ARunOnce">
+    ///   If set to <c>True</c> only search for RunOnce items. Otherwise search
+    ///   for default startup items.
+    /// </param>
+    /// <param name="AWow64">
+    ///   If set to <c>True</c> search for WOW64 items. Otherwise search for
+    ///   native items.
+    /// </param>
     procedure LoadStartup(ARootKey: TRootKey; ARunOnce: Boolean = False;
       AWow64: Boolean = False); overload;
-    procedure LoadStatus(ARootKey: TRootKey; AKeyPath: string);
+
+    /// <summary>
+    ///   Loads the enabled status of all items from the Registry. The
+    ///   deactivation timestamp of disabled is also queried and refreshed.
+    /// </summary>
+    /// <param name="ARootKey">
+    ///   The root Registry key. Can only be <c>rkHKCU</c> or <c>rkHKLM</c>.
+    /// </param>
+    /// <param name="AKeyPath">
+    ///   The Registry key of the store location.
+    /// </param>
+    /// <remarks>
+    ///   Only on Windows 8 and later!
+    /// </remarks>
+    procedure LoadStatus(ARootKey: TRootKey; const AKeyPath: string);
+
+    /// <summary>
+    ///   Refreshes the <see cref="EnabledItemsCount"/>.
+    /// </summary>
     procedure RefreshCounter();
-    { external }
+
+    /// <summary>
+    ///   Gets or sets the behaviour that startup user backup files should be
+    ///   automatically deleted after enabling or not.
+    /// </summary>
     property DeleteBackup: Boolean read FDeleteBackup write FDeleteBackup;
   end;
 
@@ -1121,11 +1253,33 @@ type
     ///   otherwise.
     /// </returns>
     function Delete(): Boolean; override;
-    function DeleteUserChoice(AFileExtension: string): Boolean;
-    function UserChoiceExists(AFileExtension: string): Boolean;
-    { external }
+
+    /// <summary>
+    ///   Deletes a user defined program association.
+    /// </summary>
+    /// <returns>
+    ///   <c>True</c> if the association was successfully deleted or <c>False</c>
+    ///   otherwise.
+    /// </returns>
+    function DeleteUserChoice(const AFileExtension: string): Boolean;
+
+    /// <summary>
+    ///   Checks if a user defined program association exists.
+    /// </summary>
+    /// <returns>
+    ///   <c>True</c> if the association exists or <c>False</c> otherwise.
+    /// </returns>
+    function UserChoiceExists(const AFileExtension: string): Boolean;
+
+    /// <summary>
+    ///   Gets full Registry location.
+    /// </summary>
     property Location: string read GetKeyPath;
-    property LocationRoot: string read FLocation write FLocation;
+
+    /// <summary>
+    ///   Gets the root location e.g. <c>Drives</c>.
+    /// </summary>
+    property LocationRoot: string read FLocation;
   end;
 
   /// <summary>
@@ -1142,7 +1296,25 @@ type
     procedure Rename(const AValueName, ANewCaption: string); reintroduce; overload;
     procedure Rename(const ANewName: string); overload; override;
   public
+    /// <summary>
+    ///   Changes the icon of a contextmenu item.
+    /// </summary>
+    /// <param name="ANewIconFileName">
+    ///   The new absolute .ico filename.
+    ///  </param>
+    /// <returns>
+    ///   <c>True</c> if the icon was successfully changed or <c>False</c>
+    ///   otherwise.
+    /// </returns>
     function ChangeIcon(const ANewIconFileName: string): Boolean;
+
+    /// <summary>
+    ///   Deletes the icon of a contextmenu. }
+    /// </summary>
+    /// <returns>
+    ///   <c>True</c> if the icon was successfully deleted or <c>False</c>
+    ///   otherwise.
+    /// </returns>
     function DeleteIcon(): Boolean;
 
     /// <summary>
@@ -1302,10 +1474,23 @@ type
     /// </param>
     procedure ExportList(const AFileName: string); override;
 
-    function IndexOf(AName, ALocationRoot: string): Integer; overload;
+    /// <summary>
+    ///   Searches for an item in the list identified by name and location.
+    /// </summary>
+    /// <param name="AName">
+    ///   The name of the item.
+    /// </param>
+    /// <param name="ALocationRoot">
+    ///   The root location e.g. <c>Drives</c>.
+    /// </param>
+    /// <returns>
+    ///   The index of the item in the list. If the item does not exist <c>-1</c>
+    ///   is returned.
+    /// </returns>
+    function IndexOf(const AName, ALocationRoot: string): Integer; overload;
 
     /// <summary>
-    ///   Searches items and adds them to the list.
+    ///   Searches for items and adds them to the list.
     /// </summary>
     /// <param name="AExpertMode">
     ///   If set to <c>True</c> use the expert search mode. Otherwise use the
@@ -1317,10 +1502,47 @@ type
     ///   <see cref="OnSearchFinish"/> event occurs.
     /// </remarks>
     procedure Load(AExpertMode: Boolean = False); override;
+
+    /// <summary>
+    ///   Searches for items and adds them to the list.
+    /// </summary>
+    /// <param name="ALocationRoot">
+    ///   The root location e.g. <c>Drives</c>.
+    /// </param>
+    /// <param name="AWow64">
+    ///   If set to <c>True</c> search for WOW64 items. Otherwise search for
+    ///   native items.
+    /// </param>
     procedure LoadContextmenu(const ALocationRoot: string;
       AWow64: Boolean); overload;
+
+    /// <summary>
+    ///   Searches for items and adds them to the list.
+    /// </summary>
+    /// <param name="ALocationRoot">
+    ///   The root location e.g. <c>Drives</c>.
+    /// </param>
+    /// <param name="AShellItemType">
+    ///   Specifies the item type to search for.
+    /// </param>
+    /// <param name="AWow64">
+    ///   If set to <c>True</c> search for WOW64 items. Otherwise search for
+    ///   native items.
+    /// </param>
     procedure LoadContextmenu(const ALocationRoot: string;
       AShellItemType: TShellItemType; AWow64: Boolean); overload;
+
+    /// <summary>
+    ///   Searches for items and adds them to the list.
+    /// </summary>
+    /// <param name="ALocationRootCommaList">
+    ///   A comma separated list containing the root locations.
+    /// </param>
+    /// <remarks>
+    ///   Asynchronous: A thread is launched! The <see cref="OnSearchStart"/>
+    ///   event occurs when the search starts. At the end the
+    ///   <see cref="OnSearchFinish"/> event occurs.
+    /// </remarks>
     procedure LoadContextMenus(ALocationRootCommaList: string = CM_LOCATIONS_DEFAULT); overload;
   end;
 
@@ -1446,7 +1668,12 @@ type
     ///   Constructor for creating a <c>TServiceList</c> instance.
     /// </summary>
     constructor Create;
+
+    /// <summary>
+    ///   Destructor for destroying a <c>TStartupUserItem</c> instance.
+    /// </summary>
     destructor Destroy(); override;
+
     function Add(AFileName, AArguments, ACaption: string): Boolean; reintroduce;
 
     /// <summary>
@@ -1458,7 +1685,7 @@ type
     procedure ExportList(const AFileName: string); override;
 
     /// <summary>
-    ///   Searches items and adds them to the list.
+    ///   Searches for items and adds them to the list.
     /// </summary>
     /// <param name="AExpertMode">
     ///   If set to <c>True</c> use the expert search mode. Otherwise use the
@@ -1639,7 +1866,7 @@ type
     function ImportBackup(const AFileName: TFileName): Boolean;
 
     /// <summary>
-    ///   Searches items and adds them to the list.
+    ///   Searches for items and adds them to the list.
     /// </summary>
     /// <param name="AExpertMode">
     ///   If set to <c>True</c> use the expert search mode. Otherwise use the
@@ -2511,10 +2738,6 @@ begin
   Result := ALanguageFile.GetString(LID_FILTER_REGISTRY_FILE);
 end;
 
-{ public TRootList.IndexOf
-
-  Returns the index of an item checking name only. }
-
 function TRootList<T>.IndexOf(const ANameOrCaption: string): Integer;
 var
   i: Integer;
@@ -2534,10 +2757,6 @@ begin
     end;  //of begin
   end;  //of for
 end;
-
-{ public TRootList.IndexOf
-
-  Returns the index of an item checking name or caption and status. }
 
 function TRootList<T>.IndexOf(const ANameOrCaption: string; AEnabled: Boolean): Integer;
 var
@@ -2613,10 +2832,6 @@ begin
   end;  //of try
 end;
 
-{ private TStartupListItem.GetTime
-
-  Returns the deactivation time of an disabled item. }
-
 function TStartupListItem.GetTime(): TDateTime;
 begin
   if not FEnabled then
@@ -2684,10 +2899,6 @@ begin
   end;  //of try
 end;
 
-{ protected TStartupListItem.DateTimeToFileTime
-
-  Converts a TDateTime to a TFileTime. }
-
 function TStartupListItem.DateTimeToFileTime(const AFileTime: TDateTime): TFileTime;
 var
   LocalFileTime: TFileTime;
@@ -2700,10 +2911,6 @@ begin
   SystemTimeToFileTime(SystemTime, LocalFileTime);
   LocalFileTimeToFileTime(LocalFileTime, Result);
 end;
-
-{ protected TStartupListItem.Delete
-
-  Deletes a Registry value whose name is the item name. }
 
 function TStartupListItem.DeleteValue(AKeyPath: string;
   AReallyWow64: Boolean = True): Boolean;
@@ -2737,10 +2944,6 @@ begin
   end;  //of try
 end;
 
-{ protected TStartupListItem.FileTimeToDateTime
-
-  Converts a TFileTime to a TDateTime. }
-
 function TStartupListItem.FileTimeToDateTime(const AFileTime: TFileTime): TDateTime;
 var
   ModifiedTime: TFileTime;
@@ -2772,18 +2975,10 @@ begin
     Result := KEY_STARTUP_RUN_APPROVED;
 end;
 
-{ protected TStartupListItem.GetFullLocation
-
-  Returns the full Registry path to a TStartupListItem. }
-
 function TStartupListItem.GetFullLocation(): string;
 begin
   Result := FRootKey.ToString() +'\'+ FLocation;
 end;
-
-{ protected TStartupListItem.GetRootKey
-
-  Returns the HKEY of an TStartupListItem. }
 
 function TStartupListItem.GetRootKey(): TRootKey;
 begin
@@ -2824,10 +3019,6 @@ begin
     Reg.Free;
   end;  //of try
 end;
-
-{ public TStartupListItem.ChangeFilePath
-
-  Changes the file path of an TStartupListItem. }
 
 procedure TStartupListItem.ChangeFilePath(const ANewFileName: string);
 var
@@ -2902,10 +3093,6 @@ begin
   end;  //of try
 end;
 
-{ public TStartupListItem.OpenInRegEdit
-
-  Opens a TStartupListItem object in RegEdit. }
-
 procedure TStartupListItem.OpenInRegEdit();
 begin
   if (FEnabled or CheckWin32Version(6, 2)) then
@@ -2957,10 +3144,6 @@ begin
   FRunOnce := ARunOnce;
 end;
 
-{ public TStartupItem.Delete
-
-  Deletes a TStartupItem object and returns True if successful. }
-
 function TStartupItem.Delete(): Boolean;
 begin
   if (FEnabled or CheckWin32Version(6, 2)) then
@@ -2974,10 +3157,6 @@ begin
   else
     Result := DeleteKey(HKEY_LOCAL_MACHINE, KEY_STARTUP_DISABLED, Name);
 end;
-
-{ public TStartupItem.Disable
-
-  Disables an TStartupItem object and returns True if successful. }
 
 function TStartupItem.Disable(): Boolean;
 var
@@ -3041,10 +3220,6 @@ begin
     Reg.Free;
   end;  //of try
 end;
-
-{ public TStartupItem.Enable
-
-  Enables an TStartupItem object and returns True if successful. }
 
 function TStartupItem.Enable(): Boolean;
 var
@@ -3208,18 +3383,10 @@ begin
   inherited Destroy;
 end;
 
-{ private TStartupUserItem.AddCircumflex
-
-  Replaces all backslashes in a path by circumflex. }
-
 function TStartupUserItem.AddCircumflex(const AName: string): string;
 begin
   Result := StringReplace(AName, '\', '^', [rfReplaceAll]);
 end;
-
-{ protected TStartupUserItem.GetFullLocation
-
-  Returns the file path of a TStartupUserItem. }
 
 function TStartupUserItem.GetFullLocation(): string;
 begin
@@ -3261,10 +3428,6 @@ begin
     FLnkFile.CreateBackup();
 end;
 
-{ public TStartupUserItem.Delete
-
-  Deletes a TStartupUserItem object and returns True if successful. }
-
 function TStartupUserItem.Delete(): Boolean;
 var
   Win8: Boolean;
@@ -3287,10 +3450,6 @@ begin
     Result := DeleteKey(HKEY_LOCAL_MACHINE, KEY_STARTUP_USER_DISABLED,
       AddCircumflex(FLnkFile.FileName));
 end;
-
-{ public TStartupUserItem.Disable
-
-  Disables an TStartupUserItem object and returns True if successful. }
 
 function TStartupUserItem.Disable(): Boolean;
 var
@@ -3351,10 +3510,6 @@ begin
     Reg.Free;
   end;  //of try
 end;
-
-{ public TStartupUserItem.Enable
-
-  Enables an TStartupUserItem object and returns True if successful. }
 
 function TStartupUserItem.Enable(): Boolean;
 begin
@@ -3478,19 +3633,11 @@ end;
 
 { TStartupList }
 
-{ public TStartupList.Create
-
-  General constructor for creating a TStartupList instance. }
-
 constructor TStartupList.Create;
 begin
   inherited Create;
   FDeleteBackup := True;
 end;
-
-{ private TStartupList.DeleteBackupFile
-
-  Deletes the backup file of a TStartupUserItem. }
 
 function TStartupList.DeleteBackupFile(): Boolean;
 begin
@@ -3509,10 +3656,6 @@ begin
   Result := Format(ALanguageFile.GetString(LID_FILTER_STARTUP_FILES),
     [EXT_STARTUP_USER, EXT_STARTUP_USER, EXT_STARTUP_COMMON, EXT_STARTUP_COMMON]);
 end;
-
-{ protected TStartupList.AddItemDisabled
-
-  Adds a disabled default startup item to the list. }
 
 function TStartupList.AddItemDisabled(AReg: TRegistry; AWow64: Boolean): Integer;
 var
@@ -3541,10 +3684,6 @@ begin
   Result := inherited Add(Item);
 end;
 
-{ protected TStartupList.AddItem
-
-  Adds a enabled default startup item to the list. }
-
 function TStartupList.AddItem(ARootKey: TRootKey; const AKeyPath, AName,
   AFileName: string; AWow64, ARunOnce: Boolean): Integer;
 var
@@ -3570,10 +3709,6 @@ begin
     Result := -1;
   end;  //of try
 end;
-
-{ protected TStartupList.AddNewStartupUserItem
-
-  Adds a new startup user item to the autostart. }
 
 function TStartupList.AddNewStartupUserItem(AName: string; AFileName: TFileName;
   AArguments: string = ''; AStartupUser: Boolean = True): Boolean;
@@ -3608,10 +3743,6 @@ begin
       Result := True;
   end;  //of begin
 end;
-
-{ protected TStartupList.AddUserItemDisabled
-
-  Adds a disabled startup user item to the list. }
 
 function TStartupList.AddUserItemDisabled(AReg: TRegistry): Integer;
 var
@@ -3650,10 +3781,6 @@ begin
   Result := inherited Add(Item);
 end;
 
-{ protected TStartupList.AddUserItem
-
-  Adds a enabled startup user item to the list. }
-
 function TStartupList.AddUserItem(ALnkFile: TStartupLnkFile;
   AStartupUser: Boolean): Integer;
 var
@@ -3689,10 +3816,6 @@ begin
   Item.LnkFile := ALnkFile;
   Result := inherited Add(Item);
 end;
-
-{ public TStartupList.Add
-
-  Adds a new startup item to autostart. }
 
 function TStartupList.Add(const AFileName, AArguments, ACaption: string): Boolean;
 var
@@ -3769,10 +3892,6 @@ begin
     FLock.Release();
   end;  //of try
 end;
-
-{ public TStartupList.BackupExists
-
-  Checks if a backup file already exists. }
 
 function TStartupList.BackupExists(): Boolean;
 begin
@@ -3906,10 +4025,6 @@ begin
   end;  // of with
 end;
 
-{ public TStartupList.LoadDisabled
-
-  Searches for disabled items and adds them to the list. }
-
 procedure TStartupList.LoadDisabled(AStartupUser: Boolean; AWow64: Boolean = False);
 var
   Reg: TRegistry;
@@ -3961,10 +4076,6 @@ begin
   end;  //of try
 end;
 
-{ public TStartupList.LoadStartup
-
-  Searches for enabled startup user items and adds them to the list. }
-
 procedure TStartupList.LoadStartup(AStartupUser: Boolean);
 var
   Folder: string;
@@ -3986,10 +4097,6 @@ begin
       FindClose(SearchResult);
     end;  //of try
 end;
-
-{ public TStartupList.LoadStartup
-
-  Searches for enabled items in ARootKey and AKeyPath and adds them to the list. }
 
 procedure TStartupList.LoadStartup(ARootKey: TRootKey; ARunOnce: Boolean = False;
   AWow64: Boolean = False);
@@ -4030,11 +4137,7 @@ begin
   end;  //of finally
 end;
 
-{ public TStartupList.LoadStatus
-
-  Loads and refreshes the status of all list items (since Windows 8). }
-
-procedure TStartupList.LoadStatus(ARootKey: TRootKey; AKeyPath: string);
+procedure TStartupList.LoadStatus(ARootKey: TRootKey; const AKeyPath: string);
 var
   Reg: TRegistry;
   i: Integer;
@@ -4082,10 +4185,6 @@ begin
   end;  //of try
 end;
 
-{ public TStartupList.RefreshCounter
-
-  Refreshes the internal enabled items counter. }
-
 procedure TStartupList.RefreshCounter();
 var
   i: Integer;
@@ -4106,18 +4205,10 @@ end;
 
 { TContextListItem }
 
-{ protected TContextListItem.GetFullLocation
-
-  Returns the Registry path to a TContextListItem. }
-
 function TContextListItem.GetFullLocation(): string;
 begin
   Result := GetRootKey().ToString() +'\'+ GetKeyPath();
 end;
-
-{ protected TContextListItem.GetRootKey
-
-  Returns the HKEY of an TContextListItem. }
 
 function TContextListItem.GetRootKey(): TRootKey;
 begin
@@ -4138,21 +4229,13 @@ begin
   Result := True;
 end;
 
-{ public TContextListItem.DeleteUserChoice
-
-  Deletes a user defined program association and returns True if successful. }
-
-function TContextListItem.DeleteUserChoice(AFileExtension: string): Boolean;
+function TContextListItem.DeleteUserChoice(const AFileExtension: string): Boolean;
 begin
   Result := (RegDeleteKey(HKEY_CURRENT_USER, PChar(Format(KEY_USERCHOICE,
     [AFileExtension]))) = ERROR_SUCCESS);
 end;
 
-{ public TContextListItem.UserChoiceExists
-
-  Returns True if a user defined program association exists. }
-
-function TContextListItem.UserChoiceExists(AFileExtension: string): Boolean;
+function TContextListItem.UserChoiceExists(const AFileExtension: string): Boolean;
 var
   UserChoice: string;
 
@@ -4164,10 +4247,6 @@ end;
 
 
 { TShellItem }
-
-{ private TShellItem.GetKeyPath
-
-  Returns the Registry path of a TShellItem item. }
 
 function TShellItem.GetKeyPath(): string;
 begin
@@ -4200,10 +4279,6 @@ begin
     Reg.Free;
   end;  //of try
 end;
-
-{ protected TShellItem.GetIcon
-
-  Returns the icon handle to the item file path. }
 
 function TShellItem.GetIcon(): HICON;
 var
@@ -4242,10 +4317,6 @@ begin
   end;  //of try
 end;
 
-{ public TShellItem.ChangeFilePath
-
-  Changes the file path of an TShellItem item. }
-
 procedure TShellItem.ChangeFilePath(const ANewFileName: string);
 var
   Reg: TRegistry;
@@ -4275,10 +4346,6 @@ begin
     Reg.Free;
   end;  //of try
 end;
-
-{ public TShellItem.ChangeIcon
-
-  Changes the icon of an TShellItem item. }
 
 function TShellItem.ChangeIcon(const ANewIconFileName: string): Boolean;
 var
@@ -4350,10 +4417,6 @@ begin
   end;  //of try
 end;
 
-{ public TShellItem.DeleteIcon
-
-  Deletes the icon of a TShellItem and returns True if successful. }
-
 function TShellItem.DeleteIcon: Boolean;
 begin
   Result := ChangeIcon('');
@@ -4386,10 +4449,6 @@ end;
 
 
 { TShellCascadingItem }
-
-{ private TShellCascadingItem.GetSubCommands
-
-  Gets the submenu items of a TShellCascadingItem item. }
 
 procedure TShellCascadingItem.GetSubCommands(var ASubCommands: TStrings);
 const
@@ -4479,10 +4538,6 @@ end;
 
 { TShellExItem }
 
-{ private TShellExItem.ChangeStatus
-
-  Enables or disables a ShellEx item. }
-
 procedure TShellExItem.ChangeStatus(const ANewStatus: Boolean);
 var
   Reg: TRegistry;
@@ -4530,18 +4585,10 @@ begin
   end;  //of try
 end;
 
-{ private TShellExItem.GetKeyPath
-
-  Returns the Registry path to a TShellExItem. }
-
 function TShellExItem.GetKeyPath(): string;
 begin
   Result := FLocation +'\'+ CM_SHELLEX_HANDLERS +'\'+ Name;
 end;
-
-{ public TShellExItem.ChangeFilePath
-
-  Changes the file path of an TShellExItem item. }
 
 procedure TShellExItem.ChangeFilePath(const ANewFileName: string);
 var
@@ -4633,11 +4680,8 @@ begin
   Result := CM_SHELLEX;
 end;
 
+
 { TShellNewItem }
-
-{ private TShellNewItem.ChangeStatus
-
-  Enables or disables a ShellNew item. }
 
 procedure TShellNewItem.ChangeStatus(const ANewStatus: Boolean);
 var
@@ -4685,10 +4729,6 @@ begin
   end;  //of try
 end;
 
-{ private TShellNewItem.GetKeyPath
-
-  Returns the Registry path to a TShellExItem. }
-
 function TShellNewItem.GetKeyPath(): string;
 begin
   if FEnabled then
@@ -4696,10 +4736,6 @@ begin
   else
     Result := FLocation +'\'+ CM_SHELLNEW_DISABLED;
 end;
-
-{ public TShellNewItem.ChangeFilePath
-
-  Changes the file path of an TShellExItem item. }
 
 procedure TShellNewItem.ChangeFilePath(const ANewFileName: string);
 begin
@@ -4743,10 +4779,6 @@ end;
 
 { TContextList }
 
-{ protected TContextList.AddShellItem
-
-  Adds a shell item to list. }
-
 function TContextList.AddShellItem(const AName, ALocationRoot, AFileName,
   ACaption: string; AEnabled, AWow64: Boolean): Integer;
 var
@@ -4760,10 +4792,6 @@ begin
   if AEnabled then
     Inc(FEnabledItemsCount);
 end;
-
-{ protected TContextList.AddShellExItem
-
-  Adds a cascading shell item to list. }
 
 function TContextList.AddCascadingShellItem(const AName, ALocationRoot,
   ACaption: string; AEnabled, AWow64: Boolean): Integer;
@@ -4779,10 +4807,6 @@ begin
     Inc(FEnabledItemsCount);
 end;
 
-{ protected TContextList.AddShellExItem
-
-  Adds a shellex item to list. }
-
 function TContextList.AddShellExItem(const AName, ALocationRoot, AFileName: string;
   AEnabled, AWow64: Boolean): Integer;
 var
@@ -4796,10 +4820,6 @@ begin
     Inc(FEnabledItemsCount);
 end;
 
-{ protected TContextList.AddShellItem
-
-  Adds a shell item to list. }
-
 function TContextList.AddShellNewItem(const AName, ALocationRoot, ACaption: string;
   AEnabled, AWow64: Boolean): Integer;
 var
@@ -4812,10 +4832,6 @@ begin
   if AEnabled then
     Inc(FEnabledItemsCount);
 end;
-
-{ public TContextList.Add
-
-  Adds a new contextmenu entry. }
 
 function TContextList.Add(AFileName, AArguments, ALocationRoot, ACaption: string;
   AExtended: Boolean = False): Boolean;
@@ -4949,11 +4965,7 @@ begin
   end;  //of try
 end;
 
-{ public TContextList.IndexOf
-
-  Returns the index of an item checking name and location. }
-
-function TContextList.IndexOf(AName, ALocationRoot: string): Integer;
+function TContextList.IndexOf(const AName, ALocationRoot: string): Integer;
 var
   i: Integer;
   Item: TContextListItem;
@@ -4974,10 +4986,6 @@ begin
   end;  //of for
 end;
 
-{ public TContextList.Load
-
-  Searches for context menu items in default or expert mode. }
-
 procedure TContextList.Load(AExpertMode: Boolean = False);
 begin
   if AExpertMode then
@@ -4986,11 +4994,6 @@ begin
     LoadContextMenus(CM_LOCATIONS_DEFAULT);
 end;
 
-{ public TContextList.LoadContextmenu
-
-  Searches for Shell and ShellEx context menu entries in specific Registry key
-  and adds them to the list. }
-
 procedure TContextList.LoadContextmenu(const ALocationRoot: string;
   AWow64: Boolean);
 begin
@@ -4998,10 +5001,6 @@ begin
   LoadContextmenu(ALocationRoot, stShellEx, AWow64);
   LoadContextmenu(ALocationRoot, stShellNew, AWow64);
 end;
-
-{ public TContextList.LoadContextmenu
-
-  Searches for context menu items in Registry key and adds them to the list. }
 
 procedure TContextList.LoadContextmenu(const ALocationRoot: string;
   AShellItemType: TShellItemType; AWow64: Boolean);
@@ -5184,10 +5183,6 @@ begin
   end;  //of try
 end;
 
-{ public TContextList.LoadContextMenus
-
-  Searches for context menu entries at different locations. }
-
 procedure TContextList.LoadContextMenus(ALocationRootCommaList: string = CM_LOCATIONS_DEFAULT);
 var
   SearchThread: TContextSearchThread;
@@ -5223,10 +5218,6 @@ end;
 
 { TServiceListItem }
 
-{ public TServiceListItem.Create
-
-  Constructor for creating a TServiceListItem instance. }
-
 constructor TServiceListItem.Create(const AName, ACaption, AFileName: string;
   AEnabled: Boolean; AServiceStart: TServiceStart; AServiceManager: SC_HANDLE);
 begin
@@ -5234,10 +5225,6 @@ begin
   FServiceStart := AServiceStart;
   FServiceManager := AServiceManager;
 end;
-
-{ private TServiceListItem.GetHandle
-
-  Returns the handle to a service. }
 
 function TServiceListItem.GetHandle(AAccess: DWORD): SC_HANDLE;
 var
@@ -5256,10 +5243,6 @@ begin
   Result := Handle;
 end;
 
-{ private TServiceListItem.GetTime
-
-  Returns the deactivation time of an disabled item. }
-
 function TServiceListItem.GetTime(): TDateTime;
 begin
   if not FEnabled then
@@ -5269,27 +5252,16 @@ begin
     Result := 0;
 end;
 
-{ private TServiceListItem.GetLocation
-
-  Returns the Registry path to a TServiceListItem. }
 
 function TServiceListItem.GetLocation(): string;
 begin
   Result := KEY_SERVICE_ENABLED + Name;
 end;
 
-{ protected TServiceListItem.GetFullLocation
-
-  Returns the full Registry path to a TServiceListItem. }
-
 function TServiceListItem.GetFullLocation(): string;
 begin
   Result := GetRootKey().ToString() +'\'+ GetLocation();
 end;
-
-{ protected TServiceListItem.GetRootKey
-
-  Returns the HKEY of an TServiceListItem. }
 
 function TServiceListItem.GetRootKey(): TRootKey;
 begin
@@ -5373,10 +5345,6 @@ begin
   end;  //of try
 end;
 
-{ public TServiceListItem.Disable
-
-  Disables an TServiceListItem object and returns True if successful. }
-
 function TServiceListItem.Disable(): Boolean;
 var
   Service: SC_HANDLE;
@@ -5421,10 +5389,6 @@ begin
     CloseServiceHandle(Service);
   end;  //of try
 end;
-
-{ public TServiceListItem.Enable
-
-  Enables an TServiceListItem object and returns True if successful. }
 
 function TServiceListItem.Enable(): Boolean;
 var
@@ -5540,10 +5504,6 @@ end;
 
 { TServiceList }
 
-{ public TServiceList.Create
-
-  Constructor for creating a TServiceList instance. }
-
 constructor TServiceList.Create();
 begin
   inherited Create;
@@ -5551,19 +5511,11 @@ begin
     SC_MANAGER_ENUMERATE_SERVICE or SC_MANAGER_CREATE_SERVICE);
 end;
 
-{ public TServiceList.Destroy
-
-  Destructor for destroying a TServiceList instance. }
-
 destructor TServiceList.Destroy();
 begin
   CloseServiceHandle(FManager);
   inherited Destroy;
 end;
-
-{ protected TServiceList.AddServiceDisabled
-
-  Adds a disabled service item to list. }
 
 function TServiceList.AddServiceDisabled(const AName, ACaption, AFileName: string;
   AReg: TRegistry): Integer;
@@ -5584,10 +5536,6 @@ begin
   Result := inherited Add(Item);
 end;
 
-{ protected TServiceList.AddServiceEnabled
-
-  Adds an enabled service item to list. }
-
 function TServiceList.AddServiceEnabled(const AName, ACaption, AFileName: string;
   AStart: TServiceStart): Integer;
 var
@@ -5598,10 +5546,6 @@ begin
   Result := inherited Add(Item);
   Inc(FEnabledItemsCount);
 end;
-
-{ public TServiceList.Add
-
-  Adds a new service item to services location. }
 
 function TServiceList.Add(AFileName, AArguments, ACaption: string): Boolean;
 var
@@ -5691,10 +5635,6 @@ begin
     FLock.Release();
   end;  //of try
 end;
-
-{ public TServiceList.Load
-
-  Searches for service items in default or expert mode. }
 
 procedure TServiceList.Load(AExpertMode: Boolean = False);
 var
@@ -5850,10 +5790,6 @@ begin
   end;  //of try
 end;
 
-{ protected TTaskListItem.GetFullLocation
-
-  Returns the full file path to a TTaskListItem. }
-
 function TTaskListItem.GetFullLocation(): string;
 begin
   if GetFolderPath(CSIDL_SYSTEM, Result) then
@@ -5966,10 +5902,6 @@ begin
   CoUninitialize();
   inherited Destroy;
 end;
-
-{ protected TTaskList.AddTaskItem
-
-  Adds a task item to the list. }
 
 function TTaskList.AddTaskItem(ATask: IRegisteredTask; ATaskFolder: ITaskFolder): Integer;
 var
