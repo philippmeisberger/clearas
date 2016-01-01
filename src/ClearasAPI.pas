@@ -1097,13 +1097,10 @@ type
   TStartupList = class(TRootList<TStartupListItem>, IImportableList)
   private
     FDeleteBackup: Boolean;
-    function DeleteBackupFile(): Boolean; deprecated 'Since Windows 8';
-  protected
-    function AddItem(ARootKey: TRootKey; const AKeyPath, AName, AFileName: string;
-      AWow64, ARunOnce: Boolean): Integer;
     function AddNewStartupUserItem(const AName: string; AFileName: TFileName;
       AArguments: string = ''; AStartupUser: Boolean = True): Boolean;
     function AddUserItem(ALnkFile: TStartupLnkFile; AStartupUser: Boolean): Integer;
+    function DeleteBackupFile(): Boolean; deprecated 'Since Windows 8';
   public
     /// <summary>
     ///   Constructor for creating a <c>TStartupList</c> instance.
@@ -1219,6 +1216,9 @@ type
     /// <summary>
     ///   Searches for items and adds them to the list.
     /// </summary>
+    /// <param name="ARootKey">
+    ///   The root Registry key. Can only be <c>rkHKCU</c> or <c>rkHKLM</c>.
+    /// </param>
     /// <param name="ARunOnce">
     ///   If set to <c>True</c> only search for RunOnce items. Otherwise search
     ///   for default startup items.
@@ -1499,8 +1499,7 @@ type
     /// <param name="AEnabled">
     ///   The status.
     /// </param>
-    constructor Create(const AName, ACaption, ALocation: string;
-      AEnabled: Boolean);
+    constructor Create(const AName, ACaption, ALocation: string; AEnabled: Boolean);
 
     /// <summary>
     ///   Deletes the item.
@@ -1737,11 +1736,6 @@ type
     property Location: string read GetLocation;
 
     /// <summary>
-    ///   Gets the handle to the current service manager.
-    /// </summary>
-    property Manager: SC_HANDLE read FServiceManager;
-
-    /// <summary>
     ///   Gets the start type.
     /// </summary>
     property Start: TServiceStart read FServiceStart;
@@ -1924,7 +1918,6 @@ type
   TTaskList = class(TRootList<TTaskListItem>, IImportableList)
   private
     FTaskService: ITaskService;
-  protected
     function AddTaskItem(ATask: IRegisteredTask; ATaskFolder: ITaskFolder): Integer;
   public
     /// <summary>
@@ -3783,21 +3776,6 @@ begin
     [EXT_STARTUP_USER, EXT_STARTUP_USER, EXT_STARTUP_COMMON, EXT_STARTUP_COMMON]);
 end;
 
-function TStartupList.AddItem(ARootKey: TRootKey; const AKeyPath, AName,
-  AFileName: string; AWow64, ARunOnce: Boolean): Integer;
-var
-  Item: TStartupItem;
-
-begin
-  // Invalid startup key?
-  if not (ARootKey in [rkHKLM, rkHKCU]) then
-    Exit(-1);
-
-  Item := TStartupItem.Create(AName, AFileName, AKeyPath, ARootKey, True, AWow64,
-    ARunOnce);
-  Result := Add(Item);
-end;
-
 function TStartupList.AddNewStartupUserItem(const AName: string; AFileName: TFileName;
   AArguments: string = ''; AStartupUser: Boolean = True): Boolean;
 var
@@ -3837,25 +3815,20 @@ var
   RootKey: TRootKey;
 
 begin
-  try
-    Location := ALnkFile.FileName;
-    Name := ExtractFileName(Location);
-    FileName := ALnkFile.FullPath;
+  Location := ALnkFile.FileName;
+  Name := ExtractFileName(Location);
+  FileName := ALnkFile.FullPath;
 
-    // Windows 8?
-    if CheckWin32Version(6, 2) then
-    begin
-      if AStartupUser then
-        RootKey := rkHKCU
-      else
-        RootKey := rkHKLM;
-    end  //of begin
+  // Windows 8?
+  if CheckWin32Version(6, 2) then
+  begin
+    if AStartupUser then
+      RootKey := rkHKCU
     else
-      RootKey := rkUnknown;
-
-  except
-    Exit(-1);
-  end;  //of try
+      RootKey := rkHKLM;
+  end  //of begin
+  else
+    RootKey := rkUnknown;
 
   Result := Add(TStartupUserItem.Create(Name, FileName, Location, RootKey, True,
     ALnkFile));
@@ -3910,15 +3883,13 @@ begin
         Reg.WriteString(ACaption, FullPath);
 
         // Adds item to list
-        if (AddItem(rkHKCU, KEY_STARTUP_RUN, ACaption, FullPath, False, False) <> -1) then
-        begin
-          Result := True;
+        Result := (Add(TStartupItem.Create(ACaption, AFileName, KEY_STARTUP_RUN,
+          rkHKCU, True, False, False)) <> -1);
 
-          // Windows 8?
-          if CheckWin32Version(6, 2) then
-            // Write the StartupApproved value
-            Last.Enabled := True;
-        end;  //of begin
+        // Windows 8?
+        if (Result and CheckWin32Version(6, 2)) then
+          // Write the StartupApproved value
+          Last.Enabled := True;
 
       finally
         Reg.CloseKey();
@@ -4178,6 +4149,10 @@ var
   KeyPath: string;
 
 begin
+  // Invalid startup key?
+  if not (ARootKey in [rkHKLM, rkHKCU]) then
+    Exit;
+
   Items := TStringList.Create;
 
   // Allow WOW64 redirection?
@@ -4198,14 +4173,14 @@ begin
     Reg.GetValueNames(Items);
 
     for i := 0 to Items.Count - 1 do
-      // Read path to .exe and add item to list
-      AddItem(ARootKey, KeyPath, Items[i], Reg.ReadString(Items[i]), AWow64, ARunOnce);
+      Add(TStartupItem.Create(Items[i], Reg.ReadString(Items[i]), KeyPath,
+        ARootKey, True, AWow64, ARunOnce));
 
   finally
     Reg.CloseKey();
     Reg.Free;
     Items.Free;
-  end;  //of finally
+  end;  //of try
 end;
 
 procedure TStartupList.LoadStatus(ARootKey: TRootKey; const AKeyPath: string);
@@ -5927,29 +5902,24 @@ var
   FileName: string;
 
 begin
-  try
-    // Try to find executable command in task
-    Actions := (ATask.Definition.Actions._NewEnum as IEnumVariant);
+  // Try to find executable command in task
+  Actions := (ATask.Definition.Actions._NewEnum as IEnumVariant);
 
-    if (Actions.Next(1, ActionItem, Fetched) = 0) then
+  if (Actions.Next(1, ActionItem, Fetched) = 0) then
+  begin
+    Action := (IDispatch(ActionItem) as IAction);
+
+    // Task has an executable?
+    if (Action.ActionType = TASK_ACTION_EXEC) then
     begin
-      Action := (IDispatch(ActionItem) as IAction);
+      ExecAction := (Action as IExecAction);
+      FileName := ExecAction.Path;
 
-      // Task has an executable?
-      if (Action.ActionType = TASK_ACTION_EXEC) then
-      begin
-        ExecAction := (Action as IExecAction);
-        FileName := ExecAction.Path;
-
-        // Append arguments?
-        if (ExecAction.Arguments <> '') then
-          FileName := FileName +' '+ ExecAction.Arguments;
-      end;  //of begin
-    end;  //of while
-
-  except
-    Exit(-1);
-  end;  //of try
+      // Append arguments?
+      if (ExecAction.Arguments <> '') then
+        FileName := FileName +' '+ ExecAction.Arguments;
+    end;  //of begin
+  end;  //of while
 
   Item := TTaskListItem.Create(ATask.Name, FileName, ExtractFileDir(ATask.Path),
     ATask.Enabled, ATask, ATaskFolder);
