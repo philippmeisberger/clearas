@@ -495,7 +495,7 @@ type
     ///   Use the WOW64 technology.
     /// </param>
     constructor Create(const AName, ACaption, AFileName, ALocation: string;
-      AEnabled, AWow64: Boolean); reintroduce;
+      AEnabled, AWow64: Boolean);
 
     /// <summary>
     ///   Gets the filter for file export.
@@ -546,7 +546,9 @@ type
     property Wow64Location: string read GetWow64Key;
   end;
 
-  { TItemStatus }
+  /// <summary>
+  ///   The possible item changes.
+  /// </summary>
   TItemStatus = (
     stNone, stEnabled, stDisabled, stDeleted
   );
@@ -619,6 +621,18 @@ type
     ///   Destructor for destroying a <c>TRootList</c> instance.
     /// </summary>
     destructor Destroy; override;
+
+    /// <summary>
+    ///   Adds an item to the list.
+    /// </summary>
+    /// <param name="AItem">
+    ///   The item.
+    /// </param>
+    /// <returns>
+    ///   The index of the item. If the item was not added <c>-1</c> is
+    ///   returned.
+    /// </returns>
+    function Add(const AItem: TRootItem): Integer; reintroduce;
 
     /// <summary>
     ///   Changes the file path of the current selected item.
@@ -869,7 +883,7 @@ type
     ///   Use the WOW64 technology.
     /// </param>
     constructor Create(const AName, AFileName, ALocation: string;
-      ARootKey: TRootKey; AEnabled, AWow64: Boolean); reintroduce;
+      ARootKey: TRootKey; AEnabled, AWow64: Boolean);
 
     /// <summary>
     ///   Deletes the item.
@@ -985,9 +999,9 @@ type
   /// </summary>
   TStartupUserItem = class(TStartupListItem)
   private
-    FStartupUser: Boolean;
     FLnkFile: TStartupLnkFile;
     function AddCircumflex(const AName: string): string;
+    function GetStartupUser: Boolean;
   protected
     procedure ChangeFilePath(const ANewFileName: string); override;
     function Disable(): Boolean; override;
@@ -1014,11 +1028,11 @@ type
     /// <param name="AEnabled">
     ///   The status.
     /// </param>
-    /// <param name="AStartupUser">
-    ///   Item is a startup user item and is a .lnk file.
+    /// <param name="ALnkFile">
+    ///   The corresponding .lnk file.
     /// </param>
     constructor Create(const AName, AFileName, ALocation: string;
-      ARootKey: TRootKey; AEnabled, AStartupUser: Boolean);
+      ARootKey: TRootKey; AEnabled: Boolean; ALnkFile: TStartupLnkFile);
 
     /// <summary>
     ///   Destructor for destroying a <c>TStartupUserItem</c> instance.
@@ -1066,7 +1080,7 @@ type
     ///   current user. Otherwise the item is located in startup folder of all
     ///   users.
     /// </summary>
-    property StartupUser: Boolean read FStartupUser;
+    property StartupUser: Boolean read GetStartupUser;
 
     /// <summary>
     ///   Gets or sets the .lnk file.
@@ -1085,19 +1099,33 @@ type
     FDeleteBackup: Boolean;
     function DeleteBackupFile(): Boolean; deprecated 'Since Windows 8';
   protected
-    function AddItemDisabled(AReg: TRegistry; AWow64: Boolean): Integer; deprecated 'Since Windows 8';
     function AddItem(ARootKey: TRootKey; const AKeyPath, AName, AFileName: string;
       AWow64, ARunOnce: Boolean): Integer;
     function AddNewStartupUserItem(AName: string; AFileName: TFileName;
       AArguments: string = ''; AStartupUser: Boolean = True): Boolean;
-    function AddUserItemDisabled(AReg: TRegistry): Integer; deprecated 'Since Windows 8';
     function AddUserItem(ALnkFile: TStartupLnkFile; AStartupUser: Boolean): Integer;
   public
     /// <summary>
     ///   Constructor for creating a <c>TStartupList</c> instance.
     /// </summary>
     constructor Create;
-    function Add(const AFileName, AArguments, ACaption: string): Boolean; reintroduce;
+
+    /// <summary>
+    ///   Adds an item to the list.
+    /// </summary>
+    /// <param name="AFileName">
+    ///   The absolute .exe filename.
+    /// </param>
+    /// <param name="AArguments">
+    ///   Optional arguments passed to the .exe.
+    /// </param>
+    /// <param name="ACaption">
+    ///   The display name.
+    /// </param>
+    /// <returns>
+    ///   <c>True</c> if the item was successfully added or <c>False</c> otherwise.
+    /// </returns>
+    function Add(const AFileName, AArguments, ACaption: string): Boolean; overload;
 
     /// <summary>
     ///   Checks if a startup user backup file already exists.
@@ -1300,6 +1328,27 @@ type
     procedure Rename(const ANewName: string); overload; override;
   public
     /// <summary>
+    ///   Constructor for creating a <c>TShellNewItem</c> instance.
+    /// </summary>
+    /// <param name="AName">
+    ///   The internal name.
+    /// </param>
+    /// <param name="ACaption">
+    ///   The display name.
+    /// </param>
+    /// <param name="AFileName">
+    ///   The filename to an .exe file.
+    /// </param>
+    /// <param name="ALocation">
+    ///   The location where the item can be found.
+    /// </param>
+    /// <param name="AEnabled">
+    ///   The status.
+    /// </param>
+    constructor Create(const AName, ACaption, AFileName, ALocation: string;
+      AEnabled: Boolean);
+
+    /// <summary>
     ///   Changes the icon of a contextmenu item.
     /// </summary>
     /// <param name="ANewIconFileName">
@@ -1349,6 +1398,24 @@ type
     procedure ChangeFilePath(const ANewFileName: string); override;
     procedure Rename(const ANewName: string); override;
   public
+    /// <summary>
+    ///   Constructor for creating a <c>TShellNewItem</c> instance.
+    /// </summary>
+    /// <param name="AName">
+    ///   The internal name.
+    /// </param>
+    /// <param name="ACaption">
+    ///   The display name.
+    /// </param>
+    /// <param name="ALocation">
+    ///   The location where the item can be found.
+    /// </param>
+    /// <param name="AEnabled">
+    ///   The status.
+    /// </param>
+    constructor Create(const AName, ACaption, ALocation: string;
+      AEnabled: Boolean);
+
     /// <summary>
     ///   Deletes the item.
     /// </summary>
@@ -1419,6 +1486,24 @@ type
     procedure Rename(const ANewName: string); override;
   public
     /// <summary>
+    ///   Constructor for creating a <c>TShellNewItem</c> instance.
+    /// </summary>
+    /// <param name="AName">
+    ///   The internal name.
+    /// </param>
+    /// <param name="ACaption">
+    ///   The display name.
+    /// </param>
+    /// <param name="ALocation">
+    ///   The location where the item can be found.
+    /// </param>
+    /// <param name="AEnabled">
+    ///   The status.
+    /// </param>
+    constructor Create(const AName, ACaption, ALocation: string;
+      AEnabled: Boolean);
+
+    /// <summary>
     ///   Deletes the item.
     /// </summary>
     /// <returns>
@@ -1456,18 +1541,32 @@ type
   ///   list is locked.
   /// </summary>
   TContextList = class(TRootList<TContextListItem>)
-  protected
-    function AddCascadingShellItem(const AName, ALocationRoot, ACaption: string;
-      AEnabled, AWow64: Boolean): Integer;
-    function AddShellItem(const AName, ALocationRoot, AFileName, ACaption: string;
-      AEnabled, AWow64: Boolean): Integer;
-    function AddShellExItem(const AName, ALocationRoot, AFileName: string;
-      AEnabled, AWow64: Boolean): Integer;
-    function AddShellNewItem(const AName, ALocationRoot, ACaption: string;
-      AEnabled, AWow64: Boolean): Integer;
   public
-    function Add(AFileName, AArguments, ALocationRoot, ACaption: string;
-      AExtended: Boolean = False): Boolean; reintroduce;
+    /// <summary>
+    ///   Adds an item to the list.
+    /// </summary>
+    /// <param name="AFileName">
+    ///   The absolute .exe filename.
+    /// </param>
+    /// <param name="AArguments">
+    ///   Optional arguments passed to the .exe.
+    /// </param>
+    /// <param name="ALocationRoot">
+    ///   The root Registry location e.g. <c>Drives</c>.
+    /// </param>
+    /// <param name="ACaption">
+    ///   The display name.
+    /// </param>
+    /// <param name="AExtended">
+    ///   If set to <c>True</c> the contextmenu item will only be shown when
+    ///   shift-key is pressed and a right click is performed. Otherwise the
+    ///   item is always shown.
+    /// </param>
+    /// <returns>
+    ///   <c>True</c> if the item was successfully added or <c>False</c> otherwise.
+    /// </returns>
+    function Add(const AFileName, AArguments, ALocationRoot, ACaption: string;
+      AExtended: Boolean = False): Boolean; overload;
 
     /// <summary>
     ///   Exports the complete list as file.
@@ -1677,7 +1776,22 @@ type
     /// </summary>
     destructor Destroy(); override;
 
-    function Add(AFileName, AArguments, ACaption: string): Boolean; reintroduce;
+    /// <summary>
+    ///   Adds an item to the list.
+    /// </summary>
+    /// <param name="AFileName">
+    ///   The absolute .exe filename.
+    /// </param>
+    /// <param name="AArguments">
+    ///   Optional arguments passed to the .exe.
+    /// </param>
+    /// <param name="ACaption">
+    ///   The display name.
+    /// </param>
+    /// <returns>
+    ///   <c>True</c> if the item was successfully added or <c>False</c> otherwise.
+    /// </returns>
+    function Add(const AFileName, AArguments, ACaption: string): Boolean; overload;
 
     /// <summary>
     ///   Exports the complete list as file.
@@ -2598,6 +2712,14 @@ begin
   FItem := nil;
 end;
 
+function TRootList<T>.Add(const AItem: TRootItem): Integer;
+begin
+  Result := inherited Add(AItem);
+
+  if ((Result <> -1) and AItem.Enabled) then
+    Inc(FEnabledItemsCount);
+end;
+
 procedure TRootList<T>.ChangeItemFilePath(const ANewFilePath: string);
 begin
   // List locked?
@@ -3374,10 +3496,10 @@ end;
 { TStartupUserItem }
 
 constructor TStartupUserItem.Create(const AName, AFileName, ALocation: string;
-  ARootKey: TRootKey; AEnabled, AStartupUser: Boolean);
+  ARootKey: TRootKey; AEnabled: Boolean; ALnkFile: TStartupLnkFile);
 begin
   inherited Create(AName, AFileName, ALocation, ARootKey, AEnabled, False);
-  FStartupUser := AStartupUser;
+  FLnkFile := ALnkFile;
 end;
 
 destructor TStartupUserItem.Destroy;
@@ -3403,6 +3525,11 @@ begin
       Result := inherited GetFullLocation();
 end;
 
+function TStartupUserItem.GetStartupUser(): Boolean;
+begin
+  Result := FLnkFile.StartupUser;
+end;
+
 function TStartupUserItem.GetApprovedLocation(): string;
 begin
   // Only since Windows 8!
@@ -3412,7 +3539,7 @@ end;
 
 function TStartupUserItem.GetExportFilter(ALanguageFile: TLanguageFile): string;
 begin
-  if FStartupUser then
+  if StartupUser then
     Result := ToString() +'|*'+ EXT_STARTUP_USER
   else
     Result := ToString() +'|*'+ EXT_STARTUP_COMMON;
@@ -3621,13 +3748,13 @@ begin
   // Windows >= Vista?
   if CheckWin32Version(6) then
   begin
-    if FStartupUser then
+    if StartupUser then
       Result := STARTUP_USER
     else
       Result := STARTUP_COMMON;
   end  //of begin
   else
-    if FStartupUser then
+    if StartupUser then
       Result := STARTUP_USER_XP
     else
       Result := STARTUP_COMMON_XP;
@@ -3660,33 +3787,6 @@ begin
     [EXT_STARTUP_USER, EXT_STARTUP_USER, EXT_STARTUP_COMMON, EXT_STARTUP_COMMON]);
 end;
 
-function TStartupList.AddItemDisabled(AReg: TRegistry; AWow64: Boolean): Integer;
-var
-  Item: TStartupItem;
-  RunOnce: Boolean;
-  Location, Name, FileName: string;
-
-begin
-  // Deprecated since Windows 8!
-  if CheckWin32Version(6, 2) then
-    Exit(-1);
-
-  try
-    RunOnce := (ExtractFileName(AReg.ReadString('key')) = 'RunOnce');
-    Location := AReg.CurrentPath;
-    Name := ExtractFileName(Location);
-    FileName := AReg.ReadString('command');
-
-  except
-    Exit(-1);
-  end;  //of try
-
-  Item := TStartupItem.Create(Name, FileName, Location, rkHKLM, False,
-    AWow64, RunOnce);
-  Item.Time := Item.GetTimestamp(AReg);
-  Result := inherited Add(Item);
-end;
-
 function TStartupList.AddItem(ARootKey: TRootKey; const AKeyPath, AName,
   AFileName: string; AWow64, ARunOnce: Boolean): Integer;
 var
@@ -3700,12 +3800,7 @@ begin
     if not (ARootKey in [rkHKLM, rkHKCU]) then
       raise EStartupException.Create('Invalid startup key!');
 
-    // < Windows 8?
-    // Note: Since Windows 8 LoadStatus() is used to refresh counter!
-    if not CheckWin32Version(6, 2) then
-      Inc(FEnabledItemsCount);
-
-    Result := inherited Add(Item);
+    Result := Add(Item);
 
   except
     Item.Free;
@@ -3736,58 +3831,17 @@ begin
   // Add item to list
   if (AddUserItem(LnkFile, AStartupUser) <> -1) then
   begin
+    Result := True;
+
     // Windows 8?
     if CheckWin32Version(6, 2) then
-    begin
       Last.Enabled := True;
-      Inc(FEnabledItemsCount);
-    end  //of begin
-    else
-      Result := True;
   end;  //of begin
-end;
-
-function TStartupList.AddUserItemDisabled(AReg: TRegistry): Integer;
-var
-  Item: TStartupUserItem;
-  LnkFileName, ExeFileName: TFileName;
-  StartupUser: Boolean;
-  Name, FileName, Location, ExeArguments: string;
-
-begin
-  // Deprecated since Windows 8!
-  if CheckWin32Version(6, 2) then
-    Exit(-1);
-
-  try
-    Location := AReg.CurrentPath;
-    Name := ExtractFileName(StringReplace(Location, '^', '\', [rfReplaceAll]));
-    FileName := AReg.ReadString('command');
-    LnkFileName := AReg.ReadString('path');
-
-    // Windows >= Vista?
-    if CheckWin32Version(6) then
-      StartupUser := not AnsiSameText(AReg.ReadString('backupExtension'), EXT_STARTUP_COMMON)
-    else
-      StartupUser := AnsiSameText(AReg.ReadString('location'), STARTUP_USER_XP);
-
-  except
-    Exit(-1);
-  end;  //of try
-
-  Item := TStartupUserItem.Create(Name, FileName, Location, rkHKLM, False, StartupUser);
-  ExeFileName := Item.ExtractPathToFile(FileName);
-  ExeArguments := Item.ExtractArguments(FileName);
-  Item.LnkFile := TStartupLnkFile.Create(LnkFileName, not StartupUser,
-    ExeFileName, ExeArguments);
-  Item.Time := Item.GetTimestamp(AReg);
-  Result := inherited Add(Item);
 end;
 
 function TStartupList.AddUserItem(ALnkFile: TStartupLnkFile;
   AStartupUser: Boolean): Integer;
 var
-  Item: TStartupUserItem;
   Location, Name, FileName: string;
   RootKey: TRootKey;
 
@@ -3806,18 +3860,14 @@ begin
         RootKey := rkHKLM;
     end  //of begin
     else
-    begin
       RootKey := rkUnknown;
-      Inc(FEnabledItemsCount);
-    end;  //of if
 
   except
     Exit(-1);
   end;  //of try
 
-  Item := TStartupUserItem.Create(Name, FileName, Location, RootKey, True, AStartupUser);
-  Item.LnkFile := ALnkFile;
-  Result := inherited Add(Item);
+  Result := Add(TStartupUserItem.Create(Name, FileName, Location, RootKey, True,
+    ALnkFile));
 end;
 
 function TStartupList.Add(const AFileName, AArguments, ACaption: string): Boolean;
@@ -3871,14 +3921,11 @@ begin
         // Adds item to list
         if (AddItem(rkHKCU, KEY_STARTUP_RUN, ACaption, FullPath, False, False) <> -1) then
         begin
+          Result := True;
+
           // Windows 8?
           if CheckWin32Version(6, 2) then
-          begin
             Last.Enabled := True;
-            Inc(FEnabledItemsCount);
-          end  //of begin
-          else
-            Result := True;
         end;  //of begin
 
       finally
@@ -4035,6 +4082,9 @@ var
   KeyPath: string;
   i: Integer;
   Wow64: Boolean;
+  Item: TStartupListItem;
+  RunOnce, StartupUser: Boolean;
+  Location, Name, FileName, LnkFileName, ExeFileName, ExeArguments: string;
 
 begin
   // Deprecated since Windows 8!
@@ -4058,6 +4108,8 @@ begin
     begin
       Reg.CloseKey();
       Reg.OpenKey(KeyPath + Items[i], False);
+      Location := Reg.CurrentPath;
+      FileName := Reg.ReadString('command');
 
       if not AStartupUser then
       begin
@@ -4066,10 +4118,34 @@ begin
         else
           Wow64 := False;
 
-        AddItemDisabled(Reg, Wow64);
+        RunOnce := (ExtractFileName(Reg.ReadString('key')) = 'RunOnce');
+        Name := ExtractFileName(Location);
+
+        Item := TStartupItem.Create(Name, FileName, Location, rkHKLM, False,
+          Wow64, RunOnce);
       end  //of begin
       else
-        AddUserItemDisabled(Reg);
+      begin
+        Name := ExtractFileName(StringReplace(Location, '^', '\', [rfReplaceAll]));
+        LnkFileName := Reg.ReadString('path');
+
+        // Windows >= Vista?
+        if CheckWin32Version(6) then
+          StartupUser := not AnsiSameText(Reg.ReadString('backupExtension'), EXT_STARTUP_COMMON)
+        else
+          StartupUser := AnsiSameText(Reg.ReadString('location'), STARTUP_USER_XP);
+
+        Item := TStartupUserItem.Create(Name, FileName, Location, rkHKLM, False, nil);
+
+        // Setup .lnk file
+        ExeFileName := Item.ExtractPathToFile(FileName);
+        ExeArguments := Item.ExtractArguments(FileName);
+        TStartupUserItem(Item).LnkFile := TStartupLnkFile.Create(LnkFileName,
+          StartupUser, ExeFileName, ExeArguments);
+      end;  //of if
+
+      Item.Time := Item.GetTimestamp(Reg);
+      Add(Item);
     end;  //of for
 
   finally
@@ -4081,9 +4157,9 @@ end;
 
 procedure TStartupList.LoadStartup(AStartupUser: Boolean);
 var
-  Folder: string;
   SearchResult: TSearchRec;
   LnkFile: TStartupLnkFile;
+  Folder: string;
 
 begin
   Folder := TStartupLnkFile.GetStartUpDir(AStartupUser);
@@ -4250,6 +4326,12 @@ end;
 
 
 { TShellItem }
+
+constructor TShellItem.Create(const AName, ACaption, AFileName, ALocation: string;
+  AEnabled: Boolean);
+begin
+  inherited Create(AName, ACaption, AFileName, ALocation, AEnabled, False);
+end;
 
 function TShellItem.GetKeyPath(): string;
 begin
@@ -4452,6 +4534,12 @@ end;
 
 
 { TShellCascadingItem }
+
+constructor TShellCascadingItem.Create(const AName, ACaption, ALocation: string;
+  AEnabled: Boolean);
+begin
+  inherited Create(AName, ACaption, '', ALocation, AEnabled);
+end;
 
 procedure TShellCascadingItem.GetSubCommands(var ASubCommands: TStrings);
 const
@@ -4686,6 +4774,12 @@ end;
 
 { TShellNewItem }
 
+constructor TShellNewItem.Create(const AName, ACaption, ALocation: string;
+  AEnabled: Boolean);
+begin
+  inherited Create(AName, ACaption, '', ALocation, AEnabled, False);
+end;
+
 procedure TShellNewItem.ChangeStatus(const ANewStatus: Boolean);
 var
   Reg: TRegistry;
@@ -4782,62 +4876,8 @@ end;
 
 { TContextList }
 
-function TContextList.AddShellItem(const AName, ALocationRoot, AFileName,
-  ACaption: string; AEnabled, AWow64: Boolean): Integer;
-var
-  Item: TContextListItem;
-
-begin
-  Item := TShellItem.Create(AName, ACaption, AFileName, ALocationRoot, AEnabled,
-    AWow64);
-  Result := inherited Add(Item);
-
-  if AEnabled then
-    Inc(FEnabledItemsCount);
-end;
-
-function TContextList.AddCascadingShellItem(const AName, ALocationRoot,
-  ACaption: string; AEnabled, AWow64: Boolean): Integer;
-var
-  Item: TContextListItem;
-
-begin
-  Item := TShellCascadingItem.Create(AName, ACaption, '', ALocationRoot,
-    AEnabled, AWow64);
-  Result := inherited Add(Item);
-
-  if AEnabled then
-    Inc(FEnabledItemsCount);
-end;
-
-function TContextList.AddShellExItem(const AName, ALocationRoot, AFileName: string;
-  AEnabled, AWow64: Boolean): Integer;
-var
-  Item: TContextListItem;
-
-begin
-  Item := TShellExItem.Create(AName, '', AFileName, ALocationRoot, AEnabled, AWow64);
-  Result := inherited Add(Item);
-
-  if AEnabled then
-    Inc(FEnabledItemsCount);
-end;
-
-function TContextList.AddShellNewItem(const AName, ALocationRoot, ACaption: string;
-  AEnabled, AWow64: Boolean): Integer;
-var
-  Item: TContextListItem;
-
-begin
-  Item := TShellNewItem.Create(AName, ACaption, '', ALocationRoot, AEnabled, AWow64);
-  Result := inherited Add(Item);
-
-  if AEnabled then
-    Inc(FEnabledItemsCount);
-end;
-
-function TContextList.Add(AFileName, AArguments, ALocationRoot, ACaption: string;
-  AExtended: Boolean = False): Boolean;
+function TContextList.Add(const AFileName, AArguments, ALocationRoot,
+  ACaption: string; AExtended: Boolean = False): Boolean;
 var
   Name, Ext, FullPath, LocationRoot, FileType, KeyPath: string;
   Reg: TRegistry;
@@ -4925,7 +4965,7 @@ begin
       Reg.WriteString('', FullPath);
 
       // Adds item to list
-      Result := (AddShellItem(Name, FileType, FullPath, ACaption, True, False) <> -1);
+      Result := (Add(TShellItem.Create(Name, ACaption, FullPath, FileType, True)) <> -1);
 
       // Refresh TListView
       DoNotifyOnFinished();
@@ -5011,7 +5051,7 @@ var
   Reg: TRegistry;
   i, DelimiterPos: Integer;
   List: TStringList;
-  Item, Key, FilePath, GuID, Caption: string;
+  ItemName, Key, FileName, GuID, Caption: string;
   Enabled, Wow64: Boolean;
   Access64: LongWord;
 
@@ -5075,7 +5115,7 @@ begin
         Caption := ExtractFileName(ALocationRoot);
 
       // Add item to list
-      AddShellNewItem(Key, ALocationRoot, Caption, Enabled, False);
+      Add(TShellNewItem.Create(Key, Caption, ALocationRoot, Enabled));
       Exit;
     end;  //of if
 
@@ -5085,12 +5125,12 @@ begin
     for i := 0 to List.Count - 1 do
     begin
       Reg.CloseKey();
-      Item := List[i];
-      Reg.OpenKey(Key +'\'+ Item, False);
-      FilePath := '';
+      ItemName := List[i];
+      Reg.OpenKey(Key +'\'+ ItemName, False);
+      FileName := '';
 
       // Filter items with GUID in name
-      if (Item[1] = '{') then
+      if (ItemName[1] = '{') then
         Continue;
 
       // Search for shell entries?
@@ -5113,7 +5153,7 @@ begin
             Continue;
 
           Caption := Reg.ReadString('MUIVerb');
-          AddCascadingShellItem(Item, ALocationRoot, Caption, Enabled, False);
+          Add(TShellCascadingItem.Create(ItemName, Caption, ALocationRoot, Enabled));
           Continue;
         end;  //of begin
 
@@ -5125,10 +5165,8 @@ begin
         if not (Reg.GetDataType('') in [rdString, rdExpandString]) then
           Continue;
 
-        FilePath := Reg.ReadString('');
-
-        // Add item to list
-        AddShellItem(Item, ALocationRoot, FilePath, Caption, Enabled, False);
+        FileName := Reg.ReadString('');
+        Add(TShellItem.Create(ItemName, Caption, FileName, ALocationRoot, Enabled));
       end  //of begin
       else
         if (AShellItemType = stShellEx) then
@@ -5155,7 +5193,7 @@ begin
             if not (Reg.GetDataType('') in [rdString, rdExpandString]) then
               Continue;
 
-            FilePath := Reg.ReadString('');
+            FileName := Reg.ReadString('');
           end  //of begin
           else
             if AWow64 then
@@ -5168,14 +5206,14 @@ begin
                 if not (Reg.GetDataType('') in [rdString, rdExpandString]) then
                   Continue;
 
-                FilePath := Reg.ReadString('');
+                FileName := Reg.ReadString('');
               end;  //of begin
 
               Reg.Access := Access64;
             end;  //of if
 
           // Add item to list
-          AddShellExItem(Item, ALocationRoot, FilePath, Enabled, Wow64);
+          Add(TShellExItem.Create(ItemName, '', FileName, ALocationRoot, Enabled, Wow64));
         end;  //of begin
     end;  //of for
 
@@ -5536,7 +5574,7 @@ begin
 
   Item := TServiceListItem.Create(AName, ACaption, AFileName, False, Start, FManager);
   Item.Time := Item.GetTimestamp(AReg);
-  Result := inherited Add(Item);
+  Result := Add(Item);
 end;
 
 function TServiceList.AddServiceEnabled(const AName, ACaption, AFileName: string;
@@ -5545,12 +5583,12 @@ var
   Item: TServiceListItem;
 
 begin
-  Item := TServiceListItem.Create(AName, ACaption, AFileName, (AStart <> ssDisabled), AStart, FManager);
-  Result := inherited Add(Item);
-  Inc(FEnabledItemsCount);
+  Item := TServiceListItem.Create(AName, ACaption, AFileName, (AStart <> ssDisabled),
+    AStart, FManager);
+  Result := Add(Item);
 end;
 
-function TServiceList.Add(AFileName, AArguments, ACaption: string): Boolean;
+function TServiceList.Add(const AFileName, AArguments, ACaption: string): Boolean;
 var
   Name, FullPath: string;
   Service: SC_Handle;
@@ -5943,11 +5981,7 @@ begin
 
   Item := TTaskListItem.Create(ATask.Name, FileName, ExtractFileDir(ATask.Path),
     ATask.Enabled, ATask, ATaskFolder);
-  Result := inherited Add(Item);
-
-  // Update active counter
-  if Item.Enabled then
-    Inc(FEnabledItemsCount);
+  Result := Add(Item);
 end;
 
 procedure TTaskList.ExportList(const AFileName: string);
