@@ -907,7 +907,7 @@ type
     /// <returns>
     ///    The root Registry key.
     /// </returns>
-    property RootKey: TRootKey read GetRootKey write FRootKey;
+    property RootKey: TRootKey read GetRootKey;
 
     /// <summary>
     ///   Gets or sets the deactivation timstamp.
@@ -1226,6 +1226,9 @@ type
     ///   Gets or sets the behaviour that startup user backup files should be
     ///   automatically deleted after enabling or not.
     /// </summary>
+    /// <remarks>
+    ///   Deprecated since Windows 8!
+    /// </remarks>
     property DeleteBackup: Boolean read FDeleteBackup write FDeleteBackup;
   end;
 

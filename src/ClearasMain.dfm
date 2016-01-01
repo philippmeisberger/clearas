@@ -34,10 +34,6 @@ object Main: TMain
     OnChange = PageControlChange
     object tsStartup: TTabSheet
       Caption = 'Autostart'
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       DesignSize = (
         535
         284)
@@ -55,7 +51,7 @@ object Main: TMain
         Height = 14
         Hint = 'Zur Website'
         Anchors = [akBottom]
-        Caption = #169' P.Meisberger 2015'
+        Caption = #169' P.Meisberger 2016'
         Font.Charset = ANSI_CHARSET
         Font.Color = clBlack
         Font.Height = -11
@@ -188,10 +184,6 @@ object Main: TMain
     object tsContext: TTabSheet
       Caption = 'Kontextmen'#252
       ImageIndex = 1
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       DesignSize = (
         535
         284)
@@ -202,7 +194,7 @@ object Main: TMain
         Height = 14
         Hint = 'Zur Website'
         Anchors = [akBottom]
-        Caption = #169' P.Meisberger 2015'
+        Caption = #169' P.Meisberger 2016'
         Font.Charset = ANSI_CHARSET
         Font.Color = clBlack
         Font.Height = -11
@@ -368,10 +360,6 @@ object Main: TMain
     object tsService: TTabSheet
       Caption = 'Dienste'
       ImageIndex = 2
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       DesignSize = (
         535
         284)
@@ -396,7 +384,7 @@ object Main: TMain
         Height = 14
         Hint = 'Zur Website'
         Anchors = [akBottom]
-        Caption = #169' P.Meisberger 2015'
+        Caption = #169' P.Meisberger 2016'
         Font.Charset = ANSI_CHARSET
         Font.Color = clBlack
         Font.Height = -11
@@ -548,10 +536,6 @@ object Main: TMain
     object tsTasks: TTabSheet
       Caption = 'Aufgaben'
       ImageIndex = 3
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       DesignSize = (
         535
         284)
@@ -562,7 +546,7 @@ object Main: TMain
         Height = 14
         Hint = 'Zur Website'
         Anchors = [akBottom]
-        Caption = #169' P.Meisberger 2015'
+        Caption = #169' P.Meisberger 2016'
         Font.Charset = ANSI_CHARSET
         Font.Color = clBlack
         Font.Height = -11
@@ -898,7 +882,7 @@ object Main: TMain
   object QuickSearchIconList: TImageList
     Left = 256
     Bitmap = {
-      494C010103000800040210001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C010103000800080210001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000001000000001002000000000000010
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
