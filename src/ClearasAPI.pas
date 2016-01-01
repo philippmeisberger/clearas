@@ -1101,7 +1101,7 @@ type
   protected
     function AddItem(ARootKey: TRootKey; const AKeyPath, AName, AFileName: string;
       AWow64, ARunOnce: Boolean): Integer;
-    function AddNewStartupUserItem(AName: string; AFileName: TFileName;
+    function AddNewStartupUserItem(const AName: string; AFileName: TFileName;
       AArguments: string = ''; AStartupUser: Boolean = True): Boolean;
     function AddUserItem(ALnkFile: TStartupLnkFile; AStartupUser: Boolean): Integer;
   public
@@ -1328,7 +1328,7 @@ type
     procedure Rename(const ANewName: string); overload; override;
   public
     /// <summary>
-    ///   Constructor for creating a <c>TShellNewItem</c> instance.
+    ///   Constructor for creating a <c>TShellItem</c> instance.
     /// </summary>
     /// <param name="AName">
     ///   The internal name.
@@ -1399,7 +1399,7 @@ type
     procedure Rename(const ANewName: string); override;
   public
     /// <summary>
-    ///   Constructor for creating a <c>TShellNewItem</c> instance.
+    ///   Constructor for creating a <c>TShellCascadingItem</c> instance.
     /// </summary>
     /// <param name="AName">
     ///   The internal name.
@@ -1413,8 +1413,7 @@ type
     /// <param name="AEnabled">
     ///   The status.
     /// </param>
-    constructor Create(const AName, ACaption, ALocation: string;
-      AEnabled: Boolean);
+    constructor Create(const AName, ACaption, ALocation: string; AEnabled: Boolean);
 
     /// <summary>
     ///   Deletes the item.
@@ -1651,7 +1650,9 @@ type
   { Exception class }
   EServiceException = class(Exception);
 
-  { Service enum }
+  /// <summary>
+  ///   The possible service startup type.
+  /// </summary>
   TServiceStart = (
     ssBoot, ssSystem, ssAutomatic, ssManual, ssDisabled
   );
@@ -1760,11 +1761,6 @@ type
   TServiceList = class(TRootList<TServiceListItem>)
   private
     FManager: SC_HANDLE;
-  protected
-    function AddServiceDisabled(const AName, ACaption, AFileName: string;
-      AReg: TRegistry): Integer;
-    function AddServiceEnabled(const AName, ACaption, AFileName: string;
-      AStart: TServiceStart): Integer;
   public
     /// <summary>
     ///   Constructor for creating a <c>TServiceList</c> instance.
@@ -2637,7 +2633,7 @@ begin
   Result := 0;
 
   // Deactivation timestamp only available for disabled items
-  if FEnabled then
+  if (not Assigned(AReg) or FEnabled) then
     Exit;
 
   try
@@ -3793,22 +3789,16 @@ var
   Item: TStartupItem;
 
 begin
+  // Invalid startup key?
+  if not (ARootKey in [rkHKLM, rkHKCU]) then
+    Exit(-1);
+
   Item := TStartupItem.Create(AName, AFileName, AKeyPath, ARootKey, True, AWow64,
     ARunOnce);
-
-  try
-    if not (ARootKey in [rkHKLM, rkHKCU]) then
-      raise EStartupException.Create('Invalid startup key!');
-
-    Result := Add(Item);
-
-  except
-    Item.Free;
-    Result := -1;
-  end;  //of try
+  Result := Add(Item);
 end;
 
-function TStartupList.AddNewStartupUserItem(AName: string; AFileName: TFileName;
+function TStartupList.AddNewStartupUserItem(const AName: string; AFileName: TFileName;
   AArguments: string = ''; AStartupUser: Boolean = True): Boolean;
 var
   i: Integer;
@@ -3835,6 +3825,7 @@ begin
 
     // Windows 8?
     if CheckWin32Version(6, 2) then
+      // Write the StartupApproved value
       Last.Enabled := True;
   end;  //of begin
 end;
@@ -3902,7 +3893,7 @@ begin
     else
     begin
       // No WOW64 redirection on HKCU!
-      Reg := TRegistry.Create(KEY_WRITE);
+      Reg := TRegistry.Create(KEY_READ or KEY_WRITE);
 
       // Try to add new startup item to Registry
       try
@@ -3925,6 +3916,7 @@ begin
 
           // Windows 8?
           if CheckWin32Version(6, 2) then
+            // Write the StartupApproved value
             Last.Enabled := True;
         end;  //of begin
 
@@ -5558,36 +5550,6 @@ begin
   inherited Destroy;
 end;
 
-function TServiceList.AddServiceDisabled(const AName, ACaption, AFileName: string;
-  AReg: TRegistry): Integer;
-var
-  Item: TServiceListItem;
-  Start: TServiceStart;
-
-begin
-  try
-    Start := TServiceStart(AReg.ReadInteger(AName));
-
-  except
-    Exit(-1);
-  end;  //of try
-
-  Item := TServiceListItem.Create(AName, ACaption, AFileName, False, Start, FManager);
-  Item.Time := Item.GetTimestamp(AReg);
-  Result := Add(Item);
-end;
-
-function TServiceList.AddServiceEnabled(const AName, ACaption, AFileName: string;
-  AStart: TServiceStart): Integer;
-var
-  Item: TServiceListItem;
-
-begin
-  Item := TServiceListItem.Create(AName, ACaption, AFileName, (AStart <> ssDisabled),
-    AStart, FManager);
-  Result := Add(Item);
-end;
-
 function TServiceList.Add(const AFileName, AArguments, ACaption: string): Boolean;
 var
   Name, FullPath: string;
@@ -5635,7 +5597,7 @@ begin
     CloseServiceHandle(Service);
 
     // Adds service to list
-    Result := (AddServiceEnabled(Name, ACaption, FullPath, ssAutomatic) <> -1);
+    Result := (Add(TServiceListItem.Create(Name, ACaption, FullPath, True, ssAutomatic, FManager)) <> -1);
 
     // Refresh TListView
     DoNotifyOnFinished();
@@ -5702,6 +5664,9 @@ var
   BytesNeeded, LastError: DWORD;
   ServiceStart: TServiceStart;
   Reg: TRegistry;
+  Start: TServiceStart;
+  Item: TServiceListItem;
+  Caption, FileName: string;
 
 begin
   Result := -1;
@@ -5733,6 +5698,9 @@ begin
       else                  Exit;
     end;
 
+    Caption := ServiceConfig^.lpDisplayName;
+    FileName := ServiceConfig^.lpBinaryPathName;
+
     // Read last status of disabled service
     if (ServiceStart = ssDisabled) then
     begin
@@ -5751,13 +5719,15 @@ begin
         if not Reg.ValueExists(AName) then
           Exit;
 
+        Start := TServiceStart(Reg.ReadInteger(AName));
+
         // Skip demand started services
-        if (not AIncludeDemand and (Reg.ReadInteger(AName) = Ord(ssManual))) then
+        if (not AIncludeDemand and (Start = ssManual)) then
           Exit;
 
-        // Add disabled item to list
-        Result := AddServiceDisabled(AName, ServiceConfig^.lpDisplayName,
-          ServiceConfig^.lpBinaryPathName, Reg);
+        Item := TServiceListItem.Create(AName, Caption, FileName, False, Start,
+          FManager);
+        Item.Time := Item.GetTimestamp(Reg);
 
       finally
         Reg.CloseKey();
@@ -5765,9 +5735,11 @@ begin
       end;  //of try
     end  //of begin
     else
-      // Add enabled item to list
-      Result := AddServiceEnabled(AName, ServiceConfig^.lpDisplayName,
-        ServiceConfig^.lpBinaryPathName, ServiceStart);
+      Item := TServiceListItem.Create(AName, Caption, FileName, True,
+        ServiceStart, FManager);
+
+    // Add service to list
+    Result := Add(Item);
 
   finally
     FreeMem(ServiceConfig, BytesNeeded);
