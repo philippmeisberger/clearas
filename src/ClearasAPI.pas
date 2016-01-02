@@ -18,51 +18,6 @@ uses
   Graphics, CommCtrl, ShellAPI, SyncObjs, StrUtils, Variants, Generics.Collections,
   Taskschd, PMCWOSUtils, PMCWLanguageFile, PMCWIniFileParser, KnownFolders;
 
-const
-  { Startup registry keys until Windows 7 }
-  KEY_STARTUP_DISABLED        = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\startupreg\' deprecated;
-  KEY_STARTUP_USER_DISABLED   = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\startupfolder\' deprecated;
-
-  { Startup registry keys since Windows 8 }
-  KEY_STARTUP_APPROVED        = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\';
-  KEY_STARTUP_RUN_APPROVED    = KEY_STARTUP_APPROVED +'Run';
-  KEY_STARTUP_RUN32_APPROVED  = KEY_STARTUP_APPROVED +'Run32';
-  KEY_STARTUP_USER_APPROVED   = KEY_STARTUP_APPROVED +'StartupFolder';
-
-  { General startup keys }
-  KEY_STARTUP_RUN             = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Run';
-  KEY_STARTUP_RUNONCE         = 'SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce';
-
-  { Redirected 32-Bit Registry keys by WOW64 }
-  KEY_STARTUP_RUN32           = 'SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Run';
-  KEY_STARTUP_RUNONCE32       = 'SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnce';
-
-  { Service Registry keys }
-  KEY_SERVICE_DISABLED        = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\services';
-  KEY_SERVICE_ENABLED         = 'SYSTEM\CurrentControlSet\services\';
-
-  { Context menu Registry subkeys + values}
-  KEY_USERCHOICE              = 'Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\%s\UserChoice';
-  KEY_COMMAND_STORE           = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\CommandStore\shell';
-  CM_SHELL                    = 'Shell';
-  CM_SHELL_DISABLED           = 'LegacyDisable';
-  CM_SHELLEX                  = 'ShellEx';
-  CM_SHELLEX_HANDLERS         = CM_SHELLEX +'\ContextMenuHandlers';
-  CM_SHELLEX_FILE             = 'CLSID\%s\InProcServer32';
-  CM_SHELLNEW                 = 'ShellNew';
-  CM_SHELLNEW_DISABLED        = '_'+ CM_SHELLNEW;
-  CM_LOCATIONS_DEFAULT        = 'Directory, Folder, *, Drive';
-
-  { Extensions of backup files }
-  EXT_STARTUP_COMMON          = '.CommonStartup';
-  EXT_STARTUP_USER            = '.Startup';
-
-  { Description type of startup user items }
-  STARTUP_COMMON              = 'Startup Common';
-  STARTUP_COMMON_XP           = 'Common Startup' deprecated;
-  STARTUP_USER                = 'Startup User';
-  STARTUP_USER_XP             = 'Startup' deprecated;
-
 type
   /// <summary>
   ///   A <c>TLnkFile</c> represents a symbolic link file.
@@ -254,14 +209,14 @@ type
     class function GetBackupDir(): string; deprecated 'Since Windows 8';
 
     /// <summary>
-    ///   Gets the file system startup location.
+    ///   Gets the filesystem startup location.
     /// </summary>
     /// <param name="AStartupUser">
     ///   If set to <c>True</c> the startup location for the current user is
     ///   returned. Otherwise the startup location for all users is returned.
     /// </param>
     /// <returns>
-    ///   The backup directory.
+    ///   The startup directory.
     /// </returns>
     class function GetStartUpDir(AStartupUser: Boolean): string;
 
@@ -452,7 +407,6 @@ type
     function DeleteKey(AHKey: HKEY; AKeyPath, AKeyName: string;
       AFailIfNotExists: Boolean = True): Boolean;
     function GetRootKey(): TRootKey; virtual; abstract;
-    function GetWow64Key(): string;
 
     /// <summary>
     ///   Opens the item location in either 32 or 64 bit RegEdit.
@@ -536,14 +490,6 @@ type
     ///   Item is redirected by WOW64.
     /// </summary>
     property Wow64: Boolean read FWow64;
-
-    /// <summary>
-    ///   Gets the virtual Registry key redirected by WOW64.
-    /// </summary>
-    /// <returns>
-    ///    The WOW64 Registry key.
-    /// </returns>
-    property Wow64Location: string read GetWow64Key;
   end;
 
   /// <summary>
@@ -802,10 +748,35 @@ type
     property Selected: T read FItem write FItem;
   end;
 
-  { Exception class }
-  EStartupException = class(Exception);
-
 const
+  { Startup registry keys until Windows 7 }
+  KEY_STARTUP_DISABLED        = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\startupreg\' deprecated;
+  KEY_STARTUP_USER_DISABLED   = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\startupfolder\' deprecated;
+
+  { Startup registry keys since Windows 8 }
+  KEY_STARTUP_APPROVED        = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\';
+  KEY_STARTUP_RUN_APPROVED    = KEY_STARTUP_APPROVED +'Run';
+  KEY_STARTUP_RUN32_APPROVED  = KEY_STARTUP_APPROVED +'Run32';
+  KEY_STARTUP_USER_APPROVED   = KEY_STARTUP_APPROVED +'StartupFolder';
+
+  { General startup keys }
+  KEY_STARTUP_RUN             = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Run';
+  KEY_STARTUP_RUNONCE         = 'SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce';
+
+  { Redirected 32-Bit Registry keys by WOW64 }
+  KEY_STARTUP_RUN32           = 'SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Run';
+  KEY_STARTUP_RUNONCE32       = 'SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnce';
+
+  { Extensions of backup files }
+  EXT_STARTUP_COMMON          = '.CommonStartup';
+  EXT_STARTUP_USER            = '.Startup';
+
+  { Description type of startup user items }
+  STARTUP_COMMON              = 'Startup Common';
+  STARTUP_COMMON_XP           = 'Common Startup' deprecated;
+  STARTUP_USER                = 'Startup User';
+  STARTUP_USER_XP             = 'Startup' deprecated;
+
   /// <summary>
   ///   Signals that a startup item is enabled.
   /// </summary>
@@ -817,6 +788,9 @@ const
   ST_DISABLED = $3;
 
 type
+  { Exception class }
+  EStartupException = class(Exception);
+
   /// <summary>
   ///   A <c>TStartupItemStatus</c> represents the new status of startup items
   ///   since Windows 8. The status of startup items is a binary value of 12.
@@ -857,6 +831,7 @@ type
     function GetApprovedLocation(): string; virtual;
     function GetFullLocation(): string; override;
     function GetRootKey(): TRootKey; override;
+    function GetWow64Key(): string; virtual;
     procedure Rename(const ANewName: string); overload; override;
     function Rename(const AKeyPath, ANewName: string;
       AReallyWow64: Boolean = True): Boolean; reintroduce; overload;
@@ -927,6 +902,14 @@ type
     ///   Gets or sets the deactivation timstamp.
     /// </summary>
     property Time: TDateTime read GetTime write FTime;
+
+    /// <summary>
+    ///   Gets the virtual Registry key redirected by WOW64.
+    /// </summary>
+    /// <returns>
+    ///    The WOW64 Registry key.
+    /// </returns>
+    property Wow64Location: string read GetWow64Key;
   end;
 
   /// <summary>
@@ -939,6 +922,7 @@ type
   protected
     function Disable(): Boolean; override;
     function Enable(): Boolean; override;
+    function GetWow64Key(): string; override;
     procedure Rename(const ANewName: string); override;
   public
     /// <summary>
@@ -1089,6 +1073,54 @@ type
   end;
 
   /// <summary>
+  ///   The possible startup locations.
+  /// </summary>
+  TStartupLocation = (
+    slHkcuRun,
+    slHkcuRunOnce,
+    slHklmRun,
+    slHklmRun32,
+    slHklmRunOnce,
+    slHklmRunOnce32,
+    slStartupUser,
+    slCommonStartup
+  );
+
+  TStartupLocationHelper = record helper for TStartupLocation
+    /// <summary>
+    ///   Gets the startup store location.
+    /// </summary>
+    /// <returns>
+    ///   The location.
+    /// </returns>
+    function GetLocation(): TPair<HKEY, string>;
+  end;
+
+  /// <summary>
+  ///   The possible StartupApproved locations.
+  /// </summary>
+  /// <remarks>
+  ///   Only on Windows 8 and later!
+  /// </remarks>
+  TStartupApprovedLocation = (
+    saHkcuRun,
+    saHkcuStartupFolder,
+    saHklmRun,
+    saHklmRun32,
+    saHklmStartupFolder
+  );
+
+  TStartupApprovedLocationHelper = record helper for TStartupApprovedLocation
+    /// <summary>
+    ///   Gets the Registry key of the StartupApproved location.
+    /// </summary>
+    /// <returns>
+    ///   The Registry key as pair containing the <c>HKEY</c> and the key itself.
+    /// </returns>
+    function GetRegistryKey(): TPair<HKEY, string>;
+  end;
+
+  /// <summary>
   ///   A <c>TStartupList</c> is the list that contains a set of
   ///   <see cref="TStartupListItem"/>s. The list is thread-safe and supports
   ///   locking. You can use the <see cref="IsLocked"/> method to see if the
@@ -1190,28 +1222,7 @@ type
     ///   event occurs when the search starts. At the end the
     ///   <see cref="OnSearchFinish"/> event occurs.
     /// </remarks>
-    procedure Load(AExpertMode: Boolean = False); override;
-
-    /// <summary>
-    ///   Searches for disabled items and adds them to the list.
-    /// </summary>
-    /// <param name="AStartupUser">
-    ///   If set to <c>True</c> only search for startup user items. If set to
-    ///   <c>False</c> only search for default startup items.
-    /// </param>
-    /// <param name="AWow64">
-    ///   If set to <c>True</c> search for WOW64 items. Otherwise skip them.
-    /// </param>
-    procedure LoadDisabled(AStartupUser: Boolean; AWow64: Boolean = False); deprecated 'Since Windows 8';
-
-    /// <summary>
-    ///   Searches for enabled startup user items and adds them to the list.
-    /// </summary>
-    /// <param name="AStartupUser">
-    ///   If set to <c>True</c> only search for startup user items. If set to
-    ///   <c>False</c> only search for common startup items.
-    /// </param>
-    procedure LoadStartup(AStartupUser: Boolean); overload;
+    procedure Load(AExpertMode: Boolean = False); overload; override;
 
     /// <summary>
     ///   Searches for items and adds them to the list.
@@ -1227,23 +1238,28 @@ type
     ///   If set to <c>True</c> search for WOW64 items. Otherwise search for
     ///   native items.
     /// </param>
-    procedure LoadStartup(ARootKey: TRootKey; ARunOnce: Boolean = False;
-      AWow64: Boolean = False); overload;
+    procedure Load(AStartupLocation: TStartupLocation); reintroduce; overload;
+
+    /// <summary>
+    ///   Searches for disabled items and adds them to the list.
+    /// </summary>
+    /// <param name="AStartupUser">
+    ///   If set to <c>True</c> only search for startup user items. If set to
+    ///   <c>False</c> only search for default startup items.
+    /// </param>
+    procedure LoadDisabled(AStartupUser: Boolean); deprecated 'Since Windows 8';
 
     /// <summary>
     ///   Loads the enabled status of all items from the Registry. The
     ///   deactivation timestamp of disabled is also queried and refreshed.
     /// </summary>
-    /// <param name="ARootKey">
-    ///   The root Registry key. Can only be <c>rkHKCU</c> or <c>rkHKLM</c>.
-    /// </param>
-    /// <param name="AKeyPath">
-    ///   The Registry key of the store location.
+    /// <param name="AApprovedLocation">
+    ///   The approved startup location.
     /// </param>
     /// <remarks>
     ///   Only on Windows 8 and later!
     /// </remarks>
-    procedure LoadStatus(ARootKey: TRootKey; const AKeyPath: string);
+    procedure LoadStatus(AApprovedLocation: TStartupApprovedLocation);
 
     /// <summary>
     ///   Refreshes the <see cref="EnabledItemsCount"/>.
@@ -1260,6 +1276,20 @@ type
     property DeleteBackup: Boolean read FDeleteBackup write FDeleteBackup;
   end;
 
+const
+  { Context menu Registry subkeys + values}
+  KEY_USERCHOICE              = 'Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\%s\UserChoice';
+  KEY_COMMAND_STORE           = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\CommandStore\shell';
+  CM_SHELL                    = 'Shell';
+  CM_SHELL_DISABLED           = 'LegacyDisable';
+  CM_SHELLEX                  = 'ShellEx';
+  CM_SHELLEX_HANDLERS         = CM_SHELLEX +'\ContextMenuHandlers';
+  CM_SHELLEX_FILE             = 'CLSID\%s\InProcServer32';
+  CM_SHELLNEW                 = 'ShellNew';
+  CM_SHELLNEW_DISABLED        = '_'+ CM_SHELLNEW;
+  CM_LOCATIONS_DEFAULT        = 'Directory, Folder, *, Drive';
+
+type
   { Exception class }
   EContextMenuException = class(Exception);
 
@@ -1646,6 +1676,12 @@ type
     procedure LoadContextMenus(ALocationRootCommaList: string = CM_LOCATIONS_DEFAULT); overload;
   end;
 
+const
+  { Service Registry keys }
+  KEY_SERVICE_DISABLED        = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\services';
+  KEY_SERVICE_ENABLED         = 'SYSTEM\CurrentControlSet\services\';
+
+type
   { Exception class }
   EServiceException = class(Exception);
 
@@ -2519,19 +2555,6 @@ begin
   end;  //of try
 end;
 
-function TRegistryItem.GetWow64Key(): string;
-begin
-  if ((FEnabled or CheckWin32Version(6, 2)) and FWow64) then
-  begin
-    if (ExtractFileName(FLocation) = 'RunOnce') then
-      Result := KEY_STARTUP_RUNONCE32
-    else
-      Result := KEY_STARTUP_RUN32;
-  end  //of begin
-  else
-    Result := FLocation;
-end;
-
 procedure TRegistryItem.OpenInRegEdit(AWow64: Boolean);
 const
   KEY_REGEDIT = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Regedit';
@@ -2953,6 +2976,14 @@ begin
   else
     // No deactivation time for enabled items!
     Result := 0;
+end;
+
+function TStartupListItem.GetWow64Key(): string;
+begin
+  if ((FEnabled or CheckWin32Version(6, 2)) and FWow64) then
+    Result := KEY_STARTUP_RUN32
+  else
+    Result := FLocation;
 end;
 
 procedure TStartupListItem.ChangeStatus(const ANewStatus: Boolean);
@@ -3415,6 +3446,19 @@ begin
   end;  //of try
 end;
 
+function TStartupItem.GetWow64Key(): string;
+begin
+  if ((FEnabled or CheckWin32Version(6, 2)) and FWow64) then
+  begin
+    if FRunOnce then
+      Result := KEY_STARTUP_RUNONCE32
+    else
+      Result := KEY_STARTUP_RUN32;
+  end  //of begin
+  else
+    Result := FLocation;
+end;
+
 procedure TStartupItem.Rename(const ANewName: string);
 var
   Reg: TRegistry;
@@ -3750,6 +3794,88 @@ begin
 end;
 
 
+{ TStartupApprovedLocationHelper }
+
+function TStartupApprovedLocationHelper.GetRegistryKey(): TPair<HKEY, string>;
+begin
+  case Self of
+    saHkcuRun:
+      begin
+        Result.Key := HKEY_CURRENT_USER;
+        Result.Value := KEY_STARTUP_RUN_APPROVED;
+      end;
+
+    saHkcuStartupFolder:
+      begin
+        Result.Key := HKEY_CURRENT_USER;
+        Result.Value := KEY_STARTUP_USER_APPROVED;
+      end;
+
+    saHklmRun:
+      begin
+        Result.Key := HKEY_LOCAL_MACHINE;
+        Result.Value := KEY_STARTUP_RUN_APPROVED;
+      end;
+
+    saHklmRun32:
+      begin
+        Result.Key := HKEY_LOCAL_MACHINE;
+        Result.Value := KEY_STARTUP_RUN32_APPROVED;
+      end;
+
+    saHklmStartupFolder:
+      begin
+        Result.Key := HKEY_LOCAL_MACHINE;
+        Result.Value := KEY_STARTUP_USER_APPROVED;
+      end;
+  end;  //of case
+end;
+
+
+{ TStartupLocationHelper }
+
+function TStartupLocationHelper.GetLocation(): TPair<HKEY, string>;
+begin
+  case Self of
+    slHkcuRun:
+      begin
+        Result.Key := HKEY_CURRENT_USER;
+        Result.Value := KEY_STARTUP_RUN;
+      end;
+
+    slHkcuRunOnce:
+      begin
+        Result.Key := HKEY_CURRENT_USER;
+        Result.Value := KEY_STARTUP_RUNONCE;
+      end;
+
+    slHklmRun, slHklmRun32:
+      begin
+        Result.Key := HKEY_LOCAL_MACHINE;
+        Result.Value := KEY_STARTUP_RUN;
+      end;
+
+    slHklmRunOnce, slHklmRunOnce32:
+      begin
+        Result.Key := HKEY_LOCAL_MACHINE;
+        Result.Value := KEY_STARTUP_RUNONCE;
+      end;
+
+    slStartupUser:
+      begin
+        Result.Key := 0;
+        Result.Value := TStartupLnkFile.GetStartUpDir(True);
+      end;
+
+    slCommonStartup:
+      begin
+        Result.Key := 0;
+        Result.Value := TStartupLnkFile.GetStartUpDir(False);
+      end;
+  end;  //of case
+end;
+
+
 { TStartupList }
 
 constructor TStartupList.Create;
@@ -3840,7 +3966,6 @@ var
   Reg: TRegistry;
 
 begin
-  Result := False;
   Name := ExtractFileName(AFileName);
   Ext := ExtractFileExt(Name);
 
@@ -4038,7 +4163,7 @@ begin
   end;  // of with
 end;
 
-procedure TStartupList.LoadDisabled(AStartupUser: Boolean; AWow64: Boolean = False);
+procedure TStartupList.LoadDisabled(AStartupUser: Boolean);
 var
   Reg: TRegistry;
   Items: TStringList;
@@ -4076,11 +4201,7 @@ begin
 
       if not AStartupUser then
       begin
-        if AWow64 then
-          Wow64 := AnsiContainsText(Reg.ReadString('key'), 'Wow6432Node')
-        else
-          Wow64 := False;
-
+        Wow64 := AnsiContainsText(Reg.ReadString('key'), 'Wow6432Node');
         RunOnce := (ExtractFileName(Reg.ReadString('key')) = 'RunOnce');
         Name := ExtractFileName(Location);
 
@@ -4118,63 +4239,61 @@ begin
   end;  //of try
 end;
 
-procedure TStartupList.LoadStartup(AStartupUser: Boolean);
+procedure TStartupList.Load(AStartupLocation: TStartupLocation);
 var
   SearchResult: TSearchRec;
   LnkFile: TStartupLnkFile;
-  Folder: string;
+  Reg: TRegistry;
+  Items: TStringList;
+  i: Integer;
+  StartupUser, Wow64, RunOnce: Boolean;
+  RootKey: TRootKey;
 
 begin
-  Folder := TStartupLnkFile.GetStartUpDir(AStartupUser);
+  if (AStartupLocation in [slStartupUser, slCommonStartup]) then
+  begin
+    StartupUser := (AStartupLocation = slStartupUser);
 
-  if (FindFirst(Folder +'*.lnk', faAnyFile - faDirectory, SearchResult) = 0) then
+    if (FindFirst(AStartupLocation.GetLocation().Value +'*.lnk',
+      faAnyFile - faDirectory, SearchResult) = 0) then
     try
       // .lnk file found
       repeat
-        LnkFile := TStartupLnkFile.Create(SearchResult.Name, AStartupUser);
-        AddUserItem(LnkFile, AStartupUser);
+        LnkFile := TStartupLnkFile.Create(SearchResult.Name, StartupUser);
+        AddUserItem(LnkFile, StartupUser);
       until FindNext(SearchResult) <> 0;
 
     finally
       FindClose(SearchResult);
     end;  //of try
-end;
 
-procedure TStartupList.LoadStartup(ARootKey: TRootKey; ARunOnce: Boolean = False;
-  AWow64: Boolean = False);
-var
-  Reg: TRegistry;
-  Items: TStringList;
-  i: Integer;
-  KeyPath: string;
+    Exit;
+  end;   //of begin
 
-begin
-  // Invalid startup key?
-  if not (ARootKey in [rkHKLM, rkHKCU]) then
+  Wow64 := (AStartupLocation in [slHklmRunOnce32, slHklmRun32]);
+
+  // WOW64 only present on 64 bit Windows!
+  if (Wow64 and (TOSVersion.Architecture <> arIntelX64)) then
     Exit;
 
   Items := TStringList.Create;
+  RunOnce := (AStartupLocation in [slHkcuRunOnce, slHklmRunOnce, slHklmRunOnce32]);
 
   // Allow WOW64 redirection?
-  if AWow64 then
+  if Wow64 then
     Reg := TRegistry.Create(KEY_WOW64_32KEY or KEY_READ)
   else
     Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ);
 
-  // Set startup location
-  if ARunOnce then
-    KeyPath := KEY_STARTUP_RUNONCE
-  else
-    KeyPath := KEY_STARTUP_RUN;
-
   try
-    Reg.RootKey := ARootKey.ToHKey();
-    Reg.OpenKey(KeyPath, False);
+    Reg.RootKey := AStartupLocation.GetLocation().Key;
+    Reg.OpenKey(AStartupLocation.GetLocation().Value, False);
     Reg.GetValueNames(Items);
+    RootKey.FromHKey(Reg.RootKey);
 
     for i := 0 to Items.Count - 1 do
-      Add(TStartupItem.Create(Items[i], Reg.ReadString(Items[i]), KeyPath,
-        ARootKey, True, AWow64, ARunOnce));
+      Add(TStartupItem.Create(Items[i], Reg.ReadString(Items[i]), Reg.CurrentPath,
+        RootKey, True, Wow64, RunOnce));
 
   finally
     Reg.CloseKey();
@@ -4183,7 +4302,7 @@ begin
   end;  //of try
 end;
 
-procedure TStartupList.LoadStatus(ARootKey: TRootKey; const AKeyPath: string);
+procedure TStartupList.LoadStatus(AApprovedLocation: TStartupApprovedLocation);
 var
   Reg: TRegistry;
   i: Integer;
@@ -4192,8 +4311,8 @@ var
   ItemStatus: TStartupItemStatus;
 
 begin
-  // Startup items only exist in HKCU and HKLM
-  if not (ARootKey in [rkHKCU, rkHKLM]) then
+  // Only on Windows 8 and later!
+  if not CheckWin32Version(6, 2) then
     Exit;
 
   Items := TStringList.Create;
@@ -4202,8 +4321,8 @@ begin
   Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ);
 
   try
-    Reg.RootKey := ARootKey.ToHKey();
-    Reg.OpenKey(AKeyPath, False);
+    Reg.RootKey := AApprovedLocation.GetRegistryKey().Key;
+    Reg.OpenKey(AApprovedLocation.GetRegistryKey().Value, False);
     Reg.GetValueNames(Items);
 
     for i := 0 to Count - 1 do
@@ -5259,7 +5378,6 @@ begin
     // No deactivation time for enabled items!
     Result := 0;
 end;
-
 
 function TServiceListItem.GetLocation(): string;
 begin

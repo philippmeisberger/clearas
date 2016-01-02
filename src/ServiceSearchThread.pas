@@ -14,7 +14,6 @@ uses
   Windows, Classes, SysUtils, SyncObjs, WinSvc, ClearasSearchThread, ClearasAPI;
 
 type
-  { TServiceSearchThread }
   TServiceSearchThread = class(TClearasSearchThread)
   private
     FServiceList: TServiceList;
@@ -23,19 +22,30 @@ type
   protected
     procedure Execute; override;
   public
+    /// <summary>
+    ///   Constructor for creating a <c>TServiceSearchThread</c> instance.
+    /// </summary>
+    /// <param name="AServiceList">
+    ///   A <see cref="TServiceList"/> to be filled.
+    /// </param>
+    /// <param name="AManager">
+    ///   The service manager.
+    /// </param>
+    /// <param name="ALock">
+    ///   The mutex.
+    /// </param>
     constructor Create(AServiceList: TServiceList; AManager: SC_HANDLE;
       ALock: TCriticalSection);
-    { external }
+
+    /// <summary>
+    ///   Include shared services.
+    /// </summary>
     property IncludeShared: Boolean read FIncludeShared write FIncludeShared;
   end;
 
 implementation
 
 { TServiceSearchThread }
-
-{ public TServiceSearchThread.Create
-
-  Constructor for creating a TServiceSearchThread instance. }
 
 constructor TServiceSearchThread.Create(AServiceList: TServiceList;
   AManager: SC_HANDLE; ALock: TCriticalSection);
@@ -44,10 +54,6 @@ begin
   FServiceList := AServiceList;
   FManager := AManager;
 end;
-
-{ protected TServiceSearchThread.Execute
-
-  Searches for service items. }
 
 procedure TServiceSearchThread.Execute;
 var
@@ -113,10 +119,10 @@ begin
 
     finally
       FreeMem(Services, BytesNeeded);
+      FLock.Release();
 
       // Notify end of search
       Synchronize(DoNotifyOnFinish);
-      FLock.Release();
     end;  //of try
 
   except

@@ -14,7 +14,6 @@ uses
   Windows, Classes, Registry, SyncObjs, ClearasSearchThread, ClearasAPI;
 
 type
-  { TContextSearchThread }
   TContextSearchThread = class(TClearasSearchThread)
   private
     FReg: TRegistry;
@@ -28,12 +27,40 @@ type
   protected
     procedure Execute; override;
   public
+    /// <summary>
+    ///   Constructor for creating a <c>TContextSearchThread</c> instance.
+    /// </summary>
+    /// <param name="AContextList">
+    ///   A <see cref="TContextList"/> to be filled.
+    /// </param>
+    /// <param name="ALock">
+    ///   The mutex.
+    /// </param>
     constructor Create(AContextList: TContextList; ALock: TCriticalSection);
+
+    /// <summary>
+    ///   Destructor for destroying a <c>TContextSearchThread</c> instance.
+    /// </summary>
     destructor Destroy(); override;
-    { external }
+
+    /// <summary>
+    ///   A comma separated list containing the root locations.
+    /// </summary>
     property Locations: TStringList read FLocations;
+
+    /// <summary>
+    ///   The key to start the search.
+    /// </summary>
     property Root: string read FRoot write FRoot;
+
+    /// <summary>
+    ///   The root key to start the search.
+    /// </summary>
     property RootKey: HKEY read FRootKey write FRootKey;
+
+    /// <summary>
+    ///   Use the WOW64 technology.
+    /// </summary>
     property Win64: Boolean read FWin64 write FWin64;
   end;
 
@@ -42,10 +69,6 @@ implementation
 uses StrUtils, SysUtils;
 
 { TContextSearchThread }
-
-{ public TContextSearchThread.Create
-
-  Constructor for creating a TContextSearchThread instance. }
 
 constructor TContextSearchThread.Create(AContextList: TContextList;
   ALock: TCriticalSection);
@@ -59,10 +82,6 @@ begin
   FRoot := '';
 end;
 
-{ public TContextSearchThread.Destroy
-
-  Destructor for destroying a TContextSearchThread instance. }
-
 destructor TContextSearchThread.Destroy();
 begin
   FReg.CloseKey();
@@ -70,10 +89,6 @@ begin
   FLocations.Free;
   inherited Destroy;
 end;
-
-{ private TContextSearchThread.SearchSubkey
-
-  Searches for pattern keys in a Registry subkey. }
 
 procedure TContextSearchThread.SearchSubkey(const AKeyName: string);
 var
@@ -129,10 +144,6 @@ begin
   end;  //of try
 end;
 
-{ private TContextSearchThread.LoadAllContextMenus
-
-  Searches for context menu items in entire Registry. }
-
 procedure TContextSearchThread.LoadAllContextMenus();
 var
   i: Integer;
@@ -166,10 +177,6 @@ begin
   end;  //of try
 end;
 
-{ private TContextSearchThread.LoadContextMenus
-
-  Searches for specific context menu items in Registry. }
-
 procedure TContextSearchThread.LoadContextMenus();
 var
   i: Integer;
@@ -187,10 +194,6 @@ begin
   end;  //of for
 end;
 
-{ protected TContextSearchThread.Execute
-
-  Searches for context menu items in Registry. }
-
 procedure TContextSearchThread.Execute;
 begin
   FLock.Acquire();
@@ -207,9 +210,10 @@ begin
         LoadAllContextMenus();
 
     finally
+      FLock.Release();
+
       // Notify end of search
       Synchronize(DoNotifyOnFinish);
-      FLock.Release();
     end;  //of try
 
   except

@@ -14,7 +14,6 @@ uses
   Classes, SyncObjs, ClearasAPI;
 
 type
-  { TClearasSearchThread }
   TClearasSearchThread = class(TThread)
   private
     FProgress: Cardinal;
@@ -33,21 +32,41 @@ type
     procedure DoNotifyOnStart();
     procedure DoNotifyOnSearching();
   public
+    /// <summary>
+    ///   Constructor for creating a <c>TClearasSearchThread</c> instance.
+    /// </summary>
+    /// <param name="AStartupList">
+    ///   A <see cref="TRootList"/> to be filled.
+    /// </param>
+    /// <param name="ALock">
+    ///   The mutex.
+    /// </param>
     constructor Create(ASelectedList: TRootList<TRootItem>; ALock: TCriticalSection);
-    { external }
+
+    /// <summary>
+    ///   Occurs when search has failed.
+    /// </summary>
     property OnError: TSearchErrorEvent read FOnError write FOnError;
+
+    /// <summary>
+    ///   Occurs when search has finished.
+    /// </summary>
     property OnFinish: TNotifyEvent read FOnFinish write FOnFinish;
+
+    /// <summary>
+    ///   Occurs when search is in progress.
+    /// </summary>
     property OnSearching: TSearchEvent read FOnSearching write FOnSearching;
+
+    /// <summary>
+    ///   Occurs when search has started.
+    /// </summary>
     property OnStart: TSearchEvent read FOnStart write FOnStart;
   end;
 
 implementation
 
 { TClearasSearchThread }
-
-{ public TClearasSearchThread.Create
-
-  Constructor for creating a TClearasSearchThread instance. }
 
 constructor TClearasSearchThread.Create(ASelectedList: TRootList<TRootItem>;
   ALock: TCriticalSection);
@@ -59,19 +78,11 @@ begin
   FOnChanged := FSelectedList.OnChanged;
 end;
 
-{ protected TClearasSearchThread.DoNotifyOnError
-
-  Synchronizable event method that is called when an error has occured. }
-
 procedure TClearasSearchThread.DoNotifyOnError();
 begin
   if Assigned(FOnError) then
     FOnError(Self, FErrorMessage);
 end;
-
-{ protected TClearasSearchThread.DoNotifyOnFinish
-
-  Synchronizable event method that is called when search has finished. }
 
 procedure TClearasSearchThread.DoNotifyOnFinish();
 begin
@@ -82,10 +93,6 @@ begin
   FOnChanged(Self, stDeleted);
 end;
 
-{ protected TContextSearchThread.DoNotifyOnSearching
-
-  Synchronizable event method that is called when search is in progress. }
-
 procedure TClearasSearchThread.DoNotifyOnSearching();
 begin
   if Assigned(FOnSearching) then
@@ -94,10 +101,6 @@ begin
     FOnSearching(Self, FProgress);
   end;  //of begin
 end;
-
-{ protected TContextSearchThread.DoNotifyOnStart
-
-  Synchronizable event method that is called when search has started. }
 
 procedure TClearasSearchThread.DoNotifyOnStart();
 begin

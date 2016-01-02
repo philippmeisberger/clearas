@@ -15,7 +15,6 @@ uses
   ClearasAPI, PMCWOSUtils;
 
 type
-  { TTaskSearchThread }
   TTaskSearchThread = class(TClearasSearchThread)
   private
     FTaskService: ITaskService;
@@ -27,12 +26,39 @@ type
   protected
     procedure Execute; override;
   public
+    /// <summary>
+    ///   Constructor for creating a <c>TTaskSearchThread</c> instance.
+    /// </summary>
+    /// <param name="ATaskList">
+    ///   A <see cref="TTaskList"/> to be filled.
+    /// </param>
+    /// <param name="ATaskService">
+    ///   The task service.
+    /// </param>
+    /// <param name="ALock">
+    ///   The mutex.
+    /// </param>
     constructor Create(ATaskList: TTaskList; ATaskService: ITaskService;
       ALock: TCriticalSection);
-    { external }
+
+    /// <summary>
+    ///   Include tasks in subfolders.
+    /// </summary>
     property IncludeSubFolders: Boolean read FIncludeSubFolders write FIncludeSubFolders;
+
+    /// <summary>
+    ///   Include hidden tasks.
+    /// </summary>
     property IncludeHidden: Boolean read FIncludeHidden write FIncludeHidden;
+
+    /// <summary>
+    ///   The path to the task folder.
+    /// </summary>
     property Path: string read FPath write FPath;
+
+    /// <summary>
+    ///   Use the WOW64 technology.
+    /// </summary>
     property Win64: Boolean read FWin64 write FWin64;
   end;
 
@@ -40,20 +66,12 @@ implementation
 
 { TTaskSearchThread }
 
-{ public TTaskSearchThread.Create
-
-  Constructor for creating a TTaskSearchThread instance. }
-
 constructor TTaskSearchThread.Create(ATaskList: TTaskList;
   ATaskService: ITaskService; ALock: TCriticalSection);
 begin
   inherited Create(TRootList<TRootItem>(ATaskList), ALock);
   FTaskService := ATaskService;
 end;
-
-{ private TTaskSearchThread.LoadTasks
-
-  Searches for task items in specific folder and adds them to the list. }
 
 procedure TTaskSearchThread.LoadTasks(APath: string);
 var
@@ -86,10 +104,6 @@ begin
   end;  //of begin
 end;
 
-{ protected TTaskSearchThread.Execute
-
-  Searches for task items in specific file system folder. }
-
 procedure TTaskSearchThread.Execute;
 begin
   FLock.Acquire();
@@ -117,10 +131,10 @@ begin
       if Win64 then
         Wow64FsRedirection(False);
     {$ENDIF}
+      FLock.Release();
 
       // Notify end of search
       Synchronize(DoNotifyOnFinish);
-      FLock.Release();
     end;  //of try
 
   except
