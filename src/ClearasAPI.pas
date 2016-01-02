@@ -495,10 +495,10 @@ type
   end;
 
   /// <summary>
-  ///   The possible item changes.
+  ///   The possible basically item changes.
   /// </summary>
   TItemStatus = (
-    stNone, stEnabled, stDisabled, stDeleted
+    stEnabled, stDisabled, stDeleted
   );
 
   { Events }
@@ -706,7 +706,7 @@ type
     /// <param name="ANewCaption">
     ///   The new name.
     /// </param>
-    function RenameItem(const ANewName: string): Boolean; virtual;
+    procedure RenameItem(const ANewName: string); virtual;
 
     /// <summary>
     ///   Gets the count of enabled items in the list.
@@ -2764,7 +2764,6 @@ begin
 
     // Change item file path
     FItem.ChangeFilePath(ANewFilePath);
-    DoNotifyOnChanged(stNone);
 
   finally
     FLock.Release();
@@ -2953,7 +2952,7 @@ begin
   Result := not Entered;
 end;
 
-function TRootList<T>.RenameItem(const ANewName: string): Boolean;
+procedure TRootList<T>.RenameItem(const ANewName: string);
 begin
   // List locked?
   if not FLock.TryEnter() then
@@ -2963,8 +2962,7 @@ begin
     if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
       raise EInvalidItem.Create('No item selected!');
 
-    FItem.Rename(ANewName);
-    DoNotifyOnChanged(stNone);
+    FItem.Name := ANewName;
 
   finally
     FLock.Release();

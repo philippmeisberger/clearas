@@ -969,8 +969,8 @@ end;
 procedure TMain.OnStartupItemChanged(Sender: TObject; ANewStatus: TItemStatus);
 begin
   // Refresh counter label
-  lwStartup.Columns[1].Caption := FLang.Format(LID_PROGRAM_COUNTER, [FStartup.EnabledItemsCount,
-    FStartup.Count]);
+  lwStartup.Columns[1].Caption := FLang.Format(LID_PROGRAM_COUNTER,
+    [FStartup.EnabledItemsCount, FStartup.Count]);
 
   // Change button states
   case ANewStatus of
@@ -1086,8 +1086,8 @@ end;
 procedure TMain.OnServiceItemChanged(Sender: TObject; ANewStatus: TItemStatus);
 begin
   // Refresh counter label
-  lwService.Columns[1].Caption := FLang.Format(LID_SERVICE_COUNTER, [FService.EnabledItemsCount,
-    FService.Count]);
+  lwService.Columns[1].Caption := FLang.Format(LID_SERVICE_COUNTER,
+    [FService.EnabledItemsCount, FService.Count]);
 
   // Change button states
   case ANewStatus of
@@ -2319,8 +2319,10 @@ begin
       if ((Trim(Name) = '') or (Name = Item.Name) or (Name = Item.Caption)) then
         Exit;
 
+      GetSelectedList().RenameItem(Name);
+
       // Names are visible instead of captions?
-      if (GetSelectedList().RenameItem(Name) and not mmShowCaptions.Checked) then
+      if not mmShowCaptions.Checked then
         GetSelectedListView().ItemFocused.SubItems[0] := Name;
     end;  //of begin
 
