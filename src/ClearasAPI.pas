@@ -271,6 +271,7 @@ type
     function GetFileDescription(AFileName: TFileName): string;
     function GetIcon(): HICON; overload; virtual;
     function GetIcon(AExeFileName: TFileName): HICON; overload;
+    function GetLocation(): string; virtual;
     procedure Rename(const ANewName: string); virtual;
   public
     /// <summary>
@@ -382,7 +383,7 @@ type
     /// <summary>
     ///   Gets the store location.
     /// </summary>
-    property Location: string read FLocation;
+    property Location: string read GetLocation;
 
     /// <summary>
     ///   Gets the complete store location.
@@ -406,6 +407,7 @@ type
   protected
     function DeleteKey(AHKey: HKEY; AKeyPath, AKeyName: string;
       AFailIfNotExists: Boolean = True): Boolean;
+    function GetFullLocation(): string; override;
     function GetRootKey(): TRootKey; virtual; abstract;
 
     /// <summary>
@@ -815,6 +817,9 @@ type
   ///   A <c>TStartupListItem</c> represents a basic startup item that can be
   ///   added to a <see cref="TStartupList"/>.
   /// </summary>
+  /// <remarks>
+  ///   This class is intended to be only ancenstor for items.
+  /// </remarks>
   TStartupListItem = class(TRegistryItem)
   private
     FTime: TDateTime;
@@ -829,7 +834,6 @@ type
     function DeleteValue(AKeyPath: string; AReallyWow64: Boolean = True): Boolean;
     function FileTimeToDateTime(const AFileTime: TFileTime): TDateTime;
     function GetApprovedLocation(): string; virtual;
-    function GetFullLocation(): string; override;
     function GetRootKey(): TRootKey; override;
     function GetWow64Key(): string; virtual;
     procedure Rename(const ANewName: string); overload; override;
@@ -1298,11 +1302,11 @@ type
   ///   be added to a <see cref="TContextList"/>. All context menu items are
   ///   in the Registry.
   /// </summary>
+  /// <remarks>
+  ///   This class is intended to be only ancenstor for items.
+  /// </remarks>
   TContextListItem = class(TRegistryItem)
-  private
-    function GetKeyPath(): string; virtual; abstract;
   protected
-    function GetFullLocation(): string; override;
     function GetRootKey(): TRootKey; override;
     procedure Rename(const ANewName: string); override;
   public
@@ -1333,11 +1337,6 @@ type
     function UserChoiceExists(const AFileExtension: string): Boolean;
 
     /// <summary>
-    ///   Gets full Registry location.
-    /// </summary>
-    property Location: string read GetKeyPath;
-
-    /// <summary>
     ///   Gets the root location e.g. <c>Drives</c>.
     /// </summary>
     property LocationRoot: string read FLocation;
@@ -1348,12 +1347,11 @@ type
   ///   added to a <see cref="TContextList"/>. Those items are in plain-text.
   /// </summary>
   TShellItem = class(TContextListItem)
-  private
-    function GetKeyPath(): string; override;
   protected
     procedure ChangeFilePath(const ANewFileName: string); override;
     procedure ChangeStatus(const ANewStatus: Boolean); override;
     function GetIcon(): HICON; override;
+    function GetLocation(): string; override;
     procedure Rename(const AValueName, ANewCaption: string); reintroduce; overload;
     procedure Rename(const ANewName: string); overload; override;
   public
@@ -1477,11 +1475,10 @@ type
   ///   by a GUID.
   /// </summary>
   TShellExItem = class(TContextListItem)
-  private
-    function GetKeyPath(): string; override;
   protected
     procedure ChangeFilePath(const ANewFileName: string); override;
     procedure ChangeStatus(const ANewStatus: Boolean); override;
+    function GetLocation(): string; override;
     procedure Rename(const ANewName: string); override;
   public
     /// <summary>
@@ -1507,11 +1504,10 @@ type
   ///   in the background context menu "new".
   /// </summary>
   TShellNewItem = class(TContextListItem)
-  private
-    function GetKeyPath(): string; override;
   protected
     procedure ChangeFilePath(const ANewFileName: string); override;
     procedure ChangeStatus(const ANewStatus: Boolean); override;
+    function GetLocation(): string; override;
     procedure Rename(const ANewName: string); override;
   public
     /// <summary>
@@ -1707,13 +1703,12 @@ type
     FServiceStart: TServiceStart;
     function Disable(): Boolean;
     function Enable(): Boolean;
-    function GetLocation(): string;
     function GetHandle(AAccess: DWORD): SC_HANDLE;
     function GetTime(): TDateTime;
   protected
     procedure ChangeFilePath(const ANewFileName: string); override;
     procedure ChangeStatus(const ANewStatus: Boolean); override;
-    function GetFullLocation(): string; override;
+    function GetLocation(): string; override;
     function GetRootKey(): TRootKey; override;
     procedure Rename(const ANewName: string); override;
   public
@@ -1765,11 +1760,6 @@ type
     ///   The item type.
     /// </returns>
     function ToString(): string; override;
-
-    /// <summary>
-    ///   Gets the Registry location.
-    /// </summary>
-    property Location: string read GetLocation;
 
     /// <summary>
     ///   Gets the start type.
@@ -2448,6 +2438,11 @@ begin
 {$ENDIF}
 end;
 
+function TRootItem.GetLocation(): string;
+begin
+  Result := FLocation;
+end;
+
 procedure TRootItem.ChangeStatus(const ANewStatus: Boolean);
 begin
   FEnabled := ANewStatus;
@@ -2639,6 +2634,11 @@ end;
 function TRegistryItem.GetExportFilter(ALanguageFile: TLanguageFile): string;
 begin
   Result := ALanguageFile.GetString(LID_FILTER_REGISTRY_FILE);
+end;
+
+function TRegistryItem.GetFullLocation(): string;
+begin
+  Result := GetRootKey().ToString() +'\'+ GetLocation();
 end;
 
 function TRegistryItem.GetTimestamp(AReg: TRegistry): TDateTime;
@@ -3120,11 +3120,6 @@ begin
     Result := KEY_STARTUP_RUN_APPROVED;
 end;
 
-function TStartupListItem.GetFullLocation(): string;
-begin
-  Result := FRootKey.ToString() +'\'+ FLocation;
-end;
-
 function TStartupListItem.GetRootKey(): TRootKey;
 begin
   Result := FRootKey;
@@ -3549,6 +3544,7 @@ end;
 function TStartupUserItem.GetFullLocation(): string;
 begin
   if FEnabled then
+    // Enabled startup user items have a filesystem location! 
     Result := FLocation
   else
     // Windows 8?
@@ -4131,7 +4127,7 @@ begin
 
     // Create .lnk file and add it to list
     Result := AddNewStartupUserItem(Name, LnkFile.ExeFileName, LnkFile.Arguments,
-      (Ext = EXT_STARTUP_COMMON));
+      (Ext = EXT_STARTUP_USER));
 
     // Refresh TListView
     if Result then
@@ -4370,11 +4366,6 @@ end;
 
 { TContextListItem }
 
-function TContextListItem.GetFullLocation(): string;
-begin
-  Result := GetRootKey().ToString() +'\'+ GetKeyPath();
-end;
-
 function TContextListItem.GetRootKey(): TRootKey;
 begin
   Result := rkHKCR;
@@ -4388,7 +4379,7 @@ end;
 
 function TContextListItem.Delete(): Boolean;
 begin
-  if not DeleteKey(HKEY_CLASSES_ROOT, ExtractFileDir(GetKeyPath()), Name) then
+  if not DeleteKey(HKEY_CLASSES_ROOT, ExtractFileDir(GetLocation()), Name) then
     raise EContextMenuException.Create('Could not delete key!');
 
   Result := True;
@@ -4419,9 +4410,9 @@ begin
   inherited Create(AName, ACaption, AFileName, ALocation, AEnabled, False);
 end;
 
-function TShellItem.GetKeyPath(): string;
+function TShellItem.GetLocation(): string;
 begin
-  Result := FLocation +'\'+ CM_SHELL +'\'+ Name;
+  Result := inherited GetLocation() +'\'+ CM_SHELL +'\'+ Name;
 end;
 
 procedure TShellItem.Rename(const AValueName, ANewCaption: string);
@@ -4435,7 +4426,7 @@ begin
     Reg.RootKey := HKEY_CLASSES_ROOT;
 
     // Invalid key?
-    if not Reg.OpenKey(GetKeyPath(), False) then
+    if not Reg.OpenKey(GetLocation(), False) then
       raise EContextMenuException.Create('Key does not exist!');
 
     // Invalid data type?
@@ -4466,7 +4457,7 @@ begin
     Reg.RootKey := HKEY_CLASSES_ROOT;
 
     // Invalid key?
-    if not Reg.OpenKey(GetKeyPath(), False) then
+    if not Reg.OpenKey(GetLocation(), False) then
       raise EContextMenuException.Create('Key does not exist!');
 
     if Reg.ValueExists('Icon') then
@@ -4499,7 +4490,7 @@ begin
     Reg.RootKey := HKEY_CLASSES_ROOT;
 
     // Invalid key?
-    if not Reg.OpenKey(GetKeyPath() +'\command', False) then
+    if not Reg.OpenKey(GetLocation() +'\command', False) then
       raise EContextMenuException.Create('Key does not exist!');
 
     // Change path
@@ -4530,7 +4521,7 @@ begin
     Reg.RootKey := HKEY_CLASSES_ROOT;
 
     // Invalid key?
-    if not Reg.OpenKey(GetKeyPath(), False) then
+    if not Reg.OpenKey(GetLocation(), False) then
       raise EContextMenuException.Create('Key does not exist!');
 
     // Delete icon?
@@ -4567,7 +4558,7 @@ begin
     Reg.RootKey := HKEY_CLASSES_ROOT;
 
     // Key does not exist?
-    if not Reg.OpenKey(GetKeyPath(), False) then
+    if not Reg.OpenKey(GetLocation(), False) then
       raise EContextMenuException.Create('Key does not exist!');
 
     if ANewStatus then
@@ -4601,7 +4592,7 @@ begin
   RegFile := TRegistryFile.Create(AFileName, True);
 
   try
-    RegFile.ExportReg(HKEY_CLASSES_ROOT, GetKeyPath(), True);
+    RegFile.ExportReg(HKEY_CLASSES_ROOT, GetLocation(), True);
 
   finally
     RegFile.Free;
@@ -4640,7 +4631,7 @@ begin
   try
     Reg.RootKey := HKEY_CLASSES_ROOT;
 
-    if (not Reg.OpenKey(GetKeyPath(), False) or not Reg.ValueExists(CM_SUBCOMMANDS)) then
+    if (not Reg.OpenKey(GetLocation(), False) or not Reg.ValueExists(CM_SUBCOMMANDS)) then
       Exit;
 
     ASubCommands.Delimiter := ';';
@@ -4688,7 +4679,7 @@ begin
   Commands := TStringList.Create;
 
   try
-    RegFile.ExportKey(HKEY_CLASSES_ROOT, GetKeyPath(), True);
+    RegFile.ExportKey(HKEY_CLASSES_ROOT, GetLocation(), True);
     GetSubCommands(Commands);
 
     for i := 0 to Commands.Count - 1 do
@@ -4727,7 +4718,7 @@ begin
     Reg.RootKey := HKEY_CLASSES_ROOT;
 
     // Key does not exist?
-    if not Reg.OpenKey(GetKeyPath(), False) then
+    if not Reg.OpenKey(GetLocation(), False) then
       raise EContextMenuException.Create('Key does not exist!');
 
     // Value does not exist?
@@ -4762,9 +4753,9 @@ begin
   end;  //of try
 end;
 
-function TShellExItem.GetKeyPath(): string;
+function TShellExItem.GetLocation(): string;
 begin
-  Result := FLocation +'\'+ CM_SHELLEX_HANDLERS +'\'+ Name;
+  Result := inherited GetLocation() +'\'+ CM_SHELLEX_HANDLERS +'\'+ Name;
 end;
 
 procedure TShellExItem.ChangeFilePath(const ANewFileName: string);
@@ -4782,7 +4773,7 @@ begin
     Reg.RootKey := HKEY_CLASSES_ROOT;
 
     // Invalid key?
-    if not Reg.OpenKey(GetKeyPath(), False) then
+    if not Reg.OpenKey(GetLocation(), False) then
       raise EContextMenuException.Create('Key does not exist!');
 
     // Read GUID and setup key of program
@@ -4827,7 +4818,7 @@ begin
   try
     Reg.RootKey := HKEY_CLASSES_ROOT;
 
-    if Reg.OpenKey(GetKeyPath(), False) then
+    if Reg.OpenKey(GetLocation(), False) then
     begin
       Key := 'CLSID\'+ Reg.ReadString('');
       Reg.CloseKey();
@@ -4837,7 +4828,7 @@ begin
         RegFile.ExportKey(HKEY_CLASSES_ROOT, Key, True);
     end;  //of begin
 
-    RegFile.ExportKey(HKEY_CLASSES_ROOT, GetKeyPath(), True);
+    RegFile.ExportKey(HKEY_CLASSES_ROOT, GetLocation(), True);
     RegFile.Save();
 
   finally
@@ -4912,12 +4903,12 @@ begin
   end;  //of try
 end;
 
-function TShellNewItem.GetKeyPath(): string;
+function TShellNewItem.GetLocation(): string;
 begin
   if FEnabled then
-    Result := FLocation +'\'+ CM_SHELLNEW
+    Result := inherited GetLocation() +'\'+ CM_SHELLNEW
   else
-    Result := FLocation +'\'+ CM_SHELLNEW_DISABLED;
+    Result := inherited GetLocation() +'\'+ CM_SHELLNEW_DISABLED;
 end;
 
 procedure TShellNewItem.ChangeFilePath(const ANewFileName: string);
@@ -4927,8 +4918,8 @@ end;
 
 function TShellNewItem.Delete(): Boolean;
 begin
-  if not DeleteKey(HKEY_CLASSES_ROOT, ExtractFileDir(GetKeyPath()),
-    ExtractFileName(GetKeyPath())) then
+  if not DeleteKey(HKEY_CLASSES_ROOT, ExtractFileDir(GetLocation()),
+    ExtractFileName(GetLocation())) then
     raise EContextMenuException.Create('Could not delete key!');
 
   Result := True;
@@ -4942,7 +4933,7 @@ begin
   RegFile := TRegistryFile.Create(AFileName, True);
 
   try
-    RegFile.ExportReg(HKEY_CLASSES_ROOT, GetKeyPath(), True);
+    RegFile.ExportReg(HKEY_CLASSES_ROOT, GetLocation(), True);
 
   finally
     RegFile.Free;
@@ -5382,11 +5373,6 @@ end;
 function TServiceListItem.GetLocation(): string;
 begin
   Result := KEY_SERVICE_ENABLED + Name;
-end;
-
-function TServiceListItem.GetFullLocation(): string;
-begin
-  Result := GetRootKey().ToString() +'\'+ GetLocation();
 end;
 
 function TServiceListItem.GetRootKey(): TRootKey;
@@ -5899,7 +5885,7 @@ end;
 function TTaskListItem.GetFullLocation(): string;
 begin
   if GetFolderPath(CSIDL_SYSTEM, Result) then
-    Result := IncludeTrailingBackslash(Result +'Tasks'+ Location) + Name;
+    Result := IncludeTrailingBackslash(Result +'Tasks'+ GetLocation()) + Name;
 end;
 
 procedure TTaskListItem.ChangeFilePath(const ANewFilePath: string);
