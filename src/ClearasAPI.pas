@@ -381,7 +381,7 @@ type
     property Icon: HICON read GetIcon;
 
     /// <summary>
-    ///   Gets the store location.
+    ///   Gets the store location. Usually a Registry key.
     /// </summary>
     property Location: string read GetLocation;
 
@@ -780,14 +780,16 @@ const
   STARTUP_USER_XP             = 'Startup' deprecated;
 
   /// <summary>
-  ///   Signals that a startup item is enabled.
+  ///   Used in <see cref="TStartupItemStatus"/> to signal that a startup item 
+  ///   is enabled.
   /// </summary>
-  ST_ENABLED  = $2;
+  ST_ENABLED                  = $2;
 
   /// <summary>
-  ///   Signals that a startup item is disabled.
+  ///   Used in <see cref="TStartupItemStatus"/> to signal that a startup item 
+  ///   is disabled.
   /// </summary>
-  ST_DISABLED = $3;
+  ST_DISABLED                 = $3;
 
 type
   { Exception class }
@@ -1347,6 +1349,8 @@ type
   ///   added to a <see cref="TContextList"/>. Those items are in plain-text.
   /// </summary>
   TShellItem = class(TContextListItem)
+  private
+    FExtended: Boolean;
   protected
     procedure ChangeFilePath(const ANewFileName: string); override;
     procedure ChangeStatus(const ANewStatus: Boolean); override;
@@ -1373,8 +1377,12 @@ type
     /// <param name="AEnabled">
     ///   The status.
     /// </param>
+    /// <param name="AExtended">
+    ///   The contextmenu item is only shown when shift-key is pressed and a 
+    ///   right click is performed. Otherwise the item is always shown.
+    /// </param>
     constructor Create(const AName, ACaption, AFileName, ALocation: string;
-      AEnabled: Boolean);
+      AEnabled, AExtended: Boolean);
 
     /// <summary>
     ///   Changes the icon of a contextmenu item.
@@ -1412,6 +1420,12 @@ type
     ///   The item type.
     /// </returns>
     function ToString(): string; override;
+
+    /// <summary>
+    ///   Gets the behaviour that the contextmenu item is only shown when
+    ///   shift-key is pressed and a right click is performed.
+    /// </summary>
+    property Extended: Boolean read FExtended;
   end;
 
   /// <summary>
@@ -1441,7 +1455,12 @@ type
     /// <param name="AEnabled">
     ///   The status.
     /// </param>
-    constructor Create(const AName, ACaption, ALocation: string; AEnabled: Boolean);
+    /// <param name="AExtended">
+    ///   The contextmenu item is only shown when shift-key is pressed and a 
+    ///   right click is performed. Otherwise the item is always shown.
+    /// </param>
+    constructor Create(const AName, ACaption, ALocation: string; AEnabled, 
+      AExtended: Boolean);
 
     /// <summary>
     ///   Deletes the item.
@@ -3288,7 +3307,7 @@ function TStartupItem.Delete(): Boolean;
 begin
   if (FEnabled or CheckWin32Version(6, 2)) then
   begin
-    Result := DeleteValue(Location, True);
+    Result := DeleteValue(GetLocation(), True);
 
     // Windows 8?
     if (Result and CheckWin32Version(6, 2)) then
@@ -3313,19 +3332,10 @@ begin
     if not Reg.OpenKey(KEY_STARTUP_DISABLED + Name, True) then
       raise EStartupException.Create('Could not create key!');
 
-    // Write redirected key
-    if FWow64 then
-    begin
-      if (FLocation = KEY_STARTUP_RUNONCE) then
-        FLocation := KEY_STARTUP_RUNONCE32
-      else
-        FLocation := KEY_STARTUP_RUN32;
-    end;  //of begin
-
     // Write values
     RootKey.FromHKey(FRootKey.ToHKey());
     Reg.WriteString('hkey', RootKey.ToString(False));
-    Reg.WriteString('key', FLocation);
+    Reg.WriteString('key', GetWow64Key());
     Reg.WriteString('item', Name);
     Reg.WriteString('command', FileName);
     Reg.WriteString('inimapping', '0');
@@ -4199,7 +4209,7 @@ begin
       begin
         Wow64 := AnsiContainsText(Reg.ReadString('key'), 'Wow6432Node');
         RunOnce := (ExtractFileName(Reg.ReadString('key')) = 'RunOnce');
-        Name := ExtractFileName(Location);
+        Name := Items[i];
 
         Item := TStartupItem.Create(Name, FileName, Location, rkHKLM, False,
           Wow64, RunOnce);
@@ -4405,9 +4415,10 @@ end;
 { TShellItem }
 
 constructor TShellItem.Create(const AName, ACaption, AFileName, ALocation: string;
-  AEnabled: Boolean);
+  AEnabled, AExtended: Boolean);
 begin
   inherited Create(AName, ACaption, AFileName, ALocation, AEnabled, False);
+  FExtended := AExtended;
 end;
 
 function TShellItem.GetLocation(): string;
@@ -4613,9 +4624,9 @@ end;
 { TShellCascadingItem }
 
 constructor TShellCascadingItem.Create(const AName, ACaption, ALocation: string;
-  AEnabled: Boolean);
+  AEnabled, AExtended: Boolean);
 begin
-  inherited Create(AName, ACaption, '', ALocation, AEnabled);
+  inherited Create(AName, ACaption, '', ALocation, AEnabled, AExtended);
 end;
 
 procedure TShellCascadingItem.GetSubCommands(var ASubCommands: TStrings);
@@ -5042,7 +5053,8 @@ begin
       Reg.WriteString('', FullPath);
 
       // Adds item to list
-      Result := (Add(TShellItem.Create(Name, ACaption, FullPath, FileType, True)) <> -1);
+      Result := (Add(TShellItem.Create(Name, ACaption, FullPath, FileType, True, 
+        AExtended)) <> -1);
 
       // Refresh TListView
       DoNotifyOnFinished();
@@ -5129,9 +5141,9 @@ var
   i, DelimiterPos: Integer;
   List: TStringList;
   ItemName, Key, FileName, GuID, Caption: string;
-  Enabled, Wow64: Boolean;
+  Enabled, Wow64, Extended: Boolean;
   Access64: LongWord;
-
+  
 begin
   Access64 := KEY_WOW64_64KEY or KEY_READ;
   Reg := TRegistry.Create(Access64);
@@ -5221,7 +5233,8 @@ begin
 
         // Get status and caption of Shell item
         Enabled := not Reg.ValueExists(CM_SHELL_DISABLED);
-
+        Extended := Reg.ValueExists('Extended');
+        
         // Cascading shell item?
         if not Reg.OpenKey('command', False) then
         begin
@@ -5230,7 +5243,8 @@ begin
             Continue;
 
           Caption := Reg.ReadString('MUIVerb');
-          Add(TShellCascadingItem.Create(ItemName, Caption, ALocationRoot, Enabled));
+          Add(TShellCascadingItem.Create(ItemName, Caption, ALocationRoot, 
+            Enabled, Extended));
           Continue;
         end;  //of begin
 
@@ -5243,7 +5257,8 @@ begin
           Continue;
 
         FileName := Reg.ReadString('');
-        Add(TShellItem.Create(ItemName, Caption, FileName, ALocationRoot, Enabled));
+        Add(TShellItem.Create(ItemName, Caption, FileName, ALocationRoot, 
+          Enabled, Extended));
       end  //of begin
       else
         if (AShellItemType = stShellEx) then
@@ -5676,7 +5691,8 @@ begin
     CloseServiceHandle(Service);
 
     // Adds service to list
-    Result := (Add(TServiceListItem.Create(Name, ACaption, FullPath, True, ssAutomatic, FManager)) <> -1);
+    Result := (Add(TServiceListItem.Create(Name, ACaption, FullPath, True, 
+      ssAutomatic, FManager)) <> -1);
 
     // Refresh TListView
     DoNotifyOnFinished();
