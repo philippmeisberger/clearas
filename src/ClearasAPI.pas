@@ -1279,7 +1279,7 @@ type
     /// <remarks>
     ///   Deprecated since Windows 8!
     /// </remarks>
-    property DeleteBackup: Boolean read FDeleteBackup write FDeleteBackup;
+    property AutoDeleteBackup: Boolean read FDeleteBackup write FDeleteBackup;
   end;
 
 const
@@ -5172,7 +5172,7 @@ begin
         else
           Exit;
 
-      DelimiterPos := AnsiPos(PathDelim, ALocationRoot);
+      DelimiterPos := ALocationRoot.IndexOf('\');
 
       // ShellNew item inside a subkey?
       if (DelimiterPos > 0) then

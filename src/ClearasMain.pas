@@ -398,6 +398,7 @@ end;
 function TMain.CreateStartupUserBackup(): Boolean;
 var
   Filter, FileName: string;
+  StartupUserItem: TStartupUserItem;
 
 begin
   Result := False;
@@ -410,29 +411,27 @@ begin
     // Special .lnk file backup only for enabled startup user items!
     if (FStartup.Selected is TStartupUserItem) then
     begin
+      StartupUserItem := (FStartup.Selected as TStartupUserItem);
+
       // Windows 8?
       if CheckWin32Version(6, 2) then
       begin
-        Filter := FStartup.Selected.GetExportFilter(FLang);
-
-        if (FStartup.Selected as TStartupUserItem).StartupUser then
-          FileName := FStartup.Selected.Name + EXT_STARTUP_USER
-        else
-          FileName := FStartup.Selected.Name + EXT_STARTUP_COMMON;
+        Filter := StartupUserItem.GetExportFilter(FLang);
+        FileName := StartupUserItem.Name + StartupUserItem.LnkFile.BackupExt;
 
         // Show save dialog
         if PromptForFileName(FileName, Filter, '', bExportStartupItem.Caption,
           '%USERPROFILE%', True) then
         begin
-          FStartup.Selected.ExportItem(FileName);
+          FStartup.ExportItem(FileName);
           Result := True;
         end;  //of begin
       end  //of begin
       else
         if FStartup.Selected.Enabled then
         begin
-          FStartup.Selected.ExportItem('');
-          FLang.ShowMessage(FLang.Format(LID_BACKUP_CREATED, [(FStartup.Selected as TStartupUserItem).LnkFile.BackupLnk]));
+          FStartup.ExportItem('');
+          FLang.ShowMessage(FLang.Format(LID_BACKUP_CREATED, [StartupUserItem.LnkFile.BackupLnk]));
           bExportStartupItem.Enabled := False;
           pmExport.Enabled := False;
           Result := True;
@@ -542,7 +541,7 @@ begin
       LID_ITEM_DELETE_CONFIRM2]), mtCustom) = IDYES) then
     begin
       // Save the DeleteBackup flag
-      DelBackup := FStartup.DeleteBackup;
+      DelBackup := FStartup.AutoDeleteBackup;
       BackupExists := FStartup.BackupExists();
 
       // Skip export dialog for enabled startup user item with exising backup
@@ -555,14 +554,14 @@ begin
       // Export item and only continue if this has succeeded
       if (Answer = IDYES) then
         if CreateStartupUserBackup() then
-          FStartup.DeleteBackup := False
+          FStartup.AutoDeleteBackup := False
         else
           Exit;
 
       // Ask user to delete old existing backup
       if ((Answer = IDCANCEL) or ((FStartup.Selected is TStartupUserItem)
         and not FStartup.Selected.Enabled and BackupExists)) then
-        FStartup.DeleteBackup := (FLang.ShowMessage(FLang.GetString(LID_BACKUP_DELETE_CONFIRM),
+        FStartup.AutoDeleteBackup := (FLang.ShowMessage(FLang.GetString(LID_BACKUP_DELETE_CONFIRM),
           mtConfirmation) = IDYES);
 
       // Successfully deleted item physically?
@@ -592,8 +591,8 @@ begin
   end;  //of try
 
   // Restore the DeleteBackup flag
-  if (FStartup.DeleteBackup <> DelBackup) then
-    FStartup.DeleteBackup := DelBackup;
+  if (FStartup.AutoDeleteBackup <> DelBackup) then
+    FStartup.AutoDeleteBackup := DelBackup;
 end;
 
 { private TMain.DisableItem
@@ -2670,7 +2669,7 @@ end;
 
 procedure TMain.mmDelBackupClick(Sender: TObject);
 begin
-  FStartup.DeleteBackup := mmDelBackup.Checked;
+  FStartup.AutoDeleteBackup := mmDelBackup.Checked;
 end;
 
 { TMain.mmContextClick
