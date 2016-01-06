@@ -134,7 +134,7 @@ type
   ///   A <c>TStartupUserLnkFile</c> represents a startup link file.
   /// </summary>
   TStartupLnkFile = class(TLnkFile)
-  private
+  strict private
     FStartupUser: Boolean;
     function GetBackupLnk(): string; deprecated 'Since Windows 8';
     function GetBackupExt(): string;
@@ -206,7 +206,7 @@ type
     /// <returns>
     ///   The backup directory.
     /// </returns>
-    class function GetBackupDir(): string; deprecated 'Since Windows 8';
+    class function GetBackupDir(): string; static; deprecated 'Since Windows 8';
 
     /// <summary>
     ///   Gets the filesystem startup location.
@@ -218,7 +218,7 @@ type
     /// <returns>
     ///   The startup directory.
     /// </returns>
-    class function GetStartUpDir(AStartupUser: Boolean): string;
+    class function GetStartUpDir(AStartupUser: Boolean): string; static;
 
     /// <summary>
     ///   Gets extension of the backup file.
@@ -402,7 +402,7 @@ type
   ///   <see cref="TRootItem"/>.
   /// </summary>
   TRegistryItem = class(TRootItem)
-  private
+  strict private
     FWow64: Boolean;
   protected
     function DeleteKey(AHKey: HKEY; AKeyPath, AKeyName: string;
@@ -544,7 +544,7 @@ type
   ///   This class is intended to be used only as ancestor for other classes.
   /// </remarks>
   TRootList<T: TRootItem> = class(TObjectList<T>, IInterface)
-  private
+  strict private
     FItem: T;
     FOnChanged: TItemChangeEvent;
     FOnSearchStart,
@@ -824,10 +824,10 @@ type
   /// </remarks>
   TStartupListItem = class(TRegistryItem)
   private
-    FTime: TDateTime;
-    FRootKey: TRootKey;
     function GetTime(): TDateTime;
   protected
+    FTime: TDateTime;
+    FRootKey: TRootKey;
     procedure ChangeFilePath(const ANewFileName: string); override;
     procedure ChangeStatus(const ANewStatus: Boolean); override;
     function Disable(): Boolean; virtual; deprecated 'Since Windows 8'; abstract;
@@ -2960,7 +2960,7 @@ begin
   FRootKey := ARootKey;
 
   try
-    FCaption := GetFileDescription(GetFileNameOnly());
+    FCaption := GetFileDescription(FileNameOnly);
 
   except
     // It is not fatal if the caption could not be set! Name is used as fallback!
@@ -2978,7 +2978,7 @@ end;
 
 function TStartupListItem.GetWow64Key(): string;
 begin
-  if ((FEnabled or CheckWin32Version(6, 2)) and FWow64) then
+  if ((FEnabled or CheckWin32Version(6, 2)) and Wow64) then
     Result := KEY_STARTUP_RUN32
   else
     Result := FLocation;
@@ -3063,7 +3063,7 @@ var
 begin
   Result := False;
 
-  if ((FEnabled or CheckWin32Version(6, 2)) and FWow64 and AReallyWow64) then
+  if ((FEnabled or CheckWin32Version(6, 2)) and Wow64 and AReallyWow64) then
     Reg := TRegistry.Create(KEY_WOW64_32KEY or KEY_READ or KEY_WRITE)
   else
     Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
@@ -3131,7 +3131,7 @@ var
 begin
   Result := False;
 
-  if ((FEnabled or CheckWin32Version(6, 2)) and FWow64 and AReallyWow64) then
+  if ((FEnabled or CheckWin32Version(6, 2)) and Wow64 and AReallyWow64) then
     Reg := TRegistry.Create(KEY_WOW64_32KEY or KEY_READ or KEY_WRITE)
   else
     Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
@@ -3164,7 +3164,7 @@ var
   ItemName: string;
 
 begin
-  if ((FEnabled or CheckWin32Version(6, 2)) and FWow64) then
+  if ((FEnabled or CheckWin32Version(6, 2)) and Wow64) then
     Reg := TRegistry.Create(KEY_WOW64_32KEY or KEY_READ or KEY_WRITE)
   else
     Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
@@ -3312,7 +3312,7 @@ begin
       raise EStartupException.Create('Could not create key!');
 
     // Write values
-    RootKey.FromHKey(FRootKey.ToHKey());
+    RootKey.FromHKey(RootKey.ToHKey());
     Reg.WriteString('hkey', RootKey.ToString(False));
     Reg.WriteString('key', GetWow64Key());
     Reg.WriteString('item', Name);
@@ -3328,7 +3328,7 @@ begin
     Reg.CloseKey();
 
     // Redirect to 32 Bit key?
-    if FWow64 then
+    if Wow64 then
       Reg.Access := KEY_WOW64_32KEY or KEY_READ or KEY_WRITE;
 
     Reg.RootKey := FRootKey.ToHKey();
@@ -3383,7 +3383,7 @@ begin
     Reg.CloseKey;
 
     // Redirect to 32 Bit key?
-    if FWow64 then
+    if Wow64 then
     begin
       // RunOnce item?
       if (ExtractFileName(NewKeyPath) = 'RunOnce') then
@@ -3432,7 +3432,7 @@ end;
 
 function TStartupItem.GetWow64Key(): string;
 begin
-  if ((FEnabled or CheckWin32Version(6, 2)) and FWow64) then
+  if ((FEnabled or CheckWin32Version(6, 2)) and Wow64) then
   begin
     if FRunOnce then
       Result := KEY_STARTUP_RUNONCE32
@@ -3671,7 +3671,7 @@ begin
   else
     begin
       // Failed to create new .lnk file?
-      if not FLnkFile.Save(FLnkFile.FileName, GetFileNameOnly(), GetArguments()) then
+      if not FLnkFile.Save() then
         raise EStartupException.Create('Could not create .lnk file!');
     end;  //of if
 
@@ -4207,8 +4207,8 @@ begin
         Item := TStartupUserItem.Create(Name, FileName, Location, rkHKLM, False, nil);
 
         // Setup .lnk file
-        ExeFileName := Item.ExtractPathToFile(FileName);
-        ExeArguments := Item.ExtractArguments(FileName);
+        ExeFileName := Item.FileNameOnly;;
+        ExeArguments := Item.Arguments;
         TStartupUserItem(Item).LnkFile := TStartupLnkFile.Create(LnkFileName,
           StartupUser, ExeFileName, ExeArguments);
       end;  //of if
@@ -4754,7 +4754,7 @@ var
   ProgramKeyPath: string;
 
 begin
-  if FWow64 then
+  if Wow64 then
     Reg := TRegistry.Create(KEY_WOW64_32KEY or KEY_READ or KEY_WRITE)
   else
     Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
@@ -4800,7 +4800,7 @@ var
 begin
   RegFile := TRegistryFile.Create(AFileName, True);
 
-  if FWow64 then
+  if Wow64 then
     Reg := TRegistry.Create(KEY_WOW64_32KEY or KEY_READ)
   else
     Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ);

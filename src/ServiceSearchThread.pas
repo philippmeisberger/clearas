@@ -26,11 +26,15 @@ type
     /// <param name="AServiceList">
     ///   A <see cref="TServiceList"/> to be filled.
     /// </param>
+    /// <param name="ALock">
+    ///   The mutex.
+    /// </param>
     /// <param name="AManager">
     ///   The service manager.
     /// </param>
-    /// <param name="ALock">
-    ///   The mutex.
+    /// <param name="AExpertMode">
+    ///   If set to <c>True</c> use the expert search mode. Otherwise use the
+    ///   default search mode.
     /// </param>
     constructor Create(AServiceList: TServiceList; ALock: TCriticalSection;
       AManager: SC_HANDLE; AExpertMode: Boolean = False);
@@ -51,7 +55,7 @@ procedure TServiceSearchThread.DoExecute;
 var
   Service: SC_HANDLE;
   Services, ServicesCopy: PEnumServiceStatus;
-  BytesNeeded, ServicesReturned, ResumeHandle, LastError, ServiceType: Cardinal;
+  BytesNeeded, ServicesReturned, ResumeHandle, LastError, ServiceType: DWORD;
   i: Integer;
 
 begin
@@ -98,7 +102,8 @@ begin
 
       // Skip corrupted service
       if (Service <> 0) then
-        TServiceList(FSelectedList).LoadService(ServicesCopy^.lpServiceName, Service, FExpertMode);
+        TServiceList(FSelectedList).LoadService(ServicesCopy^.lpServiceName,
+         Service, FExpertMode);
 
       Inc(ServicesCopy);
     end;  //of for
