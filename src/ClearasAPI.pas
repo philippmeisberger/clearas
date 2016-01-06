@@ -834,7 +834,6 @@ type
     function Enable(): Boolean; virtual; deprecated 'Since Windows 8'; abstract;
     function DateTimeToFileTime(const AFileTime: TDateTime): TFileTime;
     function DeleteValue(AKeyPath: string; AReallyWow64: Boolean = True): Boolean;
-    function FileTimeToDateTime(const AFileTime: TFileTime): TDateTime;
     function GetApprovedLocation(): string; virtual;
     function GetRootKey(): TRootKey; override;
     function GetWow64Key(): string; virtual;
@@ -1094,36 +1093,20 @@ type
 
   TStartupLocationHelper = record helper for TStartupLocation
     /// <summary>
+    ///   Gets the approved startup location.
+    /// </summary>
+    /// <returns>
+    ///   The location.
+    /// </returns>
+    function GetApprovedLocation(): TPair<HKEY, string>;
+
+    /// <summary>
     ///   Gets the startup store location.
     /// </summary>
     /// <returns>
     ///   The location.
     /// </returns>
     function GetLocation(): TPair<HKEY, string>;
-  end;
-
-  /// <summary>
-  ///   The possible StartupApproved locations.
-  /// </summary>
-  /// <remarks>
-  ///   Only on Windows 8 and later!
-  /// </remarks>
-  TStartupApprovedLocation = (
-    saHkcuRun,
-    saHkcuStartupFolder,
-    saHklmRun,
-    saHklmRun32,
-    saHklmStartupFolder
-  );
-
-  TStartupApprovedLocationHelper = record helper for TStartupApprovedLocation
-    /// <summary>
-    ///   Gets the Registry key of the StartupApproved location.
-    /// </summary>
-    /// <returns>
-    ///   The Registry key as pair containing the <c>HKEY</c> and the key itself.
-    /// </returns>
-    function GetRegistryKey(): TPair<HKEY, string>;
   end;
 
   /// <summary>
@@ -1139,6 +1122,8 @@ type
       AArguments: string = ''; AStartupUser: Boolean = True): Boolean;
     function AddUserItem(ALnkFile: TStartupLnkFile; AStartupUser: Boolean): Integer;
     function DeleteBackupFile(): Boolean; deprecated 'Since Windows 8';
+    function LoadStatus(const AName: string;
+      AStartupLocation: TStartupLocation): TPair<Boolean, TDateTime>;
   public
     /// <summary>
     ///   Constructor for creating a <c>TStartupList</c> instance.
@@ -1233,16 +1218,8 @@ type
     /// <summary>
     ///   Searches for items and adds them to the list.
     /// </summary>
-    /// <param name="ARootKey">
-    ///   The root Registry key. Can only be <c>rkHKCU</c> or <c>rkHKLM</c>.
-    /// </param>
-    /// <param name="ARunOnce">
-    ///   If set to <c>True</c> only search for RunOnce items. Otherwise search
-    ///   for default startup items.
-    /// </param>
-    /// <param name="AWow64">
-    ///   If set to <c>True</c> search for WOW64 items. Otherwise search for
-    ///   native items.
+    /// <param name="AStartupLocation">
+    ///   The startup location to search for items.
     /// </param>
     procedure Load(AStartupLocation: TStartupLocation); reintroduce; overload;
 
@@ -1254,23 +1231,6 @@ type
     ///   <c>False</c> only search for default startup items.
     /// </param>
     procedure LoadDisabled(AStartupUser: Boolean); deprecated 'Since Windows 8';
-
-    /// <summary>
-    ///   Loads the enabled status of all items from the Registry. The
-    ///   deactivation timestamp of disabled is also queried and refreshed.
-    /// </summary>
-    /// <param name="AApprovedLocation">
-    ///   The approved startup location.
-    /// </param>
-    /// <remarks>
-    ///   Only on Windows 8 and later!
-    /// </remarks>
-    procedure LoadStatus(AApprovedLocation: TStartupApprovedLocation);
-
-    /// <summary>
-    ///   Refreshes the <see cref="EnabledItemsCount"/>.
-    /// </summary>
-    procedure RefreshCounter();
 
     /// <summary>
     ///   Gets or sets the behaviour that startup user backup files should be
@@ -2046,6 +2006,25 @@ implementation
 uses StartupSearchThread, ContextSearchThread, ServiceSearchThread, TaskSearchThread;
 
 {$I LanguageIDs.inc}
+
+function FileTimeToDateTime(const AFileTime: TFileTime): TDateTime;
+var
+  ModifiedTime: TFileTime;
+  SystemTime: TSystemTime;
+
+begin
+  try
+    if ((AFileTime.dwLowDateTime = 0) and (AFileTime.dwHighDateTime = 0)) then
+      Abort;
+
+    FileTimeToLocalFileTime(AFileTime, ModifiedTime);
+    FileTimeToSystemTime(ModifiedTime, SystemTime);
+    Result := SystemTimeToDateTime(SystemTime);
+
+  except
+    Result := 0;
+  end;  //of try
+end;
 
 { TLnkFile }
 
@@ -3087,25 +3066,6 @@ begin
   end;  //of try
 end;
 
-function TStartupListItem.FileTimeToDateTime(const AFileTime: TFileTime): TDateTime;
-var
-  ModifiedTime: TFileTime;
-  SystemTime: TSystemTime;
-
-begin
-  try
-    if ((AFileTime.dwLowDateTime = 0) and (AFileTime.dwHighDateTime = 0)) then
-      Abort;
-
-    FileTimeToLocalFileTime(AFileTime, ModifiedTime);
-    FileTimeToSystemTime(ModifiedTime, SystemTime);
-    Result := SystemTimeToDateTime(SystemTime);
-
-  except
-    Result := 0;
-  end;  //of try
-end;
-
 function TStartupListItem.GetApprovedLocation(): string;
 begin
   // Only since Windows 8!
@@ -3778,46 +3738,42 @@ begin
       Result := STARTUP_COMMON_XP;
 end;
 
+{ TStartupLocationHelper }
 
-{ TStartupApprovedLocationHelper }
-
-function TStartupApprovedLocationHelper.GetRegistryKey(): TPair<HKEY, string>;
+function TStartupLocationHelper.GetApprovedLocation(): TPair<HKEY, string>;
 begin
   case Self of
-    saHkcuRun:
+    slHkcuRun, slHkcuRunOnce:
       begin
         Result.Key := HKEY_CURRENT_USER;
         Result.Value := KEY_STARTUP_RUN_APPROVED;
       end;
 
-    saHkcuStartupFolder:
-      begin
-        Result.Key := HKEY_CURRENT_USER;
-        Result.Value := KEY_STARTUP_USER_APPROVED;
-      end;
-
-    saHklmRun:
+    slHklmRun, slHklmRunOnce:
       begin
         Result.Key := HKEY_LOCAL_MACHINE;
         Result.Value := KEY_STARTUP_RUN_APPROVED;
       end;
 
-    saHklmRun32:
+    slHklmRun32, slHklmRunOnce32:
       begin
         Result.Key := HKEY_LOCAL_MACHINE;
         Result.Value := KEY_STARTUP_RUN32_APPROVED;
       end;
 
-    saHklmStartupFolder:
+    slStartupUser:
+      begin
+        Result.Key := HKEY_CURRENT_USER;
+        Result.Value := KEY_STARTUP_USER_APPROVED;
+      end;
+
+    slCommonStartup:
       begin
         Result.Key := HKEY_LOCAL_MACHINE;
         Result.Value := KEY_STARTUP_USER_APPROVED;
       end;
   end;  //of case
 end;
-
-
-{ TStartupLocationHelper }
 
 function TStartupLocationHelper.GetLocation(): TPair<HKEY, string>;
 begin
@@ -4224,6 +4180,40 @@ begin
   end;  //of try
 end;
 
+function TStartupList.LoadStatus(const AName: string;
+  AStartupLocation: TStartupLocation): TPair<Boolean, TDateTime>;
+var
+  Reg: TRegistry;
+  ItemStatus: TStartupItemStatus;
+
+begin
+  // Only on Windows 8 and later!
+  if not CheckWin32Version(6, 2) then
+    Exit;
+
+  // Status is stored in 64-Bit registry
+  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ);
+
+  try
+    Reg.RootKey := AStartupLocation.GetApprovedLocation().Key;
+    Reg.OpenKey(AStartupLocation.GetApprovedLocation.Value, False);
+
+    if (Reg.GetDataSize(AName) <> SizeOf(TStartupItemStatus)) then
+      Exit;
+
+    Reg.ReadBinaryData(AName, ItemStatus, SizeOf(TStartupItemStatus));
+    Result.Key := (ItemStatus.Status = ST_ENABLED);
+
+    // Get deactivation time
+    if not Result.Key then
+      Result.Value := FileTimeToDateTime(ItemStatus.DeactivationTime);
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
+  end;  //of try
+end;
+
 procedure TStartupList.Load(AStartupLocation: TStartupLocation);
 var
   SearchResult: TSearchRec;
@@ -4233,6 +4223,9 @@ var
   i: Integer;
   StartupUser, Wow64, RunOnce: Boolean;
   RootKey: TRootKey;
+  Item: TStartupListItem;
+  Status: TPair<Boolean, TDateTime>;
+  Location, Name, FileName: string;
 
 begin
   if (AStartupLocation in [slStartupUser, slCommonStartup]) then
@@ -4245,7 +4238,26 @@ begin
       // .lnk file found
       repeat
         LnkFile := TStartupLnkFile.Create(SearchResult.Name, StartupUser);
-        AddUserItem(LnkFile, StartupUser);
+        Location := LnkFile.FileName;
+        Name := ExtractFileName(Location);
+        Status := LoadStatus(Name, AStartupLocation);
+        FileName := LnkFile.FullPath;
+
+        // Windows 8?
+        if CheckWin32Version(6, 2) then
+        begin
+          if StartupUser then
+            RootKey := rkHKCU
+          else
+            RootKey := rkHKLM;
+        end  //of begin
+        else
+          RootKey := rkUnknown;
+
+        Item := TStartupUserItem.Create(Name, FileName, Location, RootKey,
+          Status.Key, LnkFile);
+        Item.Time := Status.Value;
+        Add(Item);
       until FindNext(SearchResult) <> 0;
 
     finally
@@ -4277,55 +4289,16 @@ begin
     RootKey.FromHKey(Reg.RootKey);
 
     for i := 0 to Items.Count - 1 do
-      Add(TStartupItem.Create(Items[i], Reg.ReadString(Items[i]), Reg.CurrentPath,
-        RootKey, True, Wow64, RunOnce));
-
-  finally
-    Reg.CloseKey();
-    Reg.Free;
-    Items.Free;
-  end;  //of try
-end;
-
-procedure TStartupList.LoadStatus(AApprovedLocation: TStartupApprovedLocation);
-var
-  Reg: TRegistry;
-  i: Integer;
-  Items: TStringList;
-  Item: TStartupListItem;
-  ItemStatus: TStartupItemStatus;
-
-begin
-  // Only on Windows 8 and later!
-  if not CheckWin32Version(6, 2) then
-    Exit;
-
-  Items := TStringList.Create;
-
-  // Status is stored in 64-Bit registry
-  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ);
-
-  try
-    Reg.RootKey := AApprovedLocation.GetRegistryKey().Key;
-    Reg.OpenKey(AApprovedLocation.GetRegistryKey().Value, False);
-    Reg.GetValueNames(Items);
-
-    for i := 0 to Count - 1 do
     begin
-      Item := Self.Items[i];
+      Name := Items[i];
+      Status := LoadStatus(Name, AStartupLocation);
+      Location := Reg.CurrentPath;
+      FileName := Reg.ReadString(Items[i]);
 
-      if (Items.IndexOf(Item.Name) <> -1) then
-      begin
-        if (Reg.GetDataSize(Item.Name) <> SizeOf(TStartupItemStatus)) then
-          Continue;
-
-        Reg.ReadBinaryData(Item.Name, ItemStatus, SizeOf(TStartupItemStatus));
-        Item.FEnabled := (ItemStatus.Status = ST_ENABLED);
-
-        // Get deactivation time
-        if not Item.Enabled then
-          Item.Time := Item.FileTimeToDateTime(ItemStatus.DeactivationTime);
-      end;  //of begin
+      Item := TStartupItem.Create(Name, FileName, Location, RootKey, Status.Key,
+        Wow64, RunOnce);
+      Item.Time := Status.Value;
+      Add(Item);
     end;  //of for
 
   finally
@@ -4333,23 +4306,6 @@ begin
     Reg.Free;
     Items.Free;
   end;  //of try
-end;
-
-procedure TStartupList.RefreshCounter();
-var
-  i: Integer;
-  Item: TStartupListItem;
-
-begin
-  FEnabledItemsCount := 0;
-
-  for i := 0 to Count - 1 do
-  begin
-    Item := Items[i];
-
-    if Item.Enabled then
-      Inc(FEnabledItemsCount);
-  end;  //of for
 end;
 
 

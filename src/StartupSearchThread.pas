@@ -27,7 +27,6 @@ implementation
 
 procedure TStartupSearchThread.DoExecute;
 var
-  ApprovedLocation: TStartupApprovedLocation;
   Location: TStartupLocation;
 
 begin
@@ -41,20 +40,9 @@ begin
     TStartupList(FSelectedList).Load(Location);
   end;  //of for
 
-  // Windows 8?
-  if CheckWin32Version(6, 2) then
-  begin
-    for ApprovedLocation := Low(TStartupApprovedLocation) to High(TStartupApprovedLocation) do
-      TStartupList(FSelectedList).LoadStatus(ApprovedLocation);
-
-    TStartupList(FSelectedList).RefreshCounter();
-  end  //of begin
-  else
-  begin
-    // Load WOW6432 Registry key only on 64-Bit Windows (deprecated since Windows 8!)
-    TStartupList(FSelectedList).LoadDisabled(False);
-    TStartupList(FSelectedList).LoadDisabled(True);
-  end;  //of if
+  // Load WOW6432 Registry key only on 64-Bit Windows (deprecated since Windows 8!)
+  TStartupList(FSelectedList).LoadDisabled(False);
+  TStartupList(FSelectedList).LoadDisabled(True);
 end;
 
 end.
