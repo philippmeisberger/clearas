@@ -2,7 +2,7 @@
 {                                                                         }
 { Clearas export list thread                                              }
 {                                                                         }
-{ Copyright (c) 2011-2015 Philipp Meisberger (PM Code Works)              }
+{ Copyright (c) 2011-2016 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
 { *********************************************************************** }
 
@@ -14,7 +14,8 @@ uses
   Classes, SysUtils, ClearasAPI;
 
 type
-  { TExportListThread }
+  TExportEvent = procedure(Sender: TObject; APageControlIndex: Integer) of object;
+
   TExportListThread = class(TThread)
   private
     FList: TRootList<TRootItem>;
@@ -22,7 +23,7 @@ type
     FErrorMessage: string;
     FPageControlIndex: Byte;
     FOnFinish,
-    FOnStart: TSearchEvent;
+    FOnStart: TExportEvent;
     FOnError: TSearchErrorEvent;
     procedure DoNotifyOnError();
     procedure DoNotifyOnFinish();
@@ -34,8 +35,8 @@ type
       APageControlIndex: Byte);
     { external }
     property OnError: TSearchErrorEvent read FOnError write FOnError;
-    property OnFinish: TSearchEvent read FOnFinish write FOnFinish;
-    property OnStart: TSearchEvent read FOnStart write FOnStart;
+    property OnFinish: TExportEvent read FOnFinish write FOnFinish;
+    property OnStart: TExportEvent read FOnStart write FOnStart;
   end;
 
 implementation

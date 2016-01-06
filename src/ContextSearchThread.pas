@@ -2,7 +2,7 @@
 {                                                                         }
 { Clearas context menu search thread                                      }
 {                                                                         }
-{ Copyright (c) 2011-2015 Philipp Meisberger (PM Code Works)              }
+{ Copyright (c) 2011-2016 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
 { *********************************************************************** }
 
@@ -18,14 +18,11 @@ type
   private
     FReg: TRegistry;
     FLocations: TStringList;
-    FWin64: Boolean;
     FRoot: string;
     FRootKey: HKEY;
-    procedure LoadAllContextMenus();
-    procedure LoadContextMenus();
     procedure SearchSubkey(const AKeyName: string);
   protected
-    procedure Execute; override;
+    procedure DoExecute; override;
   public
     /// <summary>
     ///   Constructor for creating a <c>TContextSearchThread</c> instance.
@@ -36,17 +33,17 @@ type
     /// <param name="ALock">
     ///   The mutex.
     /// </param>
-    constructor Create(AContextList: TContextList; ALock: TCriticalSection);
+    /// <param name="AExpertMode">
+    ///   If set to <c>True</c> use the expert search mode. Otherwise use the
+    ///   default search mode.
+    /// </param>
+    constructor Create(AContextList: TContextList; ALock: TCriticalSection;
+      AExpertMode: Boolean = False);
 
     /// <summary>
     ///   Destructor for destroying a <c>TContextSearchThread</c> instance.
     /// </summary>
     destructor Destroy(); override;
-
-    /// <summary>
-    ///   A comma separated list containing the root locations.
-    /// </summary>
-    property Locations: TStringList read FLocations;
 
     /// <summary>
     ///   The key to start the search.
@@ -57,11 +54,6 @@ type
     ///   The root key to start the search.
     /// </summary>
     property RootKey: HKEY read FRootKey write FRootKey;
-
-    /// <summary>
-    ///   Use the WOW64 technology.
-    /// </summary>
-    property Win64: Boolean read FWin64 write FWin64;
   end;
 
 implementation
@@ -71,9 +63,9 @@ uses StrUtils, SysUtils;
 { TContextSearchThread }
 
 constructor TContextSearchThread.Create(AContextList: TContextList;
-  ALock: TCriticalSection);
+  ALock: TCriticalSection; AExpertMode: Boolean = False);
 begin
-  inherited Create(TRootList<TRootItem>(AContextList), ALock);
+  inherited Create(TRootList<TRootItem>(AContextList), ALock, AExpertMode);
   FLocations := TStringList.Create;
 
   // Init Registry access with read-only
@@ -144,85 +136,34 @@ begin
   end;  //of try
 end;
 
-procedure TContextSearchThread.LoadAllContextMenus();
+procedure TContextSearchThread.DoExecute;
 var
   i: Integer;
-  Keys: TStringList;
 
 begin
-  Keys := TStringList.Create;
+  FReg.RootKey := FRootKey;
+  FReg.OpenKey(FRoot, False);
 
-  try
-    FReg.RootKey := FRootKey;
-    FReg.OpenKey(FRoot, False);
-    FReg.GetKeyNames(Keys);
+  if FExpertMode then
+  begin
+    FReg.GetKeyNames(FLocations);
     FReg.CloseKey();
+  end  //of begin
+  else
+    FLocations.CommaText := CM_LOCATIONS_DEFAULT;
 
-    // Notify start of search
-    FProgressMax := Keys.Count;
-    Synchronize(DoNotifyOnStart);
-
-    for i := 0 to Keys.Count - 1 do
-    begin
-      Synchronize(DoNotifyOnSearching);
-
-      if (FRoot <> '') then
-        SearchSubkey(FRoot +'\'+ Keys[i])
-      else
-        SearchSubkey(Keys[i]);
-    end;  //of for
-
-  finally
-    Keys.Free;
-  end;  //of try
-end;
-
-procedure TContextSearchThread.LoadContextMenus();
-var
-  i: Integer;
-
-begin
   // Notify start of search
   FProgressMax := FLocations.Count;
-  Synchronize(DoNotifyOnStart);
 
-  // Search ...
   for i := 0 to FLocations.Count - 1 do
   begin
     Synchronize(DoNotifyOnSearching);
-    TContextList(FSelectedList).LoadContextmenu(FLocations[i], FWin64);
+
+    if (FRoot <> '') then
+      SearchSubkey(FRoot +'\'+ FLocations[i])
+    else
+      SearchSubkey(FLocations[i]);
   end;  //of for
-end;
-
-procedure TContextSearchThread.Execute;
-begin
-  FLock.Acquire();
-
-  try
-    try
-      // Clear data
-      FSelectedList.Clear;
-
-      // Load specific menus or search for all?
-      if (FLocations.Count > 0) then
-        LoadContextMenus()
-      else
-        LoadAllContextMenus();
-
-    finally
-      FLock.Release();
-
-      // Notify end of search
-      Synchronize(DoNotifyOnFinish);
-    end;  //of try
-
-  except
-    on E: Exception do
-    begin
-      FErrorMessage := Format('%s: %s', [ToString(), E.Message]);
-      Synchronize(DoNotifyOnError);
-    end;
-  end;  //of try
 end;
 
 end.

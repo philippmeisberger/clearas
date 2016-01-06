@@ -2,7 +2,7 @@
 {                                                                         }
 { Clearas API Interface Unit                                              }
 {                                                                         }
-{ Copyright (c) 2011-2015 Philipp Meisberger (PM Code Works)              }
+{ Copyright (c) 2011-2016 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
 { *********************************************************************** }
 
@@ -503,7 +503,7 @@ type
 
   { Events }
   TItemChangeEvent = procedure(Sender: TObject; ANewStatus: TItemStatus) of object;
-  TSearchEvent = procedure(Sender: TObject; ACount: Cardinal) of object;
+  TSearchEvent = procedure(Sender: TObject; AProgress, AProgressMax: Cardinal) of object;
   TSearchErrorEvent = procedure(Sender: TObject; AErrorMessage: string) of object;
 
   /// <summary>
@@ -546,10 +546,10 @@ type
   TRootList<T: TRootItem> = class(TObjectList<T>, IInterface)
   private
     FItem: T;
-    FOnSearchStart,
-    FOnSearching: TSearchEvent;
     FOnChanged: TItemChangeEvent;
+    FOnSearchStart,
     FOnSearchFinish: TNotifyEvent;
+    FOnSearching: TSearchEvent;
     FOnSearchError: TSearchErrorEvent;
   protected
     FEnabledItemsCount: Integer;
@@ -742,7 +742,7 @@ type
     /// <summary>
     ///   Occurs when item search has started.
     /// </summary>
-    property OnSearchStart: TSearchEvent read FOnSearchStart write FOnSearchStart;
+    property OnSearchStart: TNotifyEvent read FOnSearchStart write FOnSearchStart;
 
     /// <summary>
     ///   Gets or sets the current selected item.
@@ -1658,8 +1658,7 @@ type
     ///   If set to <c>True</c> search for WOW64 items. Otherwise search for
     ///   native items.
     /// </param>
-    procedure LoadContextmenu(const ALocationRoot: string;
-      AWow64: Boolean); overload;
+    procedure LoadContextmenu(const ALocationRoot: string; AWow64: Boolean); overload;
 
     /// <summary>
     ///   Searches for items and adds them to the list.
@@ -1676,19 +1675,6 @@ type
     /// </param>
     procedure LoadContextmenu(const ALocationRoot: string;
       AShellItemType: TShellItemType; AWow64: Boolean); overload;
-
-    /// <summary>
-    ///   Searches for items and adds them to the list.
-    /// </summary>
-    /// <param name="ALocationRootCommaList">
-    ///   A comma separated list containing the root locations.
-    /// </param>
-    /// <remarks>
-    ///   Asynchronous: A thread is launched! The <see cref="OnSearchStart"/>
-    ///   event occurs when the search starts. At the end the
-    ///   <see cref="OnSearchFinish"/> event occurs.
-    /// </remarks>
-    procedure LoadContextMenus(ALocationRootCommaList: string = CM_LOCATIONS_DEFAULT); overload;
   end;
 
 const
@@ -2048,16 +2034,11 @@ type
     /// <param name="APath">
     ///   The relative path to the task folder. The root is <c>\</c>.
     /// </param>
-    /// <param name="ARecursive">
-    ///   If set to <c>True</c> tasks in subfolders are included. Otherwise
-    ///   only the tasks in the folder specified in <c>APath</c> are included.
+    /// <param name="AExpertMode">
+    ///   If set to <c>True</c> tasks in subfolders and those who are hidden are
+    ///   included.
     /// </param>
-    /// <param name="AIncludeHidden">
-    ///   If set to <c>True</c> include hidden tasks. Otherwise hidden tasks are
-    ///   skipped.
-    /// </param>
-    procedure LoadTasks(APath: string = '\'; ARecursive: Boolean = False;
-      AIncludeHidden: Boolean = False); overload;
+    procedure LoadTasks(APath: string = '\'; AExpertMode: Boolean = False); overload;
   end;
 
 implementation
@@ -4153,12 +4134,12 @@ var
 
 begin
   // Init search thread
-  StartupSearchThread := TStartupSearchThread.Create(Self, FLock);
+  StartupSearchThread := TStartupSearchThread.Create(TRootList<TRootItem>(Self),
+    FLock, AExpertMode);
 
   with StartupSearchThread do
   begin
     Win64 := (TOSVersion.Architecture = arIntelX64);
-    IncludeRunOnce := AExpertMode;
     OnError := OnSearchError;
     OnFinish := OnSearchFinish;
     OnStart := OnSearchStart;
@@ -5117,19 +5098,32 @@ begin
 end;
 
 procedure TContextList.Load(AExpertMode: Boolean = False);
+var
+  SearchThread: TContextSearchThread;
+
 begin
-  if AExpertMode then
-    LoadContextMenus('')
-  else
-    LoadContextMenus(CM_LOCATIONS_DEFAULT);
+  // Init search thread
+  SearchThread := TContextSearchThread.Create(Self, FLock, AExpertMode);
+
+  with SearchThread do
+  begin
+    Win64 := (TOSVersion.Architecture = arIntelX64);
+    OnError := OnSearchError;
+    OnFinish := OnSearchFinish;
+    OnStart := OnSearchStart;
+    OnSearching := OnSearching;
+    Start;
+  end;  // of with
 end;
 
 procedure TContextList.LoadContextmenu(const ALocationRoot: string;
   AWow64: Boolean);
+var
+  ContextMenuItem: TShellItemType;
+
 begin
-  LoadContextmenu(ALocationRoot, stShell, AWow64);
-  LoadContextmenu(ALocationRoot, stShellEx, AWow64);
-  LoadContextmenu(ALocationRoot, stShellNew, AWow64);
+  for ContextMenuItem := Low(TShellItemType) to High(TShellItemType) do
+    LoadContextmenu(ALocationRoot, ContextMenuItem, AWow64);
 end;
 
 procedure TContextList.LoadContextmenu(const ALocationRoot: string;
@@ -5312,26 +5306,6 @@ begin
     Reg.CloseKey();
     Reg.Free;
   end;  //of try
-end;
-
-procedure TContextList.LoadContextMenus(ALocationRootCommaList: string = CM_LOCATIONS_DEFAULT);
-var
-  SearchThread: TContextSearchThread;
-
-begin
-  // Init search thread
-  SearchThread := TContextSearchThread.Create(Self, FLock);
-
-  with SearchThread do
-  begin
-    Locations.CommaText := ALocationRootCommaList;
-    Win64 := (TOSVersion.Architecture = arIntelX64);
-    OnError := OnSearchError;
-    OnFinish := OnSearchFinish;
-    OnStart := OnSearchStart;
-    OnSearching := OnSearching;
-    Start;
-  end;  // of with
 end;
 
 
@@ -5737,11 +5711,10 @@ var
   SearchThread: TServiceSearchThread;
 
 begin
-  SearchThread := TServiceSearchThread.Create(Self, FManager, FLock);
+  SearchThread := TServiceSearchThread.Create(Self, FLock, FManager, AExpertMode);
 
   with SearchThread do
   begin
-    IncludeShared := AExpertMode;
     OnError := OnSearchError;
     OnFinish := OnSearchFinish;
     OnStart := OnSearchStart;
@@ -6214,7 +6187,7 @@ end;
 
 procedure TTaskList.Load(AExpertMode: Boolean = False);
 begin
-  LoadTasks('\', AExpertMode, AExpertMode);
+  LoadTasks('\', AExpertMode);
 end;
 
 procedure TTaskList.LoadTasks(ATaskFolder: ITaskFolder; AIncludeHidden: Boolean);
@@ -6249,20 +6222,17 @@ begin
     end;  //of try
 end;
 
-procedure TTaskList.LoadTasks(APath: string = '\'; ARecursive: Boolean = False;
-  AIncludeHidden: Boolean = False);
+procedure TTaskList.LoadTasks(APath: string = '\'; AExpertMode: Boolean = False);
 var
   SearchThread: TTaskSearchThread;
 
 begin
-  SearchThread := TTaskSearchThread.Create(Self, FTaskService, FLock);
+  SearchThread := TTaskSearchThread.Create(Self, FLock, FTaskService, AExpertMode);
 
   with SearchThread do
   begin
     Path := APath;
     Win64 := (TOSVersion.Architecture = arIntelX64);
-    IncludeSubFolders := ARecursive;
-    IncludeHidden := AIncludeHidden;
     OnError := OnSearchError;
     OnFinish := OnSearchFinish;
     OnStart := OnSearchStart;

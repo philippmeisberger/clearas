@@ -2,7 +2,7 @@
 {                                                                         }
 { Clearas Main Unit                                                       }
 {                                                                         }
-{ Copyright (c) 2011-2015 Philipp Meisberger (PM Code Works)              }
+{ Copyright (c) 2011-2016 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
 { *********************************************************************** }
 
@@ -195,20 +195,20 @@ type
     function GetSelectedList(): TRootList<TRootItem>;
     function GetSelectedListView(): TListView;
     procedure LoadItems(ATotalRefresh: Boolean = True);
-    procedure OnContextSearchStart(Sender: TObject; AMax: Cardinal);
+    procedure OnContextSearchStart(Sender: TObject);
     procedure OnContextSearchEnd(Sender: TObject);
     procedure OnContextItemChanged(Sender: TObject; ANewStatus: TItemStatus);
-    procedure OnExportListStart(Sender: TObject; APageControlIndex: Cardinal);
-    procedure OnExportListEnd(Sender: TObject; APageControlIndex: Cardinal);
+    procedure OnExportListStart(Sender: TObject; APageControlIndex: Integer);
+    procedure OnExportListEnd(Sender: TObject; APageControlIndex: Integer);
     procedure OnExportListError(Sender: TObject; AErrorMessage: string);
     procedure OnSearchError(Sender: TObject; AErrorMessage: string);
-    procedure OnStartupSearchStart(Sender: TObject; AMax: Cardinal);
+    procedure OnStartupSearchStart(Sender: TObject);
     procedure OnStartupSearchEnd(Sender: TObject);
     procedure OnStartupItemChanged(Sender: TObject; ANewStatus: TItemStatus);
-    procedure OnServiceSearchStart(Sender: TObject; AMax: Cardinal);
+    procedure OnServiceSearchStart(Sender: TObject);
     procedure OnServiceSearchEnd(Sender: TObject);
     procedure OnServiceItemChanged(Sender: TObject; ANewStatus: TItemStatus);
-    procedure OnTaskSearchStart(Sender: TObject; AMax: Cardinal);
+    procedure OnTaskSearchStart(Sender: TObject);
     procedure OnTaskSearchEnd(Sender: TObject);
     procedure OnTaskItemChanged(Sender: TObject; ANewStatus: TItemStatus);
     procedure OnUpdate(Sender: TObject; const ANewBuild: Cardinal);
@@ -788,7 +788,7 @@ end;
 
   Event that is called when search starts. }
 
-procedure TMain.OnContextSearchStart(Sender: TObject; AMax: Cardinal);
+procedure TMain.OnContextSearchStart(Sender: TObject);
 begin
   mmLang.Enabled := False;
   cbContextExpert.Enabled := False;
@@ -831,7 +831,7 @@ begin
       with lwContext.Items.Add do
       begin
         Caption := FContext[i].GetStatus(FLang);
-        SubItems.Append(Text);
+        SubItems.AddObject(Text, FContext[i]);
         SubItems.Append(FContext[i].LocationRoot);
         SubItems.Append(FContext[i].ToString());
       end; //of with
@@ -894,7 +894,7 @@ end;
 
   Event that is called when export list starts. }
 
-procedure TMain.OnExportListStart(Sender: TObject; APageControlIndex: Cardinal);
+procedure TMain.OnExportListStart(Sender: TObject; APageControlIndex: Integer);
 begin
   PageControl.Pages[APageControlIndex].Cursor := crHourGlass;
 
@@ -925,7 +925,7 @@ end;
 
   Event that is called when export list ends. }
 
-procedure TMain.OnExportListEnd(Sender: TObject; APageControlIndex: Cardinal);
+procedure TMain.OnExportListEnd(Sender: TObject; APageControlIndex: Integer);
 begin
   PageControl.Pages[APageControlIndex].Cursor := crDefault;
 
@@ -1011,7 +1011,7 @@ end;
 
   Event that is called when search starts. }
 
-procedure TMain.OnStartupSearchStart(Sender: TObject; AMax: Cardinal);
+procedure TMain.OnStartupSearchStart(Sender: TObject);
 begin
   mmLang.Enabled := False;
   mmImport.Enabled := False;
@@ -1027,6 +1027,7 @@ procedure TMain.OnStartupSearchEnd(Sender: TObject);
 var
   Icon: TIcon;
   i: Integer;
+  Text: string;
 
 begin
   // Clear all visual data
@@ -1042,10 +1043,11 @@ begin
         Caption := FStartup[i].GetStatus(FLang);
 
         if ((FStartup[i].Caption <> '') and mmShowCaptions.Checked) then
-          SubItems.Append(FStartup[i].Caption)
+          Text := FStartup[i].Caption
         else
-          SubItems.Append(FStartup[i].Name);
+          Text := FStartup[i].Name;
 
+        SubItems.AddObject(Text, FStartup[i]);
         SubItems.Append(FStartup[i].FileName);
         SubItems.Append(FStartup[i].ToString());
 
@@ -1126,7 +1128,7 @@ end;
 
   Event that is called when search starts. }
 
-procedure TMain.OnServiceSearchStart(Sender: TObject; AMax: Cardinal);
+procedure TMain.OnServiceSearchStart(Sender: TObject);
 begin
   mmLang.Enabled := False;
   cbServiceExpert.Enabled := False;
@@ -1167,7 +1169,7 @@ begin
       with lwService.Items.Add do
       begin
         Caption := FService[i].GetStatus(FLang);
-        SubItems.Append(Text);
+        SubItems.AddObject(Text, FService[i]);
         SubItems.Append(FService[i].FileName);
         SubItems.Append(FService[i].Start.ToString(FLang));
 
@@ -1261,7 +1263,7 @@ begin
       with lwTasks.Items.Add do
       begin
         Caption := FTasks[i].GetStatus(FLang);
-        SubItems.Append(Text);
+        SubItems.AddObject(Text, FTasks[i]);
         SubItems.Append(FTasks[i].FileName);
         SubItems.Append(FTasks[i].Location);
       end; //of with
@@ -1289,7 +1291,7 @@ end;
 
   Event that is called when search starts. }
 
-procedure TMain.OnTaskSearchStart(Sender: TObject; AMax: Cardinal);
+procedure TMain.OnTaskSearchStart(Sender: TObject);
 begin
   mmLang.Enabled := False;
   mmImport.Enabled := False;
@@ -1723,30 +1725,17 @@ end;
 
 procedure TMain.lwContextSelectItem(Sender: TObject; Item: TListItem;
   Selected: Boolean);
-var
-  Index: Integer;
-
 begin
   // Item selected?
   if (Selected and Assigned(Item)) then
   begin
-    // Find index of currently selected item in backend
-    Index := FContext.IndexOf(Item.SubItems[0], Item.SubItems[1]);
-
-    // Item not found?
-    if (Index = -1) then
-    begin
-      PopupMenu.AutoPopup := False;
-      FLang.ShowMessage(FLang.GetString(LID_NOTHING_SELECTED), mtError);
-      Exit;
-    end;  //of begin
-
-    // Load item into cache
-    FContext.Selected := FContext.Items[Index];
+    FContext.Selected := TContextListItem(Item.SubItems.Objects[0]);
 
     // Change button states
     bEnableContextItem.Enabled := not FContext.Selected.Enabled;
     bDisableContextItem.Enabled := not bEnableContextItem.Enabled;
+    bDeleteContextItem.Enabled := True;
+    bExportContextItem.Enabled := True;
 
     // Change text of "change status" button
     if bDisableContextItem.Enabled then
@@ -1754,11 +1743,10 @@ begin
     else
       pmChangeStatus.Caption := bEnableContextItem.Caption;
 
+    // Update popup menu
     pmChangeStatus.Enabled := True;
-    bDeleteContextItem.Enabled := True;
     pmDelete.Enabled := True;
     pmOpenRegedit.Enabled := True;
-    bExportContextItem.Enabled := True;
     pmExport.Enabled := True;
     pmRename.Enabled := (FContext.Selected is TShellItem);
     pmChangeIcon.Visible := pmRename.Enabled;
@@ -1799,30 +1787,17 @@ end;
 
 procedure TMain.lwServiceSelectItem(Sender: TObject; Item: TListItem;
   Selected: Boolean);
-var
-  Index: Integer;
-
 begin
   // Item selected?
   if (Selected and Assigned(Item)) then
   begin
-    // Find index of currently selected item in backend
-    Index := FService.IndexOf(Item.SubItems[0]);
-
-    // Item not found?
-    if (Index = -1) then
-    begin
-      PopupMenu.AutoPopup := False;
-      FLang.ShowMessage(FLang.GetString(LID_NOTHING_SELECTED), mtError);
-      Exit;
-    end;  //of begin
-
-    // Load item into cache
-    FService.Selected := FService.Items[Index];
+    FService.Selected := TServiceListItem(Item.SubItems.Objects[0]);
 
     // Change button states
     bEnableServiceItem.Enabled := not FService.Selected.Enabled;
     bDisableServiceItem.Enabled := not bEnableServiceItem.Enabled;
+    bDeleteServiceItem.Enabled := True;
+    bExportServiceItem.Enabled := True;
 
     // Change text of "change status" button
     if bDisableServiceItem.Enabled then
@@ -1830,11 +1805,10 @@ begin
     else
       pmChangeStatus.Caption := bEnableServiceItem.Caption;
 
+    // Update popup menu
     pmChangeStatus.Enabled := True;
-    bDeleteServiceItem.Enabled := True;
     pmDelete.Enabled := True;
     pmOpenRegedit.Enabled := True;
-    bExportServiceItem.Enabled := True;
     pmExport.Enabled := True;
     pmRename.Enabled := True;
     pmDeleteIcon.Visible := False;
@@ -1875,30 +1849,17 @@ end;
 
 procedure TMain.lwTasksSelectItem(Sender: TObject; Item: TListItem;
   Selected: Boolean);
-var
-  Index: Integer;
-
 begin
   // Item selected?
   if (Selected and Assigned(Item)) then
   begin
-    // Find index of currently selected item in backend
-    Index := FTasks.IndexOf(Item.SubItems[0]);
-
-    // Item not found?
-    if (Index = -1) then
-    begin
-      PopupMenu.AutoPopup := False;
-      FLang.ShowMessage(FLang.GetString(LID_NOTHING_SELECTED), mtError);
-      Exit;
-    end;  //of begin
-
-    // Load item into cache
-    FTasks.Selected := FTasks.Items[Index];
+    FTasks.Selected := TTaskListItem(Item.SubItems.Objects[0]);
 
     // Change button states
     bEnableTaskItem.Enabled := not FTasks.Selected.Enabled;
     bDisableTaskitem.Enabled := not bEnableTaskItem.Enabled;
+    bDeleteTaskItem.Enabled := True;
+    bExportTaskItem.Enabled := True;
 
     // Change text of "change status" button
     if bDisableTaskitem.Enabled then
@@ -1906,11 +1867,10 @@ begin
     else
       pmChangeStatus.Caption := bEnableTaskItem.Caption;
 
+    // Update popup menu
     pmChangeStatus.Enabled := True;
-    bDeleteTaskItem.Enabled := True;
     pmDelete.Enabled := True;
     pmOpenRegedit.Enabled := False;
-    bExportTaskItem.Enabled := True;
     pmExport.Enabled := True;
     pmRename.Enabled := True;
     pmDeleteIcon.Visible := False;
@@ -2067,8 +2027,6 @@ end;
 
 procedure TMain.lwStartupSelectItem(Sender: TObject; Item: TListItem;
   Selected: Boolean);
-var
-  Index: Integer;
 
   function IsDouble(AName: string; AStartIndex: Integer): Integer;
   var
@@ -2099,19 +2057,7 @@ begin
   // Item selected?
   if (Selected and Assigned(Item)) then
   begin
-    // Find index of currently selected item in backend
-    Index := FStartup.IndexOf(Item.SubItems[0], (Item.Caption = FLang.GetString(LID_YES)));
-
-    // Item not found?
-    if (Index = -1) then
-    begin
-      PopupMenu.AutoPopup := False;
-      FLang.ShowMessage(FLang.GetString(LID_NOTHING_SELECTED), mtError);
-      Exit;
-    end;  //of begin
-
-    // Load item into cache
-    FStartup.Selected := FStartup.Items[Index];
+    FStartup.Selected := TStartupListItem(Item.SubItems.Objects[0]);
 
     // Check for multiple items with the same name
     if (IsDouble(Item.SubItems[0], Item.Index) <> -1) then
@@ -2125,6 +2071,7 @@ begin
     begin
       bEnableStartupItem.Enabled := not FStartup.Selected.Enabled;
       bDisableStartupItem.Enabled := not bEnableStartupItem.Enabled;
+      bDeleteStartupItem.Enabled := True;
 
       // Change text of "change status" button
       if bDisableStartupItem.Enabled then
@@ -2133,6 +2080,7 @@ begin
         pmChangeStatus.Caption := bEnableStartupItem.Caption;
 
       pmChangeStatus.Enabled := True;
+      pmEdit.Enabled := True;
     end;  //of if
 
     // Selected item is enabled and startup user type?
@@ -2150,9 +2098,8 @@ begin
       pmOpenRegedit.Enabled := True;
     end;  //of if
 
-    pmEdit.Enabled := True;
+    // Update popup menu
     pmExport.Enabled := bExportStartupItem.Enabled;
-    bDeleteStartupItem.Enabled := True;
     pmDelete.Enabled := True;
     pmRename.Enabled := True;
     pmDeleteIcon.Visible := False;

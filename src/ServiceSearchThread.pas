@@ -2,7 +2,7 @@
 {                                                                         }
 { Clearas service search thread                                           }
 {                                                                         }
-{ Copyright (c) 2011-2015 Philipp Meisberger (PM Code Works)              }
+{ Copyright (c) 2011-2016 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
 { *********************************************************************** }
 
@@ -16,11 +16,9 @@ uses
 type
   TServiceSearchThread = class(TClearasSearchThread)
   private
-    FServiceList: TServiceList;
     FManager: SC_HANDLE;
-    FIncludeShared: Boolean;
   protected
-    procedure Execute; override;
+    procedure DoExecute; override;
   public
     /// <summary>
     ///   Constructor for creating a <c>TServiceSearchThread</c> instance.
@@ -34,13 +32,8 @@ type
     /// <param name="ALock">
     ///   The mutex.
     /// </param>
-    constructor Create(AServiceList: TServiceList; AManager: SC_HANDLE;
-      ALock: TCriticalSection);
-
-    /// <summary>
-    ///   Include shared services.
-    /// </summary>
-    property IncludeShared: Boolean read FIncludeShared write FIncludeShared;
+    constructor Create(AServiceList: TServiceList; ALock: TCriticalSection;
+      AManager: SC_HANDLE; AExpertMode: Boolean = False);
   end;
 
 implementation
@@ -48,14 +41,13 @@ implementation
 { TServiceSearchThread }
 
 constructor TServiceSearchThread.Create(AServiceList: TServiceList;
-  AManager: SC_HANDLE; ALock: TCriticalSection);
+  ALock: TCriticalSection; AManager: SC_HANDLE; AExpertMode: Boolean = False);
 begin
-  inherited Create(TRootList<TRootItem>(AServiceList), ALock);
-  FServiceList := AServiceList;
+  inherited Create(TRootList<TRootItem>(AServiceList), ALock, AExpertMode);
   FManager := AManager;
 end;
 
-procedure TServiceSearchThread.Execute;
+procedure TServiceSearchThread.DoExecute;
 var
   Service: SC_HANDLE;
   Services, ServicesCopy: PEnumServiceStatus;
@@ -63,74 +55,56 @@ var
   i: Integer;
 
 begin
-  FLock.Acquire();
+  ServicesReturned := 0;
+  ResumeHandle := 0;
+  Services := nil;
+
+  // Include services that are shared with other processes?
+  if FExpertMode then
+    ServiceType := SERVICE_WIN32
+  else
+    ServiceType := SERVICE_WIN32_OWN_PROCESS;
+
+  // Determine the required size for buffer
+  EnumServicesStatus(FManager, ServiceType, SERVICE_STATE_ALL, Services^, 0,
+    BytesNeeded, ServicesReturned, ResumeHandle);
+
+  LastError := GetLastError();
+
+  // ERROR_MORE_DATA will be fired normally
+  if (LastError <> ERROR_MORE_DATA) then
+    raise EServiceException.Create(SysErrorMessage(LastError));
+
+  GetMem(Services, BytesNeeded);
 
   try
-    // Clear data
-    FServiceList.Clear;
     ServicesReturned := 0;
     ResumeHandle := 0;
-    Services := nil;
+    ServicesCopy := Services;
 
-    // Include services that are shared with other processes?
-    if FIncludeShared then
-      ServiceType := SERVICE_WIN32
-    else
-      ServiceType := SERVICE_WIN32_OWN_PROCESS;
+    // Read all services matching
+    if not EnumServicesStatus(FManager, ServiceType, SERVICE_STATE_ALL,
+      Services^, BytesNeeded, BytesNeeded, ServicesReturned, ResumeHandle) then
+      raise EServiceException.Create(SysErrorMessage(GetLastError()));
 
-    // Determine the required size for buffer
-    EnumServicesStatus(FManager, ServiceType, SERVICE_STATE_ALL, Services^, 0,
-      BytesNeeded, ServicesReturned, ResumeHandle);
+    // Notify start of search
+    FProgressMax := ServicesReturned;
 
-    LastError := GetLastError();
-
-    // ERROR_MORE_DATA will be fired normally
-    if (LastError <> ERROR_MORE_DATA) then
-      raise EServiceException.Create(SysErrorMessage(LastError));
-
-    GetMem(Services, BytesNeeded);
-
-    try
-      ServicesReturned := 0;
-      ResumeHandle := 0;
-      ServicesCopy := Services;
-
-      // Read all services matching
-      if not EnumServicesStatus(FManager, ServiceType, SERVICE_STATE_ALL,
-        Services^, BytesNeeded, BytesNeeded, ServicesReturned, ResumeHandle) then
-        raise EServiceException.Create(SysErrorMessage(GetLastError()));
-
-      // Notify start of search
-      FProgressMax := ServicesReturned;
-      Synchronize(DoNotifyOnStart);
-
-      // Add services to list
-      for i := 0 to ServicesReturned - 1 do
-      begin
-        Synchronize(DoNotifyOnSearching);
-        Service := OpenService(FManager, ServicesCopy^.lpServiceName, SERVICE_QUERY_CONFIG);
-
-        // Skip corrupted service
-        if (Service <> 0) then
-          FServiceList.LoadService(ServicesCopy^.lpServiceName, Service, FIncludeShared);
-
-        Inc(ServicesCopy);
-      end;  //of for
-
-    finally
-      FreeMem(Services, BytesNeeded);
-      FLock.Release();
-
-      // Notify end of search
-      Synchronize(DoNotifyOnFinish);
-    end;  //of try
-
-  except
-    on E: Exception do
+    // Add services to list
+    for i := 0 to ServicesReturned - 1 do
     begin
-      FErrorMessage := Format('%s: %s', [ToString(), E.Message]);
-      Synchronize(DoNotifyOnError);
-    end;
+      Synchronize(DoNotifyOnSearching);
+      Service := OpenService(FManager, ServicesCopy^.lpServiceName, SERVICE_QUERY_CONFIG);
+
+      // Skip corrupted service
+      if (Service <> 0) then
+        TServiceList(FSelectedList).LoadService(ServicesCopy^.lpServiceName, Service, FExpertMode);
+
+      Inc(ServicesCopy);
+    end;  //of for
+
+  finally
+    FreeMem(Services, BytesNeeded);
   end;  //of try
 end;
 
