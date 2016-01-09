@@ -498,7 +498,7 @@ type
   ///   The possible basically item changes.
   /// </summary>
   TItemStatus = (
-    stEnabled, stDisabled, stDeleted
+    stNone, stEnabled, stDisabled, stDeleted
   );
 
   { Events }
@@ -614,11 +614,6 @@ type
     procedure DisableItem();
 
     /// <summary>
-    ///   Notifies that the list needs a visual update.
-    /// </summary>
-    procedure DoNotifyOnFinished();
-
-    /// <summary>
     ///   Enables the current selected item.
     /// </summary>
     procedure EnableItem();
@@ -638,6 +633,8 @@ type
     ///   The absolute filename to the file.
     /// </param>
     procedure ExportList(const AFileName: string); virtual; abstract;
+
+    procedure Filter(const ASearchString: string; ASearchCaption: Boolean = True);
 
     /// <summary>
     ///   Gets the filter for file export.
@@ -699,6 +696,11 @@ type
     ///   default search mode.
     /// </param>
     procedure Load(AExpertMode: Boolean = False); virtual; abstract;
+
+    /// <summary>
+    ///   Notifies that the list needs a visual update.
+    /// </summary>
+    procedure Notify();
 
     /// <summary>
     ///   Renames the current selected item.
@@ -2678,6 +2680,14 @@ begin
     FOnChanged(Self, ANewStatus);
 end;
 
+procedure TRootList<T>.Notify();
+begin
+  if Assigned(OnSearchFinish) then
+    OnSearchFinish(Self);
+
+  FInvalid := False;
+end;
+
 function TRootList<T>.QueryInterface(const IID: TGUID; out Obj): HResult;
 begin
   if GetInterface(IID, Obj) then
@@ -2817,15 +2827,6 @@ begin
   ChangeItemStatus(False);
 end;
 
-procedure TRootList<T>.DoNotifyOnFinished();
-begin
-  if Assigned(FOnSearchFinish) then
-    FOnSearchFinish(Self);
-
-  DoNotifyOnChanged(stDeleted);
-  FInvalid := False;
-end;
-
 procedure TRootList<T>.EnableItem();
 begin
   ChangeItemStatus(True);
@@ -2846,6 +2847,27 @@ begin
   finally
     FLock.Release();
   end;  //of try
+end;
+
+procedure TRootList<T>.Filter(const ASearchString: string;
+  ASearchCaption: Boolean);
+var
+  Item: TRootItem;
+  ItemName: string;
+
+begin
+  for Item in List do
+    if Assigned(Item) then
+    begin
+      if (ASearchCaption and not Item.Caption.IsEmpty) then
+        ItemName := Item.Caption.ToLower
+      else
+        ItemName := Item.Name.ToLower;
+
+      if (ASearchString.IsEmpty or ItemName.Contains(ASearchString.ToLower) or
+        Item.Location.ToLower.Contains(ASearchString.ToLower)) then
+        OnNotify(Self, Item, cnExtracted);
+    end;  //of begin
 end;
 
 function TRootList<T>.GetExportFilter(ALanguageFile: TLanguageFile): string;
@@ -3965,7 +3987,7 @@ begin
 
     // Refresh TListView
     if Result then
-      DoNotifyOnFinished();
+      Notify();
 
   finally
     FLock.Release();
@@ -4076,7 +4098,7 @@ begin
 
     // Refresh TListView
     if Result then
-      DoNotifyOnFinished();
+      Notify();
 
   finally
     LnkFile.Free;
@@ -4992,7 +5014,7 @@ begin
         AExtended)) <> -1);
 
       // Refresh TListView
-      DoNotifyOnFinished();
+      Notify();
 
     finally
       Reg.CloseKey();
@@ -5623,7 +5645,7 @@ begin
       ssAutomatic, FManager)) <> -1);
 
     // Refresh TListView
-    DoNotifyOnFinished();
+    Notify();
 
   finally
     FLock.Release();
@@ -6102,7 +6124,7 @@ begin
       Result := (AddTaskItem(NewTask, TaskFolder) <> -1);
 
       // Refresh TListView
-      DoNotifyOnFinished();
+      Notify();
     end;  //of begin
     // TODO: ZIP file import
     {else

@@ -103,7 +103,7 @@ begin
 
   // Notify that GUI counter needs to be updated
   if Assigned(FOnChanged) then
-    FOnChanged(Self, stDeleted);
+    FOnChanged(Self, stNone);
 end;
 
 procedure TClearasSearchThread.DoNotifyOnSearching();
