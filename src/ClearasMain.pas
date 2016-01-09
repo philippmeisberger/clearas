@@ -15,7 +15,7 @@ uses
   Vcl.ComCtrls, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Dialogs, Vcl.Menus, Vcl.Graphics,
   Vcl.ClipBrd, Registry, StrUtils, System.ImageList, Winapi.CommCtrl,
   System.UITypes, ClearasAPI, ExportListThread, PMCWAbout, PMCWLanguageFile,
-  PMCWOSUtils, PMCWUpdater, PMCWDialogs, Vcl.ImgList, System.Generics.Collections;
+  PMCWOSUtils, PMCWUpdater, PMCWDialogs, Vcl.ImgList;
 
 const
   KEY_RECYCLEBIN = 'CLSID\{645FF040-5081-101B-9F08-00AA002F954E}\shell';
@@ -195,8 +195,6 @@ type
     function GetSelectedList(): TRootList<TRootItem>;
     function GetSelectedListView(): TListView;
     procedure LoadItems(ATotalRefresh: Boolean = True);
-    procedure OnContextNotify(Sender: TObject; const Item: TContextListItem;
-      Action: TCollectionNotification);
     procedure OnContextSearchStart(Sender: TObject);
     procedure OnContextSearchEnd(Sender: TObject);
     procedure OnContextItemChanged(Sender: TObject; ANewStatus: TItemStatus);
@@ -204,18 +202,12 @@ type
     procedure OnExportListEnd(Sender: TObject; APageControlIndex: Integer);
     procedure OnExportListError(Sender: TObject; AErrorMessage: string);
     procedure OnSearchError(Sender: TObject; AErrorMessage: string);
-    procedure OnStartupNotify(Sender: TObject; const Item: TStartupListItem;
-      Action: TCollectionNotification);
     procedure OnStartupSearchStart(Sender: TObject);
     procedure OnStartupSearchEnd(Sender: TObject);
     procedure OnStartupItemChanged(Sender: TObject; ANewStatus: TItemStatus);
-    procedure OnServiceNotify(Sender: TObject; const Item: TServiceListItem;
-      Action: TCollectionNotification);
     procedure OnServiceSearchStart(Sender: TObject);
     procedure OnServiceSearchEnd(Sender: TObject);
     procedure OnServiceItemChanged(Sender: TObject; ANewStatus: TItemStatus);
-    procedure OnTaskNotify(Sender: TObject; const Item: TTaskListItem;
-      Action: TCollectionNotification);
     procedure OnTaskSearchStart(Sender: TObject);
     procedure OnTaskSearchEnd(Sender: TObject);
     procedure OnTaskItemChanged(Sender: TObject; ANewStatus: TItemStatus);
@@ -262,7 +254,6 @@ begin
   // Link search events
   with FStartup do
   begin
-    OnNotify := OnStartupNotify;
     OnChanged := OnStartupItemChanged;
     OnSearchError := Self.OnSearchError;
     OnSearchFinish := OnStartupSearchEnd;
@@ -274,7 +265,6 @@ begin
   // Link search events
   with FContext do
   begin
-    OnNotify := OnContextNotify;
     OnChanged := OnContextItemChanged;
     OnSearchError := Self.OnSearchError;
     OnSearchFinish := OnContextSearchEnd;
@@ -286,7 +276,6 @@ begin
   // Link search events
   with FService do
   begin
-    OnNotify := OnServiceNotify;
     OnChanged := OnServiceItemChanged;
     OnSearchError := Self.OnSearchError;
     OnSearchFinish := OnServiceSearchEnd;
@@ -301,7 +290,6 @@ begin
     // Link search events
     with FTasks do
     begin
-      OnNotify := OnTaskNotify;
       OnChanged := OnTaskItemChanged;
       OnSearchError := Self.OnSearchError;
       OnSearchFinish := OnTaskSearchEnd;
@@ -787,7 +775,7 @@ begin
            FTasks.Load(cbTaskExpert.Checked);
     end  //of case
     else
-      GetSelectedList().Notify();
+      GetSelectedList().DoNotifyOnFinished();
 
   except
     on E: EInvalidItem do
@@ -796,13 +784,15 @@ begin
   end;  //of try
 end;
 
+{ private TMain.OnContextSearchStart
+
+  Event that is called when search starts. }
+
 procedure TMain.OnContextSearchStart(Sender: TObject);
 begin
   mmLang.Enabled := False;
   cbContextExpert.Enabled := False;
   lwContext.Cursor := crHourGlass;
-  lwContext.Clear;
-  OnContextItemChanged(Self, stDeleted);
 
   // Show progress bar
   if cbContextExpert.Checked then
@@ -812,15 +802,45 @@ begin
   end;  //of begin
 end;
 
+{ private TMain.OnContextSearchEnd
+
+  Event that is called when search ends. }
+
 procedure TMain.OnContextSearchEnd(Sender: TObject);
+var
+  i: Integer;
+  Text: string;
+
 begin
+  // Clear all visual data
+  lwContext.Clear;
+
+  // Print all information about context menu entries
+  for i := 0 to FContext.Count - 1 do
+  begin
+    // Show name or caption of item?
+    if ((FContext.Items[i].Caption <> '') and mmShowCaptions.Checked) then
+      Text := FContext[i].Caption
+    else
+      Text := FContext[i].Name;
+
+    // Filter items
+    if ((eContextSearch.Text = '') or
+      (AnsiContainsText(Text, eContextSearch.Text) or
+      AnsiContainsText(FContext[i].LocationRoot, eContextSearch.Text))) then
+      with lwContext.Items.Add do
+      begin
+        Caption := FContext[i].GetStatus(FLang);
+        SubItems.AddObject(Text, FContext[i]);
+        SubItems.Append(FContext[i].LocationRoot);
+        SubItems.Append(FContext[i].ToString());
+      end; //of with
+  end;  //of for
+
   // Update some VCL
   mmLang.Enabled := True;
   cbContextExpert.Enabled := True;
-  FContext.Filter(eContextSearch.Text, mmShowCaptions.Checked);
-  lwContext.AlphaSort();
   lwContext.Cursor := crDefault;
-  FContext.IsInvalid := False;
 
   // Hide progress bar
   if cbContextExpert.Checked then
@@ -828,7 +848,15 @@ begin
     pbContextProgress.Visible := False;
     eContextSearch.Visible := True;
   end;  //of begin
+
+  // Sort!
+  lwContext.AlphaSort();
+  FContext.IsInvalid := False;
 end;
+
+{ private TMain.OnContextItemChanged
+
+  Event method that is called when item status has been changed. }
 
 procedure TMain.OnContextItemChanged(Sender: TObject; ANewStatus: TItemStatus);
 begin
@@ -862,30 +890,9 @@ begin
   end;  //of case
 end;
 
-procedure TMain.OnContextNotify(Sender: TObject; const Item: TContextListItem;
-  Action: TCollectionNotification);
-var
-  Text: string;
+{ private TMain.OnExportListStart
 
-begin
-  if (Action <> cnExtracted) then
-    Exit;
-
-  // Show name or caption of item?
-  if ((Item.Caption <> '') and mmShowCaptions.Checked) then
-    Text := Item.Caption
-  else
-    Text := Item.Name;
-
-  // Filter items
-  with lwContext.Items.Add do
-  begin
-    Caption := Item.GetStatus(FLang);
-    SubItems.AddObject(Text, Item);
-    SubItems.Append(Item.LocationRoot);
-    SubItems.Append(Item.ToString());
-  end; //of with
-end;
+  Event that is called when export list starts. }
 
 procedure TMain.OnExportListStart(Sender: TObject; APageControlIndex: Integer);
 begin
@@ -914,6 +921,10 @@ begin
   end;  //of case
 end;
 
+{ private TMain.OnExportListEnd
+
+  Event that is called when export list ends. }
+
 procedure TMain.OnExportListEnd(Sender: TObject; APageControlIndex: Integer);
 begin
   PageControl.Pages[APageControlIndex].Cursor := crDefault;
@@ -941,10 +952,18 @@ begin
   end;  //of case
 end;
 
+{ private TMain.OnExportListError
+
+  Event method that is called when export thread has failed. }
+
 procedure TMain.OnExportListError(Sender: TObject; AErrorMessage: string);
 begin
   FLang.ShowException(FLang.GetString([LID_EXPORT, LID_IMPOSSIBLE]), AErrorMessage);
 end;
+
+{ private TMain.OnStartupItemChanged
+
+  Event method that is called when item status has been changed. }
 
 procedure TMain.OnStartupItemChanged(Sender: TObject; ANewStatus: TItemStatus);
 begin
@@ -988,50 +1007,9 @@ begin
   end;  //of case
 end;
 
-procedure TMain.OnStartupNotify(Sender: TObject; const Item: TStartupListItem;
-  Action: TCollectionNotification);
-var
-  Icon: TIcon;
-  Text: string;
+{ private TMain.OnStartupSearchStart
 
-begin
-  if (Action <> cnExtracted) then
-    Exit;
-
-  Icon := TIcon.Create;
-
-  try
-    with lwStartup.Items.Add do
-    begin
-      Caption := Item.GetStatus(FLang);
-
-      if ((Item.Caption <> '') and mmShowCaptions.Checked) then
-        Text := Item.Caption
-      else
-        Text := Item.Name;
-
-      SubItems.AddObject(Text, Item);
-      SubItems.Append(Item.FileName);
-      SubItems.Append(Item.ToString());
-
-      // Show deactivation timestamp?
-      if mmDate.Checked then
-      begin
-        if (Item.Time <> 0) then
-          SubItems.Append(DateTimeToStr(Item.Time))
-        else
-          SubItems.Append('');
-      end;  //of begin
-
-      // Get icon of program
-      Icon.Handle := Item.Icon;
-      ImageIndex := IconList.AddIcon(Icon);
-    end;  //of with
-
-  finally
-    Icon.Free;
-  end;  //of try
-end;
+  Event that is called when search starts. }
 
 procedure TMain.OnStartupSearchStart(Sender: TObject);
 begin
@@ -1039,24 +1017,72 @@ begin
   mmImport.Enabled := False;
   cbRunOnce.Enabled := False;
   lwStartup.Cursor := crHourGlass;
-  lwStartup.Clear;
-  IconList.Clear;
-  OnStartupItemChanged(Self, stDeleted);
 end;
+
+{ private TMain.OnStartupSearchEnd
+
+  Event that is called when search ends. }
 
 procedure TMain.OnStartupSearchEnd(Sender: TObject);
 var
-  Item: TStartupListItem;
+  Icon: TIcon;
+  i: Integer;
+  Text: string;
 
 begin
+  // Clear all visual data
+  lwStartup.Clear;
+  IconList.Clear;
+  Icon := TIcon.Create;
+
+  try
+    // Print all information about startup entires
+    for i := 0 to FStartup.Count - 1 do
+      with lwStartup.Items.Add do
+      begin
+        Caption := FStartup[i].GetStatus(FLang);
+
+        if ((FStartup[i].Caption <> '') and mmShowCaptions.Checked) then
+          Text := FStartup[i].Caption
+        else
+          Text := FStartup[i].Name;
+
+        SubItems.AddObject(Text, FStartup[i]);
+        SubItems.Append(FStartup[i].FileName);
+        SubItems.Append(FStartup[i].ToString());
+
+        // Show deactivation timestamp?
+        if mmDate.Checked then
+        begin
+          if (FStartup[i].Time <> 0) then
+            SubItems.Append(DateTimeToStr(FStartup[i].Time))
+          else
+            SubItems.Append('');
+        end;  //of begin
+
+        // Get icon of program
+        Icon.Handle := FStartup[i].Icon;
+        ImageIndex := IconList.AddIcon(Icon);
+      end;  //of with
+
+  finally
+    Icon.Free;
+  end;  //of try
+
+  // Update some VCL
   mmImport.Enabled := True;
   mmLang.Enabled := True;
   cbRunOnce.Enabled := True;
-  FStartup.Filter('', mmShowCaptions.Checked);
-  lwStartup.AlphaSort();
   lwStartup.Cursor := crDefault;
+
+  // Sort!
+  lwStartup.AlphaSort();
   FStartup.IsInvalid := False;
 end;
+
+{ private TMain.OnServiceItemChanged
+
+  Event method that is called when item status has been changed. }
 
 procedure TMain.OnServiceItemChanged(Sender: TObject; ANewStatus: TItemStatus);
 begin
@@ -1098,41 +1124,15 @@ begin
   end;  //of case
 end;
 
-procedure TMain.OnServiceNotify(Sender: TObject; const Item: TServiceListItem;
-  Action: TCollectionNotification);
-var
-  Text: string;
+{ private TMain.OnServiceSearchStart
 
-begin
-  if (Action <> cnExtracted) then
-    Exit;
-
-  // Show name or caption of item?
-  if ((Item.Caption <> '') and mmShowCaptions.Checked) then
-    Text := Item.Caption
-  else
-    Text := Item.Name;
-
-  with lwService.Items.Add do
-  begin
-    Caption := Item.GetStatus(FLang);
-    SubItems.AddObject(Text, Item);
-    SubItems.Append(Item.FileName);
-    SubItems.Append(Item.Start.ToString(FLang));
-
-    // Show deactivation timestamp?
-    if (mmDate.Checked and (Item.Time <> 0)) then
-      SubItems.Append(DateTimeToStr(Item.Time));
-  end;  //of with
-end;
+  Event that is called when search starts. }
 
 procedure TMain.OnServiceSearchStart(Sender: TObject);
 begin
   mmLang.Enabled := False;
   cbServiceExpert.Enabled := False;
   lwService.Cursor := crHourGlass;
-  lwService.Clear;
-  OnServiceItemChanged(Self, stDeleted);
 
   // Show progress bar
   if cbServiceExpert.Checked then
@@ -1142,14 +1142,46 @@ begin
   end;  //of begin
 end;
 
+{ private TMain.OnServiceSearchEnd
+
+  Event that is called when search ends. }
+
 procedure TMain.OnServiceSearchEnd(Sender: TObject);
+var
+  i: Integer;
+  Text: string;
+
 begin
+  // Clear all visual data
+  lwService.Clear;
+
+  // Print all information about service items
+  for i := 0 to FService.Count - 1 do
+  begin
+    // Show name or caption of item?
+    if ((FService[i].Caption <> '') and mmShowCaptions.Checked) then
+      Text := FService[i].Caption
+    else
+      Text := FService[i].Name;
+
+    // Filter items
+    if ((eServiceSearch.Text = '') or (AnsiContainsText(Text, eServiceSearch.Text))) then
+      with lwService.Items.Add do
+      begin
+        Caption := FService[i].GetStatus(FLang);
+        SubItems.AddObject(Text, FService[i]);
+        SubItems.Append(FService[i].FileName);
+        SubItems.Append(FService[i].Start.ToString(FLang));
+
+        // Show deactivation timestamp?
+        if (mmDate.Checked and (FService[i].Time <> 0)) then
+          SubItems.Append(DateTimeToStr(FService[i].Time));
+      end;  //of with
+    end;  //of for
+
   mmLang.Enabled := True;
   cbServiceExpert.Enabled := True;
-  FService.Filter(eServiceSearch.Text, mmShowCaptions.Checked);
-  lwStartup.AlphaSort();
   lwService.Cursor := crDefault;
-  FService.IsInvalid := False;
 
   // Hide progress bar
   if cbServiceExpert.Checked then
@@ -1157,12 +1189,24 @@ begin
     pbServiceProgress.Visible := False;
     eServiceSearch.Visible := True;
   end;  //of begin
+
+  // Sort!
+  lwService.AlphaSort();
+  FService.IsInvalid := False;
 end;
+
+{ private TMain.OnSearchError
+
+  Event method that is called when search thread has failed. }
 
 procedure TMain.OnSearchError(Sender: TObject; AErrorMessage: string);
 begin
   FLang.ShowException(FLang.GetString([LID_REFRESH, LID_IMPOSSIBLE]), AErrorMessage);
 end;
+
+{ private TMain.OnTaskItemChanged
+
+  Event method that is called when item status has been changed. }
 
 procedure TMain.OnTaskItemChanged(Sender: TObject; ANewStatus: TItemStatus);
 begin
@@ -1196,30 +1240,40 @@ begin
   end;  //of case
 end;
 
-procedure TMain.OnTaskNotify(Sender: TObject; const Item: TTaskListItem;
-  Action: TCollectionNotification);
-begin
-  if (Action <> cnExtracted) then
-    Exit;
+{ private TMain.OnTaskSearchEnd
 
-  with lwTasks.Items.Add do
-  begin
-    Caption := Item.GetStatus(FLang);
-    SubItems.AddObject(Item.Name, Item);
-    SubItems.Append(Item.FileName);
-    SubItems.Append(Item.Location);
-  end; //of with
-end;
+  Event that is called when export list ends. }
 
 procedure TMain.OnTaskSearchEnd(Sender: TObject);
+var
+  i: Integer;
+  Text: string;
+
 begin
+  // Clear all visual data
+  lwTasks.Clear;
+
+  // Print all information about task items
+  for i := 0 to FTasks.Count - 1 do
+  begin
+    Text := FTasks[i].Name;
+
+    // Filter items
+    if ((eTaskSearch.Text = '') or (AnsiContainsText(Text, eTaskSearch.Text))) then
+      with lwTasks.Items.Add do
+      begin
+        Caption := FTasks[i].GetStatus(FLang);
+        SubItems.AddObject(Text, FTasks[i]);
+        SubItems.Append(FTasks[i].FileName);
+        SubItems.Append(FTasks[i].Location);
+      end; //of with
+  end;  //of for
+
+  // Update some VCL
   mmImport.Enabled := True;
   mmLang.Enabled := True;
   cbTaskExpert.Enabled := True;
-  FTasks.Filter(eTaskSearch.Text, mmShowCaptions.Checked);
-  lwTasks.AlphaSort();
   lwTasks.Cursor := crDefault;
-  FTasks.IsInvalid := False;
 
   // Hide progress bar
   if cbTaskExpert.Checked then
@@ -1227,7 +1281,15 @@ begin
     pbTaskProgress.Visible := False;
     eTaskSearch.Visible := True;
   end;  //of begin
+
+  // Sort!
+  lwTasks.AlphaSort();
+  FTasks.IsInvalid := False;
 end;
+
+{ private TMain.OnTaskSearchStart
+
+  Event that is called when search starts. }
 
 procedure TMain.OnTaskSearchStart(Sender: TObject);
 begin
@@ -1235,8 +1297,6 @@ begin
   mmImport.Enabled := False;
   cbTaskExpert.Enabled := False;
   lwTasks.Cursor := crHourGlass;
-  lwTasks.Clear;
-  OnTaskItemChanged(Self, stDeleted);
 
   // Show progress bar
   if cbTaskExpert.Checked then
@@ -1492,6 +1552,10 @@ begin
   end;  //of try
 end;
 
+{ TMain.bDeleteItemClick
+
+  Event method that is called when user wants to delete an item. }
+
 procedure TMain.bDeleteItemClick(Sender: TObject);
 begin
   case PageControl.ActivePageIndex of
@@ -1502,10 +1566,18 @@ begin
   end;  //of case
 end;
 
+{ TMain.bDisableItemClick
+
+  Event method that is called when user wants to disable an item. }
+
 procedure TMain.bDisableItemClick(Sender: TObject);
 begin
   DisableItem();
 end;
+
+{ TMain.bEnableStartupItemClick
+
+  Enables currently selected startup item. }
 
 procedure TMain.bEnableStartupItemClick(Sender: TObject);
 begin
@@ -1522,6 +1594,10 @@ begin
   end;  //of begin
 end;
 
+{ TMain.bEnableContextItemClick
+
+  Enables currently selected context menu item. }
+
 procedure TMain.bEnableContextItemClick(Sender: TObject);
 begin
   // Successfully enabled item?
@@ -1532,6 +1608,10 @@ begin
       FLang.ShowMessage(LID_FILE_DOES_NOT_EXIST, LID_ENTRY_CAN_DE_DELETED, mtWarning);
   end;  //of begin
 end;
+
+{ TMain.bEnableServiceItemClick
+
+  Enables currently selected service item. }
 
 procedure TMain.bEnableServiceItemClick(Sender: TObject);
 begin
@@ -1557,10 +1637,18 @@ begin
   EnableItem();
 end;
 
+{ TMain.bExportStartupItemClick
+
+  Calls the export method of current selected deactivated startup item. }
+
 procedure TMain.bExportStartupItemClick(Sender: TObject);
 begin
   CreateStartupUserBackup();
 end;
+
+{ TMain.bExportItemClick
+
+  Calls the export method of current selected context menu item. }
 
 procedure TMain.bExportItemClick(Sender: TObject);
 begin
@@ -1578,37 +1666,44 @@ begin
   end;  //of try
 end;
 
+{ TMain.eSearchChange
+
+  Event method that is called when user changes the search string. }
+
 procedure TMain.eSearchChange(Sender: TObject);
-var
-  ButtonedEdit: TButtonedEdit;
-
 begin
-  ButtonedEdit := (Sender as TButtonedEdit);
-
-  if (ButtonedEdit.Text = '') then
+  if ((Sender as TButtonedEdit).Text = '') then
   begin
-    ButtonedEdit.RightButton.ImageIndex := 0;
-    ButtonedEdit.RightButton.DisabledImageIndex := 0;
-    ButtonedEdit.RightButton.HotImageIndex := 0;
-    ButtonedEdit.RightButton.PressedImageIndex := 0;
+    (Sender as TButtonedEdit).RightButton.ImageIndex := 0;
+    (Sender as TButtonedEdit).RightButton.DisabledImageIndex := 0;
+    (Sender as TButtonedEdit).RightButton.HotImageIndex := 0;
+    (Sender as TButtonedEdit).RightButton.PressedImageIndex := 0;
   end  //of begin
   else
   begin
-    ButtonedEdit.RightButton.ImageIndex := 1;
-    ButtonedEdit.RightButton.DisabledImageIndex := 1;
-    ButtonedEdit.RightButton.HotImageIndex := 2;
-    ButtonedEdit.RightButton.PressedImageIndex := 2;
+    (Sender as TButtonedEdit).RightButton.ImageIndex := 1;
+    (Sender as TButtonedEdit).RightButton.DisabledImageIndex := 1;
+    (Sender as TButtonedEdit).RightButton.HotImageIndex := 2;
+    (Sender as TButtonedEdit).RightButton.PressedImageIndex := 2;
   end;  //of if
 
-  GetSelectedListView().Clear();
-  GetSelectedList().Notify();
+  // Refresh TListView
+  GetSelectedList().OnSearchFinish(Self);
 end;
+
+{ TMain.eSearchRightButtonClick
+
+  Event method that is called when user clicked on clear. }
 
 procedure TMain.eSearchRightButtonClick(Sender: TObject);
 begin
   if ((Sender as TButtonedEdit).Text <> '') then
     (Sender as TButtonedEdit).Clear;
 end;
+
+{ TMain.lwContextDblClick
+
+  Event method that is called when user double clicks on TListView item. }
 
 procedure TMain.lwContextDblClick(Sender: TObject);
 begin
@@ -1623,6 +1718,10 @@ begin
       else
         FLang.ShowMessage(FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
 end;
+
+{ TMain.lwContextSelectItem
+
+  Event method that is called when user selects an item in list. }
 
 procedure TMain.lwContextSelectItem(Sender: TObject; Item: TListItem;
   Selected: Boolean);
@@ -1664,6 +1763,10 @@ begin
     PopupMenu.AutoPopup := False;
 end;
 
+{ TMain.lwServiceDblClick
+
+  Event method that is called when user double clicks on TListView item. }
+
 procedure TMain.lwServiceDblClick(Sender: TObject);
 begin
   if bEnableServiceItem.Enabled then
@@ -1677,6 +1780,10 @@ begin
       else
         FLang.ShowMessage(FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
 end;
+
+{ TMain.lwServiceSelectItem
+
+  Event method that is called when user selects an item in list. }
 
 procedure TMain.lwServiceSelectItem(Sender: TObject; Item: TListItem;
   Selected: Boolean);
@@ -1718,6 +1825,10 @@ begin
     PopupMenu.AutoPopup := False;
 end;
 
+{ TMain.lwTasksDblClick
+
+  Event method that is called when user double clicks on TListView item. }
+
 procedure TMain.lwTasksDblClick(Sender: TObject);
 begin
   if bEnableTaskItem.Enabled then
@@ -1731,6 +1842,10 @@ begin
       else
         FLang.ShowMessage(FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
 end;
+
+{ TMain.lwTasksSelectItem
+
+  Event method that is called when user selects an item in list. }
 
 procedure TMain.lwTasksSelectItem(Sender: TObject; Item: TListItem;
   Selected: Boolean);
@@ -1771,6 +1886,10 @@ begin
     // Nothing selected: Hide popup menu!
     PopupMenu.AutoPopup := False;
 end;
+
+{ TMain.ListViewColumnClick
+
+  Event method that is called when user clicks on TListView column. }
 
 procedure TMain.ListViewColumnClick(Sender: TObject; Column: TListColumn);
 var
@@ -1822,6 +1941,10 @@ begin
   List.AlphaSort();
 end;
 
+{ TMain.ListViewCompare
+
+  Sorts a TListView column alphabetically. }
+
 procedure TMain.ListViewCompare(Sender: TObject; Item1, Item2: TListItem;
   Data: Integer; var Compare: Integer);
 var
@@ -1850,6 +1973,10 @@ begin
   end;  //of if
 end;
 
+{ TMain.lwStartupDblClick
+
+  Event method that is called when user double clicks on TListView item. }
+
 procedure TMain.lwStartupDblClick(Sender: TObject);
 begin
   if bEnableStartupItem.Enabled then
@@ -1863,6 +1990,10 @@ begin
       else
         FLang.ShowMessage(FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
 end;
+
+{ TMain.ListViewKeyPress
+
+  Event method that is called when user pushes a button inside TListView. }
 
 procedure TMain.ListViewKeyPress(Sender: TObject; var Key: Char);
 var
@@ -1889,6 +2020,10 @@ begin
       Break;
     end;  //of begin
 end;
+
+{ TMain.lwStartupSelectItem
+
+  Event method that is called when user selects an item in list. }
 
 procedure TMain.lwStartupSelectItem(Sender: TObject; Item: TListItem;
   Selected: Boolean);
@@ -1978,10 +2113,18 @@ begin
     PopupMenu.AutoPopup := False;
 end;
 
+{ TMain.pmChangeStatusClick
+
+  Popup menu entry to change the status of the current selected item. }
+
 procedure TMain.pmChangeStatusClick(Sender: TObject);
 begin
   GetSelectedListView().OnDblClick(Sender);
 end;
+
+{ TMain.pmChangeIconClick
+
+  Popup menu entry to change the icon of the current selected shell item. }
 
 procedure TMain.pmChangeIconClick(Sender: TObject);
 var
@@ -2012,6 +2155,10 @@ begin
   end;  //of try
 end;
 
+{ TMain.pmDeleteClick
+
+  Popup menu entry to delete the current selected item. }
+
 procedure TMain.pmDeleteClick(Sender: TObject);
 begin
   case PageControl.ActivePageIndex of
@@ -2021,6 +2168,10 @@ begin
     3: bDeleteTaskItem.OnClick(Sender);
   end;  //of case
 end;
+
+{ TMain.pmDeleteIconClick
+
+  Popup menu entry to delete the icon of the current selected shell item. }
 
 procedure TMain.pmDeleteIconClick(Sender: TObject);
 begin
@@ -2049,6 +2200,10 @@ begin
   end;  //of try
 end;
 
+{ TMain.pmOpenRegeditClick
+
+  Opens the path of the current selected item in Explorer. }
+
 procedure TMain.pmOpenExplorerClick(Sender: TObject);
 begin
   try
@@ -2063,6 +2218,10 @@ begin
         FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
   end;  //of try
 end;
+
+{ TMain.pmOpenRegeditClick
+
+  Opens the current selected item in RegEdit. }
 
 procedure TMain.pmOpenRegeditClick(Sender: TObject);
 var
@@ -2081,6 +2240,10 @@ begin
         FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
   end;  //of try
 end;
+
+{ TMain.pmRenameClick
+
+  Renames the current selected item. }
 
 procedure TMain.pmRenameClick(Sender: TObject);
 var
@@ -2122,6 +2285,10 @@ begin
   end;  //of try
 end;
 
+{ TMain.pmCopyLocationClick
+
+  Popup menu entry to show some properties. }
+
 procedure TMain.pmCopyLocationClick(Sender: TObject);
 var
   Item: TRootItem;
@@ -2141,6 +2308,10 @@ begin
         FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
   end;  //of try
 end;
+
+{ TMain.pmEditClick
+
+  Popup menu entry to edit the path of a program. }
 
 procedure TMain.pmEditClick(Sender: TObject);
 var
@@ -2193,6 +2364,10 @@ begin
       FLang.ShowException(FLang.GetString([LID_PATH_EDIT, LID_IMPOSSIBLE]), E.Message);
   end;  //of try
 end;
+
+{ TMain.mmAddClick
+
+  MainMenu entry to add a new item to the current selected list. }
 
 procedure TMain.mmAddClick(Sender: TObject);
 var
@@ -2298,6 +2473,10 @@ begin
   end;  //of try
 end;
 
+{ TMain.mmDateClick
+
+  MainMenu entry to add or remove the deactivation timestamp column. }
+
 procedure TMain.mmDateClick(Sender: TObject);
 var
   ListView: TListView;
@@ -2322,6 +2501,10 @@ begin
   ShowColumnDate(ListView, mmDate.Checked);
 end;
 
+{ TMain.mmExportClick
+
+  MainMenu entry to export a single item as .reg file. }
+
 procedure TMain.mmExportClick(Sender: TObject);
 begin
   if (PageControl.ActivePageIndex = 0) then
@@ -2329,6 +2512,10 @@ begin
   else
     bExportItemClick(Sender);
 end;
+
+{ TMain.mmExportListClick
+
+  MainMenu entry to export the complete list as .reg (backup) file. }
 
 procedure TMain.mmExportListClick(Sender: TObject);
 var
@@ -2375,6 +2562,10 @@ begin
   end;  //of try
 end;
 
+{ TMain.mmImportClick
+
+  MainMenu entry to import a startup backup file. }
+
 procedure TMain.mmImportClick(Sender: TObject);
 var
   BackupDir, Filter, FileName: string;
@@ -2419,10 +2610,18 @@ begin
   end;  //of try
 end;
 
+{ TMain.mmDelBackupClick
+
+  MainMenu entry to set or resets the flag to delete backups automatically. }
+
 procedure TMain.mmDelBackupClick(Sender: TObject);
 begin
   FStartup.AutoDeleteBackup := mmDelBackup.Checked;
 end;
+
+{ TMain.mmContextClick
+
+  MainMenu entry to add or removes "Clearas" in the recycle bin context menu. }
 
 procedure TMain.mmContextClick(Sender: TObject);
 var
@@ -2464,10 +2663,18 @@ begin
   end;  //of try
 end;
 
+{ TMain.mmRefreshClick
+
+  MainMenu entry to refresh the current shown TListView. }
+
 procedure TMain.mmRefreshClick(Sender: TObject);
 begin
   LoadItems();
 end;
+
+{ TMain.mmShowCaptionsClick
+
+  MainMenu entry to show captions instead of names. }
 
 procedure TMain.mmShowCaptionsClick(Sender: TObject);
 begin
@@ -2477,6 +2684,10 @@ begin
   FTasks.Invalidate();
   LoadItems();
 end;
+
+{ TMain.mmStandardClick
+
+  MainMenu entry to resize all columns to standard size. }
 
 procedure TMain.mmDefaultClick(Sender: TObject);
 begin
@@ -2507,6 +2718,10 @@ begin
   end;  //of case
 end;
 
+{ TMain.mmInstallCertificateClick
+
+  MainMenu entry that allows to install the PM Code Works certificate. }
+
 procedure TMain.mmInstallCertificateClick(Sender: TObject);
 var
   Updater: TUpdate;
@@ -2526,15 +2741,28 @@ begin
   end;  //of try
 end;
 
+{ TMain.mmUpdateClick
+
+  MainMenu entry that allows users to manually search for updates. }
+
 procedure TMain.mmUpdateClick(Sender: TObject);
 begin
   FUpdateCheck.CheckForUpdate(True);
 end;
 
+{ TMain.mmReportClick
+
+  MainMenu entry that allows users to easily report a bug by opening the web
+  browser and using the "report bug" formular. }
+
 procedure TMain.mmReportClick(Sender: TObject);
 begin
   OpenUrl(URL_CONTACT);
 end;
+
+{ TMain.mmInfoClick
+
+  MainMenu entry that shows a info page with build number and version history. }
 
 procedure TMain.mmInfoClick(Sender: TObject);
 var
@@ -2546,10 +2774,18 @@ begin
   Info.Free;
 end;
 
+{ TMain.lCopyClick
+
+  Opens the homepage of PM Code Works in a web browser. }
+
 procedure TMain.lCopy1Click(Sender: TObject);
 begin
   OpenUrl(URL_BASE);
 end;
+
+{ TMain.lCopyMouseEnter
+
+  Allows a label to have the look like a hyperlink. }
 
 procedure TMain.lCopy1MouseEnter(Sender: TObject);
 begin
@@ -2561,6 +2797,10 @@ begin
   end;  //of with
 end;
 
+{ TMain.lCopyMouseLeave
+
+  Allows a label to have the look of a normal label again. }
+
 procedure TMain.lCopy1MouseLeave(Sender: TObject);
 begin
   with (Sender as TLabel) do
@@ -2570,6 +2810,10 @@ begin
     Cursor := crDefault;
   end;  //of with
 end;
+
+{ TMain.PageControlChange
+
+  Event method that is called when tab is changed. }
 
 procedure TMain.PageControlChange(Sender: TObject);
 begin
@@ -2588,7 +2832,7 @@ begin
              LoadItems()
            else
              if FStartup.IsInvalid then
-               FStartup.Notify();
+               FStartup.DoNotifyOnFinished();
          end;  //of begin
 
          lwStartupSelectItem(Sender, lwStartup.ItemFocused, True);
@@ -2607,7 +2851,7 @@ begin
              LoadItems()
            else
              if FContext.IsInvalid then
-               FContext.Notify()
+               FContext.DoNotifyOnFinished()
          end;  //of begin
 
          lwContextSelectItem(Sender, lwContext.ItemFocused, True);
@@ -2627,7 +2871,7 @@ begin
              LoadItems()
            else
              if FService.IsInvalid then
-               FService.Notify();
+               FService.DoNotifyOnFinished();
          end;  //of begin
 
          lwServiceSelectItem(Sender, lwService.ItemFocused, True);
@@ -2646,7 +2890,7 @@ begin
              LoadItems()
            else
              if FTasks.IsInvalid then
-               FTasks.Notify();
+               FTasks.DoNotifyOnFinished();
          end  //of begin
          else
          begin
@@ -2658,6 +2902,10 @@ begin
        end;
   end;  //of case
 end;
+
+{ TMain.bCloseStartupClick
+
+  Closes Clearas. }
 
 procedure TMain.bCloseStartupClick(Sender: TObject);
 begin
