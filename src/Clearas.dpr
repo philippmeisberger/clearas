@@ -14,8 +14,7 @@ uses
   ExportListThread in 'ExportListThread.pas',
   PMCWAbout in 'PMCWAbout.pas' {About},
   PMCWUpdater in 'PMCWUpdater.pas' {Update},
-  ClearasSearchThread in 'ClearasSearchThread.pas',
-  ListViewSearch in 'ListViewSearch.pas';
+  ClearasSearchThread in 'ClearasSearchThread.pas';
 
 {$R *.res}
 
