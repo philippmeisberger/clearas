@@ -2475,7 +2475,7 @@ begin
     try
       // Open file in explorer
       if not Succeeded(SHOpenFolderAndSelectItems(ItemIDList, 0, nil, 0)) then
-        raise EWarning.Create('File "'+ PreparedFileName +'" does not exist!');
+        raise EWarning.Create(SysErrorMessage(GetLastError()));
 
     finally
       ILFree(ItemIDList);
@@ -4189,7 +4189,11 @@ var
 begin
   // Only on Windows 8 and later!
   if not CheckWin32Version(6, 2) then
+  begin
+    Result.Key := True;
+    Result.Value := 0;
     Exit;
+  end;  //of if
 
   // Status is stored in 64-Bit registry
   Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ);
