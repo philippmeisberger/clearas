@@ -247,7 +247,7 @@ type
 
   /// <summary>
   ///   A <c>TRootItem</c> represents an basic list item that can be added to a
-  ///   <see cref="TRootList"/>.
+  ///   <c>TRootList<c/>.
   /// </summary>
   /// <remarks>
   ///   This class is intended to be only ancenstor for items.
@@ -703,7 +703,7 @@ type
     /// <summary>
     ///   Renames the current selected item.
     /// </summary>
-    /// <param name="ANewCaption">
+    /// <param name="ANewName">
     ///   The new name.
     /// </param>
     procedure RenameItem(const ANewName: string); virtual;
@@ -6202,3 +6202,5 @@ begin
 end;
 
 end.
+
+

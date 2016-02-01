@@ -2,7 +2,7 @@
 {                                                                         }
 { PM Code Works Cross Plattform Update Check Thread v3.0                  }
 {                                                                         }
-{ Copyright (c) 2011-2015 Philipp Meisberger (PM Code Works)              }
+{ Copyright (c) 2011-2016 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
 { *********************************************************************** }
 
@@ -39,7 +39,8 @@ type
     FOnUpdate: TOnUpdateAvailableEvent;
     FOnError: TOnUpdateCheckErrorEvent;
     FOnNoUpdate: TNotifyEvent;
-    FCurBuild, FNewBuild: Cardinal;
+    FCurrentBuild,
+    FNewBuild: Cardinal;
     FRemoteDirName: string;
     procedure DoNotifyOnError;
     procedure DoNotifyOnNoUpdate;
@@ -94,11 +95,8 @@ constructor TUpdateCheckThread.Create(ACurrentBuild: Cardinal;
   ARemoteDirName: string; ACreateSuspended: Boolean = True);
 begin
   inherited Create(ACreateSuspended);
-
-  // Thread deallocates his memory
   FreeOnTerminate := True;
-
-  FCurBuild := ACurrentBuild;
+  FCurrentBuild := ACurrentBuild;
   FRemoteDirName := ARemoteDirName;
 
   // Init IdHTTP component dynamically
@@ -126,22 +124,25 @@ end;
 
 procedure TUpdateCheckThread.Execute;
 var
-  VersionUrl: string;
-  ErrorCode: Integer;
+  VersionUrl, VersionText: string;
+  Build: Integer;
 
 begin
   try
     // Download version file for application
     VersionUrl := URL_DIR + FRemoteDirName +'/version.txt';
-    Val(FHttp.Get(VersionUrl), FNewBuild, ErrorCode);
+    VersionText := FHttp.Get(VersionUrl);
+    Build := -1;
 
     // Invalid response?
-    // Note: Should NEVER be raised!
-    if (ErrorCode <> 0) then
+    // Note: Also occurs when connection to update server fails
+    if not (TryStrToInt(VersionText, Build) and (Build >= 0)) then
       raise EConvertError.Create('Error while parsing response!');
 
+    FNewBuild := Build;
+
     // Check if downloaded version is newer than current version
-    if (FNewBuild > FCurBuild) then
+    if (FNewBuild > FCurrentBuild) then
       // Notify "update available"
       Synchronize(DoNotifyOnUpdate)
     else

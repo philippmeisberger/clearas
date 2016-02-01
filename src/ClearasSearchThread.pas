@@ -39,8 +39,8 @@ type
     /// <summary>
     ///   Constructor for creating a <c>TClearasSearchThread</c> instance.
     /// </summary>
-    /// <param name="AStartupList">
-    ///   A <see cref="TRootList"/> to be filled.
+    /// <param name="ASelectedList">
+    ///   A <c>TRootList</c> to be filled.
     /// </param>
     /// <param name="ALock">
     ///   The mutex.
@@ -146,3 +146,4 @@ begin
 end;
 
 end.
+
