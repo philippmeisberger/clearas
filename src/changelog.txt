@@ -4,7 +4,7 @@ Ein Open-Source Projekt von PM Code Works
 Changelog
 =========
 
-Version 4.3  [??.01.16]
+Version 4.3  [??.02.16]
 
 - Neues Feature "Aufgaben":
   - Ermöglicht Bearbeiten von geplanten Aufgaben

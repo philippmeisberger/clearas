@@ -40,7 +40,7 @@ begin
     TStartupList(FSelectedList).Load(Location);
   end;  //of for
 
-  // Load WOW6432 Registry key only on 64-Bit Windows (deprecated since Windows 8!)
+  // Load disabled items from deprecated Registry keys only prior to Windows 7
   TStartupList(FSelectedList).LoadDisabled(False);
   TStartupList(FSelectedList).LoadDisabled(True);
 end;
