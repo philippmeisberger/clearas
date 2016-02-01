@@ -2,7 +2,7 @@
 {                                                                         }
 { PM Code Works Cross Plattform Language Handler Unit v2.1                }
 {                                                                         }
-{ Copyright (c) 2011-2015 Philipp Meisberger (PM Code Works)              }
+{ Copyright (c) 2011-2016 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
 { *********************************************************************** }
 

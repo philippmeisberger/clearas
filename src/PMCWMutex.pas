@@ -2,7 +2,7 @@
 {                                                                         }
 { PM Code Works Windows Mutex Unit v1.3                                   }
 {                                                                         }
-{ Copyright (c) 2011-2015 Philipp Meisberger (PM Code Works)              }
+{ Copyright (c) 2011-2016 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
 { *********************************************************************** }
 

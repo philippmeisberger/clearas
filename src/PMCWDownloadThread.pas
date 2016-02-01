@@ -2,7 +2,7 @@
 {                                                                         }
 { PM Code Works Download Thread v3.0.1                                    }
 {                                                                         }
-{ Copyright (c) 2011-2015 Philipp Meisberger (PM Code Works)              }
+{ Copyright (c) 2011-2016 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
 { *********************************************************************** }
 

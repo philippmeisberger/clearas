@@ -2,7 +2,7 @@
 {                                                                         }
 { PM Code Works About Form                                                }
 {                                                                         }
-{ Copyright (c) 2011-2015 Philipp Meisberger (PM Code Works)              }
+{ Copyright (c) 2011-2016 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
 { *********************************************************************** }
 
@@ -106,4 +106,4 @@ begin
   end;  //of try
 end;
 
-end.
+end.

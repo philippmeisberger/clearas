@@ -2,7 +2,7 @@
 {                                                                         }
 { PM Code Works Initialization file parser Unit v1.2.2                    }
 {                                                                         }
-{ Copyright (c) 2011-2015 Philipp Meisberger (PM Code Works)              }
+{ Copyright (c) 2011-2016 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
 { *********************************************************************** }
 
