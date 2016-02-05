@@ -1536,7 +1536,7 @@ begin
 
   try
     Reg.RootKey := HKEY_CLASSES_ROOT;
-    
+
     // Only update if context menu entry exists
     if Reg.OpenKey(KEY_RECYCLEBIN +'\Clearas\command', False) then
     begin
@@ -2351,7 +2351,7 @@ begin
     // Update file path in TListView
     if (PageControl.ActivePageIndex <> 1) then
       GetSelectedListView().ItemFocused.SubItems[1] := EnteredPath;
-    
+
   except
     on E: EListBlocked do
       FLang.ShowMessage(LID_OPERATION_PENDING1, LID_OPERATION_PENDING2, mtWarning);
@@ -2734,7 +2734,8 @@ begin
     if not Updater.CertificateExists() then
       Updater.InstallCertificate()
     else
-      FLang.ShowMessage(FLang.GetString(27), mtInformation);
+      FLang.ShowMessage(FLang.GetString(LID_CERTIFICATE_ALREADY_INSTALLED),
+        mtInformation);
 
   finally
     Updater.Free;

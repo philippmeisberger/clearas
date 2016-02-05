@@ -4202,8 +4202,13 @@ begin
     Reg.RootKey := AStartupLocation.GetApprovedLocation().Key;
     Reg.OpenKey(AStartupLocation.GetApprovedLocation.Value, False);
 
-    if (Reg.GetDataSize(AName) <> SizeOf(TStartupItemStatus)) then
+    // Value does not exist or approved value is invalid?
+    if (not Reg.ValueExists(AName) or (Reg.GetDataSize(AName) <> SizeOf(TStartupItemStatus))) then
+    begin
+      Result.Key := True;
+      Result.Value := 0;
       Exit;
+    end;  //of begin
 
     Reg.ReadBinaryData(AName, ItemStatus, SizeOf(TStartupItemStatus));
     Result.Key := (ItemStatus.Status = ST_ENABLED);
