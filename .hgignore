@@ -4,7 +4,6 @@ src\__history\**
 tests\__history\**
 **.dcu
 **.exe
-**.reg
 **.zip
 **.stat
 **.rsm
