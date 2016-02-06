@@ -2896,6 +2896,7 @@ begin
          else
          begin
            mmImport.Enabled := False;
+           eTaskSearch.Enabled := False;
            FLang.ShowMessage('Scheduled tasks feature requires at least Windows Vista!', mtWarning);
          end;  //of if
 
