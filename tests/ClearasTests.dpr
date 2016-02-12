@@ -16,6 +16,9 @@ program ClearasTests;
 
 uses
   DUnitTestRunner,
+{$IFNDEF DEBUG}
+  AdminManifest in '..\src\AdminManifest.pas',
+{$ENDIF}
   ClearasAPITest in 'ClearasAPITest.pas',
   ClearasAPI in '..\src\ClearasAPI.pas';
 

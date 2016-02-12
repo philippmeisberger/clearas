@@ -9,10 +9,7 @@ uses
   PMCWIniFileParser, WinSvc, Graphics, Forms;
 
 const
-  cTestExe    = 'C:\Windows\regedit.exe';
-  cNewTestExe = 'C:\Windows\notepad.exe';
-  cNewTestArgument = '-s';
-  cNewTestFileName = cNewTestExe +' '+ cNewTestArgument;
+  cTestExe         = 'C:\Windows\regedit.exe';
 
 type
   TRootListTest = class(TTestCase)
@@ -131,6 +128,11 @@ begin
 end;
 
 procedure TRootListTest.TestChangeFilePath(const AItemName: string);
+const
+  cNewTestExe      = 'C:\Windows\notepad.exe';
+  cNewTestArgument = '-o';
+  cNewTestFileName = cNewTestExe +' '+ cNewTestArgument;
+
 begin
   SelectItem(AItemName);
   CheckEqualsString(cTestExe, FRootList.Selected.FileNameOnly, 'FileName of "'+ AItemName +'" does not match before renaming!');
