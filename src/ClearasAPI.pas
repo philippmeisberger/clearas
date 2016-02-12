@@ -3530,6 +3530,7 @@ begin
 
   FLnkFile.ExeFileName := DeleteQuoteChars(ExtractPathToFile(ANewFileName));
   FLnkFile.Arguments := DeleteQuoteChars(ExtractArguments(ANewFileName));
+  FFileName := ANewFileName;
 
   // Rewrite backup
   if (not FEnabled and FLnkFile.BackupExists()) then

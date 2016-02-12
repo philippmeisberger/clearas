@@ -12,6 +12,7 @@ type
   TStartupListTest = class(TTestCase)
   const
     cTestExe        = 'C:\Windows\regedit.exe';
+    cNewTestExe     = 'C:\Windows\notepad.exe';
     cHKCU           = 'HKCU';
     cHKCU_RUNONCE   = 'HKCU RunOnce';
     cHKLM           = 'HKLM';
@@ -32,6 +33,8 @@ type
   published
     procedure TestDisableItem;
     procedure TestEnableItem;
+    procedure TestRenameItem;
+    procedure TestChangeFilePath;
     procedure TestDeleteItem;
     procedure TestLocking;
     procedure CleanUp;
@@ -447,6 +450,41 @@ begin
   inherited TearDown;
 end;
 
+procedure TStartupListTest.TestChangeFilePath;
+var
+  Location: TStartupLocation;
+
+  procedure CheckChangeFilePath(const AItemName: string);
+  var
+    Index: Integer;
+
+  begin
+    Index := FStartupList.IndexOf(AItemName);
+    CheckNotEquals(-1, Index, 'Item "'+ AItemName +'" could not be found before changing file path!');
+    FStartupList.Selected := FStartupList[Index];
+    CheckEqualsString(cTestExe, FStartupList.Selected.FileNameOnly, 'FileName of "'+ AItemName +'" does not match before renaming!');
+    FStartupList.ChangeItemFilePath(cNewTestExe);
+    CheckEqualsString(cNewTestExe, FStartupList.Selected.FileNameOnly, 'FileName of "'+ AItemName +'" does not match after renaming!');
+  end;
+
+begin
+  for Location := Low(TStartupLocation) to High(TStartupLocation) do
+    FStartupList.Load(Location);
+
+  CheckChangeFilePath(cHKCU);
+  CheckChangeFilePath(cHKCU_RUNONCE);
+  //CheckChangeFilePath(cHKLM);
+  //CheckChangeFilePath(cHKLM_RUNONCE);
+  CheckChangeFilePath(STARTUP_USER +'.lnk');
+  //CheckChangeFilePath(STARTUP_COMMON +'.lnk');
+
+  if (TOSVersion.Architecture = arIntelX64) then
+  begin
+    //CheckChangeFilePath(cHKLM32);
+    //CheckChangeFilePath(cHKLM_RUNONCE32);
+  end;  //of begin
+end;
+
 procedure TStartupListTest.TestDeleteItem;
 var
   Location: TStartupLocation;
@@ -478,9 +516,10 @@ begin
   Counter := FStartupList.Count;
   CheckDelete(cHKCU);
   CheckDelete(cHKCU_RUNONCE);
+  CheckDelete(STARTUP_USER +'.lnk');
+{$IFNDEF DEBUG}
   CheckDelete(cHKLM);
   CheckDelete(cHKLM_RUNONCE);
-  CheckDelete(STARTUP_USER +'.lnk');
   CheckDelete(STARTUP_COMMON +'.lnk');
 
   if (TOSVersion.Architecture = arIntelX64) then
@@ -488,7 +527,7 @@ begin
     CheckDelete(cHKLM32);
     CheckDelete(cHKLM_RUNONCE32);
   end;  //of begin
-
+{$ENDIF}
   CheckEquals(Counter, FStartupList.Count, 'After deleting items counter does not match!');
   FStartupList.Clear;
 
@@ -536,9 +575,10 @@ begin
 
   CheckDisable(cHKCU);
   CheckDisable(cHKCU_RUNONCE);
+  CheckDisable(STARTUP_USER +'.lnk');
+{$IFNDEF DEBUG}
   CheckDisable(cHKLM);
   CheckDisable(cHKLM_RUNONCE);
-  CheckDisable(STARTUP_USER +'.lnk');
   CheckDisable(STARTUP_COMMON +'.lnk');
 
   if (TOSVersion.Architecture = arIntelX64) then
@@ -546,6 +586,7 @@ begin
     CheckDisable(cHKLM32);
     CheckDisable(cHKLM_RUNONCE32);
   end;  //of begin
+{$ENDIF}
 end;
 
 procedure TStartupListTest.TestEnableItem;
@@ -582,9 +623,10 @@ begin
 
   CheckEnable(cHKCU);
   CheckEnable(cHKCU_RUNONCE);
+  CheckEnable(STARTUP_USER +'.lnk');
+{$IFNDEF DEBUG}
   CheckEnable(cHKLM);
   CheckEnable(cHKLM_RUNONCE);
-  CheckEnable(STARTUP_USER +'.lnk');
   CheckEnable(STARTUP_COMMON +'.lnk');
 
   if (TOSVersion.Architecture = arIntelX64) then
@@ -592,6 +634,7 @@ begin
     CheckEnable(cHKLM32);
     CheckEnable(cHKLM_RUNONCE32);
   end;  //of begin
+{$ENDIF}
 end;
 
 procedure TStartupListTest.TestLocking_SearchStart(Sender: TObject);
@@ -604,6 +647,44 @@ begin
     on E: EListBlocked do
       FLockingSuccessful := True;
   end;  //of try
+end;
+
+procedure TStartupListTest.TestRenameItem;
+var
+  Location: TStartupLocation;
+
+  procedure CheckRename(const AItemName: string);
+  var
+    Index: Integer;
+
+  begin
+    Index := FStartupList.IndexOf(AItemName);
+    CheckNotEquals(-1, Index, 'Item "'+ AItemName +'" could not be found before renaming!');
+    FStartupList.Selected := FStartupList[Index];
+    FStartupList.RenameItem(AItemName +'2');
+    CheckEquals(AItemName +'2', FStartupList.Selected.Name, 'Item was not renamed correctly!');
+    FStartupList.RenameItem(AItemName);
+    CheckEquals(AItemName, FStartupList.Selected.Name, 'Item was not renamed correctly twice!');
+  end;
+
+begin
+  for Location := Low(TStartupLocation) to High(TStartupLocation) do
+    FStartupList.Load(Location);
+
+  CheckRename(cHKCU);
+  CheckRename(cHKCU_RUNONCE);
+  CheckRename(STARTUP_USER +'.lnk');
+{$IFNDEF DEBUG}
+  CheckRename(cHKLM);
+  CheckRename(cHKLM_RUNONCE);
+  CheckRename(STARTUP_COMMON +'.lnk');
+
+  if (TOSVersion.Architecture = arIntelX64) then
+  begin
+    CheckRename(cHKLM32);
+    CheckRename(cHKLM_RUNONCE32);
+  end;  //of begin
+{$ENDIF}
 end;
 
 procedure TStartupListTest.TestLocking;
@@ -625,6 +706,11 @@ var
   LnkFile: TStartupLnkFile;
 
 begin
+{$IFDEF DEBUG}
+  if (ALocation in [slHklmRun..slHklmRunOnce32, slCommonStartup]) then
+    Exit;
+{$ENDIF}
+
   if (ALocation in [slStartupUser, slCommonStartup]) then
   begin
     LnkFile := TStartupLnkFile.Create(GetItemName(ALocation), (ALocation = slStartupUser), cTestExe, '-s');
