@@ -11,6 +11,8 @@ uses
 const
   cTestExe    = 'C:\Windows\regedit.exe';
   cNewTestExe = 'C:\Windows\notepad.exe';
+  cNewTestArgument = '-s';
+  cNewTestFileName = cNewTestExe +' '+ cNewTestArgument;
 
 type
   TRootListTest = class(TTestCase)
@@ -132,8 +134,10 @@ procedure TRootListTest.TestChangeFilePath(const AItemName: string);
 begin
   SelectItem(AItemName);
   CheckEqualsString(cTestExe, FRootList.Selected.FileNameOnly, 'FileName of "'+ AItemName +'" does not match before renaming!');
-  FRootList.ChangeItemFilePath(cNewTestExe);
-  CheckEqualsString(cNewTestExe, FRootList.Selected.FileNameOnly, 'FileName of "'+ AItemName +'" does not match after renaming!');
+  FRootList.ChangeItemFilePath(cNewTestFileName);
+  CheckEqualsString(cNewTestFileName, FRootList.Selected.FileName, 'FileName of "'+ AItemName +'" does not match after renaming!');
+  CheckEqualsString(cNewTestExe, FRootList.Selected.FileNameOnly, 'FileNameOnly of "'+ AItemName +'" does not match after renaming!');
+  CheckEqualsString(cNewTestArgument, FRootList.Selected.Arguments, 'Arguments of "'+ AItemName +'" does not match after renaming!');
 end;
 
 procedure TRootListTest.TestDelete(const AItemName: string);
