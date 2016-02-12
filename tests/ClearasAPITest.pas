@@ -9,7 +9,7 @@ uses
   PMCWIniFileParser, WinSvc, Graphics, Forms;
 
 const
-  cTestExe         = 'C:\Windows\regedit.exe';
+  cTestExe = 'C:\Windows\regedit.exe';
 
 type
   TRootListTest = class(TTestCase)
@@ -43,16 +43,17 @@ type
     cHKLM_RUNONCE32 = 'HKLM RunOnce32';
   private
     procedure AddTestItemEnabled(ALocation: TStartupLocation);
-    procedure AddTestItemsEnabled();
     procedure DeleteTestItem(ALocation: TStartupLocation);
     function GetItemName(ALocation: TStartupLocation): string;
   public
     procedure SetUp; override;
   published
+    procedure AddEnabledTestItems;
     procedure TestDisableItems;
     procedure TestEnableItems;
     procedure TestRenameItems;
     procedure TestChangeItemFilePaths;
+    procedure TestExportItems;
     procedure TestDeleteItems;
     procedure CleanUp;
   end;
@@ -198,10 +199,14 @@ begin
 end;
 
 procedure TRootListTest.TestExportItem(const AItemName: string);
+var
+  SearchResult: TSearchRec;
+
 begin
   SelectItem(AItemName);
   FRootList.ExportItem(FRootList.Selected.Name);
-  // TODO: TestExportItem
+  CheckEquals(0, FindFirst(FRootList.Selected.Name +'.*', faAnyFile - faDirectory, SearchResult), 'Exported file does not exist!');
+  CheckTrue(DeleteFile(PChar(SearchResult.Name)), 'Exported file could not be deleted!');
 end;
 
 procedure TRootListTest.TestImportBackup;
@@ -268,6 +273,310 @@ begin
   CheckEquals(AItemName +'2', FRootList.Selected.Name, 'Item was not renamed correctly!');
   FRootList.RenameItem(AItemName);
   CheckEquals(AItemName, FRootList.Selected.Name, 'Item was not renamed correctly twice!');
+end;
+
+
+{ TStartupListTest }
+
+procedure TStartupListTest.SetUp;
+begin
+  inherited SetUp;
+  FRootList := TRootList<TRootItem>(TStartupList.Create);
+end;
+
+procedure TStartupListTest.TestChangeItemFilePaths;
+var
+  Location: TStartupLocation;
+
+begin
+  for Location := Low(TStartupLocation) to High(TStartupLocation) do
+    TStartupList(FRootList).Load(Location);
+
+  TestChangeFilePath(cHKCU);
+  TestChangeFilePath(cHKCU_RUNONCE);
+  TestChangeFilePath(STARTUP_USER +'.lnk');
+{$IFNDEF DEBUG}
+  TestChangeFilePath(cHKLM);
+  TestChangeFilePath(cHKLM_RUNONCE);
+  TestChangeFilePath(STARTUP_COMMON +'.lnk');
+
+  if (TOSVersion.Architecture = arIntelX64) then
+  begin
+    TestChangeFilePath(cHKLM32);
+    TestChangeFilePath(cHKLM_RUNONCE32);
+  end;  //of begin
+{$ENDIF}
+end;
+
+procedure TStartupListTest.TestDeleteItems;
+var
+  Location: TStartupLocation;
+  Counter: Integer;
+
+begin
+  for Location := Low(TStartupLocation) to High(TStartupLocation) do
+    TStartupList(FRootList).Load(Location);
+
+  TestDelete(cHKCU);
+  TestDelete(cHKCU_RUNONCE);
+  TestDelete(STARTUP_USER +'.lnk');
+{$IFNDEF DEBUG}
+  TestDelete(cHKLM);
+  TestDelete(cHKLM_RUNONCE);
+  TestDelete(STARTUP_COMMON +'.lnk');
+
+  if (TOSVersion.Architecture = arIntelX64) then
+  begin
+    TestDelete(cHKLM32);
+    TestDelete(cHKLM_RUNONCE32);
+  end;  //of begin
+{$ENDIF}
+  Counter := FRootList.Count;
+  FRootList.Clear;
+
+  // Sanity check
+  for Location := Low(TStartupLocation) to High(TStartupLocation) do
+    TStartupList(FRootList).Load(Location);
+
+  CheckEquals(Counter, FRootList.Count, 'After deleting items and loading items again counter does not match!');
+end;
+
+procedure TStartupListTest.TestDisableItems;
+var
+  Location: TStartupLocation;
+
+begin
+  for Location := Low(TStartupLocation) to High(TStartupLocation) do
+    TStartupList(FRootList).Load(Location);
+
+  TestDisable(cHKCU);
+  TestDisable(cHKCU_RUNONCE);
+  TestDisable(STARTUP_USER +'.lnk');
+{$IFNDEF DEBUG}
+  TestDisable(cHKLM);
+  TestDisable(cHKLM_RUNONCE);
+  TestDisable(STARTUP_COMMON +'.lnk');
+
+  if (TOSVersion.Architecture = arIntelX64) then
+  begin
+    TestDisable(cHKLM32);
+    TestDisable(cHKLM_RUNONCE32);
+  end;  //of begin
+{$ENDIF}
+end;
+
+procedure TStartupListTest.TestEnableItems;
+var
+  Location: TStartupLocation;
+
+begin
+  for Location := Low(TStartupLocation) to High(TStartupLocation) do
+    TStartupList(FRootList).Load(Location);
+
+  TestEnable(cHKCU);
+  TestEnable(cHKCU_RUNONCE);
+  TestEnable(STARTUP_USER +'.lnk');
+{$IFNDEF DEBUG}
+  TestEnable(cHKLM);
+  TestEnable(cHKLM_RUNONCE);
+  TestEnable(STARTUP_COMMON +'.lnk');
+
+  if (TOSVersion.Architecture = arIntelX64) then
+  begin
+    TestEnable(cHKLM32);
+    TestEnable(cHKLM_RUNONCE32);
+  end;  //of begin
+{$ENDIF}
+end;
+
+procedure TStartupListTest.TestExportItems;
+var
+  Location: TStartupLocation;
+
+begin
+  for Location := Low(TStartupLocation) to High(TStartupLocation) do
+    TStartupList(FRootList).Load(Location);
+
+  TestExportItem(cHKCU);
+  TestExportItem(cHKCU_RUNONCE);
+  TestExportItem(STARTUP_USER +'.lnk');
+{$IFNDEF DEBUG}
+  TestExportItem(cHKLM);
+  TestExportItem(cHKLM_RUNONCE);
+  TestExportItem(STARTUP_COMMON +'.lnk');
+
+  if (TOSVersion.Architecture = arIntelX64) then
+  begin
+    TestExportItem(cHKLM32);
+    TestExportItem(cHKLM_RUNONCE32);
+  end;  //of begin
+{$ENDIF}
+end;
+
+procedure TStartupListTest.TestRenameItems;
+var
+  Location: TStartupLocation;
+
+begin
+  for Location := Low(TStartupLocation) to High(TStartupLocation) do
+    TStartupList(FRootList).Load(Location);
+
+  TestRename(cHKCU);
+  TestRename(cHKCU_RUNONCE);
+  TestRename(STARTUP_USER +'.lnk');
+{$IFNDEF DEBUG}
+  TestRename(cHKLM);
+  TestRename(cHKLM_RUNONCE);
+  TestRename(STARTUP_COMMON +'.lnk');
+
+  if (TOSVersion.Architecture = arIntelX64) then
+  begin
+    TestRename(cHKLM32);
+    TestRename(cHKLM_RUNONCE32);
+  end;  //of begin
+{$ENDIF}
+end;
+
+procedure TStartupListTest.AddTestItemEnabled(ALocation: TStartupLocation);
+var
+  Reg: TRegistry;
+  LnkFile: TStartupLnkFile;
+
+begin
+{$IFDEF DEBUG}
+  // Skip startup locations that need admin access rights in debug configuration only
+  if (ALocation in [slHklmRun..slHklmRunOnce32, slCommonStartup]) then
+    Exit;
+{$ENDIF}
+
+  if (ALocation in [slStartupUser, slCommonStartup]) then
+  begin
+    LnkFile := TStartupLnkFile.Create(GetItemName(ALocation), (ALocation = slStartupUser), cTestExe, '-s');
+
+    try
+      CheckTrue(LnkFile.Save(), 'Could not save .lnk file!');
+
+    finally
+      LnkFile.Free;
+    end;  //of try
+  end  //of begin
+  else
+  begin
+    // 32 bit OS
+    if (TOSVersion.Architecture = arIntelX86) and (ALocation in [slHklmRun32, slHklmRunOnce32]) then
+      Exit;
+
+    if (ALocation in [slHklmRun32, slHklmRunOnce32]) then
+      Reg := TRegistry.Create(KEY_WOW64_32KEY or KEY_READ or KEY_WRITE)
+    else
+      Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
+
+    try
+      Reg.RootKey := ALocation.GetLocation().Key;
+      Reg.OpenKey(ALocation.GetLocation().Value, False);
+      Reg.WriteString(GetItemName(ALocation), cTestExe);
+      CheckEqualsString('', Reg.LastErrorMsg, Reg.LastErrorMsg);
+
+    finally
+      Reg.CloseKey();
+      Reg.Free;
+    end;  //of try
+  end;
+end;
+
+procedure TStartupListTest.AddEnabledTestItems();
+var
+  Location: TStartupLocation;
+
+begin
+  for Location := Low(TStartupLocation) to High(TStartupLocation) do
+    AddTestItemEnabled(Location);
+end;
+
+procedure TStartupListTest.CleanUp;
+var
+  Location: TStartupLocation;
+
+begin
+  for Location := Low(TStartupLocation) to High(TStartupLocation) do
+    DeleteTestItem(Location);
+end;
+
+procedure TStartupListTest.DeleteTestItem(ALocation: TStartupLocation);
+var
+  Reg: TRegistry;
+  LnkFile: TStartupLnkFile;
+
+begin
+  if (ALocation in [slStartupUser, slCommonStartup]) then
+  begin
+    LnkFile := TStartupLnkFile.Create(GetItemName(ALocation), (ALocation = slStartupUser), cTestExe, '-s');
+
+    try
+      if LnkFile.Exists() then
+        CheckTrue(LnkFile.Delete(), 'Could not delete .lnk file!');
+
+    finally
+      LnkFile.Free;
+    end;  //of try
+  end  //of begin
+  else
+  begin
+    // 32 bit OS
+    if (TOSVersion.Architecture = arIntelX86) and (ALocation in [slHklmRun32, slHklmRunOnce32]) then
+      Exit;
+
+    if (ALocation in [slHklmRun32, slHklmRunOnce32]) then
+      Reg := TRegistry.Create(KEY_WOW64_32KEY or KEY_READ or KEY_WRITE)
+    else
+      Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
+
+    try
+      Reg.RootKey := ALocation.GetLocation().Key;
+      Reg.OpenKey(ALocation.GetLocation().Value, False);
+
+      if Reg.ValueExists(GetItemName(ALocation)) then
+      begin
+        CheckTrue(Reg.DeleteValue(GetItemName(ALocation)), 'Could not delete Registry value: '+ GetItemName(ALocation) +'!');
+        CheckEqualsString('', Reg.LastErrorMsg, Reg.LastErrorMsg);
+      end;  //of begin
+
+      Reg.CloseKey();
+
+      if not CheckWin32Version(6, 2) then
+      begin
+        // Delete item from disabled location (prior to Windows 7)
+        Reg.RootKey := HKEY_LOCAL_MACHINE;
+        Reg.OpenKey(KEY_STARTUP_DISABLED, False);
+        Reg.DeleteKey(GetItemName(ALocation));
+      end  //of begin
+      else
+      begin
+        // Delete item from approved location (since to Windows 8)
+        Reg.RootKey := ALocation.GetApprovedLocation().Key;
+        Reg.OpenKey(ALocation.GetApprovedLocation().Value, False);
+        Reg.DeleteValue(GetItemName(ALocation));
+      end;  //of if
+
+    finally
+      Reg.CloseKey();
+      Reg.Free;
+    end;  //of try
+  end;
+end;
+
+function TStartupListTest.GetItemName(ALocation: TStartupLocation): string;
+begin
+  case ALocation of
+    slHkcuRun:       Result := cHKCU;
+    slHkcuRunOnce:   Result := cHKCU_RUNONCE;
+    slHklmRun:       Result := cHKLM;
+    slHklmRun32:     Result := cHKLM32;
+    slHklmRunOnce:   Result := cHKLM_RUNONCE;
+    slHklmRunOnce32: Result := cHKLM_RUNONCE32;
+    slStartupUser:   Result := STARTUP_USER;
+    slCommonStartup: Result := STARTUP_COMMON;
+  end;  //of case
 end;
 
 { TestTTaskList }
@@ -370,286 +679,6 @@ begin
   Destination := Destination + ChangeFileExt(ExtractFileName(AFileName), '.lnk');
   CopyFile(PChar(AFileName), PChar(Destination), False);
 end;}
-
-{ TStartupListTest }
-
-procedure TStartupListTest.SetUp;
-begin
-  inherited SetUp;
-  FRootList := TRootList<TRootItem>(TStartupList.Create);
-end;
-
-procedure TStartupListTest.TestChangeItemFilePaths;
-var
-  Location: TStartupLocation;
-
-begin
-  for Location := Low(TStartupLocation) to High(TStartupLocation) do
-    TStartupList(FRootList).Load(Location);
-
-  TestChangeFilePath(cHKCU);
-  TestChangeFilePath(cHKCU_RUNONCE);
-  TestChangeFilePath(STARTUP_USER +'.lnk');
-{$IFNDEF DEBUG}
-  TestChangeFilePath(cHKLM);
-  TestChangeFilePath(cHKLM_RUNONCE);
-  TestChangeFilePath(STARTUP_COMMON +'.lnk');
-
-  if (TOSVersion.Architecture = arIntelX64) then
-  begin
-    TestChangeFilePath(cHKLM32);
-    TestChangeFilePath(cHKLM_RUNONCE32);
-  end;  //of begin
-{$ENDIF}
-end;
-
-procedure TStartupListTest.TestDeleteItems;
-var
-  Location: TStartupLocation;
-  Counter: Integer;
-
-begin
-  for Location := Low(TStartupLocation) to High(TStartupLocation) do
-    TStartupList(FRootList).Load(Location);
-
-  TestDelete(cHKCU);
-  TestDelete(cHKCU_RUNONCE);
-  TestDelete(STARTUP_USER +'.lnk');
-{$IFNDEF DEBUG}
-  TestDelete(cHKLM);
-  TestDelete(cHKLM_RUNONCE);
-  TestDelete(STARTUP_COMMON +'.lnk');
-
-  if (TOSVersion.Architecture = arIntelX64) then
-  begin
-    TestDelete(cHKLM32);
-    TestDelete(cHKLM_RUNONCE32);
-  end;  //of begin
-{$ENDIF}
-  Counter := FRootList.Count;
-  FRootList.Clear;
-
-  // Sanity check
-  for Location := Low(TStartupLocation) to High(TStartupLocation) do
-    TStartupList(FRootList).Load(Location);
-
-  CheckEquals(Counter, FRootList.Count, 'After deleting items and loading items again counter does not match!');
-end;
-
-procedure TStartupListTest.TestDisableItems;
-var
-  Location: TStartupLocation;
-
-begin
-  AddTestItemsEnabled();
-
-  for Location := Low(TStartupLocation) to High(TStartupLocation) do
-    TStartupList(FRootList).Load(Location);
-
-  TestDisable(cHKCU);
-  TestDisable(cHKCU_RUNONCE);
-  TestDisable(STARTUP_USER +'.lnk');
-{$IFNDEF DEBUG}
-  TestDisable(cHKLM);
-  TestDisable(cHKLM_RUNONCE);
-  TestDisable(STARTUP_COMMON +'.lnk');
-
-  if (TOSVersion.Architecture = arIntelX64) then
-  begin
-    TestDisable(cHKLM32);
-    TestDisable(cHKLM_RUNONCE32);
-  end;  //of begin
-{$ENDIF}
-end;
-
-procedure TStartupListTest.TestEnableItems;
-var
-  Location: TStartupLocation;
-
-begin
-  for Location := Low(TStartupLocation) to High(TStartupLocation) do
-    TStartupList(FRootList).Load(Location);
-
-  TestEnable(cHKCU);
-  TestEnable(cHKCU_RUNONCE);
-  TestEnable(STARTUP_USER +'.lnk');
-{$IFNDEF DEBUG}
-  TestEnable(cHKLM);
-  TestEnable(cHKLM_RUNONCE);
-  TestEnable(STARTUP_COMMON +'.lnk');
-
-  if (TOSVersion.Architecture = arIntelX64) then
-  begin
-    TestEnable(cHKLM32);
-    TestEnable(cHKLM_RUNONCE32);
-  end;  //of begin
-{$ENDIF}
-end;
-
-procedure TStartupListTest.TestRenameItems;
-var
-  Location: TStartupLocation;
-
-begin
-  for Location := Low(TStartupLocation) to High(TStartupLocation) do
-    TStartupList(FRootList).Load(Location);
-
-  TestRename(cHKCU);
-  TestRename(cHKCU_RUNONCE);
-  TestRename(STARTUP_USER +'.lnk');
-{$IFNDEF DEBUG}
-  TestRename(cHKLM);
-  TestRename(cHKLM_RUNONCE);
-  TestRename(STARTUP_COMMON +'.lnk');
-
-  if (TOSVersion.Architecture = arIntelX64) then
-  begin
-    TestRename(cHKLM32);
-    TestRename(cHKLM_RUNONCE32);
-  end;  //of begin
-{$ENDIF}
-end;
-
-procedure TStartupListTest.AddTestItemEnabled(ALocation: TStartupLocation);
-var
-  Reg: TRegistry;
-  LnkFile: TStartupLnkFile;
-
-begin
-{$IFDEF DEBUG}
-  if (ALocation in [slHklmRun..slHklmRunOnce32, slCommonStartup]) then
-    Exit;
-{$ENDIF}
-
-  if (ALocation in [slStartupUser, slCommonStartup]) then
-  begin
-    LnkFile := TStartupLnkFile.Create(GetItemName(ALocation), (ALocation = slStartupUser), cTestExe, '-s');
-
-    try
-      CheckTrue(LnkFile.Save(), 'Could not save .lnk file!');
-
-    finally
-      LnkFile.Free;
-    end;  //of try
-  end  //of begin
-  else
-  begin
-    // 32 bit OS
-    if (TOSVersion.Architecture = arIntelX86) and (ALocation in [slHklmRun32, slHklmRunOnce32]) then
-      Exit;
-
-    if (ALocation in [slHklmRun32, slHklmRunOnce32]) then
-      Reg := TRegistry.Create(KEY_WOW64_32KEY or KEY_READ or KEY_WRITE)
-    else
-      Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
-
-    try
-      Reg.RootKey := ALocation.GetLocation().Key;
-      Reg.OpenKey(ALocation.GetLocation().Value, False);
-      Reg.WriteString(GetItemName(ALocation), cTestExe);
-      CheckEqualsString('', Reg.LastErrorMsg, Reg.LastErrorMsg);
-
-    finally
-      Reg.CloseKey();
-      Reg.Free;
-    end;  //of try
-  end;
-end;
-
-procedure TStartupListTest.AddTestItemsEnabled();
-var
-  Location: TStartupLocation;
-
-begin
-  for Location := Low(TStartupLocation) to High(TStartupLocation) do
-    AddTestItemEnabled(Location);
-end;
-
-procedure TStartupListTest.CleanUp;
-var
-  Location: TStartupLocation;
-
-begin
-  for Location := Low(TStartupLocation) to High(TStartupLocation) do
-    DeleteTestItem(Location);
-end;
-
-procedure TStartupListTest.DeleteTestItem(ALocation: TStartupLocation);
-var
-  Reg: TRegistry;
-  LnkFile: TStartupLnkFile;
-
-begin
-  if (ALocation in [slStartupUser, slCommonStartup]) then
-  begin
-    LnkFile := TStartupLnkFile.Create(GetItemName(ALocation), (ALocation = slStartupUser), cTestExe, '-s');
-
-    try
-      if LnkFile.Exists() then
-        CheckTrue(LnkFile.Delete(), 'Could not delete .lnk file!');
-
-    finally
-      LnkFile.Free;
-    end;  //of try
-  end  //of begin
-  else
-  begin
-    // 32 bit OS
-    if (TOSVersion.Architecture = arIntelX86) and (ALocation in [slHklmRun32, slHklmRunOnce32]) then
-      Exit;
-
-    if (ALocation in [slHklmRun32, slHklmRunOnce32]) then
-      Reg := TRegistry.Create(KEY_WOW64_32KEY or KEY_READ or KEY_WRITE)
-    else
-      Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
-
-    try
-      Reg.RootKey := ALocation.GetLocation().Key;
-      Reg.OpenKey(ALocation.GetLocation().Value, False);
-
-      if Reg.ValueExists(GetItemName(ALocation)) then
-      begin
-        CheckTrue(Reg.DeleteValue(GetItemName(ALocation)), 'Could not delete Registry value: '+ GetItemName(ALocation) +'!');
-        CheckEqualsString('', Reg.LastErrorMsg, Reg.LastErrorMsg);
-      end;  //of begin
-
-      Reg.CloseKey();
-
-      if not CheckWin32Version(6, 2) then
-      begin
-        // Delete item from disabled location (prior to Windows 7)
-        Reg.RootKey := HKEY_LOCAL_MACHINE;
-        Reg.OpenKey(KEY_STARTUP_DISABLED, False);
-        Reg.DeleteKey(GetItemName(ALocation));
-      end  //of begin
-      else
-      begin
-        // Delete item from approved location (since to Windows 8)
-        Reg.RootKey := ALocation.GetApprovedLocation().Key;
-        Reg.OpenKey(ALocation.GetApprovedLocation().Value, False);
-        Reg.DeleteValue(GetItemName(ALocation));
-      end;  //of if
-
-    finally
-      Reg.CloseKey();
-      Reg.Free;
-    end;  //of try
-  end;
-end;
-
-function TStartupListTest.GetItemName(ALocation: TStartupLocation): string;
-begin
-  case ALocation of
-    slHkcuRun:       Result := cHKCU;
-    slHkcuRunOnce:   Result := cHKCU_RUNONCE;
-    slHklmRun:       Result := cHKLM;
-    slHklmRun32:     Result := cHKLM32;
-    slHklmRunOnce:   Result := cHKLM_RUNONCE;
-    slHklmRunOnce32: Result := cHKLM_RUNONCE32;
-    slStartupUser:   Result := STARTUP_USER;
-    slCommonStartup: Result := STARTUP_COMMON;
-  end;  //of case
-end;
 
 initialization
   RegisterTest(TStartupListTest.Suite);

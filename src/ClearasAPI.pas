@@ -3165,7 +3165,7 @@ var
   RegFile: TRegistryFile;
 
 begin
-  RegFile := TRegistryFile.Create(AFileName, True);
+  RegFile := TRegistryFile.Create(ChangeFileExt(AFileName, '.reg'), True);
 
   try
     if (FEnabled or CheckWin32Version(6, 2)) then
@@ -4545,7 +4545,7 @@ var
   RegFile: TRegistryFile;
 
 begin
-  RegFile := TRegistryFile.Create(AFileName, True);
+  RegFile := TRegistryFile.Create(ChangeFileExt(AFileName, '.reg'), True);
 
   try
     RegFile.ExportReg(HKEY_CLASSES_ROOT, GetLocation(), True);
@@ -4631,7 +4631,7 @@ var
   Commands: TStrings;
 
 begin
-  RegFile := TRegistryFile.Create(AFileName, True);
+  RegFile := TRegistryFile.Create(ChangeFileExt(AFileName, '.reg'), True);
   Commands := TStringList.Create;
 
   try
@@ -4764,7 +4764,7 @@ var
   Key: string;
 
 begin
-  RegFile := TRegistryFile.Create(AFileName, True);
+  RegFile := TRegistryFile.Create(ChangeFileExt(AFileName, '.reg'), True);
 
   if Wow64 then
     Reg := TRegistry.Create(KEY_WOW64_32KEY or KEY_READ)
@@ -4886,7 +4886,7 @@ var
   RegFile: TRegistryFile;
 
 begin
-  RegFile := TRegistryFile.Create(AFileName, True);
+  RegFile := TRegistryFile.Create(ChangeFileExt(AFileName, '.reg'), True);
 
   try
     RegFile.ExportReg(HKEY_CLASSES_ROOT, GetLocation(), True);
@@ -5517,7 +5517,7 @@ var
   RegFile: TRegistryFile;
 
 begin
-  RegFile := TRegistryFile.Create(AFileName, True);
+  RegFile := TRegistryFile.Create(ChangeFileExt(AFileName, '.reg'), True);
 
   try
     RegFile.ExportReg(HKEY_LOCAL_MACHINE, GetLocation(), True);
