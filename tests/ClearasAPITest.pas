@@ -9,7 +9,35 @@ uses
   PMCWIniFileParser, WinSvc, Graphics, Forms;
 
 type
-  TestRootList = class(TTestCase)
+  TStartupListTest = class(TTestCase)
+  const
+    cTestExe        = 'C:\Windows\regedit.exe';
+    cHKCU           = 'HKCU';
+    cHKCU_RUNONCE   = 'HKCU RunOnce';
+    cHKLM           = 'HKLM';
+    cHKLM32         = 'HKLM32';
+    cHKLM_RUNONCE   = 'HKLM RunOnce';
+    cHKLM_RUNONCE32 = 'HKLM RunOnce32';
+  strict private
+    FLockingSuccessful: Boolean;
+    FStartupList: TStartupList;
+    procedure AddTestItemEnabled(ALocation: TStartupLocation);
+    procedure AddTestItemsEnabled();
+    procedure DeleteTestItem(ALocation: TStartupLocation);
+    function GetItemName(ALocation: TStartupLocation): string;
+    procedure TestLocking_SearchStart(Sender: TObject);
+  public
+    procedure SetUp; override;
+    procedure TearDown; override;
+  published
+    procedure TestDisableItem;
+    procedure TestEnableItem;
+    procedure TestDeleteItem;
+    procedure TestLocking;
+    procedure CleanUp;
+  end;
+
+  {TestRootList = class(TTestCase)
   protected
     FRootList: TRootList<TRootItem>;
   public
@@ -57,7 +85,7 @@ type
     procedure TestExportBackup;
     procedure TestImportBackup;
     procedure TestRenameItem;
-  end;
+  end;}
 
 implementation
 
@@ -97,7 +125,7 @@ begin
 end;
 
 { TestRootList }
-
+{
 procedure TestRootList.TearDown;
 begin
   FreeAndNil(FRootList);
@@ -214,7 +242,7 @@ begin
 end;
 
 { TestTTaskList }
-
+{
 procedure TestTTaskList.SetUp;
 begin
   inherited SetUp;
@@ -312,7 +340,7 @@ end;
 
 
 { TestStartupList }
-
+{
 procedure TestStartupList.SetUp;
 begin
   inherited SetUp;
@@ -403,10 +431,333 @@ begin
   ImportStartupFile('..\data\Backup.Startup', False);
   TStartupList(FRootList).LoadStartup(False);
   TestItem('Backup.Startup');
+end;}
+
+{ TStartupListTest }
+
+procedure TStartupListTest.SetUp;
+begin
+  inherited SetUp;
+  FStartupList := TStartupList.Create;
+end;
+
+procedure TStartupListTest.TearDown;
+begin
+  FStartupList.Free;
+  inherited TearDown;
+end;
+
+procedure TStartupListTest.TestDeleteItem;
+var
+  Location: TStartupLocation;
+  Counter: Integer;
+
+  procedure CheckDelete(const AItemName: string);
+  var
+    EnabledCounter: Integer;
+    Index: Integer;
+
+  begin
+    Index := FStartupList.IndexOf(AItemName);
+    CheckNotEquals(-1, Index, 'Item "'+ AItemName +'" could not be found before enabling!');
+    FStartupList.Selected := FStartupList[Index];
+    EnabledCounter := FStartupList.EnabledItemsCount;
+
+    if FStartupList.Selected.Enabled then
+      Dec(EnabledCounter);
+
+    CheckTrue(FStartupList.DeleteItem(), 'Item could not be deleted!');
+    Dec(Counter);
+    CheckEquals(EnabledCounter, FStartupList.EnabledItemsCount, 'After deleting item EnabledItemsCount should be equal to EnabledCounter!');
+  end;
+
+begin
+  for Location := Low(TStartupLocation) to High(TStartupLocation) do
+    FStartupList.Load(Location);
+
+  Counter := FStartupList.Count;
+  CheckDelete(cHKCU);
+  CheckDelete(cHKCU_RUNONCE);
+  CheckDelete(cHKLM);
+  CheckDelete(cHKLM_RUNONCE);
+  CheckDelete(STARTUP_USER +'.lnk');
+  CheckDelete(STARTUP_COMMON +'.lnk');
+
+  if (TOSVersion.Architecture = arIntelX64) then
+  begin
+    CheckDelete(cHKLM32);
+    CheckDelete(cHKLM_RUNONCE32);
+  end;  //of begin
+
+  CheckEquals(Counter, FStartupList.Count, 'After deleting items counter does not match!');
+  FStartupList.Clear;
+
+  // Sanity check
+  for Location := Low(TStartupLocation) to High(TStartupLocation) do
+    FStartupList.Load(Location);
+
+  CheckEquals(Counter, FStartupList.Count, 'After deleting items and loading items again counter does not match!');
+end;
+
+procedure TStartupListTest.TestDisableItem;
+var
+  Location: TStartupLocation;
+
+  procedure CheckDisable(const AItemName: string);
+  var
+    EnabledCounter: Integer;
+    Index: Integer;
+
+  begin
+    Index := FStartupList.IndexOf(AItemName);
+    CheckNotEquals(-1, Index, 'Item "'+ AItemName +'" could not be found before disabling!');
+    FStartupList.Selected := FStartupList[Index];
+    EnabledCounter := FStartupList.EnabledItemsCount;
+    CheckNotEquals(0, EnabledCounter, 'Before disabling EnabledItemsCount must not be 0!');
+
+    // TODO: Check item properties before disabling
+    CheckTrue(FStartupList.Selected.Enabled, 'Before disabling item Enabled must be True!');
+    Check(FStartupList.Selected.Time = 0, 'Before disabling item timestamp must be 0!');
+
+    FStartupList.DisableItem();
+
+    // TODO: Check item properties after disabling
+    CheckFalse(FStartupList.Selected.Enabled, 'After disabling item Enabled should be False, too!');
+    Check(FStartupList.Selected.Time <> 0, 'After disabling timestamp must be greater than 0!');
+    Dec(EnabledCounter);
+    CheckEquals(EnabledCounter, FStartupList.EnabledItemsCount, 'After disabling item EnabledItemsCount should be decreased by 1!');
+  end;
+
+begin
+  AddTestItemsEnabled();
+
+  for Location := Low(TStartupLocation) to High(TStartupLocation) do
+    FStartupList.Load(Location);
+
+  CheckDisable(cHKCU);
+  CheckDisable(cHKCU_RUNONCE);
+  CheckDisable(cHKLM);
+  CheckDisable(cHKLM_RUNONCE);
+  CheckDisable(STARTUP_USER +'.lnk');
+  CheckDisable(STARTUP_COMMON +'.lnk');
+
+  if (TOSVersion.Architecture = arIntelX64) then
+  begin
+    CheckDisable(cHKLM32);
+    CheckDisable(cHKLM_RUNONCE32);
+  end;  //of begin
+end;
+
+procedure TStartupListTest.TestEnableItem;
+var
+  Location: TStartupLocation;
+
+  procedure CheckEnable(const AItemName: string);
+  var
+    EnabledCounter: Integer;
+    Index: Integer;
+
+  begin
+    Index := FStartupList.IndexOf(AItemName);
+    CheckNotEquals(-1, Index, 'Item "'+ AItemName +'" could not be found before enabling!');
+    FStartupList.Selected := FStartupList[Index];
+    EnabledCounter := FStartupList.EnabledItemsCount;
+
+    // TODO: Check item properties before enabling
+    CheckFalse(FStartupList.Selected.Enabled, 'Before enabling item Enabled must be False!');
+    Check(FStartupList.Selected.Time <> 0, 'Before enabling item timestamp must not be 0!');
+
+    FStartupList.EnableItem();
+
+    // TODO: Check item properties after enabling
+    CheckTrue(FStartupList.Selected.Enabled, 'After enabling item Enabled should be True, too!');
+    Check(FStartupList.Selected.Time = 0, 'After enabling timestamp must be 0!');
+    Inc(EnabledCounter);
+    CheckEquals(EnabledCounter, FStartupList.EnabledItemsCount, 'After enabling item EnabledItemsCount should be increased by 1!');
+  end;
+
+begin
+  for Location := Low(TStartupLocation) to High(TStartupLocation) do
+    FStartupList.Load(Location);
+
+  CheckEnable(cHKCU);
+  CheckEnable(cHKCU_RUNONCE);
+  CheckEnable(cHKLM);
+  CheckEnable(cHKLM_RUNONCE);
+  CheckEnable(STARTUP_USER +'.lnk');
+  CheckEnable(STARTUP_COMMON +'.lnk');
+
+  if (TOSVersion.Architecture = arIntelX64) then
+  begin
+    CheckEnable(cHKLM32);
+    CheckEnable(cHKLM_RUNONCE32);
+  end;  //of begin
+end;
+
+procedure TStartupListTest.TestLocking_SearchStart(Sender: TObject);
+begin
+  try
+    // This must not be possible e.g. during loading!
+    FStartupList.EnableItem();
+
+  except
+    on E: EListBlocked do
+      FLockingSuccessful := True;
+  end;  //of try
+end;
+
+procedure TStartupListTest.TestLocking;
+begin
+  FLockingSuccessful := False;
+
+  // Start async loading
+  FStartupList.OnSearchStart := TestLocking_SearchStart;
+  FStartupList.Load(True);
+
+  // Give the thread time to kill himself
+  Delay(2000);
+  CheckTrue(FLockingSuccessful, 'List was not locked!!');
+end;
+
+procedure TStartupListTest.AddTestItemEnabled(ALocation: TStartupLocation);
+var
+  Reg: TRegistry;
+  LnkFile: TStartupLnkFile;
+
+begin
+  if (ALocation in [slStartupUser, slCommonStartup]) then
+  begin
+    LnkFile := TStartupLnkFile.Create(GetItemName(ALocation), (ALocation = slStartupUser), cTestExe, '-s');
+
+    try
+      CheckTrue(LnkFile.Save(), 'Could not save .lnk file!');
+
+    finally
+      LnkFile.Free;
+    end;  //of try
+  end  //of begin
+  else
+  begin
+    // 32 bit OS
+    if (TOSVersion.Architecture = arIntelX86) and (ALocation in [slHklmRun32, slHklmRunOnce32]) then
+      Exit;
+
+    if (ALocation in [slHklmRun32, slHklmRunOnce32]) then
+      Reg := TRegistry.Create(KEY_WOW64_32KEY or KEY_READ or KEY_WRITE)
+    else
+      Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
+
+    try
+      Reg.RootKey := ALocation.GetLocation().Key;
+      Reg.OpenKey(ALocation.GetLocation().Value, False);
+      Reg.WriteString(GetItemName(ALocation), cTestExe);
+      CheckEqualsString('', Reg.LastErrorMsg, Reg.LastErrorMsg);
+
+    finally
+      Reg.CloseKey();
+      Reg.Free;
+    end;  //of try
+  end;
+end;
+
+procedure TStartupListTest.AddTestItemsEnabled();
+var
+  Location: TStartupLocation;
+
+begin
+  for Location := Low(TStartupLocation) to High(TStartupLocation) do
+    AddTestItemEnabled(Location);
+end;
+
+procedure TStartupListTest.CleanUp;
+var
+  Location: TStartupLocation;
+
+begin
+  for Location := Low(TStartupLocation) to High(TStartupLocation) do
+    DeleteTestItem(Location);
+end;
+
+procedure TStartupListTest.DeleteTestItem(ALocation: TStartupLocation);
+var
+  Reg: TRegistry;
+  LnkFile: TStartupLnkFile;
+
+begin
+  if (ALocation in [slStartupUser, slCommonStartup]) then
+  begin
+    LnkFile := TStartupLnkFile.Create(GetItemName(ALocation), (ALocation = slStartupUser), cTestExe, '-s');
+
+    try
+      if LnkFile.Exists() then
+        CheckTrue(LnkFile.Delete(), 'Could not delete .lnk file!');
+
+    finally
+      LnkFile.Free;
+    end;  //of try
+  end  //of begin
+  else
+  begin
+    // 32 bit OS
+    if (TOSVersion.Architecture = arIntelX86) and (ALocation in [slHklmRun32, slHklmRunOnce32]) then
+      Exit;
+
+    if (ALocation in [slHklmRun32, slHklmRunOnce32]) then
+      Reg := TRegistry.Create(KEY_WOW64_32KEY or KEY_READ or KEY_WRITE)
+    else
+      Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
+
+    try
+      Reg.RootKey := ALocation.GetLocation().Key;
+      Reg.OpenKey(ALocation.GetLocation().Value, False);
+
+      if Reg.ValueExists(GetItemName(ALocation)) then
+      begin
+        CheckTrue(Reg.DeleteValue(GetItemName(ALocation)), 'Could not delete Registry value: '+ GetItemName(ALocation) +'!');
+        CheckEqualsString('', Reg.LastErrorMsg, Reg.LastErrorMsg);
+      end;  //of begin
+
+      Reg.CloseKey();
+
+      if not CheckWin32Version(6, 2) then
+      begin
+        // Delete item from disabled location (prior to Windows 7)
+        Reg.RootKey := HKEY_LOCAL_MACHINE;
+        Reg.OpenKey(KEY_STARTUP_DISABLED, False);
+        Reg.DeleteKey(GetItemName(ALocation));
+      end  //of begin
+      else
+      begin
+        // Delete item from approved location (since to Windows 8)
+        Reg.RootKey := ALocation.GetApprovedLocation().Key;
+        Reg.OpenKey(ALocation.GetApprovedLocation().Value, False);
+        Reg.DeleteValue(GetItemName(ALocation));
+      end;  //of if
+
+    finally
+      Reg.CloseKey();
+      Reg.Free;
+    end;  //of try
+  end;
+end;
+
+function TStartupListTest.GetItemName(ALocation: TStartupLocation): string;
+begin
+  case ALocation of
+    slHkcuRun:       Result := cHKCU;
+    slHkcuRunOnce:   Result := cHKCU_RUNONCE;
+    slHklmRun:       Result := cHKLM;
+    slHklmRun32:     Result := cHKLM32;
+    slHklmRunOnce:   Result := cHKLM_RUNONCE;
+    slHklmRunOnce32: Result := cHKLM_RUNONCE32;
+    slStartupUser:   Result := STARTUP_USER;
+    slCommonStartup: Result := STARTUP_COMMON;
+  end;  //of case
 end;
 
 initialization
-  RegisterTest(TestStartupList.Suite);
-  RegisterTest(TestTTaskList.Suite);
+  RegisterTest(TStartupListTest.Suite);
+  //RegisterTest(TestStartupList.Suite);
+  //RegisterTest(TestTTaskList.Suite);
 end.
 
