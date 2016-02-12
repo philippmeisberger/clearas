@@ -8,74 +8,57 @@ uses
   Variants, SyncObjs, ShlObj, Generics.Collections, Classes, Zip, CommCtrl,
   PMCWIniFileParser, WinSvc, Graphics, Forms;
 
+const
+  cTestExe    = 'C:\Windows\regedit.exe';
+  cNewTestExe = 'C:\Windows\notepad.exe';
+
 type
-  TStartupListTest = class(TTestCase)
+  TRootListTest = class(TTestCase)
+  strict private
+    FLockingSuccessful: Boolean;
+    procedure TestLocking_SearchStart(Sender: TObject);
+  protected
+    FRootList: TRootList<TRootItem>;
+    procedure SelectItem(const AItemName: string);
+    procedure TestDisable(const AItemName: string);
+    procedure TestEnable(const AItemName: string);
+    procedure TestDelete(const AItemName: string);
+    procedure TestExportItem(const AItemName: string);
+    procedure TestExportBackup;
+    procedure TestImportBackup;
+    procedure TestRename(const AItemName: string);
+    procedure TestChangeFilePath(const AItemName: string);
+  public
+    procedure TearDown; override;
+  published
+    procedure TestLocking;
+  end;
+
+  TStartupListTest = class(TRootListTest)
   const
-    cTestExe        = 'C:\Windows\regedit.exe';
-    cNewTestExe     = 'C:\Windows\notepad.exe';
     cHKCU           = 'HKCU';
     cHKCU_RUNONCE   = 'HKCU RunOnce';
     cHKLM           = 'HKLM';
     cHKLM32         = 'HKLM32';
     cHKLM_RUNONCE   = 'HKLM RunOnce';
     cHKLM_RUNONCE32 = 'HKLM RunOnce32';
-  strict private
-    FLockingSuccessful: Boolean;
-    FStartupList: TStartupList;
+  private
     procedure AddTestItemEnabled(ALocation: TStartupLocation);
     procedure AddTestItemsEnabled();
     procedure DeleteTestItem(ALocation: TStartupLocation);
     function GetItemName(ALocation: TStartupLocation): string;
-    procedure TestLocking_SearchStart(Sender: TObject);
   public
     procedure SetUp; override;
-    procedure TearDown; override;
   published
-    procedure TestDisableItem;
-    procedure TestEnableItem;
-    procedure TestRenameItem;
-    procedure TestChangeFilePath;
-    procedure TestDeleteItem;
-    procedure TestLocking;
+    procedure TestDisableItems;
+    procedure TestEnableItems;
+    procedure TestRenameItems;
+    procedure TestChangeItemFilePaths;
+    procedure TestDeleteItems;
     procedure CleanUp;
   end;
 
-  {TestRootList = class(TTestCase)
-  protected
-    FRootList: TRootList<TRootItem>;
-  public
-    procedure TearDown; override;
-  public
-    procedure TestDisable;
-    procedure TestEnable;
-    procedure TestDelete;
-    procedure TestExportItem;
-    procedure TestExportBackup;
-    procedure TestImportBackup;
-    procedure TestRename;
-  published
-    procedure TestLocking;
-  end;
-
-  TestStartupList = class(TestRootList)
-  private
-    procedure TestItem(AName: string);
-    procedure ImportStartupFile(const AFileName: TFileName;
-      ACommonStartup: Boolean = False);
-  public
-    procedure SetUp; override;
-  published
-    procedure TestHKCUItem;
-    procedure TestHKCU32Item;
-    procedure TestHKLMItem;
-    procedure TestHKLM32Item;
-    procedure TestRunOnceItem;
-    procedure TestRunOnce32Item;
-    procedure TestStartupUserItem;
-    procedure TestStartupCommonItem;
-  end;
-
-  TestTTaskList = class(TTestCase)
+  {TestTTaskList = class(TTestCase)
   strict private
     FTaskList: TTaskList;
     procedure OnTaskSearchFinished(Sender: TObject);
@@ -128,73 +111,96 @@ begin
 end;
 
 { TestRootList }
-{
-procedure TestRootList.TearDown;
+
+procedure TRootListTest.TearDown;
 begin
   FreeAndNil(FRootList);
   inherited TearDown;
 end;
 
-procedure TestRootList.TestDelete;
+procedure TRootListTest.SelectItem(const AItemName: string);
 var
-  CountBefore, CountEnabledBefore: Word;
-  WasEnabled: Boolean;
+  Index: Integer;
 
 begin
-  CountBefore := FRootList.Count;
-  CountEnabledBefore := FRootList.Enabled;
-  WasEnabled := FRootList.Selected.Enabled;
-  CheckTrue(FRootList.DeleteItem(), 'Item was not deleted!');
-
-  if WasEnabled then
-    CheckEquals(CountEnabledBefore - 1, FRootList.Enabled, 'After deleting enabled item count must be decreased by 1!')
-  else
-    CheckEquals(CountEnabledBefore, FRootList.Enabled, 'After deleting disabled item count must not be changed!');
-
-  CheckEquals(CountBefore, FRootList.Count, 'After deleting item count must must be decreased by 1!');
+  Index := FRootList.IndexOf(AItemName);
+  CheckNotEquals(-1, Index, 'Item "'+ AItemName +'" could not be found!');
+  FRootList.Selected := FRootList[Index];
 end;
 
-procedure TestRootList.TestDisable;
+procedure TRootListTest.TestChangeFilePath(const AItemName: string);
+begin
+  SelectItem(AItemName);
+  CheckEqualsString(cTestExe, FRootList.Selected.FileNameOnly, 'FileName of "'+ AItemName +'" does not match before renaming!');
+  FRootList.ChangeItemFilePath(cNewTestExe);
+  CheckEqualsString(cNewTestExe, FRootList.Selected.FileNameOnly, 'FileName of "'+ AItemName +'" does not match after renaming!');
+end;
+
+procedure TRootListTest.TestDelete(const AItemName: string);
 var
-  CountBefore, CountEnabledBefore: Integer;
+  Counter, EnabledCounter: Integer;
 
 begin
-  CountBefore := FRootList.Count;
-  CountEnabledBefore := FRootList.Enabled;
-  CheckTrue(FRootList.Selected.Enabled, 'Item must be enabled to be disabled!');
-  CheckTrue(FRootList.DisableItem(), 'Item was not disabled!');
-  CheckFalse(FRootList.Selected.Enabled, 'After disabling item status must also be disabled!');
-  CheckEquals(0, FRootList.Enabled, 'After disabling item enabled count must be decreased by 1!');
-  CheckEquals(CountBefore, FRootList.Count, 'After disabling count must not be changed!');
+  SelectItem(AItemName);
+  Counter := FRootList.Count;
+  EnabledCounter := FRootList.EnabledItemsCount;
+
+  if FRootList.Selected.Enabled then
+    Dec(EnabledCounter);
+
+  CheckTrue(FRootList.DeleteItem(), 'Item "'+ AItemName +'" was not deleted!');
+  Dec(Counter);
+  CheckEquals(EnabledCounter, FRootList.EnabledItemsCount, 'After deleting item "'+ AItemName +'" EnabledItemsCount should be equal to EnabledCounter!');
+  CheckEquals(Counter, FRootList.Count, 'After deleting item "'+ AItemName +'" Count should be decreased by 1!');
 end;
 
-procedure TestRootList.TestEnable;
+procedure TRootListTest.TestDisable(const AItemName: string);
 var
-  CountBefore, CountEnabledBefore: Integer;
+  Counter, EnabledCounter: Integer;
 
 begin
-  CountBefore := FRootList.Count;
-  CountEnabledBefore := FRootList.Enabled;
-  CheckFalse(FRootList.Selected.Enabled, 'Item must be disabled to be enabled!');
-  CheckTrue(FRootList.EnableItem(), 'Item was not enabled!');
-  CheckTrue(FRootList.Selected.Enabled, 'After enabling item status must also be enabled!');
-  CheckEquals(1, FRootList.Enabled, 'After enabling item enabled count must be increased by 1!');
-  CheckEquals(CountBefore, FRootList.Count, 'After enabling count must not be changed!');
+  SelectItem(AItemName);
+  Counter := FRootList.Count;
+  EnabledCounter := FRootList.EnabledItemsCount;
+  CheckTrue(FRootList.Selected.Enabled, 'Before disabling item "'+ AItemName +'" Enabled must be True!');
+  FRootList.DisableItem();
+  CheckFalse(FRootList.Selected.Enabled, 'After disabling item "'+ AItemName +'" Enabled should also be False!');
+  Dec(EnabledCounter);
+  CheckEquals(EnabledCounter, FRootList.EnabledItemsCount, 'After disabling item "'+ AItemName +'" EnabledItemsCount must be decreased by 1!');
+  CheckEquals(Counter, FRootList.Count, 'After disabling item "'+ AItemName +'" Count must not be changed!');
 end;
 
-procedure TestRootList.TestExportBackup;
-begin
+procedure TRootListTest.TestEnable(const AItemName: string);
+var
+  Counter, EnabledCounter: Integer;
 
+begin
+  SelectItem(AItemName);
+  Counter := FRootList.Count;
+  EnabledCounter := FRootList.EnabledItemsCount;
+  CheckFalse(FRootList.Selected.Enabled, 'Before enabling item "'+ AItemName +'" Enabled must be False!');
+  FRootList.EnableItem();
+  CheckTrue(FRootList.Selected.Enabled, 'After enabling item "'+ AItemName +'" Enabled should be True!');
+  Inc(EnabledCounter);
+  CheckEquals(EnabledCounter, FRootList.EnabledItemsCount, 'After enabling item "'+ AItemName +'" EnabledItemsCount must be increased by 1!');
+  CheckEquals(Counter, FRootList.Count, 'After enabling item "'+ AItemName +'" Count must not be changed!');
 end;
 
-procedure TestRootList.TestExportItem;
+procedure TRootListTest.TestExportBackup;
 begin
+  // TODO: TestExportBackup
+end;
+
+procedure TRootListTest.TestExportItem(const AItemName: string);
+begin
+  SelectItem(AItemName);
   FRootList.ExportItem(FRootList.Selected.Name);
-  FCheckCalled := True;
+  // TODO: TestExportItem
 end;
 
-procedure TestRootList.TestImportBackup;
-const
+procedure TRootListTest.TestImportBackup;
+begin
+{const
   TestTaskFile = 'C:\Users\Phil\PMCW\Projekte\clearas\tests\data\Task.xml';
 
 begin
@@ -210,38 +216,52 @@ begin
 
   if FRootList.Selected.Enabled then
   begin
-    CheckTrue(FRootList.DisableItem(), 'Could not disable imported item');
+    FRootList.DisableItem();
     CheckFalse(FRootList.Selected.Enabled, 'After disabling an item the status must also be disabled');
   end
   else
   begin
-    CheckTrue(FRootList.EnableItem(), 'Could not enable imported item');
+    FRootList.EnableItem();
     CheckTrue(FRootList.Selected.Enabled, 'After enabling an item the status must also be enabled');
   end;
 
   CheckFalse((FRootList as IImportableList).ImportBackup(TestTaskFile), 'Backup duplicated');
   CheckTrue(FRootList.DeleteItem(), 'Could not delete imported item');
-  CheckEquals(0, FRootList.Count, 'After deleting one item the list must be empty');
+  CheckEquals(0, FRootList.Count, 'After deleting one item the list must be empty');}
 end;
 
-procedure TestRootList.TestLocking;
+procedure TRootListTest.TestLocking_SearchStart(Sender: TObject);
 begin
-  FRootList.Load();
-
   try
+    // This must not be possible e.g. during loading!
     FRootList.EnableItem();
 
   except
     on E: EListBlocked do
-      FCheckCalled := True;
-  end;
-
-  Delay(1000);
+      FLockingSuccessful := True;
+  end;  //of try
 end;
 
-procedure TestRootList.TestRename;
+procedure TRootListTest.TestLocking;
 begin
-  CheckTrue(FRootList.RenameItem(FRootList.Selected.ClassName));
+  FLockingSuccessful := False;
+
+  // Start async loading
+  FRootList.OnSearchStart := TestLocking_SearchStart;
+  FRootList.Load(True);
+
+  // Give the thread time to kill himself
+  Delay(2000);
+  CheckTrue(FLockingSuccessful, 'List was not locked!!');
+end;
+
+procedure TRootListTest.TestRename(const AItemName: string);
+begin
+  SelectItem(AItemName);
+  FRootList.RenameItem(AItemName +'2');
+  CheckEquals(AItemName +'2', FRootList.Selected.Name, 'Item was not renamed correctly!');
+  FRootList.RenameItem(AItemName);
+  CheckEquals(AItemName, FRootList.Selected.Name, 'Item was not renamed correctly twice!');
 end;
 
 { TestTTaskList }
@@ -250,12 +270,6 @@ procedure TestTTaskList.SetUp;
 begin
   inherited SetUp;
   FTaskList := TTaskList.Create;
-end;
-
-procedure TestTTaskList.TearDown;
-begin
-  FreeAndNil(FTaskList);
-  inherited TearDown;
 end;
 
 procedure TestTTaskList.OnTaskSearchFinished(Sender: TObject);
@@ -336,21 +350,7 @@ begin
   CheckEquals(0, FTaskList.Count, 'After deleting of one item task list must be empty');
 end;
 
-procedure TestTTaskList.TestRenameItem;
-begin
-
-end;
-
-
-{ TestStartupList }
-{
-procedure TestStartupList.SetUp;
-begin
-  inherited SetUp;
-  FRootList := TRootList<TRootItem>(TStartupList.Create);
-end;
-
-procedure TestStartupList.ImportStartupFile(const AFileName: TFileName;
+{procedure TestStartupList.ImportStartupFile(const AFileName: TFileName;
   ACommonStartup: Boolean = False);
 var
   Destination: string;
@@ -363,77 +363,6 @@ begin
 
   Destination := Destination + ChangeFileExt(ExtractFileName(AFileName), '.lnk');
   CopyFile(PChar(AFileName), PChar(Destination), False);
-end;
-
-procedure TestStartupList.TestItem(AName: string);
-var
-  Index: Integer;
-
-begin
-  Check(FRootList.Count > 0, 'List must contain at least 1 item!');
-  Index := FRootList.IndexOf(AName);
-  CheckNotEquals(-1, Index, 'Item not found in list!');
-  FRootList.Selected := FRootList[Index];
-  TestDisable;
-  TestRename;
-  TestEnable;
-  TestDelete;
-end;
-
-procedure TestStartupList.TestHKCU32Item;
-begin
-  ImportRegistryFile('..\data\HKCU32.reg');
-  TStartupList(FRootList).LoadStartup(rkHKCU, False, True);
-  TestItem('HKCU32');
-end;
-
-procedure TestStartupList.TestHKCUItem;
-begin
-  ImportRegistryFile('..\data\HKCU.reg');
-  TStartupList(FRootList).LoadStartup(rkHKCU);
-  TestItem('HKCU');
-end;
-
-procedure TestStartupList.TestHKLM32Item;
-begin
-  ImportRegistryFile('..\data\HKLM32.reg');
-  TStartupList(FRootList).LoadStartup(rkHKLM, False, True);
-  TestItem('HKLM32');
-end;
-
-procedure TestStartupList.TestHKLMItem;
-begin
-  ImportRegistryFile('..\data\HKLM32.reg');
-  TStartupList(FRootList).LoadStartup(rkHKLM);
-  TestItem('HKLM');
-end;
-
-procedure TestStartupList.TestRunOnce32Item;
-begin
-  ImportRegistryFile('..\data\RunOnce32.reg');
-  TStartupList(FRootList).LoadStartup(rkHKLM, True, True);
-  TestItem('RunOnce32');
-end;
-
-procedure TestStartupList.TestRunOnceItem;
-begin
-  ImportRegistryFile('..\data\RunOnce.reg');
-  TStartupList(FRootList).LoadStartup(rkHKLM, True, False);
-  TestItem('RunOnce');
-end;
-
-procedure TestStartupList.TestStartupCommonItem;
-begin
-  ImportStartupFile('..\data\Backup.CommonStartup', True);
-  TStartupList(FRootList).LoadStartup(True);
-  TestItem('Backup.CommonStartup');
-end;
-
-procedure TestStartupList.TestStartupUserItem;
-begin
-  ImportStartupFile('..\data\Backup.Startup', False);
-  TStartupList(FRootList).LoadStartup(False);
-  TestItem('Backup.Startup');
 end;}
 
 { TStartupListTest }
@@ -441,263 +370,138 @@ end;}
 procedure TStartupListTest.SetUp;
 begin
   inherited SetUp;
-  FStartupList := TStartupList.Create;
+  FRootList := TRootList<TRootItem>(TStartupList.Create);
 end;
 
-procedure TStartupListTest.TearDown;
-begin
-  FStartupList.Free;
-  inherited TearDown;
-end;
-
-procedure TStartupListTest.TestChangeFilePath;
+procedure TStartupListTest.TestChangeItemFilePaths;
 var
   Location: TStartupLocation;
 
-  procedure CheckChangeFilePath(const AItemName: string);
-  var
-    Index: Integer;
-
-  begin
-    Index := FStartupList.IndexOf(AItemName);
-    CheckNotEquals(-1, Index, 'Item "'+ AItemName +'" could not be found before changing file path!');
-    FStartupList.Selected := FStartupList[Index];
-    CheckEqualsString(cTestExe, FStartupList.Selected.FileNameOnly, 'FileName of "'+ AItemName +'" does not match before renaming!');
-    FStartupList.ChangeItemFilePath(cNewTestExe);
-    CheckEqualsString(cNewTestExe, FStartupList.Selected.FileNameOnly, 'FileName of "'+ AItemName +'" does not match after renaming!');
-  end;
-
 begin
   for Location := Low(TStartupLocation) to High(TStartupLocation) do
-    FStartupList.Load(Location);
+    TStartupList(FRootList).Load(Location);
 
-  CheckChangeFilePath(cHKCU);
-  CheckChangeFilePath(cHKCU_RUNONCE);
-  //CheckChangeFilePath(cHKLM);
-  //CheckChangeFilePath(cHKLM_RUNONCE);
-  CheckChangeFilePath(STARTUP_USER +'.lnk');
-  //CheckChangeFilePath(STARTUP_COMMON +'.lnk');
+  TestChangeFilePath(cHKCU);
+  TestChangeFilePath(cHKCU_RUNONCE);
+  TestChangeFilePath(STARTUP_USER +'.lnk');
+{$IFNDEF DEBUG}
+  TestChangeFilePath(cHKLM);
+  TestChangeFilePath(cHKLM_RUNONCE);
+  TestChangeFilePath(STARTUP_COMMON +'.lnk');
 
   if (TOSVersion.Architecture = arIntelX64) then
   begin
-    //CheckChangeFilePath(cHKLM32);
-    //CheckChangeFilePath(cHKLM_RUNONCE32);
+    TestChangeFilePath(cHKLM32);
+    TestChangeFilePath(cHKLM_RUNONCE32);
   end;  //of begin
+{$ENDIF}
 end;
 
-procedure TStartupListTest.TestDeleteItem;
+procedure TStartupListTest.TestDeleteItems;
 var
   Location: TStartupLocation;
   Counter: Integer;
 
-  procedure CheckDelete(const AItemName: string);
-  var
-    EnabledCounter: Integer;
-    Index: Integer;
-
-  begin
-    Index := FStartupList.IndexOf(AItemName);
-    CheckNotEquals(-1, Index, 'Item "'+ AItemName +'" could not be found before enabling!');
-    FStartupList.Selected := FStartupList[Index];
-    EnabledCounter := FStartupList.EnabledItemsCount;
-
-    if FStartupList.Selected.Enabled then
-      Dec(EnabledCounter);
-
-    CheckTrue(FStartupList.DeleteItem(), 'Item could not be deleted!');
-    Dec(Counter);
-    CheckEquals(EnabledCounter, FStartupList.EnabledItemsCount, 'After deleting item EnabledItemsCount should be equal to EnabledCounter!');
-  end;
-
 begin
   for Location := Low(TStartupLocation) to High(TStartupLocation) do
-    FStartupList.Load(Location);
+    TStartupList(FRootList).Load(Location);
 
-  Counter := FStartupList.Count;
-  CheckDelete(cHKCU);
-  CheckDelete(cHKCU_RUNONCE);
-  CheckDelete(STARTUP_USER +'.lnk');
+  TestDelete(cHKCU);
+  TestDelete(cHKCU_RUNONCE);
+  TestDelete(STARTUP_USER +'.lnk');
 {$IFNDEF DEBUG}
-  CheckDelete(cHKLM);
-  CheckDelete(cHKLM_RUNONCE);
-  CheckDelete(STARTUP_COMMON +'.lnk');
+  TestDelete(cHKLM);
+  TestDelete(cHKLM_RUNONCE);
+  TestDelete(STARTUP_COMMON +'.lnk');
 
   if (TOSVersion.Architecture = arIntelX64) then
   begin
-    CheckDelete(cHKLM32);
-    CheckDelete(cHKLM_RUNONCE32);
+    TestDelete(cHKLM32);
+    TestDelete(cHKLM_RUNONCE32);
   end;  //of begin
 {$ENDIF}
-  CheckEquals(Counter, FStartupList.Count, 'After deleting items counter does not match!');
-  FStartupList.Clear;
+  Counter := FRootList.Count;
+  FRootList.Clear;
 
   // Sanity check
   for Location := Low(TStartupLocation) to High(TStartupLocation) do
-    FStartupList.Load(Location);
+    TStartupList(FRootList).Load(Location);
 
-  CheckEquals(Counter, FStartupList.Count, 'After deleting items and loading items again counter does not match!');
+  CheckEquals(Counter, FRootList.Count, 'After deleting items and loading items again counter does not match!');
 end;
 
-procedure TStartupListTest.TestDisableItem;
+procedure TStartupListTest.TestDisableItems;
 var
   Location: TStartupLocation;
-
-  procedure CheckDisable(const AItemName: string);
-  var
-    EnabledCounter: Integer;
-    Index: Integer;
-
-  begin
-    Index := FStartupList.IndexOf(AItemName);
-    CheckNotEquals(-1, Index, 'Item "'+ AItemName +'" could not be found before disabling!');
-    FStartupList.Selected := FStartupList[Index];
-    EnabledCounter := FStartupList.EnabledItemsCount;
-    CheckNotEquals(0, EnabledCounter, 'Before disabling EnabledItemsCount must not be 0!');
-
-    // TODO: Check item properties before disabling
-    CheckTrue(FStartupList.Selected.Enabled, 'Before disabling item Enabled must be True!');
-    Check(FStartupList.Selected.Time = 0, 'Before disabling item timestamp must be 0!');
-
-    FStartupList.DisableItem();
-
-    // TODO: Check item properties after disabling
-    CheckFalse(FStartupList.Selected.Enabled, 'After disabling item Enabled should be False, too!');
-    Check(FStartupList.Selected.Time <> 0, 'After disabling timestamp must be greater than 0!');
-    Dec(EnabledCounter);
-    CheckEquals(EnabledCounter, FStartupList.EnabledItemsCount, 'After disabling item EnabledItemsCount should be decreased by 1!');
-  end;
 
 begin
   AddTestItemsEnabled();
 
   for Location := Low(TStartupLocation) to High(TStartupLocation) do
-    FStartupList.Load(Location);
+    TStartupList(FRootList).Load(Location);
 
-  CheckDisable(cHKCU);
-  CheckDisable(cHKCU_RUNONCE);
-  CheckDisable(STARTUP_USER +'.lnk');
+  TestDisable(cHKCU);
+  TestDisable(cHKCU_RUNONCE);
+  TestDisable(STARTUP_USER +'.lnk');
 {$IFNDEF DEBUG}
-  CheckDisable(cHKLM);
-  CheckDisable(cHKLM_RUNONCE);
-  CheckDisable(STARTUP_COMMON +'.lnk');
+  TestDisable(cHKLM);
+  TestDisable(cHKLM_RUNONCE);
+  TestDisable(STARTUP_COMMON +'.lnk');
 
   if (TOSVersion.Architecture = arIntelX64) then
   begin
-    CheckDisable(cHKLM32);
-    CheckDisable(cHKLM_RUNONCE32);
+    TestDisable(cHKLM32);
+    TestDisable(cHKLM_RUNONCE32);
   end;  //of begin
 {$ENDIF}
 end;
 
-procedure TStartupListTest.TestEnableItem;
+procedure TStartupListTest.TestEnableItems;
 var
   Location: TStartupLocation;
 
-  procedure CheckEnable(const AItemName: string);
-  var
-    EnabledCounter: Integer;
-    Index: Integer;
-
-  begin
-    Index := FStartupList.IndexOf(AItemName);
-    CheckNotEquals(-1, Index, 'Item "'+ AItemName +'" could not be found before enabling!');
-    FStartupList.Selected := FStartupList[Index];
-    EnabledCounter := FStartupList.EnabledItemsCount;
-
-    // TODO: Check item properties before enabling
-    CheckFalse(FStartupList.Selected.Enabled, 'Before enabling item Enabled must be False!');
-    Check(FStartupList.Selected.Time <> 0, 'Before enabling item timestamp must not be 0!');
-
-    FStartupList.EnableItem();
-
-    // TODO: Check item properties after enabling
-    CheckTrue(FStartupList.Selected.Enabled, 'After enabling item Enabled should be True, too!');
-    Check(FStartupList.Selected.Time = 0, 'After enabling timestamp must be 0!');
-    Inc(EnabledCounter);
-    CheckEquals(EnabledCounter, FStartupList.EnabledItemsCount, 'After enabling item EnabledItemsCount should be increased by 1!');
-  end;
-
 begin
   for Location := Low(TStartupLocation) to High(TStartupLocation) do
-    FStartupList.Load(Location);
+    TStartupList(FRootList).Load(Location);
 
-  CheckEnable(cHKCU);
-  CheckEnable(cHKCU_RUNONCE);
-  CheckEnable(STARTUP_USER +'.lnk');
+  TestEnable(cHKCU);
+  TestEnable(cHKCU_RUNONCE);
+  TestEnable(STARTUP_USER +'.lnk');
 {$IFNDEF DEBUG}
-  CheckEnable(cHKLM);
-  CheckEnable(cHKLM_RUNONCE);
-  CheckEnable(STARTUP_COMMON +'.lnk');
+  TestEnable(cHKLM);
+  TestEnable(cHKLM_RUNONCE);
+  TestEnable(STARTUP_COMMON +'.lnk');
 
   if (TOSVersion.Architecture = arIntelX64) then
   begin
-    CheckEnable(cHKLM32);
-    CheckEnable(cHKLM_RUNONCE32);
+    TestEnable(cHKLM32);
+    TestEnable(cHKLM_RUNONCE32);
   end;  //of begin
 {$ENDIF}
 end;
 
-procedure TStartupListTest.TestLocking_SearchStart(Sender: TObject);
-begin
-  try
-    // This must not be possible e.g. during loading!
-    FStartupList.EnableItem();
-
-  except
-    on E: EListBlocked do
-      FLockingSuccessful := True;
-  end;  //of try
-end;
-
-procedure TStartupListTest.TestRenameItem;
+procedure TStartupListTest.TestRenameItems;
 var
   Location: TStartupLocation;
 
-  procedure CheckRename(const AItemName: string);
-  var
-    Index: Integer;
-
-  begin
-    Index := FStartupList.IndexOf(AItemName);
-    CheckNotEquals(-1, Index, 'Item "'+ AItemName +'" could not be found before renaming!');
-    FStartupList.Selected := FStartupList[Index];
-    FStartupList.RenameItem(AItemName +'2');
-    CheckEquals(AItemName +'2', FStartupList.Selected.Name, 'Item was not renamed correctly!');
-    FStartupList.RenameItem(AItemName);
-    CheckEquals(AItemName, FStartupList.Selected.Name, 'Item was not renamed correctly twice!');
-  end;
-
 begin
   for Location := Low(TStartupLocation) to High(TStartupLocation) do
-    FStartupList.Load(Location);
+    TStartupList(FRootList).Load(Location);
 
-  CheckRename(cHKCU);
-  CheckRename(cHKCU_RUNONCE);
-  CheckRename(STARTUP_USER +'.lnk');
+  TestRename(cHKCU);
+  TestRename(cHKCU_RUNONCE);
+  TestRename(STARTUP_USER +'.lnk');
 {$IFNDEF DEBUG}
-  CheckRename(cHKLM);
-  CheckRename(cHKLM_RUNONCE);
-  CheckRename(STARTUP_COMMON +'.lnk');
+  TestRename(cHKLM);
+  TestRename(cHKLM_RUNONCE);
+  TestRename(STARTUP_COMMON +'.lnk');
 
   if (TOSVersion.Architecture = arIntelX64) then
   begin
-    CheckRename(cHKLM32);
-    CheckRename(cHKLM_RUNONCE32);
+    TestRename(cHKLM32);
+    TestRename(cHKLM_RUNONCE32);
   end;  //of begin
 {$ENDIF}
-end;
-
-procedure TStartupListTest.TestLocking;
-begin
-  FLockingSuccessful := False;
-
-  // Start async loading
-  FStartupList.OnSearchStart := TestLocking_SearchStart;
-  FStartupList.Load(True);
-
-  // Give the thread time to kill himself
-  Delay(2000);
-  CheckTrue(FLockingSuccessful, 'List was not locked!!');
 end;
 
 procedure TStartupListTest.AddTestItemEnabled(ALocation: TStartupLocation);
