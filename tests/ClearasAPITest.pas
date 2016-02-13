@@ -22,10 +22,10 @@ type
     procedure TestDisable(const AItemName: string);
     procedure TestEnable(const AItemName: string);
     procedure TestDelete(const AItemName: string);
-    procedure TestExportItem(const AItemName: string);
+    procedure TestExport(const AItemName: string);
     procedure TestExportBackup;
     procedure TestImportBackup;
-    procedure TestRename(const AItemName: string);
+    procedure TestRename(const AItemName: string); virtual;
     procedure TestChangeFilePath(const AItemName: string);
   public
     procedure TearDown; override;
@@ -45,6 +45,40 @@ type
     procedure AddTestItemEnabled(ALocation: TStartupLocation);
     procedure DeleteTestItem(ALocation: TStartupLocation);
     function GetItemName(ALocation: TStartupLocation): string;
+  public
+    procedure SetUp; override;
+  published
+    procedure AddEnabledTestItems;
+    procedure TestDisableItems;
+    procedure TestEnableItems;
+    procedure TestRenameItems;
+    procedure TestChangeItemFilePaths;
+    procedure TestExportItems;
+    procedure TestDeleteItems;
+    procedure CleanUp;
+  end;
+
+  TContextListTest = class(TRootListTest)
+  const
+    cShellFileExt           = '.789';
+    cShellExGUID              = '{C9BD3A62-5743-4102-892C-62381FD93E3F}';
+    cShellCMItem              = 'ShellTest';
+    cShellCMItemCascading     = 'ShellCascadingTest';
+    cShellCMCascadingSubItem1 = 'ShellCascadingItemTest1';
+    cShellCMCascadingSubItem2 = 'ShellCascadingItemTest2';
+    cShellExCMItem            = 'ShellExTest';
+    cShellNewCMItem           = 'ShellNewTest';
+  private
+    procedure AddShellCMTestItem(const AFileExt, AName, ACaption, AIcon,
+      AFileName: string);
+    procedure AddShellCascadingCMTestItem(const AFileExt, AName, ACaption, AIcon,
+      AFileName: string);
+    procedure AddShellExCMTestItem(const AFileExt, AName, ACaption, AGuid,
+      AFileName: string);
+    procedure AddShellNewCMTestItem(const AFileExt, AName, ACaption, AIcon,
+      AFileName: string);
+  protected
+    procedure TestRename(const AItemName: string); override;
   public
     procedure SetUp; override;
   published
@@ -123,6 +157,7 @@ var
   Index: Integer;
 
 begin
+  CheckNotEquals(0, FRootList.Count, 'List is empty: Load() was not called!');
   Index := FRootList.IndexOf(AItemName);
   CheckNotEquals(-1, Index, 'Item "'+ AItemName +'" could not be found!');
   FRootList.Selected := FRootList[Index];
@@ -136,11 +171,11 @@ const
 
 begin
   SelectItem(AItemName);
-  CheckEqualsString(cTestExe, FRootList.Selected.FileNameOnly, 'FileName of "'+ AItemName +'" does not match before renaming!');
+  CheckEqualsString(cTestExe, FRootList.Selected.FileNameOnly, 'FileName of "'+ AItemName +'" does not match before changing file path!');
   FRootList.ChangeItemFilePath(cNewTestFileName);
-  CheckEqualsString(cNewTestFileName, FRootList.Selected.FileName, 'FileName of "'+ AItemName +'" does not match after renaming!');
-  CheckEqualsString(cNewTestExe, FRootList.Selected.FileNameOnly, 'FileNameOnly of "'+ AItemName +'" does not match after renaming!');
-  CheckEqualsString(cNewTestArgument, FRootList.Selected.Arguments, 'Arguments of "'+ AItemName +'" does not match after renaming!');
+  CheckEqualsString(cNewTestFileName, FRootList.Selected.FileName, 'FileName of "'+ AItemName +'" does not match after changing file path!');
+  CheckEqualsString(cNewTestExe, FRootList.Selected.FileNameOnly, 'FileNameOnly of "'+ AItemName +'" does not match after changing file path!');
+  CheckEqualsString(cNewTestArgument, FRootList.Selected.Arguments, 'Arguments of "'+ AItemName +'" does not match after changing file path!');
 end;
 
 procedure TRootListTest.TestDelete(const AItemName: string);
@@ -198,7 +233,7 @@ begin
   // TODO: TestExportBackup
 end;
 
-procedure TRootListTest.TestExportItem(const AItemName: string);
+procedure TRootListTest.TestExport(const AItemName: string);
 var
   SearchResult: TSearchRec;
 
@@ -397,18 +432,18 @@ begin
   for Location := Low(TStartupLocation) to High(TStartupLocation) do
     TStartupList(FRootList).Load(Location);
 
-  TestExportItem(cHKCU);
-  TestExportItem(cHKCU_RUNONCE);
-  TestExportItem(STARTUP_USER +'.lnk');
+  TestExport(cHKCU);
+  TestExport(cHKCU_RUNONCE);
+  TestExport(STARTUP_USER +'.lnk');
 {$IFNDEF DEBUG}
-  TestExportItem(cHKLM);
-  TestExportItem(cHKLM_RUNONCE);
-  TestExportItem(STARTUP_COMMON +'.lnk');
+  TestExport(cHKLM);
+  TestExport(cHKLM_RUNONCE);
+  TestExport(STARTUP_COMMON +'.lnk');
 
   if (TOSVersion.Architecture = arIntelX64) then
   begin
-    TestExportItem(cHKLM32);
-    TestExportItem(cHKLM_RUNONCE32);
+    TestExport(cHKLM32);
+    TestExport(cHKLM_RUNONCE32);
   end;  //of begin
 {$ENDIF}
 end;
@@ -680,9 +715,311 @@ begin
   CopyFile(PChar(AFileName), PChar(Destination), False);
 end;}
 
+{ TContextListTest }
+
+procedure TContextListTest.SetUp;
+begin
+  inherited SetUp;
+  FRootList := TRootList<TRootItem>(TContextList.Create);
+end;
+
+procedure TContextListTest.AddShellCascadingCMTestItem(const AFileExt, AName,
+  ACaption, AIcon, AFileName: string);
+var
+  Reg: TRegistry;
+  ItemName: string;
+
+  procedure CreateMenuItem(const AName, ACaption, AFileName: string);
+  begin
+    Reg.CloseKey;
+    Reg.RootKey := HKEY_LOCAL_MACHINE;
+    Reg.OpenKey(KEY_COMMAND_STORE +'\'+ AName, True);
+    Reg.WriteString('', ACaption);
+    CheckEqualsString('', Reg.LastErrorMsg, Reg.LastErrorMsg);
+
+    Reg.CloseKey;
+    Reg.RootKey := HKEY_LOCAL_MACHINE;
+    Reg.OpenKey(KEY_COMMAND_STORE +'\'+ AName +'\command', True);
+    Reg.WriteString('', AFileName);
+    CheckEqualsString('', Reg.LastErrorMsg, Reg.LastErrorMsg);
+  end;
+
+begin
+{$IFDEF DEBUG}
+  // Skip creation of test item in debug configuration because it needs admin access rights
+  Exit;
+{$ENDIF}
+
+  Check(AnsiStartsStr('.', AFileExt), 'FileExt must start with a "."!');
+  CheckNotEqualsString('', AName, 'Name must not be empty!');
+  CheckNotEqualsString('', AFileName, 'FileName must not be empty!');
+  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
+
+  try
+    Reg.RootKey := HKEY_CLASSES_ROOT;
+    Reg.OpenKey(AFileExt +'\shell\'+ AName, True);
+
+    if (ACaption <> '') then
+      Reg.WriteString('MUIVerb', ACaption);
+
+    if (AIcon <> '') then
+      Reg.WriteString('Icon', AIcon);
+
+    ItemName := AName +'.Test.Item';
+    Reg.WriteString('SubCommands', cShellCMCascadingSubItem1 +';'+ cShellCMCascadingSubItem2);
+    CreateMenuItem(cShellCMCascadingSubItem1, cShellCMCascadingSubItem1, AFileName +' -a');
+    CreateMenuItem(cShellCMCascadingSubItem2, cShellCMCascadingSubItem2, AFileName +' -b');
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
+  end;  //of try
+end;
+
+procedure TContextListTest.AddShellCMTestItem(const AFileExt, AName, ACaption,
+  AIcon, AFileName: string);
+var
+  Reg: TRegistry;
+
+begin
+{$IFDEF DEBUG}
+  // Skip creation of test item in debug configuration because it needs admin access rights
+  Exit;
+{$ENDIF}
+
+  Check(AnsiStartsStr('.', AFileExt), 'FileExt must start with a "."!');
+  CheckNotEqualsString('', AName, 'Name must not be empty!');
+  CheckNotEqualsString('', AFileName, 'FileName must not be empty!');
+  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
+
+  try
+    Reg.RootKey := HKEY_CLASSES_ROOT;
+    Reg.OpenKey(AFileExt +'\shell\'+ AName, True);
+
+    if (ACaption <> '') then
+      Reg.WriteString('', ACaption);
+
+    if (AIcon <> '') then
+      Reg.WriteString('Icon', AIcon);
+
+    Reg.CloseKey;
+    Reg.RootKey := HKEY_CLASSES_ROOT;
+    Reg.OpenKey(AFileExt +'\shell\'+ AName +'\command', True);
+    Reg.WriteString('', AFileName);
+    CheckEqualsString('', Reg.LastErrorMsg, Reg.LastErrorMsg);
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
+  end;  //of try
+end;
+
+procedure TContextListTest.AddShellExCMTestItem(const AFileExt, AName, ACaption,
+  AGuid, AFileName: string);
+var
+  Reg: TRegistry;
+
+begin
+{$IFDEF DEBUG}
+  // Skip creation of test item in debug configuration because it needs admin access rights
+  Exit;
+{$ENDIF}
+
+  Check(AnsiStartsStr('.', AFileExt), 'FileExt must start with a "."!');
+  CheckNotEqualsString('', AName, 'Name must not be empty!');
+  CheckNotEqualsString('', AFileName, 'FileName must not be empty!');
+  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
+
+  try
+    Reg.RootKey := HKEY_CLASSES_ROOT;
+    Reg.OpenKey(AFileExt +'\'+ CM_SHELLEX_HANDLERS +'\'+ AName, True);
+    Reg.WriteString('', AGuid);
+    CheckEqualsString('', Reg.LastErrorMsg, Reg.LastErrorMsg);
+
+    Reg.CloseKey;
+    Reg.RootKey := HKEY_CLASSES_ROOT;
+
+    if (ACaption <> '') then
+    begin
+      Reg.OpenKey('CLSID\'+ AGuid, True);
+      Reg.WriteString('', ACaption);
+      CheckEqualsString('', Reg.LastErrorMsg, Reg.LastErrorMsg);
+      Reg.CloseKey;
+    end;
+
+    Reg.RootKey := HKEY_CLASSES_ROOT;
+    Reg.OpenKey('CLSID\'+ AGuid +'\InprocServer32', True);
+    Reg.WriteString('', AFileName);
+    CheckEqualsString('', Reg.LastErrorMsg, Reg.LastErrorMsg);
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
+  end;  //of try
+end;
+
+procedure TContextListTest.AddShellNewCMTestItem(const AFileExt, AName, ACaption,
+  AIcon, AFileName: string);
+var
+  Reg: TRegistry;
+
+begin
+{$IFDEF DEBUG}
+  // Skip creation of test item in debug configuration because it needs admin access rights
+  Exit;
+{$ENDIF}
+
+  Check(AnsiStartsStr('.', AFileExt), 'FileExt must start with a "."!');
+  CheckNotEqualsString('', AFileName, 'FileName must not be empty!');
+  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
+
+  try
+    Reg.RootKey := HKEY_CLASSES_ROOT;
+    Reg.OpenKey(AFileExt, True);
+    Reg.WriteString('', ACaption);
+    CheckEqualsString('', Reg.LastErrorMsg, Reg.LastErrorMsg);
+
+    Reg.CloseKey;
+    Reg.RootKey := HKEY_CLASSES_ROOT;
+    Reg.OpenKey(AName, True);
+    Reg.WriteString('', ACaption);
+    CheckEqualsString('', Reg.LastErrorMsg, Reg.LastErrorMsg);
+
+    Reg.CloseKey;
+    Reg.RootKey := HKEY_CLASSES_ROOT;
+    Reg.OpenKey(AName +'\DefaultIcon', True);
+    Reg.WriteString('', AIcon);
+    CheckEqualsString('', Reg.LastErrorMsg, Reg.LastErrorMsg);
+
+    Reg.CloseKey;
+    Reg.RootKey := HKEY_CLASSES_ROOT;
+    Reg.OpenKey(AName +'\shell\open\command', True);
+    Reg.WriteString('', AFileName);
+    CheckEqualsString('', Reg.LastErrorMsg, Reg.LastErrorMsg);
+
+    Reg.CloseKey;
+    Reg.RootKey := HKEY_CLASSES_ROOT;
+    Reg.OpenKey(AFileExt +'\'+ CM_SHELLNEW, True);
+    Reg.WriteExpandString('ItemName', '@%systemroot%\system32\mspaint.exe,-59414');
+    Reg.WriteString('NullFile', '');
+    CheckEqualsString('', Reg.LastErrorMsg, Reg.LastErrorMsg);
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
+  end;  //of try
+end;
+
+procedure TContextListTest.AddEnabledTestItems;
+begin
+{$IFDEF DEBUG}
+  // Skip creation of test items in debug configuration because it needs admin access rights
+  CheckTrue(False, 'Test must be run with admin access rights!');
+{$ENDIF}
+
+  AddShellCMTestItem(cShellFileExt, cShellCMItem, cShellCMItem, cTestExe, cTestExe);
+  AddShellCascadingCMTestItem(cShellFileExt, cShellCMItemCascading, cShellCMItemCascading,
+    cTestExe, cTestExe);
+  AddShellExCMTestItem(cShellFileExt, cShellExCMItem, cShellExCMItem,
+    cShellExGUID, cTestExe);
+  AddShellNewCMTestItem(cShellFileExt, cShellNewCMItem, cShellNewCMItem, cTestExe, cTestExe);
+end;
+
+procedure TContextListTest.TestChangeItemFilePaths;
+begin
+  TContextList(FRootList).LoadContextmenu(cShellFileExt, False);
+  TestChangeFilePath(cShellCMItem);
+  TestChangeFilePath(cShellExCMItem);
+  // NOTE: Changing the filename of a cascading shell and shell new items is not possible!
+end;
+
+procedure TContextListTest.TestDeleteItems;
+begin
+  TContextList(FRootList).LoadContextmenu(cShellFileExt, False);
+  TestDelete(cShellCMItem);
+  TestDelete(cShellExCMItem);
+  TestDelete(cShellCMItemCascading);
+  TestDelete(cShellNewCMItem);
+end;
+
+procedure TContextListTest.TestDisableItems;
+begin
+  TContextList(FRootList).LoadContextmenu(cShellFileExt, False);
+  TestDisable(cShellCMItem);
+  TestDisable(cShellExCMItem);
+  TestDisable(cShellCMItemCascading);
+  TestDisable(cShellNewCMItem);
+end;
+
+procedure TContextListTest.TestEnableItems;
+begin
+  TContextList(FRootList).LoadContextmenu(cShellFileExt, False);
+  TestEnable(cShellCMItem);
+  TestEnable(cShellExCMItem);
+  TestEnable(cShellCMItemCascading);
+  TestEnable(cShellNewCMItem);
+end;
+
+procedure TContextListTest.TestExportItems;
+begin
+  TContextList(FRootList).LoadContextmenu(cShellFileExt, False);
+  TestExport(cShellCMItem);
+  TestExport(cShellExCMItem);
+  TestExport(cShellCMItemCascading);
+  TestExport(cShellNewCMItem);
+end;
+
+procedure TContextListTest.TestRename(const AItemName: string);
+begin
+  SelectItem(AItemName);
+  FRootList.RenameItem(AItemName +'2');
+
+  // NOTE: Renaming a contextmenu item changes the caption not the name!!!
+  CheckEquals(AItemName +'2', FRootList.Selected.Caption, 'Item was not renamed correctly!');
+  FRootList.RenameItem(AItemName);
+  CheckEquals(AItemName, FRootList.Selected.Caption, 'Item was not renamed correctly twice!');
+end;
+
+procedure TContextListTest.TestRenameItems;
+begin
+  TContextList(FRootList).LoadContextmenu(cShellFileExt, False);
+  TestRename(cShellCMItem);
+  // NOTE: Renaming shellex and shell new items is not possible
+  TestRename(cShellCMItemCascading);
+end;
+
+procedure TContextListTest.CleanUp;
+var
+  Reg: TRegistry;
+
+begin
+{$IFDEF DEBUG}
+  // Skip deletion of test items in debug configuration because it needs admin access rights
+  CheckTrue(False, 'Test must be run with admin access rights!');
+{$ENDIF}
+
+  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
+
+  try
+    Reg.RootKey := HKEY_CLASSES_ROOT;
+    Reg.DeleteKey(cShellFileExt);
+    Reg.DeleteKey(cShellNewCMItem);
+    Reg.DeleteKey('CLSID\'+ cShellExGUID);
+
+    Reg.RootKey := HKEY_LOCAL_MACHINE;
+    Reg.DeleteKey(KEY_COMMAND_STORE +'\'+ cShellCMCascadingSubItem1);
+    Reg.DeleteKey(KEY_COMMAND_STORE +'\'+ cShellCMCascadingSubItem2);
+    FCheckCalled := True;
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
+  end;  //of try
+end;
+
 initialization
   RegisterTest(TStartupListTest.Suite);
-  //RegisterTest(TestStartupList.Suite);
+  RegisterTest(TContextListTest.Suite);
   //RegisterTest(TestTTaskList.Suite);
 end.
 
