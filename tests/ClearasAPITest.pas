@@ -60,7 +60,7 @@ type
 
   TContextListTest = class(TRootListTest)
   const
-    cShellFileExt           = '.789';
+    cShellFileExt             = '.789';
     cShellExGUID              = '{C9BD3A62-5743-4102-892C-62381FD93E3F}';
     cShellCMItem              = 'ShellTest';
     cShellCMItemCascading     = 'ShellCascadingTest';
@@ -92,13 +92,16 @@ type
     procedure CleanUp;
   end;
 
-  {TestTTaskList = class(TTestCase)
-  strict private
-    FTaskList: TTaskList;
+  TServiceListTest = class(TRootListTest)
+  public
+    procedure SetUp; override;
+  end;
+
+  {TTaskListTest = class(TRootListTest)
+  private
     procedure OnTaskSearchFinished(Sender: TObject);
   public
     procedure SetUp; override;
-    procedure TearDown; override;
   published
     procedure TestChangeItemFilePath;
     procedure TestExportItem;
@@ -614,15 +617,15 @@ begin
   end;  //of case
 end;
 
-{ TestTTaskList }
+{ TTaskListTest }
 {
-procedure TestTTaskList.SetUp;
+procedure TTaskListTest.SetUp;
 begin
   inherited SetUp;
   FTaskList := TTaskList.Create;
 end;
 
-procedure TestTTaskList.OnTaskSearchFinished(Sender: TObject);
+procedure TTaskListTest.OnTaskSearchFinished(Sender: TObject);
 const
   ZipFile = 'C:\Users\Phil\PMCW\Projekte\clearas\tests\TestExportList.zip';
 
@@ -632,7 +635,7 @@ begin
   CheckTrue(FileExists(ZipFile), 'List was not exported as file!');
 end;
 
-procedure TestTTaskList.TestChangeItemFilePath;
+procedure TTaskListTest.TestChangeItemFilePath;
 const
   TestTaskFile = 'Task.xml';
   NewFileName = 'C:\Windows\regedit.exe';
@@ -661,7 +664,7 @@ begin
   CheckEquals(0, FTaskList.Count, 'After deleting of one item task list must be empty');
 end;
 
-procedure TestTTaskList.TestExportBackup;
+procedure TTaskListTest.TestExportBackup;
 begin
   FTaskList.OnSearchFinish := OnTaskSearchFinished;
   FTaskList.Load(False);
@@ -670,12 +673,12 @@ begin
   CheckEquals(0, FTaskList.Count, 'After clearing the list must be empty!');
 end;
 
-procedure TestTTaskList.TestExportItem;
+procedure TTaskListTest.TestExportItem;
 begin
 
 end;
 
-procedure TestTTaskList.TestImportBackup;
+procedure TTaskListTest.TestImportBackup;
 const
   TestTaskFile = 'C:\Users\Phil\PMCW\Projekte\clearas\tests\TestTask.xml';
 
@@ -1017,9 +1020,18 @@ begin
   end;  //of try
 end;
 
+{ TServiceListTest }
+
+procedure TServiceListTest.SetUp;
+begin
+  inherited SetUp;
+  FRootList := TRootList<TRootItem>(TServiceList.Create);
+end;
+
 initialization
   RegisterTest(TStartupListTest.Suite);
   RegisterTest(TContextListTest.Suite);
-  //RegisterTest(TestTTaskList.Suite);
+  //RegisterTest(TServiceListTest.Suite);
+  //RegisterTest(TTaskListTest.Suite);
 end.
 

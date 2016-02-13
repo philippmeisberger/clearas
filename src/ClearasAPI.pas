@@ -1650,7 +1650,11 @@ type
   ///   The possible service startup type.
   /// </summary>
   TServiceStart = (
-    ssBoot, ssSystem, ssAutomatic, ssManual, ssDisabled
+    ssBoot      = SERVICE_BOOT_START,
+    ssSystem    = SERVICE_SYSTEM_START,
+    ssAutomatic = SERVICE_AUTO_START,
+    ssManual    = SERVICE_DEMAND_START,
+    ssDisabled  = SERVICE_DISABLED
   );
 
   TServiceStartHelper = record helper for TServiceStart
@@ -5719,16 +5723,15 @@ begin
     if not QueryServiceConfig(AServiceHandle, ServiceConfig, BytesNeeded, BytesNeeded) then
       raise EServiceException.Create(SysErrorMessage(GetLastError()));
 
-    // Determine status and filter services
-    case ServiceConfig^.dwStartType of
-      SERVICE_AUTO_START:   ServiceStart := ssAutomatic;
-      SERVICE_DISABLED:     ServiceStart := ssDisabled;
-      SERVICE_DEMAND_START: if AIncludeDemand then
-                              ServiceStart := ssManual
-                            else
-                              Exit;
-      else                  Exit;
-    end;
+    ServiceStart := TServiceStart(ServiceConfig^.dwStartType);
+
+    // Filter important system services
+    if (ServiceStart in [ssBoot, ssSystem]) then
+      Exit;
+
+    // Skip services started manual when not in expert mode
+    if ((ServiceStart = ssManual) and not AIncludeDemand) then
+      Exit;
 
     Caption := ServiceConfig^.lpDisplayName;
     FileName := ServiceConfig^.lpBinaryPathName;

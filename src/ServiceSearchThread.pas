@@ -103,7 +103,7 @@ begin
       // Skip corrupted service
       if (Service <> 0) then
         TServiceList(FSelectedList).LoadService(ServicesCopy^.lpServiceName,
-         Service, FExpertMode);
+          Service, FExpertMode);
 
       Inc(ServicesCopy);
     end;  //of for
