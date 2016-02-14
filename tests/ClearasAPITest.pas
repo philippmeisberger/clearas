@@ -26,7 +26,6 @@ type
     procedure TestEnable(const AItemName: string);
     procedure TestDelete(const AItemName: string);
     procedure TestExport(const AItemName: string);
-    procedure TestImportBackup;
     procedure TestRename(const AItemName: string); virtual;
     procedure TestChangeFilePath(const AItemName: string);
   public
@@ -57,6 +56,7 @@ type
     procedure CleanUp; override;
   published
     procedure AddEnabledTestItems; override;
+    procedure TestImportBackup;
   end;
 
   TContextListTest = class(TRootListTest)
@@ -323,38 +323,6 @@ begin
   EnsureFileExportedAndDelete(FRootList.Selected.Name);
 end;
 
-procedure TRootListTest.TestImportBackup;
-begin
-{const
-  TestTaskFile = 'C:\Users\Phil\PMCW\Projekte\clearas\tests\data\Task.xml';
-
-begin
-  if not Supports(FRootList, IImportableList) then
-  begin
-    FCheckCalled := True;
-    Exit;
-  end;  //of begin
-
-  CheckTrue((FRootList as IImportableList).ImportBackup(TestTaskFile), 'Import failed');
-  CheckEquals(1, FRootList.Count, 'After importing there must be 1 item in list but it is empty');
-  FRootList.Selected := FRootList[0];
-
-  if FRootList.Selected.Enabled then
-  begin
-    FRootList.DisableItem();
-    CheckFalse(FRootList.Selected.Enabled, 'After disabling an item the status must also be disabled');
-  end
-  else
-  begin
-    FRootList.EnableItem();
-    CheckTrue(FRootList.Selected.Enabled, 'After enabling an item the status must also be enabled');
-  end;
-
-  CheckFalse((FRootList as IImportableList).ImportBackup(TestTaskFile), 'Backup duplicated');
-  CheckTrue(FRootList.DeleteItem(), 'Could not delete imported item');
-  CheckEquals(0, FRootList.Count, 'After deleting one item the list must be empty');}
-end;
-
 procedure TRootListTest.TestLocking_SearchStart(Sender: TObject);
 begin
   try
@@ -421,6 +389,19 @@ begin
     FTestItems.Append(GetItemName(slHklmRunOnce32));
   end;  //of begin
 {$ENDIF}
+end;
+
+procedure TStartupListTest.TestImportBackup;
+begin
+  Check(TStartupList(FRootList).ImportBackup('..\..\data\'+ GetItemName(slStartupUser) + EXT_STARTUP_USER), STARTUP_USER +' file already exists!');
+{$IFNDEF DEBUG}
+  Check(TStartupList(FRootList).ImportBackup('..\..\data\'+ GetItemName(slCommonStartup) + EXT_STARTUP_COMMON), STARTUP_COMMON +' file already exists!');
+  CheckEquals(2, FRootList.Count, 'After importing 2 startup backup files there should be 2 items in the list!');
+  TestDelete(GetItemName(slCommonStartup));
+{$ELSE}
+  CheckEquals(1, FRootList.Count, 'After importing 1 startup backup file there should be 1 items in the list!');
+{$ENDIF}
+  TestDelete(GetItemName(slStartupUser));
 end;
 
 procedure TStartupListTest.AddTestItemEnabled(ALocation: TStartupLocation);
