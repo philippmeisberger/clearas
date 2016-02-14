@@ -93,8 +93,22 @@ type
   end;
 
   TServiceListTest = class(TRootListTest)
+  const
+    cServiceCaption = 'TestService';
+  private
+    procedure LoadService();
+  protected
+    procedure TestRename(const AItemName: string); override;
   public
     procedure SetUp; override;
+  published
+    procedure AddEnabledTestItem;
+    procedure TestDisableItem;
+    procedure TestEnableItem;
+    procedure TestRenameItem;
+    procedure TestChangeItemFilePath;
+    procedure TestExportItem;
+    procedure TestDeleteItem;
   end;
 
   {TTaskListTest = class(TRootListTest)
@@ -749,7 +763,7 @@ var
 
 begin
 {$IFDEF DEBUG}
-  // Skip creation of test item in debug configuration because it needs admin access rights
+  // Skip test in debug configuration because it needs admin access rights
   Exit;
 {$ENDIF}
 
@@ -786,7 +800,7 @@ var
 
 begin
 {$IFDEF DEBUG}
-  // Skip creation of test item in debug configuration because it needs admin access rights
+  // Skip test in debug configuration because it needs admin access rights
   Exit;
 {$ENDIF}
 
@@ -824,7 +838,7 @@ var
 
 begin
 {$IFDEF DEBUG}
-  // Skip creation of test item in debug configuration because it needs admin access rights
+  // Skip test in debug configuration because it needs admin access rights
   Exit;
 {$ENDIF}
 
@@ -868,7 +882,7 @@ var
 
 begin
 {$IFDEF DEBUG}
-  // Skip creation of test item in debug configuration because it needs admin access rights
+  // Skip test in debug configuration because it needs admin access rights
   Exit;
 {$ENDIF}
 
@@ -916,7 +930,7 @@ end;
 procedure TContextListTest.AddEnabledTestItems;
 begin
 {$IFDEF DEBUG}
-  // Skip creation of test items in debug configuration because it needs admin access rights
+  // Skip test in debug configuration because it needs admin access rights
   CheckTrue(False, 'Test must be run with admin access rights!');
 {$ENDIF}
 
@@ -997,7 +1011,7 @@ var
 
 begin
 {$IFDEF DEBUG}
-  // Skip deletion of test items in debug configuration because it needs admin access rights
+  // Skip test in debug configuration because it needs admin access rights
   CheckTrue(False, 'Test must be run with admin access rights!');
 {$ENDIF}
 
@@ -1026,12 +1040,109 @@ procedure TServiceListTest.SetUp;
 begin
   inherited SetUp;
   FRootList := TRootList<TRootItem>(TServiceList.Create);
+
+end;
+
+procedure TServiceListTest.LoadService();
+var
+  Service: SC_HANDLE;
+  ServiceName: string;
+
+begin
+  // Add test service to list
+  ServiceName := ChangeFileExt(ExtractFileName(cTestExe), '');
+  CheckNotEquals(0, TServiceList(FRootList).Manager, 'Invalid service manager handle!');
+  Service := OpenService(TServiceList(FRootList).Manager, PChar(ServiceName), SERVICE_QUERY_CONFIG);
+  CheckNotEquals(0, Service, 'Invalid service handle!');
+  TServiceList(FRootList).LoadService(ServiceName, Service, False);
+  CloseServiceHandle(Service);
+end;
+
+procedure TServiceListTest.TestRename(const AItemName: string);
+begin
+  SelectItem(AItemName);
+  FRootList.RenameItem(AItemName +'2');
+
+  // NOTE: Renaming a service item changes the caption not the name!!!
+  CheckEquals(AItemName +'2', FRootList.Selected.Caption, 'Item was not renamed correctly!');
+  FRootList.RenameItem(AItemName);
+  CheckEquals(AItemName, FRootList.Selected.Caption, 'Item was not renamed correctly twice!');
+end;
+
+procedure TServiceListTest.AddEnabledTestItem;
+begin
+{$IFDEF DEBUG}
+  // Skip adding test item in debug configuration because it needs admin access rights
+  CheckTrue(False, 'Test must be run with admin access rights!');
+{$ENDIF}
+  CheckTrue(TServiceList(FRootList).Add(cTestExe, '', cServiceCaption), 'Service already exists!');
+  CheckEquals(1, FRootList.Count, 'There should be 1 service in the list!');
+end;
+
+procedure TServiceListTest.TestChangeItemFilePath;
+begin
+{$IFDEF DEBUG}
+  // Skip test in debug configuration because it needs admin access rights
+  CheckTrue(False, 'Test must be run with admin access rights!');
+{$ENDIF}
+  LoadService();
+  TestChangeFilePath(cServiceCaption);
+end;
+
+procedure TServiceListTest.TestDeleteItem;
+begin
+{$IFDEF DEBUG}
+  // Skip test in debug configuration because it needs admin access rights
+  CheckTrue(False, 'Test must be run with admin access rights!');
+{$ENDIF}
+  LoadService();
+  TestDelete(cServiceCaption);
+end;
+
+procedure TServiceListTest.TestDisableItem;
+begin
+{$IFDEF DEBUG}
+  // Skip test in debug configuration because it needs admin access rights
+  CheckTrue(False, 'Test must be run with admin access rights!');
+{$ENDIF}
+  LoadService();
+  TestDisable(cServiceCaption);
+end;
+
+procedure TServiceListTest.TestEnableItem;
+begin
+{$IFDEF DEBUG}
+  // Skip test in debug configuration because it needs admin access rights
+  CheckTrue(False, 'Test must be run with admin access rights!');
+{$ENDIF}
+  LoadService();
+  TestEnable(cServiceCaption);
+end;
+
+procedure TServiceListTest.TestExportItem;
+begin
+{$IFDEF DEBUG}
+  // Skip test in debug configuration because it needs admin access rights
+  CheckTrue(False, 'Test must be run with admin access rights!');
+{$ENDIF}
+  LoadService();
+  TestExport(cServiceCaption);
+end;
+
+procedure TServiceListTest.TestRenameItem;
+begin
+{$IFDEF DEBUG}
+  // Skip test in debug configuration because it needs admin access rights
+  CheckTrue(False, 'Test must be run with admin access rights!');
+{$ENDIF}
+  LoadService();
+  TestRename(cServiceCaption);
 end;
 
 initialization
   RegisterTest(TStartupListTest.Suite);
   RegisterTest(TContextListTest.Suite);
-  //RegisterTest(TServiceListTest.Suite);
+  RegisterTest(TServiceListTest.Suite);
   //RegisterTest(TTaskListTest.Suite);
 end.
 

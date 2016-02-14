@@ -1817,6 +1817,11 @@ type
     /// </returns>
     function LoadService(const AName: string; AServiceHandle: SC_HANDLE;
       AIncludeDemand: Boolean = False): Integer;
+
+    /// <summary>
+    ///   Gets the current handle to the service manager.
+    /// </summary>
+    property Manager: SC_HANDLE read FManager;
   end;
 
   { Exception class }
@@ -4604,7 +4609,8 @@ end;
 
 procedure TShellCascadingItem.ChangeFilePath(const ANewFileName: string);
 begin
-  raise EAbstractError.Create('Impossible!');
+  raise EAbstractError.Create('It is impossible to change the filename of a '
+    + ToString() +' item!');
 end;
 
 function TShellCascadingItem.Delete(): Boolean;
@@ -4800,7 +4806,7 @@ end;
 
 procedure TShellExItem.Rename(const ANewName: string);
 begin
-  raise EAbstractError.Create('Impossible!');
+  raise EAbstractError.Create('It is impossible to rename a '+ ToString() +'item!');
 end;
 
 function TShellExItem.ToString(): string;
@@ -4848,7 +4854,7 @@ begin
       raise EContextMenuException.Create('Key '''+ OldKeyName +''' does not exist!');
 
     // New key already exists?
-    if Reg.KeyExists(NewKeyName) then
+    if Reg.KeyExists(NewKeyName) and not Reg.DeleteKey(NewKeyName) then
       raise EContextMenuException.Create('Key '''+ NewKeyName +''' already exists!');
 
     // Rename key
@@ -4873,7 +4879,8 @@ end;
 
 procedure TShellNewItem.ChangeFilePath(const ANewFileName: string);
 begin
-  raise EAbstractError.Create('Impossible!');
+  raise EAbstractError.Create('It is impossible to change the filename of a '
+    + ToString() +' item!');
 end;
 
 function TShellNewItem.Delete(): Boolean;
@@ -4902,7 +4909,7 @@ end;
 
 procedure TShellNewItem.Rename(const ANewName: string);
 begin
-  raise EAbstractError.Create('Impossible!');
+  raise EAbstractError.Create('It is impossible to rename a '+ ToString() +'item!');
 end;
 
 function TShellNewItem.ToString(): string;
@@ -5577,7 +5584,7 @@ constructor TServiceList.Create();
 begin
   inherited Create;
   FManager := OpenSCManager(nil, SERVICES_ACTIVE_DATABASE,
-    SC_MANAGER_ENUMERATE_SERVICE or SC_MANAGER_CREATE_SERVICE);
+    SC_MANAGER_ENUMERATE_SERVICE {$IFNDEF DEBUG}or SC_MANAGER_CREATE_SERVICE{$ENDIF});
 end;
 
 destructor TServiceList.Destroy();
@@ -5633,7 +5640,7 @@ begin
     CloseServiceHandle(Service);
 
     // Adds service to list
-    Result := (Add(TServiceListItem.Create(Name, ACaption, FullPath, True, 
+    Result := (Add(TServiceListItem.Create(Name, ACaption, FullPath, True,
       ssAutomatic, FManager)) <> -1);
 
     // Refresh TListView
