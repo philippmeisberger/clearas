@@ -1,12 +1,12 @@
 unit ClearasAPITest;
 
+{$WARN SYMBOL_PLATFORM OFF}
+
 interface
 
 uses
-  TestFramework, StrUtils, Registry, PMCWLanguageFile, ClearasAPI, ComObj,
-  ActiveX, SysUtils, ShellAPI, Windows, PMCWOSUtils, KnownFolders, Taskschd,
-  Variants, SyncObjs, ShlObj, Generics.Collections, Classes, Zip, CommCtrl,
-  PMCWIniFileParser, WinSvc, Graphics, Forms;
+  TestFramework, Windows, Classes, Registry, ComObj, SysUtils, ShellAPI,
+  Taskschd, WinSvc, Forms, ClearasAPI;
 
 const
   cTestExe = 'C:\Windows\regedit.exe';
@@ -670,7 +670,7 @@ begin
   Exit;
 {$ENDIF}
 
-  Check(AnsiStartsStr('.', AFileExt), 'FileExt must start with a "."!');
+  Check(AFileExt.StartsWith('.'), 'FileExt must start with a "."!');
   CheckNotEqualsString('', AName, 'Name must not be empty!');
   CheckNotEqualsString('', AFileName, 'FileName must not be empty!');
   Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
@@ -707,7 +707,7 @@ begin
   Exit;
 {$ENDIF}
 
-  Check(AnsiStartsStr('.', AFileExt), 'FileExt must start with a "."!');
+  Check(AFileExt.StartsWith('.'), 'FileExt must start with a "."!');;
   CheckNotEqualsString('', AName, 'Name must not be empty!');
   CheckNotEqualsString('', AFileName, 'FileName must not be empty!');
   Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
@@ -745,7 +745,7 @@ begin
   Exit;
 {$ENDIF}
 
-  Check(AnsiStartsStr('.', AFileExt), 'FileExt must start with a "."!');
+  Check(AFileExt.StartsWith('.'), 'FileExt must start with a "."!');
   CheckNotEqualsString('', AName, 'Name must not be empty!');
   CheckNotEqualsString('', AFileName, 'FileName must not be empty!');
   Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
@@ -789,7 +789,7 @@ begin
   Exit;
 {$ENDIF}
 
-  Check(AnsiStartsStr('.', AFileExt), 'FileExt must start with a "."!');
+  Check(AFileExt.StartsWith('.'), 'FileExt must start with a "."!');
   CheckNotEqualsString('', AFileName, 'FileName must not be empty!');
   Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
 
