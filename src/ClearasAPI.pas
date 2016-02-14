@@ -5948,10 +5948,10 @@ begin
   inherited Create;
   CoInitialize(nil);
 
-{$IFNDEF DEBUG}
-  OleCheck(CoInitializeSecurity(nil, -1, nil, nil, RPC_C_AUTHN_LEVEL_PKT_PRIVACY,
-    RPC_C_IMP_LEVEL_IMPERSONATE, nil, EOAC_NONE, nil));
-{$ENDIF}
+//{$IFNDEF DEBUG}
+//  OleCheck(CoInitializeSecurity(nil, -1, nil, nil, RPC_C_AUTHN_LEVEL_PKT_PRIVACY,
+//    RPC_C_IMP_LEVEL_IMPERSONATE, nil, EOAC_NONE, nil));
+//{$ENDIF}
   OleCheck(CoCreateInstance(CLSID_TaskScheduler, nil, CLSCTX_INPROC_SERVER,
     IID_ITaskService, FTaskService));
   OleCheck(FTaskService.Connect(Null, Null, Null, Null));
