@@ -16,46 +16,47 @@ type
   strict private
     FLockingSuccessful: Boolean;
     procedure TestLocking_SearchStart(Sender: TObject);
+    procedure EnsureFileExportedAndDelete(const AFileName: string);
   protected
     FRootList: TRootList<TRootItem>;
+    FTestItems: TStringList;
+    procedure LoadItems(); virtual; abstract;
     procedure SelectItem(const AItemName: string);
     procedure TestDisable(const AItemName: string);
     procedure TestEnable(const AItemName: string);
     procedure TestDelete(const AItemName: string);
     procedure TestExport(const AItemName: string);
-    procedure TestExportBackup;
     procedure TestImportBackup;
     procedure TestRename(const AItemName: string); virtual;
     procedure TestChangeFilePath(const AItemName: string);
   public
+    procedure SetUp; override;
     procedure TearDown; override;
+    procedure CleanUp; virtual;
   published
+    procedure AddEnabledTestItems; virtual; abstract;
+    procedure TestDisableItems;
+    procedure TestEnableItems;
+    procedure TestRenameItems; virtual;
+    procedure TestChangeItemFilePaths; virtual;
+    procedure TestExportBackup;
+    procedure TestExportItems;
+    procedure TestDeleteItems;
     procedure TestLocking;
   end;
 
   TStartupListTest = class(TRootListTest)
-  const
-    cHKCU           = 'HKCU';
-    cHKCU_RUNONCE   = 'HKCU RunOnce';
-    cHKLM           = 'HKLM';
-    cHKLM32         = 'HKLM32';
-    cHKLM_RUNONCE   = 'HKLM RunOnce';
-    cHKLM_RUNONCE32 = 'HKLM RunOnce32';
   private
     procedure AddTestItemEnabled(ALocation: TStartupLocation);
     procedure DeleteTestItem(ALocation: TStartupLocation);
     function GetItemName(ALocation: TStartupLocation): string;
+  protected
+    procedure LoadItems(); override;
   public
     procedure SetUp; override;
+    procedure CleanUp; override;
   published
-    procedure AddEnabledTestItems;
-    procedure TestDisableItems;
-    procedure TestEnableItems;
-    procedure TestRenameItems;
-    procedure TestChangeItemFilePaths;
-    procedure TestExportItems;
-    procedure TestDeleteItems;
-    procedure CleanUp;
+    procedure AddEnabledTestItems; override;
   end;
 
   TContextListTest = class(TRootListTest)
@@ -78,54 +79,34 @@ type
     procedure AddShellNewCMTestItem(const AFileExt, AName, ACaption, AIcon,
       AFileName: string);
   protected
+    procedure LoadItems(); override;
     procedure TestRename(const AItemName: string); override;
   public
     procedure SetUp; override;
+    procedure CleanUp; override;
   published
-    procedure AddEnabledTestItems;
-    procedure TestDisableItems;
-    procedure TestEnableItems;
-    procedure TestRenameItems;
-    procedure TestChangeItemFilePaths;
-    procedure TestExportItems;
-    procedure TestDeleteItems;
-    procedure CleanUp;
+    procedure AddEnabledTestItems; override;
+    procedure TestChangeItemFilePaths; override;
+    procedure TestRenameItems; override;
   end;
 
   TServiceListTest = class(TRootListTest)
-  const
-    cServiceCaption = 'TestService';
-  private
-    procedure LoadService();
   protected
+    procedure LoadItems(); override;
     procedure TestRename(const AItemName: string); override;
   public
     procedure SetUp; override;
   published
-    procedure AddEnabledTestItem;
-    procedure TestDisableItem;
-    procedure TestEnableItem;
-    procedure TestRenameItem;
-    procedure TestChangeItemFilePath;
-    procedure TestExportItem;
-    procedure TestDeleteItem;
+    procedure AddEnabledTestItems; override;
   end;
 
   TTaskListTest = class(TRootListTest)
-  const
-    cTestTaskName = 'TestTask';
-    cTestTaskFile = 'data\'+ cTestTaskName +'.xml';
+  protected
+    procedure LoadItems(); override;
   public
     procedure SetUp; override;
-    procedure LoadTasks();
   published
-    procedure AddEnabledTestItem;
-    procedure TestDisableItem;
-    procedure TestEnableItem;
-    procedure TestRenameItem;
-    procedure TestChangeItemFilePath;
-    procedure TestExportItem;
-    procedure TestDeleteItem;
+    procedure AddEnabledTestItems; override;
   end;
 
 implementation
@@ -167,10 +148,32 @@ end;
 
 { TestRootList }
 
+procedure TRootListTest.SetUp;
+begin
+  inherited SetUp;
+  FTestItems := TStringList.Create;
+end;
+
 procedure TRootListTest.TearDown;
 begin
   FreeAndNil(FRootList);
+  FreeAndNil(FTestItems);
   inherited TearDown;
+end;
+
+procedure TRootListTest.CleanUp;
+begin
+  // Nothing to clean up here!
+end;
+
+procedure TRootListTest.EnsureFileExportedAndDelete(const AFileName: string);
+var
+  SearchResult: TSearchRec;
+
+begin
+  Assert(AFileName <> '', 'FileName of exported file must not be empty!');
+  CheckEquals(0, FindFirst(AFileName +'.*', faAnyFile - faDirectory, SearchResult), 'Exported file does not exist!');
+  Check(DeleteFile(PChar(SearchResult.Name)), 'Exported file could not be deleted!');
 end;
 
 procedure TRootListTest.SelectItem(const AItemName: string);
@@ -199,6 +202,17 @@ begin
   CheckEqualsString(cNewTestArgument, FRootList.Selected.Arguments, 'Arguments of "'+ AItemName +'" does not match after changing file path!');
 end;
 
+procedure TRootListTest.TestChangeItemFilePaths;
+var
+  i: Integer;
+
+begin
+  LoadItems();
+
+  for i := 0 to FTestItems.Count - 1 do
+    TestChangeFilePath(FTestItems[i]);
+end;
+
 procedure TRootListTest.TestDelete(const AItemName: string);
 var
   Counter, EnabledCounter: Integer;
@@ -217,6 +231,19 @@ begin
   CheckEquals(Counter, FRootList.Count, 'After deleting item "'+ AItemName +'" Count should be decreased by 1!');
 end;
 
+procedure TRootListTest.TestDeleteItems;
+var
+  i: Integer;
+
+begin
+  LoadItems();
+
+  for i := 0 to FTestItems.Count - 1 do
+    TestDelete(FTestItems[i]);
+
+  CleanUp();
+end;
+
 procedure TRootListTest.TestDisable(const AItemName: string);
 var
   Counter, EnabledCounter: Integer;
@@ -231,6 +258,17 @@ begin
   Dec(EnabledCounter);
   CheckEquals(EnabledCounter, FRootList.EnabledItemsCount, 'After disabling item "'+ AItemName +'" EnabledItemsCount must be decreased by 1!');
   CheckEquals(Counter, FRootList.Count, 'After disabling item "'+ AItemName +'" Count must not be changed!');
+end;
+
+procedure TRootListTest.TestDisableItems;
+var
+  i: Integer;
+
+begin
+  LoadItems();
+
+  for i := 0 to FTestItems.Count - 1 do
+    TestDisable(FTestItems[i]);
 end;
 
 procedure TRootListTest.TestEnable(const AItemName: string);
@@ -249,20 +287,40 @@ begin
   CheckEquals(Counter, FRootList.Count, 'After enabling item "'+ AItemName +'" Count must not be changed!');
 end;
 
+procedure TRootListTest.TestEnableItems;
+var
+  i: Integer;
+
+begin
+  LoadItems();
+
+  for i := 0 to FTestItems.Count - 1 do
+    TestEnable(FTestItems[i]);
+end;
+
 procedure TRootListTest.TestExportBackup;
 begin
-  // TODO: TestExportBackup
+  LoadItems();
+  FRootList.ExportList(ClassName);
+  EnsureFileExportedAndDelete(ClassName);
+end;
+
+procedure TRootListTest.TestExportItems;
+var
+  i: Integer;
+
+begin
+  LoadItems();
+
+  for i := 0 to FTestItems.Count - 1 do
+    TestExport(FTestItems[i]);
 end;
 
 procedure TRootListTest.TestExport(const AItemName: string);
-var
-  SearchResult: TSearchRec;
-
 begin
   SelectItem(AItemName);
   FRootList.ExportItem(FRootList.Selected.Name);
-  CheckEquals(0, FindFirst(FRootList.Selected.Name +'.*', faAnyFile - faDirectory, SearchResult), 'Exported file does not exist!');
-  CheckTrue(DeleteFile(PChar(SearchResult.Name)), 'Exported file could not be deleted!');
+  EnsureFileExportedAndDelete(FRootList.Selected.Name);
 end;
 
 procedure TRootListTest.TestImportBackup;
@@ -331,6 +389,16 @@ begin
   CheckEquals(AItemName, FRootList.Selected.Name, 'Item was not renamed correctly twice!');
 end;
 
+procedure TRootListTest.TestRenameItems;
+var
+  i: Integer;
+
+begin
+  LoadItems();
+
+  for i := 0 to FTestItems.Count - 1 do
+    TestRename(FTestItems[i]);
+end;
 
 { TStartupListTest }
 
@@ -338,157 +406,19 @@ procedure TStartupListTest.SetUp;
 begin
   inherited SetUp;
   FRootList := TRootList<TRootItem>(TStartupList.Create);
-end;
 
-procedure TStartupListTest.TestChangeItemFilePaths;
-var
-  Location: TStartupLocation;
-
-begin
-  for Location := Low(TStartupLocation) to High(TStartupLocation) do
-    TStartupList(FRootList).Load(Location);
-
-  TestChangeFilePath(cHKCU);
-  TestChangeFilePath(cHKCU_RUNONCE);
-  TestChangeFilePath(STARTUP_USER +'.lnk');
+  FTestItems.Append(GetItemName(slHkcuRun));
+  FTestItems.Append(GetItemName(slHkcuRunOnce));
+  FTestItems.Append(GetItemName(slStartupUser));
 {$IFNDEF DEBUG}
-  TestChangeFilePath(cHKLM);
-  TestChangeFilePath(cHKLM_RUNONCE);
-  TestChangeFilePath(STARTUP_COMMON +'.lnk');
+  FTestItems.Append(GetItemName(slHklmRun));
+  FTestItems.Append(GetItemName(slHklmRunOnce));
+  FTestItems.Append(GetItemName(slCommonStartup));
 
   if (TOSVersion.Architecture = arIntelX64) then
   begin
-    TestChangeFilePath(cHKLM32);
-    TestChangeFilePath(cHKLM_RUNONCE32);
-  end;  //of begin
-{$ENDIF}
-end;
-
-procedure TStartupListTest.TestDeleteItems;
-var
-  Location: TStartupLocation;
-  Counter: Integer;
-
-begin
-  for Location := Low(TStartupLocation) to High(TStartupLocation) do
-    TStartupList(FRootList).Load(Location);
-
-  TestDelete(cHKCU);
-  TestDelete(cHKCU_RUNONCE);
-  TestDelete(STARTUP_USER +'.lnk');
-{$IFNDEF DEBUG}
-  TestDelete(cHKLM);
-  TestDelete(cHKLM_RUNONCE);
-  TestDelete(STARTUP_COMMON +'.lnk');
-
-  if (TOSVersion.Architecture = arIntelX64) then
-  begin
-    TestDelete(cHKLM32);
-    TestDelete(cHKLM_RUNONCE32);
-  end;  //of begin
-{$ENDIF}
-  Counter := FRootList.Count;
-  FRootList.Clear;
-
-  // Sanity check
-  for Location := Low(TStartupLocation) to High(TStartupLocation) do
-    TStartupList(FRootList).Load(Location);
-
-  CheckEquals(Counter, FRootList.Count, 'After deleting items and loading items again counter does not match!');
-end;
-
-procedure TStartupListTest.TestDisableItems;
-var
-  Location: TStartupLocation;
-
-begin
-  for Location := Low(TStartupLocation) to High(TStartupLocation) do
-    TStartupList(FRootList).Load(Location);
-
-  TestDisable(cHKCU);
-  TestDisable(cHKCU_RUNONCE);
-  TestDisable(STARTUP_USER +'.lnk');
-{$IFNDEF DEBUG}
-  TestDisable(cHKLM);
-  TestDisable(cHKLM_RUNONCE);
-  TestDisable(STARTUP_COMMON +'.lnk');
-
-  if (TOSVersion.Architecture = arIntelX64) then
-  begin
-    TestDisable(cHKLM32);
-    TestDisable(cHKLM_RUNONCE32);
-  end;  //of begin
-{$ENDIF}
-end;
-
-procedure TStartupListTest.TestEnableItems;
-var
-  Location: TStartupLocation;
-
-begin
-  for Location := Low(TStartupLocation) to High(TStartupLocation) do
-    TStartupList(FRootList).Load(Location);
-
-  TestEnable(cHKCU);
-  TestEnable(cHKCU_RUNONCE);
-  TestEnable(STARTUP_USER +'.lnk');
-{$IFNDEF DEBUG}
-  TestEnable(cHKLM);
-  TestEnable(cHKLM_RUNONCE);
-  TestEnable(STARTUP_COMMON +'.lnk');
-
-  if (TOSVersion.Architecture = arIntelX64) then
-  begin
-    TestEnable(cHKLM32);
-    TestEnable(cHKLM_RUNONCE32);
-  end;  //of begin
-{$ENDIF}
-end;
-
-procedure TStartupListTest.TestExportItems;
-var
-  Location: TStartupLocation;
-
-begin
-  for Location := Low(TStartupLocation) to High(TStartupLocation) do
-    TStartupList(FRootList).Load(Location);
-
-  TestExport(cHKCU);
-  TestExport(cHKCU_RUNONCE);
-  TestExport(STARTUP_USER +'.lnk');
-{$IFNDEF DEBUG}
-  TestExport(cHKLM);
-  TestExport(cHKLM_RUNONCE);
-  TestExport(STARTUP_COMMON +'.lnk');
-
-  if (TOSVersion.Architecture = arIntelX64) then
-  begin
-    TestExport(cHKLM32);
-    TestExport(cHKLM_RUNONCE32);
-  end;  //of begin
-{$ENDIF}
-end;
-
-procedure TStartupListTest.TestRenameItems;
-var
-  Location: TStartupLocation;
-
-begin
-  for Location := Low(TStartupLocation) to High(TStartupLocation) do
-    TStartupList(FRootList).Load(Location);
-
-  TestRename(cHKCU);
-  TestRename(cHKCU_RUNONCE);
-  TestRename(STARTUP_USER +'.lnk');
-{$IFNDEF DEBUG}
-  TestRename(cHKLM);
-  TestRename(cHKLM_RUNONCE);
-  TestRename(STARTUP_COMMON +'.lnk');
-
-  if (TOSVersion.Architecture = arIntelX64) then
-  begin
-    TestRename(cHKLM32);
-    TestRename(cHKLM_RUNONCE32);
+    FTestItems.Append(GetItemName(slHklmRun32));
+    FTestItems.Append(GetItemName(slHklmRunOnce32));
   end;  //of begin
 {$ENDIF}
 end;
@@ -538,6 +468,15 @@ begin
       Reg.Free;
     end;  //of try
   end;
+end;
+
+procedure TStartupListTest.LoadItems();
+var
+  Location: TStartupLocation;
+
+begin
+  for Location := Low(TStartupLocation) to High(TStartupLocation) do
+    TStartupList(FRootList).Load(Location);
 end;
 
 procedure TStartupListTest.AddEnabledTestItems();
@@ -624,16 +563,17 @@ end;
 function TStartupListTest.GetItemName(ALocation: TStartupLocation): string;
 begin
   case ALocation of
-    slHkcuRun:       Result := cHKCU;
-    slHkcuRunOnce:   Result := cHKCU_RUNONCE;
-    slHklmRun:       Result := cHKLM;
-    slHklmRun32:     Result := cHKLM32;
-    slHklmRunOnce:   Result := cHKLM_RUNONCE;
-    slHklmRunOnce32: Result := cHKLM_RUNONCE32;
-    slStartupUser:   Result := STARTUP_USER;
-    slCommonStartup: Result := STARTUP_COMMON;
+    slHkcuRun:       Result := 'HKCU';
+    slHkcuRunOnce:   Result := 'HKCU RunOnce';
+    slHklmRun:       Result := 'HKLM';
+    slHklmRun32:     Result := 'HKLM32';
+    slHklmRunOnce:   Result := 'HKLM RunOnce';
+    slHklmRunOnce32: Result := 'HKLM RunOnce32';
+    slStartupUser:   Result := STARTUP_USER +'.lnk';
+    slCommonStartup: Result := STARTUP_COMMON +'.lnk';
   end;  //of case
 end;
+
 
 { TContextListTest }
 
@@ -641,6 +581,11 @@ procedure TContextListTest.SetUp;
 begin
   inherited SetUp;
   FRootList := TRootList<TRootItem>(TContextList.Create);
+
+  FTestItems.Append(cShellCMItem);
+  FTestItems.Append(cShellCMItemCascading);
+  FTestItems.Append(cShellNewCMItem);
+  FTestItems.Append(cShellExCMItem);
 end;
 
 procedure TContextListTest.AddShellCascadingCMTestItem(const AFileExt, AName,
@@ -845,48 +790,18 @@ begin
   AddShellNewCMTestItem(cShellFileExt, cShellNewCMItem, cShellNewCMItem, cTestExe, cTestExe);
 end;
 
+procedure TContextListTest.LoadItems();
+begin
+  TContextList(FRootList).LoadContextmenu(cShellFileExt, False);
+end;
+
 procedure TContextListTest.TestChangeItemFilePaths;
 begin
-  TContextList(FRootList).LoadContextmenu(cShellFileExt, False);
-  TestChangeFilePath(cShellCMItem);
-  TestChangeFilePath(cShellExCMItem);
   // NOTE: Changing the filename of a cascading shell and shell new items is not possible!
-end;
-
-procedure TContextListTest.TestDeleteItems;
-begin
-  TContextList(FRootList).LoadContextmenu(cShellFileExt, False);
-  TestDelete(cShellCMItem);
-  TestDelete(cShellExCMItem);
-  TestDelete(cShellCMItemCascading);
-  TestDelete(cShellNewCMItem);
-end;
-
-procedure TContextListTest.TestDisableItems;
-begin
-  TContextList(FRootList).LoadContextmenu(cShellFileExt, False);
-  TestDisable(cShellCMItem);
-  TestDisable(cShellExCMItem);
-  TestDisable(cShellCMItemCascading);
-  TestDisable(cShellNewCMItem);
-end;
-
-procedure TContextListTest.TestEnableItems;
-begin
-  TContextList(FRootList).LoadContextmenu(cShellFileExt, False);
-  TestEnable(cShellCMItem);
-  TestEnable(cShellExCMItem);
-  TestEnable(cShellCMItemCascading);
-  TestEnable(cShellNewCMItem);
-end;
-
-procedure TContextListTest.TestExportItems;
-begin
-  TContextList(FRootList).LoadContextmenu(cShellFileExt, False);
-  TestExport(cShellCMItem);
-  TestExport(cShellExCMItem);
-  TestExport(cShellCMItemCascading);
-  TestExport(cShellNewCMItem);
+  FTestItems.Clear;
+  FTestItems.Append(cShellCMItem);
+  FTestItems.Append(cShellExCMItem);
+  inherited TestChangeItemFilePaths;
 end;
 
 procedure TContextListTest.TestRename(const AItemName: string);
@@ -902,10 +817,11 @@ end;
 
 procedure TContextListTest.TestRenameItems;
 begin
-  TContextList(FRootList).LoadContextmenu(cShellFileExt, False);
-  TestRename(cShellCMItem);
   // NOTE: Renaming shellex and shell new items is not possible
-  TestRename(cShellCMItemCascading);
+  FTestItems.Clear;
+  FTestItems.Append(cShellCMItem);
+  FTestItems.Append(cShellCMItemCascading);
+  inherited TestRenameItems;
 end;
 
 procedure TContextListTest.CleanUp;
@@ -943,9 +859,10 @@ procedure TServiceListTest.SetUp;
 begin
   inherited SetUp;
   FRootList := TRootList<TRootItem>(TServiceList.Create);
+  FTestItems.Append('TestService');
 end;
 
-procedure TServiceListTest.LoadService();
+procedure TServiceListTest.LoadItems();
 var
   Service: SC_HANDLE;
   ServiceName: string;
@@ -975,51 +892,23 @@ begin
   CheckEquals(AItemName, FRootList.Selected.Caption, 'Item was not renamed correctly twice!');
 end;
 
-procedure TServiceListTest.AddEnabledTestItem;
+procedure TServiceListTest.AddEnabledTestItems;
 begin
-  CheckTrue(TServiceList(FRootList).Add(cTestExe, '', cServiceCaption), 'Service already exists!');
-  CheckEquals(1, FRootList.Count, 'There should be 1 service in the list!');
+  CheckTrue(TServiceList(FRootList).Add(cTestExe, '', FTestItems[0]), 'Service already exists!');
+  CheckEquals(FTestItems.Count, FRootList.Count, 'Actual item count differs from expected count!');
 end;
 
-procedure TServiceListTest.TestChangeItemFilePath;
-begin
-  LoadService();
-  TestChangeFilePath(cServiceCaption);
-end;
-
-procedure TServiceListTest.TestDeleteItem;
-begin
-  LoadService();
-  TestDelete(cServiceCaption);
-end;
-
-procedure TServiceListTest.TestDisableItem;
-begin
-  LoadService();
-  TestDisable(cServiceCaption);
-end;
-
-procedure TServiceListTest.TestEnableItem;
-begin
-  LoadService();
-  TestEnable(cServiceCaption);
-end;
-
-procedure TServiceListTest.TestExportItem;
-begin
-  LoadService();
-  TestExport(cServiceCaption);
-end;
-
-procedure TServiceListTest.TestRenameItem;
-begin
-  LoadService();
-  TestRename(cServiceCaption);
-end;
 
 { TTaskListTest }
 
-procedure TTaskListTest.LoadTasks();
+procedure TTaskListTest.SetUp;
+begin
+  inherited SetUp;
+  FRootList := TRootList<TRootItem>(TTaskList.Create);
+  FTestItems.Append('TestTask');
+end;
+
+procedure TTaskListTest.LoadItems();
 var
   TaskFolder: ITaskFolder;
 
@@ -1031,55 +920,14 @@ begin
   TTaskList(FRootList).LoadTasks(TaskFolder, False);
 end;
 
-procedure TTaskListTest.SetUp;
-begin
-  inherited SetUp;
-  FRootList := TRootList<TRootItem>(TTaskList.Create);
-end;
-
-procedure TTaskListTest.AddEnabledTestItem;
+procedure TTaskListTest.AddEnabledTestItems;
 var
   TaskFileName: string;
 
 begin
-  TaskFileName := IncludeTrailingBackslash(ExtractFileDir(ExtractFileDir(GetCurrentDir()))) + cTestTaskFile;
+  TaskFileName := IncludeTrailingBackslash(ExtractFileDir(ExtractFileDir(GetCurrentDir()))) +'data\'+ FTestItems[0] +'.xml';
   CheckTrue(TTaskList(FRootList).ImportBackup(TaskFileName), 'Task already exists!');
-end;
-
-procedure TTaskListTest.TestChangeItemFilePath;
-begin
-  LoadTasks();
-  TestChangeFilePath(cTestTaskName);
-end;
-
-procedure TTaskListTest.TestDeleteItem;
-begin
-  LoadTasks();
-  TestDelete(cTestTaskName);
-end;
-
-procedure TTaskListTest.TestDisableItem;
-begin
-  LoadTasks();
-  TestDisable(cTestTaskName);
-end;
-
-procedure TTaskListTest.TestEnableItem;
-begin
-  LoadTasks();
-  TestEnable(cTestTaskName);
-end;
-
-procedure TTaskListTest.TestExportItem;
-begin
-  LoadTasks();
-  TestExport(cTestTaskName);
-end;
-
-procedure TTaskListTest.TestRenameItem;
-begin
-  LoadTasks();
-  TestRename(cTestTaskName);
+  CheckEquals(FTestItems.Count, FRootList.Count, 'Actual item count differs from expected count!');
 end;
 
 initialization
@@ -1088,4 +936,5 @@ initialization
   RegisterTest(TServiceListTest.Suite);
   RegisterTest(TTaskListTest.Suite);
 end.
+
 

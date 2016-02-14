@@ -4030,7 +4030,7 @@ begin
   Win8 := CheckWin32Version(6, 2);
 
   // Init Reg file
-  RegFile := TRegistryFile.Create(AFileName, True);
+  RegFile := TRegistryFile.Create(ChangeFileExt(AFileName, '.reg'), True);
 
   try
     for i := 0 to Count - 1 do
@@ -5045,7 +5045,7 @@ begin
   FLock.Acquire;
 
   // Init Reg file
-  RegFile := TRegistryFile.Create(AFileName, True);
+  RegFile := TRegistryFile.Create(ChangeFileExt(AFileName, '.reg'), True);
 
   try
     for i := 0 to Count - 1 do
@@ -5671,7 +5671,7 @@ begin
   FLock.Acquire;
 
   // Init Reg file
-  RegFile := TRegistryFile.Create(AFileName, True);
+  RegFile := TRegistryFile.Create(ChangeFileExt(AFileName, '.reg'), True);
 
   try
     // Export enabled services
@@ -6021,7 +6021,7 @@ begin
 {$ENDIF}
 
   try
-    ZipFile.Open(AFileName, zmWrite);
+    ZipFile.Open(ChangeFileExt(AFileName, '.zip'), zmWrite);
 
     // For validation purposes: "Clearas" is the comment
     ZipFile.Comment := 'Clearas';
