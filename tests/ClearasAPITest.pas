@@ -111,18 +111,22 @@ type
     procedure TestDeleteItem;
   end;
 
-  {TTaskListTest = class(TRootListTest)
-  private
-    procedure OnTaskSearchFinished(Sender: TObject);
+  TTaskListTest = class(TRootListTest)
+  const
+    cTestTaskName = 'Task';
+    cTestTaskFile = 'data\'+ cTestTaskName +'.xml';
   public
     procedure SetUp; override;
+    procedure LoadTasks();
   published
+    procedure AddEnabledTestItem;
+    procedure TestDisableItem;
+    procedure TestEnableItem;
+    procedure TestRenameItem;
     procedure TestChangeItemFilePath;
     procedure TestExportItem;
-    procedure TestExportBackup;
-    procedure TestImportBackup;
-    procedure TestRenameItem;
-  end;}
+    procedure TestDeleteItem;
+  end;
 
 implementation
 
@@ -631,107 +635,6 @@ begin
   end;  //of case
 end;
 
-{ TTaskListTest }
-{
-procedure TTaskListTest.SetUp;
-begin
-  inherited SetUp;
-  FTaskList := TTaskList.Create;
-end;
-
-procedure TTaskListTest.OnTaskSearchFinished(Sender: TObject);
-const
-  ZipFile = 'C:\Users\Phil\PMCW\Projekte\clearas\tests\TestExportList.zip';
-
-begin
-  Check(FTaskList.Count > 0, 'List must not be empty!');
-  FTaskList.ExportList(ZipFile);
-  CheckTrue(FileExists(ZipFile), 'List was not exported as file!');
-end;
-
-procedure TTaskListTest.TestChangeItemFilePath;
-const
-  TestTaskFile = 'Task.xml';
-  NewFileName = 'C:\Windows\regedit.exe';
-
-var
-  OldFileName: string;
-
-begin
-  CheckTrue(FTaskList.ImportBackup(TestTaskFile), 'Import failed');
-  CheckEquals(1, FTaskList.Count, 'There must be 1 task in list but it is empty');
-  FTaskList.Selected := FTaskList[0];
-
-  OldFileName := FTaskList.Selected.FileName;
-  CheckNotEquals('', OldFileName, 'FileName must not be empty!');
-
-  // Change path
-  CheckTrue(FTaskList.ChangeItemFilePath(NewFileName), 'Could not change path!');
-  CheckEquals(NewFileName, FTaskList.Selected.FileName, 'FileNames are not the same!');
-
-  CheckTrue(FTaskList.EnableItem(), 'Could not enable task');
-  CheckTrue(FTaskList.Selected.Enabled, 'After enabling a task the status must be enabled');
-
-
-
-  CheckTrue(FTaskList.DeleteItem(), 'Could not delete task');
-  CheckEquals(0, FTaskList.Count, 'After deleting of one item task list must be empty');
-end;
-
-procedure TTaskListTest.TestExportBackup;
-begin
-  FTaskList.OnSearchFinish := OnTaskSearchFinished;
-  FTaskList.Load(False);
-  Delay(1000);
-  FTaskList.Clear;
-  CheckEquals(0, FTaskList.Count, 'After clearing the list must be empty!');
-end;
-
-procedure TTaskListTest.TestExportItem;
-begin
-
-end;
-
-procedure TTaskListTest.TestImportBackup;
-const
-  TestTaskFile = 'C:\Users\Phil\PMCW\Projekte\clearas\tests\TestTask.xml';
-
-begin
-  CheckTrue(FTaskList.ImportBackup(TestTaskFile), 'Import failed');
-  CheckEquals(1, FTaskList.Count, 'There must be 1 task in list but it is empty');
-  FTaskList.Selected := FTaskList[0];
-
-  if FTaskList.Selected.Enabled then
-  begin
-    CheckTrue(FTaskList.DisableItem(), 'Could not disable task');
-    CheckFalse(FTaskList.Selected.Enabled, 'After disabling a task the status must be disabled');
-  end
-  else
-  begin
-    CheckTrue(FTaskList.EnableItem(), 'Could not enable task');
-    CheckTrue(FTaskList.Selected.Enabled, 'After enabling a task the status must be enabled');
-  end;
-
-  CheckFalse(FTaskList.ImportBackup(TestTaskFile), 'Task duplicated');
-  CheckTrue(FTaskList.DeleteItem(), 'Could not delete task');
-  CheckEquals(0, FTaskList.Count, 'After deleting of one item task list must be empty');
-end;
-
-{procedure TestStartupList.ImportStartupFile(const AFileName: TFileName;
-  ACommonStartup: Boolean = False);
-var
-  Destination: string;
-
-begin
-  if ACommonStartup then
-    Destination := GetKnownFolderPath(FOLDERID_CommonStartup)
-  else
-    Destination := GetKnownFolderPath(FOLDERID_Startup);
-
-  Destination := Destination + ChangeFileExt(ExtractFileName(AFileName), '.lnk');
-  CopyFile(PChar(AFileName), PChar(Destination), False);
-end;}
-
 { TContextListTest }
 
 procedure TContextListTest.SetUp;
@@ -1040,7 +943,6 @@ procedure TServiceListTest.SetUp;
 begin
   inherited SetUp;
   FRootList := TRootList<TRootItem>(TServiceList.Create);
-
 end;
 
 procedure TServiceListTest.LoadService();
@@ -1049,6 +951,10 @@ var
   ServiceName: string;
 
 begin
+{$IFDEF DEBUG}
+  // Skip test in debug configuration because it needs admin access rights
+  CheckTrue(False, 'Test must be run with admin access rights!');
+{$ENDIF}
   // Add test service to list
   ServiceName := ChangeFileExt(ExtractFileName(cTestExe), '');
   CheckNotEquals(0, TServiceList(FRootList).Manager, 'Invalid service manager handle!');
@@ -1071,78 +977,208 @@ end;
 
 procedure TServiceListTest.AddEnabledTestItem;
 begin
-{$IFDEF DEBUG}
-  // Skip adding test item in debug configuration because it needs admin access rights
-  CheckTrue(False, 'Test must be run with admin access rights!');
-{$ENDIF}
   CheckTrue(TServiceList(FRootList).Add(cTestExe, '', cServiceCaption), 'Service already exists!');
   CheckEquals(1, FRootList.Count, 'There should be 1 service in the list!');
 end;
 
 procedure TServiceListTest.TestChangeItemFilePath;
 begin
-{$IFDEF DEBUG}
-  // Skip test in debug configuration because it needs admin access rights
-  CheckTrue(False, 'Test must be run with admin access rights!');
-{$ENDIF}
   LoadService();
   TestChangeFilePath(cServiceCaption);
 end;
 
 procedure TServiceListTest.TestDeleteItem;
 begin
-{$IFDEF DEBUG}
-  // Skip test in debug configuration because it needs admin access rights
-  CheckTrue(False, 'Test must be run with admin access rights!');
-{$ENDIF}
   LoadService();
   TestDelete(cServiceCaption);
 end;
 
 procedure TServiceListTest.TestDisableItem;
 begin
-{$IFDEF DEBUG}
-  // Skip test in debug configuration because it needs admin access rights
-  CheckTrue(False, 'Test must be run with admin access rights!');
-{$ENDIF}
   LoadService();
   TestDisable(cServiceCaption);
 end;
 
 procedure TServiceListTest.TestEnableItem;
 begin
-{$IFDEF DEBUG}
-  // Skip test in debug configuration because it needs admin access rights
-  CheckTrue(False, 'Test must be run with admin access rights!');
-{$ENDIF}
   LoadService();
   TestEnable(cServiceCaption);
 end;
 
 procedure TServiceListTest.TestExportItem;
 begin
-{$IFDEF DEBUG}
-  // Skip test in debug configuration because it needs admin access rights
-  CheckTrue(False, 'Test must be run with admin access rights!');
-{$ENDIF}
   LoadService();
   TestExport(cServiceCaption);
 end;
 
 procedure TServiceListTest.TestRenameItem;
 begin
-{$IFDEF DEBUG}
-  // Skip test in debug configuration because it needs admin access rights
-  CheckTrue(False, 'Test must be run with admin access rights!');
-{$ENDIF}
   LoadService();
   TestRename(cServiceCaption);
 end;
+
+{ TTaskListTest }
+
+procedure TTaskListTest.LoadTasks();
+var
+  TaskFolder: ITaskFolder;
+
+begin
+  // Open current folder
+  OleCheck(TTaskList(FRootList).TaskService.GetFolder('\', TaskFolder));
+
+  // Add tasks in folder to list
+  TTaskList(FRootList).LoadTasks(TaskFolder, False);
+end;
+
+procedure TTaskListTest.SetUp;
+begin
+  inherited SetUp;
+  FRootList := TRootList<TRootItem>(TTaskList.Create);
+end;
+
+procedure TTaskListTest.AddEnabledTestItem;
+var
+  TaskFileName: string;
+
+begin
+  TaskFileName := IncludeTrailingBackslash(ExtractFileDir(ExtractFileDir(GetCurrentDir()))) + cTestTaskFile;
+  CheckTrue(TTaskList(FRootList).ImportBackup(TaskFileName), 'Task already exists!');
+end;
+
+procedure TTaskListTest.TestChangeItemFilePath;
+begin
+  LoadTasks();
+  TestChangeFilePath(cTestTaskName);
+end;
+
+procedure TTaskListTest.TestDeleteItem;
+begin
+  LoadTasks();
+  TestDelete(cTestTaskName);
+end;
+
+procedure TTaskListTest.TestDisableItem;
+begin
+  LoadTasks();
+  TestDisable(cTestTaskName);
+end;
+
+procedure TTaskListTest.TestEnableItem;
+begin
+  LoadTasks();
+  TestEnable(cTestTaskName);
+end;
+
+procedure TTaskListTest.TestExportItem;
+begin
+  LoadTasks();
+  TestExport(cTestTaskName);
+end;
+
+procedure TTaskListTest.TestRenameItem;
+begin
+  LoadTasks();
+  TestRename(cTestTaskName);
+end;
+
+{procedure TTaskListTest.OnTaskSearchFinished(Sender: TObject);
+const
+  ZipFile = 'C:\Users\Phil\PMCW\Projekte\clearas\tests\TestExportList.zip';
+
+begin
+  Check(FTaskList.Count > 0, 'List must not be empty!');
+  FTaskList.ExportList(ZipFile);
+  CheckTrue(FileExists(ZipFile), 'List was not exported as file!');
+end;
+
+procedure TTaskListTest.TestChangeItemFilePath;
+const
+  TestTaskFile = 'Task.xml';
+  NewFileName = 'C:\Windows\regedit.exe';
+
+var
+  OldFileName: string;
+
+begin
+  CheckTrue(FTaskList.ImportBackup(TestTaskFile), 'Import failed');
+  CheckEquals(1, FTaskList.Count, 'There must be 1 task in list but it is empty');
+  FTaskList.Selected := FTaskList[0];
+
+  OldFileName := FTaskList.Selected.FileName;
+  CheckNotEquals('', OldFileName, 'FileName must not be empty!');
+
+  // Change path
+  CheckTrue(FTaskList.ChangeItemFilePath(NewFileName), 'Could not change path!');
+  CheckEquals(NewFileName, FTaskList.Selected.FileName, 'FileNames are not the same!');
+
+  CheckTrue(FTaskList.EnableItem(), 'Could not enable task');
+  CheckTrue(FTaskList.Selected.Enabled, 'After enabling a task the status must be enabled');
+
+
+
+  CheckTrue(FTaskList.DeleteItem(), 'Could not delete task');
+  CheckEquals(0, FTaskList.Count, 'After deleting of one item task list must be empty');
+end;
+
+procedure TTaskListTest.TestExportBackup;
+begin
+  FTaskList.OnSearchFinish := OnTaskSearchFinished;
+  FTaskList.Load(False);
+  Delay(1000);
+  FTaskList.Clear;
+  CheckEquals(0, FTaskList.Count, 'After clearing the list must be empty!');
+end;
+
+procedure TTaskListTest.TestExportItem;
+begin
+
+end;
+
+procedure TTaskListTest.TestImportBackup;
+const
+  TestTaskFile = 'C:\Users\Phil\PMCW\Projekte\clearas\tests\TestTask.xml';
+
+begin
+  CheckTrue(FTaskList.ImportBackup(TestTaskFile), 'Import failed');
+  CheckEquals(1, FTaskList.Count, 'There must be 1 task in list but it is empty');
+  FTaskList.Selected := FTaskList[0];
+
+  if FTaskList.Selected.Enabled then
+  begin
+    CheckTrue(FTaskList.DisableItem(), 'Could not disable task');
+    CheckFalse(FTaskList.Selected.Enabled, 'After disabling a task the status must be disabled');
+  end
+  else
+  begin
+    CheckTrue(FTaskList.EnableItem(), 'Could not enable task');
+    CheckTrue(FTaskList.Selected.Enabled, 'After enabling a task the status must be enabled');
+  end;
+
+  CheckFalse(FTaskList.ImportBackup(TestTaskFile), 'Task duplicated');
+  CheckTrue(FTaskList.DeleteItem(), 'Could not delete task');
+  CheckEquals(0, FTaskList.Count, 'After deleting of one item task list must be empty');
+end;
+
+{procedure TestStartupList.ImportStartupFile(const AFileName: TFileName;
+  ACommonStartup: Boolean = False);
+var
+  Destination: string;
+
+begin
+  if ACommonStartup then
+    Destination := GetKnownFolderPath(FOLDERID_CommonStartup)
+  else
+    Destination := GetKnownFolderPath(FOLDERID_Startup);
+
+  Destination := Destination + ChangeFileExt(ExtractFileName(AFileName), '.lnk');
+  CopyFile(PChar(AFileName), PChar(Destination), False);
+end;}
 
 initialization
   RegisterTest(TStartupListTest.Suite);
   RegisterTest(TContextListTest.Suite);
   RegisterTest(TServiceListTest.Suite);
-  //RegisterTest(TTaskListTest.Suite);
+  RegisterTest(TTaskListTest.Suite);
 end.
 

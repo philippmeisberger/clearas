@@ -2007,7 +2007,17 @@ type
     ///   If set to <c>True</c> tasks in subfolders and those who are hidden are
     ///   included.
     /// </param>
+    /// <remarks>
+    ///   Asynchronous: A thread is launched! The <see cref="OnSearchStart"/>
+    ///   event occurs when the search starts. At the end the
+    ///   <see cref="OnSearchFinish"/> event occurs.
+    /// </remarks>
     procedure LoadTasks(APath: string = '\'; AExpertMode: Boolean = False); overload;
+
+    /// <summary>
+    ///   Gets the current task service.
+    /// </summary>
+    property TaskService: ITaskService read FTaskService;
   end;
 
 implementation
@@ -5939,17 +5949,12 @@ begin
   CoInitialize(nil);
 
 {$IFNDEF DEBUG}
-  if Failed(CoInitializeSecurity(nil, -1, nil, nil, RPC_C_AUTHN_LEVEL_PKT_PRIVACY,
-    RPC_C_IMP_LEVEL_IMPERSONATE, nil, EOAC_NONE, nil)) then
-    raise ETaskException.Create('Could not register security values for process!');
+  OleCheck(CoInitializeSecurity(nil, -1, nil, nil, RPC_C_AUTHN_LEVEL_PKT_PRIVACY,
+    RPC_C_IMP_LEVEL_IMPERSONATE, nil, EOAC_NONE, nil));
 {$ENDIF}
-
-  if Failed(CoCreateInstance(CLSID_TaskScheduler, nil, CLSCTX_INPROC_SERVER,
-    IID_ITaskService, FTaskService)) then
-    raise ETaskException.Create('Could not create task service!');
-
-  if Failed(FTaskService.Connect(Null, Null, Null, Null)) then
-    raise ETaskException.Create('Could not connect to task service!');
+  OleCheck(CoCreateInstance(CLSID_TaskScheduler, nil, CLSCTX_INPROC_SERVER,
+    IID_ITaskService, FTaskService));
+  OleCheck(FTaskService.Connect(Null, Null, Null, Null));
 end;
 
 destructor TTaskList.Destroy;
