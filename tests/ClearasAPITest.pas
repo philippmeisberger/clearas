@@ -394,8 +394,10 @@ end;
 procedure TStartupListTest.TestImportBackup;
 begin
   Check(TStartupList(FRootList).ImportBackup('..\..\data\'+ GetItemName(slStartupUser) + EXT_STARTUP_USER), STARTUP_USER +' file already exists!');
+  CheckFalse(TStartupList(FRootList).ImportBackup('..\..\data\'+ GetItemName(slStartupUser) + EXT_STARTUP_USER), STARTUP_USER +' file already exists so it must not be possible to import it again!');
 {$IFNDEF DEBUG}
   Check(TStartupList(FRootList).ImportBackup('..\..\data\'+ GetItemName(slCommonStartup) + EXT_STARTUP_COMMON), STARTUP_COMMON +' file already exists!');
+  CheckFalse(TStartupList(FRootList).ImportBackup('..\..\data\'+ GetItemName(slCommonStartup) + EXT_STARTUP_COMMON), STARTUP_COMMON +' file already exists so it must not be possible to import it again!');
   CheckEquals(2, FRootList.Count, 'After importing 2 startup backup files there should be 2 items in the list!');
   TestDelete(GetItemName(slCommonStartup));
 {$ELSE}
@@ -907,7 +909,8 @@ var
 
 begin
   TaskFileName := IncludeTrailingBackslash(ExtractFileDir(ExtractFileDir(GetCurrentDir()))) +'data\'+ FTestItems[0] +'.xml';
-  CheckTrue(TTaskList(FRootList).ImportBackup(TaskFileName), 'Task already exists!');
+  Check(TTaskList(FRootList).ImportBackup(TaskFileName), 'Task already exists!');
+  CheckFalse(TTaskList(FRootList).ImportBackup(TaskFileName), 'Task already exists so it must not be imported again!');
   CheckEquals(FTestItems.Count, FRootList.Count, 'Actual item count differs from expected count!');
 end;
 
