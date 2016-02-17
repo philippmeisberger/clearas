@@ -55,8 +55,8 @@ type
     procedure SetUp; override;
     procedure CleanUp; override;
   published
-    procedure AddEnabledTestItems; override;
     procedure TestImportBackup;
+    procedure AddEnabledTestItems; override;
   end;
 
   TContextListTest = class(TRootListTest)
