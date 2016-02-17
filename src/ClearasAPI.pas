@@ -2022,7 +2022,7 @@ type
 
 implementation
 
-uses StartupSearchThread, ContextSearchThread, ServiceSearchThread, TaskSearchThread;
+uses StartupSearchThread, ContextSearchThread, ServiceSearchThread, TaskSearchThread, Dialogs;
 
 {$I LanguageIDs.inc}
 
@@ -4172,7 +4172,7 @@ begin
       else
       begin
         Name := ExtractFileName(StringReplace(Location, '^', '\', [rfReplaceAll]));
-        LnkFileName := Reg.ReadString('path');
+        LnkFileName := ExtractFileName(Reg.ReadString('path'));
 
         // Windows >= Vista?
         if CheckWin32Version(6) then

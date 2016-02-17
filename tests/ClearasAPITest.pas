@@ -172,7 +172,7 @@ var
 
 begin
   Assert(AFileName <> '', 'FileName of exported file must not be empty!');
-  CheckEquals(0, FindFirst(AFileName +'.*', faAnyFile - faDirectory, SearchResult), 'Exported file does not exist!');
+  CheckEquals(0, FindFirst(AFileName +'.*', faAnyFile - faDirectory, SearchResult), 'Exported file "'+ AFileName +'" does not exist!');
   Check(DeleteFile(PChar(SearchResult.Name)), 'Exported file could not be deleted!');
 end;
 
@@ -293,6 +293,12 @@ var
 
 begin
   LoadItems();
+
+  if not CheckWin32Version(6, 2) then
+  begin
+    TStartupList(FRootList).LoadDisabled(False);
+    TStartupList(FRootList).LoadDisabled(True);
+  end;  //of begin
 
   for i := 0 to FTestItems.Count - 1 do
     TestEnable(FTestItems[i]);
@@ -909,6 +915,7 @@ var
 
 begin
   TaskFileName := IncludeTrailingBackslash(ExtractFileDir(ExtractFileDir(GetCurrentDir()))) +'data\'+ FTestItems[0] +'.xml';
+  Check(FileExists(TaskFileName), 'Task backup file "'+ TaskFileName +'" does not exist!');
   Check(TTaskList(FRootList).ImportBackup(TaskFileName), 'Task already exists!');
   CheckFalse(TTaskList(FRootList).ImportBackup(TaskFileName), 'Task already exists so it must not be imported again!');
   CheckEquals(FTestItems.Count, FRootList.Count, 'Actual item count differs from expected count!');
