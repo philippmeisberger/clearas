@@ -187,7 +187,7 @@ type
     FLang: TLanguageFile;
     FUpdateCheck: TUpdateCheck;
     function CreateStartupUserBackup(): Boolean;
-    function DeleteItem(AConfirmMessageId: Word): Boolean;
+    function DeleteItem(AConfirmMessageId: TLanguageId): Boolean;
     procedure DeleteStartupItem(Sender: TObject);
     function DisableItem(): Boolean;
     function EnableItem(): Boolean;
@@ -462,7 +462,7 @@ end;
 
   Deletes the current selected item. }
 
-function TMain.DeleteItem(AConfirmMessageId: Word): Boolean;
+function TMain.DeleteItem(AConfirmMessageId: TLanguageId): Boolean;
 var
   Answer: Integer;
   ListView: TListView;
@@ -537,7 +537,7 @@ begin
 
     // Confirm deletion of item
     if (FLang.ShowMessage(FLang.Format([LID_STARTUP_DELETE_CONFIRM],
-      [FStartup.Selected.Name]), FLang.GetString([LID_ITEM_DELETE_CONFIRM1,
+      [lwStartup.ItemFocused.SubItems[0]]), FLang.GetString([LID_ITEM_DELETE_CONFIRM1,
       LID_ITEM_DELETE_CONFIRM2]), mtCustom) = IDYES) then
     begin
       // Save the DeleteBackup flag
@@ -2027,61 +2027,22 @@ end;
 
 procedure TMain.lwStartupSelectItem(Sender: TObject; Item: TListItem;
   Selected: Boolean);
-
-  function IsDouble(AName: string; AStartIndex: Integer): Integer;
-  var
-    i, j, k: Integer;
-
-  begin
-    Result := -1;
-    j := 0;
-
-    for i := AStartIndex +1 to lwStartup.Items.Count -1 do
-      if (AName = lwStartup.Items.Item[i].SubItems[0]) then
-      begin
-        Inc(j);
-        Result := i;
-        Break;
-      end;  //of begin
-
-    if (j = 0) then
-      for k := 0 to Item.Index -1 do
-        if (AName = lwStartup.Items.Item[k].SubItems[0]) then
-        begin
-          Result := k;
-          Break;
-        end;  //of begin
-  end;
-
 begin
   // Item selected?
   if (Selected and Assigned(Item)) then
   begin
     FStartup.Selected := TStartupListItem(Item.SubItems.Objects[0]);
 
-    // Check for multiple items with the same name
-    if (IsDouble(Item.SubItems[0], Item.Index) <> -1) then
-    begin
-      bEnableStartupItem.Enabled := False;
-      bDisableStartupItem.Enabled := False;
-      pmChangeStatus.Enabled := False;
-      pmEdit.Enabled := False;
-    end  //of begin
+    // Change button states
+    bEnableStartupItem.Enabled := not FStartup.Selected.Enabled;
+    bDisableStartupItem.Enabled := not bEnableStartupItem.Enabled;
+    bDeleteStartupItem.Enabled := True;
+
+    // Change text of "change status" button
+    if bDisableStartupItem.Enabled then
+      pmChangeStatus.Caption := bDisableStartupItem.Caption
     else
-    begin
-      bEnableStartupItem.Enabled := not FStartup.Selected.Enabled;
-      bDisableStartupItem.Enabled := not bEnableStartupItem.Enabled;
-      bDeleteStartupItem.Enabled := True;
-
-      // Change text of "change status" button
-      if bDisableStartupItem.Enabled then
-        pmChangeStatus.Caption := bDisableStartupItem.Caption
-      else
-        pmChangeStatus.Caption := bEnableStartupItem.Caption;
-
-      pmChangeStatus.Enabled := True;
-      pmEdit.Enabled := True;
-    end;  //of if
+      pmChangeStatus.Caption := bEnableStartupItem.Caption;
 
     // Selected item is enabled and startup user type?
     if ((FStartup.Selected is TStartupUserItem) and FStartup.Selected.Enabled) then
@@ -2102,6 +2063,8 @@ begin
     pmExport.Enabled := bExportStartupItem.Enabled;
     pmDelete.Enabled := True;
     pmRename.Enabled := True;
+    pmChangeStatus.Enabled := True;
+    pmEdit.Enabled := True;
     pmDeleteIcon.Visible := False;
     pmChangeIcon.Visible := False;
 
