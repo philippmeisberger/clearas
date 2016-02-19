@@ -2021,6 +2021,7 @@ begin
     begin
       List.ItemIndex := i;
       List.ItemFocused := List.Items[i];
+      List.ItemFocused.MakeVisible(True);
       Break;
     end;  //of begin
 end;

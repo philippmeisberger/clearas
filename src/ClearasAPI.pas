@@ -16,7 +16,8 @@ interface
 uses
   Windows, WinSvc, Classes, SysUtils, Registry, ShlObj, ActiveX, ComObj, Zip,
   Graphics, CommCtrl, ShellAPI, SyncObjs, StrUtils, Variants, Generics.Collections,
-  Taskschd, PMCWOSUtils, PMCWLanguageFile, PMCWIniFileParser, KnownFolders;
+  Taskschd, PMCWOSUtils, PMCWLanguageFile, PMCWIniFileParser, KnownFolders,
+  IOUtils;
 
 type
   /// <summary>
@@ -1837,6 +1838,7 @@ type
     FTaskFolder: ITaskFolder;
     function GetTaskDefinition(): ITaskDefinition;
     procedure UpdateTask(const AName: string; ANewDefinition: ITaskDefinition);
+    function GetZipLocation(): string;
   protected
     procedure ChangeFilePath(const ANewFilePath: string); override;
     procedure ChangeStatus(const ANewStatus: Boolean); override;
@@ -1907,6 +1909,11 @@ type
     ///   Gets the definition of the task.
     /// </summary>
     property Definition: ITaskDefinition read GetTaskDefinition;
+
+    /// <summary>
+    ///   Gets the internal ZIP archive location.
+    /// </summary>
+    property ZipLocation: string read GetZipLocation;
   end;
 
   /// <summary>
@@ -5820,6 +5827,13 @@ begin
   Result := FTask.Definition;
 end;
 
+function TTaskListItem.GetZipLocation(): string;
+begin
+  Result := IncludeTrailingPathDelimiter(Location);
+  Result := Copy(Result, 2, Length(Location));
+  Result := StringReplace(Result + Name, '\', '/', [rfReplaceAll]);
+end;
+
 procedure TTaskListItem.UpdateTask(const AName: string; ANewDefinition: ITaskDefinition);
 var
   TempLocation: string;
@@ -5903,30 +5917,39 @@ end;
 
 procedure TTaskListItem.ExportItem(const AFileName: string);
 var
+  ZipFile: TZipFile;
+{$IFDEF WIN32}
   Win64: Boolean;
-
+{$ENDIF}
 begin
+{$IFDEF WIN32}
   Win64 := (TOSVersion.Architecture = arIntelX64);
 
   // Deny WOW64 redirection on 64 Bit Windows
   if Win64 then
     Wow64FsRedirection(True);
+{$ENDIF}
+  ZipFile := TZipFile.Create;
 
   try
-    // Copy file
-    if not CopyFile(PChar(GetFullLocation()), PChar(AFileName), False) then
-      raise ETaskException.Create(SysErrorMessage(GetLastError()));
+    ZipFile.Open(ChangeFileExt(AFileName, '.zip'), zmWrite);
+    ZipFile.Comment := 'Clearas';
+    ZipFile.Add(LocationFull, ZipLocation, zcDeflate);
+    ZipFile.Close();
 
   finally
+    ZipFile.Free;
+  {$IFDEF WIN32}
     // Allow WOW64 redirection on 64 Bit Windows again
     if Win64 then
       Wow64FsRedirection(False);
+  {$ENDIF}
   end;  //of try
 end;
 
 function TTaskListItem.GetExportFilter(ALanguageFile: TLanguageFile): string;
 begin
-  Result := ALanguageFile.GetString(LID_FILTER_XML_FILES);
+  Result := ALanguageFile.GetString(LID_FILTER_ZIP_FILES);
 end;
 
 procedure TTaskListItem.Rename(const ANewName: string);
@@ -6002,16 +6025,12 @@ procedure TTaskList.ExportList(const AFileName: string);
 var
   i: Integer;
   ZipFile: TZipFile;
-  Item: TTaskListItem;
-  Path, ZipLocation: string;
 {$IFDEF WIN32}
   Win64: Boolean;
 {$ENDIF}
 
 begin
   FLock.Acquire();
-  ZipFile := TZipFile.Create;
-
 {$IFDEF WIN32}
   Win64 := (TOSVersion.Architecture = arIntelX64);
 
@@ -6019,22 +6038,14 @@ begin
   if Win64 then
     Wow64FsRedirection(True);
 {$ENDIF}
+  ZipFile := TZipFile.Create;
 
   try
     ZipFile.Open(ChangeFileExt(AFileName, '.zip'), zmWrite);
-
-    // For validation purposes: "Clearas" is the comment
     ZipFile.Comment := 'Clearas';
-    Path := IncludeTrailingPathDelimiter(Path);
 
     for i := 0 to Count - 1 do
-    begin
-      Item := Items[i];
-      ZipLocation := IncludeTrailingPathDelimiter(Item.Location);
-      ZipLocation := Copy(ZipLocation, 2, Length(Item.Location));
-      ZipLocation := StringReplace(ZipLocation + Item.Name, '\', '/', [rfReplaceAll]);
-      ZipFile.Add(Item.LocationFull, ZipLocation, zcDeflate);
-    end;  //of for
+      ZipFile.Add(Items[i].LocationFull, Items[i].ZipLocation, zcDeflate);
 
     ZipFile.Close();
 
@@ -6056,30 +6067,27 @@ end;
 
 function TTaskList.GetImportFilter(ALanguageFile: TLanguageFile): string;
 begin
-//  Result := Format('%s|%s', [ALanguageFile.GetString(LID_FILTER_XML_FILES),
-//    ALanguageFile.GetString(LID_FILTER_ZIP_FILES)]);
-  Result := ALanguageFile.GetString(LID_FILTER_XML_FILES);
+  Result := GetExportFilter(ALanguageFile);
 end;
 
 function TTaskList.ImportBackup(const AFileName: TFileName): Boolean;
 var
-  Ext, Path: string;
+  ExtractDir, FileName: string;
   TaskFolder: ITaskFolder;
   NewTask: IRegisteredTask;
-  ErrorCode: DWORD;
-  //ZipFile: TZipFile;
+  ZipFile: TZipFile;
+  i: Integer;
+  XmlTask: TStringList;
 {$IFDEF WIN32}
   Win64: Boolean;
 {$ENDIF}
 
 begin
   Result := False;
-  Ext := ExtractFileExt(AFileName);
 
   // Check invalid extension
-  if ((Ext <> '.xml') and (Ext <> '.zip')) then
-    raise EAssertionFailed.Create('Invalid backup file extension! Must be '
-      +'''.xml'' or ''.zip''!');
+  if (ExtractFileExt(AFileName) <> '.zip') then
+    raise EAssertionFailed.Create('Invalid backup file extension! Must be ''.zip''!');
 
   // List locked?
   if not FLock.TryEnter() then
@@ -6094,67 +6102,55 @@ begin
 {$ENDIF}
 
   try
-    if (Ext = '.xml') then
-    begin
-      // Open root task folder
-      OleCheck(FTaskService.GetFolder('\', TaskFolder));
-      Path := TaskFolder.Path + ChangeFileExt(ExtractFileName(AFileName), '');
+    XmlTask := TStringList.Create;
+    ZipFile := TZipFile.Create;
 
-      // Task exists?
-      if Succeeded(TaskFolder.GetTask(PChar(Path), NewTask)) then
-        Exit;
+    try
+      ZipFile.Open(AFileName, zmRead);
 
-      {
-      // Temporary workaround:
-      // On 32-Bit RegisterTask() works fine but on 64-Bit not: WTF!
-      OleCheck(TaskFolder.RegisterTask(PChar(Path), PChar(XmlText),
-        TASK_CREATE, Null, Null, TASK_LOGON_INTERACTIVE_TOKEN, Null, NewTask));
-      }
-      if not ExecuteProgram('schtasks', '/create /XML "'+ AFileName +'" /tn '+
-        Copy(Path, 2, Length(Path)), SW_HIDE, True, True) then
+      // For validation purposes: "Clearas" is the comment
+      if (ZipFile.Comment <> 'Clearas') then
+        raise ETaskException.Create(SysErrorMessage(SCHED_E_INVALID_TASK_HASH));
+
+      ExtractDir := GetKnownFolderPath(FOLDERID_LocalAppData) +'Temp\Clearas';
+
+      for i := 0 to ZipFile.FileCount - 1 do
       begin
-        ErrorCode := GetLastError();
+        NewTask := nil;
+        TaskFolder := nil;
+        FileName := ZipFile.FileName[i];
+        ZipFile.Extract(FileName, ExtractDir);
+        FileName := '\'+ StringReplace(FileName, '/', '\', [rfReplaceAll]);
+        OleCheck(FTaskService.GetFolder(PChar(ExtractFileDir(FileName)), TaskFolder));
 
-        if (ErrorCode = ERROR_SUCCESS) then
-          ErrorCode := SCHED_E_MALFORMEDXML;
+        // Task exists?
+        if Succeeded(TaskFolder.GetTask(PChar(ExtractFileName(FileName)), NewTask)) then
+          Continue;
 
-        raise ETaskException.Create(SysErrorMessage(ErrorCode));
-      end;  //of begin
+        FileName := Copy(FileName, 2, Length(FileName));
+        XmlTask.LoadFromFile(ExtractDir +'\'+ FileName, TEncoding.Unicode);
 
-      OleCheck(TaskFolder.GetTask(PChar(Path), NewTask));
+        // Register the task
+        OleCheck(TaskFolder.RegisterTask(PChar(FileName), XmlTask.GetText(),
+          TASK_CREATE, Null, Null, TASK_LOGON_INTERACTIVE_TOKEN, Null, NewTask));
 
-      // Add new task to list
-      Result := (AddTaskItem(NewTask, TaskFolder) <> -1);
+        // Add new task to list
+        if (AddTaskItem(NewTask, TaskFolder) = -1) then
+          raise ETaskException.Create('Task could not be added!');
 
-      // Refresh TListView
-      DoNotifyOnFinished();
-    end;  //of begin
-    // TODO: ZIP file import
-    {else
-    begin
-      ZipFile := TZipFile.Create;
-
-      try
-        ZipFile.Open(AFileName, zmRead);
-
-        // For validation purposes: "Clearas" is the comment
-        if (ZipFile.Comment <> 'Clearas') then
-          raise ETaskException.Create(SysErrorMessage(SCHED_E_INVALID_TASK_HASH));
-
-        Path := GetKnownFolderPath(FOLDERID_System) +'Tasks';
-
-        if not DirectoryExists(Path) then
-          raise ETaskException.Create('Task directory does not exist!');
-
-        ZipFile.ExtractAll(Path);
-        ZipFile.Close();
-        Load();
         Result := True;
+      end;  //of for
 
-      finally
-        ZipFile.Free;
-      end;  //of try
-    end;  //of if}
+      ZipFile.Close();
+      TDirectory.Delete(ExtractDir, True);
+
+    finally
+      ZipFile.Free;
+      XmlTask.Free;
+    end;  //of try
+
+    // Refresh TListView
+    DoNotifyOnFinished();
 
   finally
   {$IFDEF WIN32}

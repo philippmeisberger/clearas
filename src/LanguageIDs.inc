@@ -68,7 +68,6 @@ const
   LID_TASKS_HEADLINE                    = 115;
   LID_TASKS_COUNTER                     = 116;
   LID_TASKS_ADD                         = 117;
-  LID_FILTER_XML_FILES                  = 118;
   LID_FILTER_ZIP_FILES                  = 119;
   LID_TASKS_DELETE_CONFIRM              = 120;
   LID_CONTEXT_MENU_ICON_CHANGE          = 121;
