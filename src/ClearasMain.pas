@@ -1747,6 +1747,8 @@ begin
     pmChangeStatus.Enabled := True;
     pmDelete.Enabled := True;
     pmOpenRegedit.Enabled := True;
+    pmOpenExplorer.Enabled := not (FContext.Selected is TShellNewItem) and not
+      (FContext.Selected is TShellCascadingItem);
     pmExport.Enabled := True;
     pmRename.Enabled := (FContext.Selected is TShellItem);
     pmChangeIcon.Visible := pmRename.Enabled;
@@ -1809,6 +1811,7 @@ begin
     pmChangeStatus.Enabled := True;
     pmDelete.Enabled := True;
     pmOpenRegedit.Enabled := True;
+    pmOpenExplorer.Enabled := True;
     pmExport.Enabled := True;
     pmRename.Enabled := True;
     pmDeleteIcon.Visible := False;
@@ -1871,6 +1874,7 @@ begin
     pmChangeStatus.Enabled := True;
     pmDelete.Enabled := True;
     pmOpenRegedit.Enabled := False;
+    pmOpenExplorer.Enabled := True;
     pmExport.Enabled := True;
     pmRename.Enabled := True;
     pmDeleteIcon.Visible := False;
@@ -2060,6 +2064,7 @@ begin
     end;  //of if
 
     // Update popup menu
+    pmOpenExplorer.Enabled := True;
     pmExport.Enabled := bExportStartupItem.Enabled;
     pmDelete.Enabled := True;
     pmRename.Enabled := True;
