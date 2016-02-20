@@ -265,6 +265,7 @@ begin
   // Link search events
   with FContext do
   begin
+    Duplicates := True;
     OnChanged := OnContextItemChanged;
     OnSearchError := Self.OnSearchError;
     OnSearchFinish := OnContextSearchEnd;
@@ -1498,7 +1499,7 @@ begin
 
     // Select file filter
     if (PageControl.ActivePageIndex = 3) then
-      DefaultExt := '.xml'
+      DefaultExt := '.zip'
     else
       DefaultExt := '.reg';
 
@@ -2237,7 +2238,7 @@ begin
       GetSelectedList().RenameItem(Name);
 
       // Names are visible instead of captions?
-      if not mmShowCaptions.Checked then
+      if (not mmShowCaptions.Checked or (PageControl.ActivePageIndex in [1, 3])) then
         GetSelectedListView().ItemFocused.SubItems[0] := Name;
     end;  //of begin
 
@@ -2248,6 +2249,10 @@ begin
     on E: EInvalidItem do
       FLang.ShowMessage(FLang.GetString([LID_RENAME, LID_IMPOSSIBLE]),
         FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
+
+    on E: EWarning do
+      FLang.ShowMessage(FLang.GetString([LID_RENAME, LID_IMPOSSIBLE]),
+        FLang.GetString(LID_ENTRY_ALREADY_EXISTS), mtWarning);
 
     on E: Exception do
       FLang.ShowException(FLang.GetString([LID_RENAME, LID_IMPOSSIBLE]), E.Message);

@@ -547,6 +547,7 @@ type
   TRootList<T: TRootItem> = class(TObjectList<T>, IInterface)
   strict private
     FItem: T;
+    FDuplicates: Boolean;
     FOnChanged: TItemChangeEvent;
     FOnSearchStart,
     FOnSearchFinish: TNotifyEvent;
@@ -708,6 +709,11 @@ type
     ///   The new name.
     /// </param>
     procedure RenameItem(const ANewName: string); virtual;
+
+    /// <summary>
+    ///   Allow items with the the same name.
+    /// </summary>
+    property Duplicates: Boolean read FDuplicates write FDuplicates;
 
     /// <summary>
     ///   Gets the count of enabled items in the list.
@@ -1835,10 +1841,10 @@ type
   TTaskListItem = class(TRootItem)
   private
     FTask: IRegisteredTask;
-    FTaskFolder: ITaskFolder;
+    FTaskService: ITaskService;
     function GetTaskDefinition(): ITaskDefinition;
-    procedure UpdateTask(const AName: string; ANewDefinition: ITaskDefinition);
     function GetZipLocation(): string;
+    procedure UpdateTask(const AName: string; ANewDefinition: ITaskDefinition);
   protected
     procedure ChangeFilePath(const ANewFilePath: string); override;
     procedure ChangeStatus(const ANewStatus: Boolean); override;
@@ -1863,11 +1869,11 @@ type
     /// <param name="ATask">
     ///   The task.
     /// </param>
-    /// <param name="ATaskFolder">
-    ///   A <c>ITaskFolder</c> object.
+    /// <param name="ATaskService">
+    ///   A <c>ITaskService</c> object.
     /// </param>
     constructor Create(const AName, AFileName, ALocation: string; AEnabled: Boolean;
-      ATask: IRegisteredTask; ATaskFolder: ITaskFolder);
+      ATask: IRegisteredTask; ATaskService: ITaskService);
 
     /// <summary>
     ///   Deletes the item.
@@ -2029,7 +2035,7 @@ type
 
 implementation
 
-uses StartupSearchThread, ContextSearchThread, ServiceSearchThread, TaskSearchThread, Dialogs;
+uses StartupSearchThread, ContextSearchThread, ServiceSearchThread, TaskSearchThread;
 
 {$I LanguageIDs.inc}
 
@@ -2688,6 +2694,7 @@ begin
   inherited Create;
   FEnabledItemsCount := 0;
   FInvalid := True;
+  FDuplicates := False;
   FLock := TCriticalSection.Create;
 end;
 
@@ -2939,6 +2946,9 @@ begin
 end;
 
 procedure TRootList<T>.RenameItem(const ANewName: string);
+var
+  i: Integer;
+
 begin
   // List locked?
   if not FLock.TryEnter() then
@@ -2947,6 +2957,14 @@ begin
   try
     if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
       raise EInvalidItem.Create('No item selected!');
+
+    if not FDuplicates then
+    begin
+      // Check for item with the same name
+      for i := 0 to Count - 1 do
+        if (Items[i].Name = ANewName) then
+          raise EWarning.Create('Item named "'+ ANewName +'" already exists!');
+    end;  //of begin
 
     FItem.Name := ANewName;
 
@@ -5809,11 +5827,11 @@ end;
 { TTaskListItem }
 
 constructor TTaskListItem.Create(const AName, AFileName, ALocation: string;
-  AEnabled: Boolean; ATask: IRegisteredTask; ATaskFolder: ITaskFolder);
+  AEnabled: Boolean; ATask: IRegisteredTask; ATaskService: ITaskService);
 begin
   inherited Create(AName, '', AFileName, ALocation, AEnabled);
   FTask := ATask;
-  FTaskFolder := ATaskFolder;
+  FTaskService := ATaskService;
 end;
 
 procedure TTaskListItem.ChangeStatus(const ANewStatus: Boolean);
@@ -5834,21 +5852,22 @@ begin
   Result := StringReplace(Result + Name, '\', '/', [rfReplaceAll]);
 end;
 
-procedure TTaskListItem.UpdateTask(const AName: string; ANewDefinition: ITaskDefinition);
+function TTaskListItem.GetFullLocation(): string;
+begin
+  if GetFolderPath(CSIDL_SYSTEM, Result) then
+    Result := IncludeTrailingBackslash(Result +'Tasks'+ GetLocation()) + Name;
+end;
+
+procedure TTaskListItem.UpdateTask(const AName: string;
+  ANewDefinition: ITaskDefinition);
 var
   TempLocation: string;
   TaskFile: TStringList;
   NewTask: IRegisteredTask;
+  TaskFolder: ITaskFolder;
 
 begin
-  {
-  // Temporary workaround:
-  // On 32-Bit RegisterTaskDefinition() works fine but on 64-Bit not: WTF!
-  OleCheck(FTaskFolder.RegisterTaskDefinition(FTask.Name, Definition,
-    TASK_UPDATE, Null, Null, FTask.Definition.Principal.LogonType, Null, NewTask));
-  }
-
-  TempLocation := IncludeTrailingBackslash(GetTempDir()) + AName;
+  TempLocation := GetKnownFolderPath(FOLDERID_LocalAppData) +'Temp'+ FTask.Path;
   TaskFile := TStringList.Create;
 
   try
@@ -5856,23 +5875,18 @@ begin
     TaskFile.SaveToFile(TempLocation, TEncoding.Unicode);
     Delete();
 
-    if not ExecuteProgram('schtasks', '/create /XML "'+ TempLocation
-      +'" /tn '+ AName, SW_HIDE, True, True) then
+    if not ExecuteProgram('schtasks', '/create /XML "'+ TempLocation +'"'+
+      ' /tn "'+ AName +'"', SW_HIDE, True, True) then
       raise Exception.Create(SysErrorMessage(GetLastError()));
 
-    OleCheck(FTaskFolder.GetTask(PChar(AName), NewTask));
+    OleCheck(FTaskService.GetFolder(PChar(Location), TaskFolder));
+    OleCheck(TaskFolder.GetTask(PChar(AName), NewTask));
     DeleteFile(TempLocation);
     FTask := NewTask;
 
   finally
     TaskFile.Free;
   end;  //of try
-end;
-
-function TTaskListItem.GetFullLocation(): string;
-begin
-  if GetFolderPath(CSIDL_SYSTEM, Result) then
-    Result := IncludeTrailingBackslash(Result +'Tasks'+ GetLocation()) + Name;
 end;
 
 procedure TTaskListItem.ChangeFilePath(const ANewFilePath: string);
@@ -5882,14 +5896,15 @@ var
   ActionItem: OleVariant;
   ExecAction: IExecAction;
   Fetched: DWORD;
-  Definition: ITaskDefinition;
+  NewDefinition: ITaskDefinition;
 
 begin
-  Definition := FTask.Definition;
-  Actions := (Definition.Actions._NewEnum as IEnumVariant);
+  OleCheck(FTaskService.NewTask(0, NewDefinition));
+  NewDefinition := FTask.Definition;
+  Actions := (NewDefinition.Actions._NewEnum as IEnumVariant);
 
   // Try to find executable command in task
-  if (Actions.Next(1, ActionItem, Fetched) = 0) then
+  if (Actions.Next(1, ActionItem, Fetched) = S_OK) then
   begin
     Action := (IDispatch(ActionItem) as IAction);
 
@@ -5903,15 +5918,27 @@ begin
       ExecAction.Arguments := PChar(ExtractArguments(ANewFilePath));
 
       // Update information
-      UpdateTask(Name, Definition);
+      // NOTE: Temporary workaround
+      UpdateTask(FTask.Name, NewDefinition);
+
+      {// This does not work with 64-bit .exe
+      OleCheck(FTaskService.GetFolder(PChar(Location), TaskFolder));
+      OleCheck(TaskFolder.RegisterTaskDefinition(FTask.Name, NewDefinition,
+        TASK_UPDATE, Null, Null, TASK_LOGON_NONE, Null, NewTask));
+
+      FTask := NewTask;}
       inherited ChangeFilePath(ANewFilePath);
     end;  //of begin
   end;  //of while
 end;
 
 function TTaskListItem.Delete(): Boolean;
+var
+  TaskFolder: ITaskFolder;
+
 begin
-  OleCheck(FTaskFolder.DeleteTask(PChar(Name), 0));
+  OleCheck(FTaskService.GetFolder(PChar(Location), TaskFolder));
+  OleCheck(TaskFolder.DeleteTask(PChar(Name), 0));
   Result := True;
 end;
 
@@ -5953,8 +5980,28 @@ begin
 end;
 
 procedure TTaskListItem.Rename(const ANewName: string);
+var
+  NewDefinition: ITaskDefinition;
+  //TaskFolder: ITaskFolder;
+  //NewTask: IRegisteredTask;
+
 begin
-  UpdateTask(ANewName, FTask.Definition);
+  // Copy task definition
+  OleCheck(FTaskService.NewTask(0, NewDefinition));
+  NewDefinition := FTask.Definition;
+
+  {// This does not work with 64-bit .exe
+  // Register definition under new task name
+  OleCheck(FTaskService.GetFolder(PChar(Location), TaskFolder));
+  OleCheck(TaskFolder.RegisterTaskDefinition(PChar(ANewName), NewDefinition,
+    TASK_CREATE, Null, Null, TASK_LOGON_NONE, Null, NewTask));
+
+  // Delete old task
+  OleCheck(TaskFolder.DeleteTask(FTask.Name, 0));
+  FTask := NewTask;}
+
+  // NOTE: Temporary workaround
+  UpdateTask(ANewName, NewDefinition);
   inherited Rename(ANewName);
 end;
 
@@ -5970,11 +6017,6 @@ constructor TTaskList.Create;
 begin
   inherited Create;
   CoInitialize(nil);
-
-//{$IFNDEF DEBUG}
-//  OleCheck(CoInitializeSecurity(nil, -1, nil, nil, RPC_C_AUTHN_LEVEL_PKT_PRIVACY,
-//    RPC_C_IMP_LEVEL_IMPERSONATE, nil, EOAC_NONE, nil));
-//{$ENDIF}
   OleCheck(CoCreateInstance(CLSID_TaskScheduler, nil, CLSCTX_INPROC_SERVER,
     IID_ITaskService, FTaskService));
   OleCheck(FTaskService.Connect(Null, Null, Null, Null));
@@ -6000,7 +6042,7 @@ begin
   // Try to find executable command in task
   Actions := (ATask.Definition.Actions._NewEnum as IEnumVariant);
 
-  if (Actions.Next(1, ActionItem, Fetched) = 0) then
+  if (Actions.Next(1, ActionItem, Fetched) = S_OK) then
   begin
     Action := (IDispatch(ActionItem) as IAction);
 
@@ -6017,7 +6059,7 @@ begin
   end;  //of while
 
   Item := TTaskListItem.Create(ATask.Name, FileName, ExtractFileDir(ATask.Path),
-    ATask.Enabled, ATask, ATaskFolder);
+    ATask.Enabled, ATask, FTaskService);
   Result := Add(Item);
 end;
 
@@ -6150,7 +6192,8 @@ begin
     end;  //of try
 
     // Refresh TListView
-    DoNotifyOnFinished();
+    if Result then
+      DoNotifyOnFinished();
 
   finally
   {$IFDEF WIN32}
@@ -6188,7 +6231,7 @@ begin
   Tasks := (TaskCollection._NewEnum as IEnumVariant);
 
   // Add tasks to list
-  while (Tasks.Next(1, TaskItem, Fetched) = 0) do
+  while (Tasks.Next(1, TaskItem, Fetched) = S_OK) do
     try
       Task := (IDispatch(TaskItem) as IRegisteredTask);
       AddTaskItem(Task, ATaskFolder);

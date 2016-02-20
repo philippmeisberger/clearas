@@ -65,7 +65,7 @@ var
   Folders: IEnumVariant;
   TaskFolder: ITaskFolder;
   FolderItem: OleVariant;
-  Fetched: Cardinal;
+  Fetched: LongWord;
 
 begin
   // Open current folder
@@ -82,7 +82,7 @@ begin
     Folders := (FolderCollection._NewEnum as IEnumVariant);
 
     // Search for tasks in subfolders
-    while (Folders.Next(1, FolderItem, Fetched) = 0) do
+    while (Folders.Next(1, FolderItem, Fetched) = S_OK) do
     begin
       TaskFolder := (IDispatch(FolderItem) as ITaskFolder);
       LoadTasks(TaskFolder.Path);
