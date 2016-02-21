@@ -5854,34 +5854,40 @@ end;
 
 function TTaskListItem.GetFullLocation(): string;
 begin
-  if GetFolderPath(CSIDL_SYSTEM, Result) then
+  if GetKnownFolderPath(FOLDERID_System, Result) then
     Result := IncludeTrailingBackslash(Result +'Tasks'+ GetLocation()) + Name;
 end;
 
 procedure TTaskListItem.UpdateTask(const AName: string;
   ANewDefinition: ITaskDefinition);
 var
-  TempLocation: string;
+  ExtractDir, TempLocation, NewTaskName: string;
   TaskFile: TStringList;
   NewTask: IRegisteredTask;
   TaskFolder: ITaskFolder;
 
 begin
-  TempLocation := GetKnownFolderPath(FOLDERID_LocalAppData) +'Temp'+ FTask.Path;
+  ExtractDir := GetKnownFolderPath(FOLDERID_LocalAppData) +'Temp\Clearas';
+  TempLocation := ExtractDir + FTask.Path;
+  ForceDirectories(ExtractFileDir(TempLocation));
   TaskFile := TStringList.Create;
 
   try
     TaskFile.SetText(ANewDefinition.XmlText);
     TaskFile.SaveToFile(TempLocation, TEncoding.Unicode);
+    NewTaskName := IncludeTrailingPathDelimiter(ExtractFileDir(FTask.Path)) + AName;
+    NewTaskName := Copy(NewTaskName, 2, Length(NewTaskName));
     Delete();
 
+    // Temporary workaround
+    // TODO: Use RegisterTaskDefinition() instead
     if not ExecuteProgram('schtasks', '/create /XML "'+ TempLocation +'"'+
-      ' /tn "'+ AName +'"', SW_HIDE, True, True) then
+      ' /tn "'+ NewTaskName +'"', SW_HIDE, True, True) then
       raise Exception.Create(SysErrorMessage(GetLastError()));
 
     OleCheck(FTaskService.GetFolder(PChar(Location), TaskFolder));
     OleCheck(TaskFolder.GetTask(PChar(AName), NewTask));
-    DeleteFile(TempLocation);
+    TDirectory.Delete(ExtractDir, True);
     FTask := NewTask;
 
   finally
@@ -5912,8 +5918,6 @@ begin
     if (Action.ActionType = TASK_ACTION_EXEC) then
     begin
       ExecAction := (Action as IExecAction);
-
-      // Change path + arguments
       ExecAction.Path := PChar(ExtractPathToFile(ANewFilePath));
       ExecAction.Arguments := PChar(ExtractArguments(ANewFilePath));
 
@@ -6173,8 +6177,9 @@ begin
         XmlTask.LoadFromFile(ExtractDir +'\'+ FileName, TEncoding.Unicode);
 
         // Register the task
-        OleCheck(TaskFolder.RegisterTask(PChar(FileName), XmlTask.GetText(),
-          TASK_CREATE, Null, Null, TASK_LOGON_INTERACTIVE_TOKEN, Null, NewTask));
+        OleCheck(TaskFolder.RegisterTask(PChar(ExtractFileName(FileName)),
+          XmlTask.GetText(), TASK_CREATE, Null, Null, TASK_LOGON_INTERACTIVE_TOKEN,
+          Null, NewTask));
 
         // Add new task to list
         if (AddTaskItem(NewTask, TaskFolder) = -1) then
