@@ -120,7 +120,12 @@ begin
 
           // Only valid ShellNew item when there are values inside
           if (Values.Count > 0) then
+          begin
             TContextList(FSelectedList).LoadContextmenu(AKeyName, stShellNew, FWin64);
+
+            // "ShellNew" and "_ShellNew" in same key are possible: Take only one
+            Exit;
+          end;  //of begin
         end;  //of begin
 
         // File extension: Search in subkey for ShellNew items

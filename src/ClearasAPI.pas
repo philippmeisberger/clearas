@@ -5169,7 +5169,7 @@ begin
     // Add ShellNew item?
     if (AShellItemType = stShellNew) then
     begin
-      // TODO: "ShellNew" and "_ShellNew" in same key are possible!
+      // "ShellNew" and "_ShellNew" in same key are possible: prefer "ShellNew"
       if Reg.KeyExists(CM_SHELLNEW) then
         Enabled := True
       else
