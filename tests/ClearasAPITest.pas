@@ -914,7 +914,7 @@ var
   TaskFileName: string;
 
 begin
-  TaskFileName := IncludeTrailingBackslash(ExtractFileDir(ExtractFileDir(GetCurrentDir()))) +'data\'+ FTestItems[0] +'.xml';
+  TaskFileName := IncludeTrailingBackslash(ExtractFileDir(ExtractFileDir(GetCurrentDir()))) +'data\'+ FTestItems[0] +'.zip';
   Check(FileExists(TaskFileName), 'Task backup file "'+ TaskFileName +'" does not exist!');
   Check(TTaskList(FRootList).ImportBackup(TaskFileName), 'Task already exists!');
   CheckFalse(TTaskList(FRootList).ImportBackup(TaskFileName), 'Task already exists so it must not be imported again!');

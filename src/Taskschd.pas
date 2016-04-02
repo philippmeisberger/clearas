@@ -266,14 +266,14 @@ type
     TASK_RUN_USE_SESSION_ID = $4,
     TASK_RUN_USER_SID = $8
   );
-  TTaskRunFlags = TASK_RUN_FLAGS;
   {$EXTERNALSYM TASK_RUN_FLAGS}
+  TTaskRunFlags = TASK_RUN_FLAGS;
 
   TASK_ENUM_FLAGS = (
     TASK_ENUM_HIDDEN = $1
   );
-  TTaskEnumFlags = TASK_ENUM_FLAGS;
   {$EXTERNALSYM TASK_ENUM_FLAGS}
+  TTaskEnumFlags = TASK_ENUM_FLAGS;
 
   TASK_LOGON_TYPE = (
     TASK_LOGON_NONE,
@@ -284,15 +284,15 @@ type
     TASK_LOGON_SERVICE_ACCOUNT,
     TASK_LOGON_INTERACTIVE_TOKEN_OR_PASSWORD
   );
-  TTaskLogonType = TASK_LOGON_TYPE;
   {$EXTERNALSYM TASK_LOGON_TYPE}
+  TTaskLogonType = TASK_LOGON_TYPE;
 
   TASK_RUNLEVEL_TYPE = (
     TASK_RUNLEVEL_LUA,
     TASK_RUNLEVEL_HIGHEST
   );
-  TTaskRunLevelType = TASK_RUNLEVEL_TYPE;
   {$EXTERNALSYM TASK_RUNLEVEL_TYPE}
+  TTaskRunLevelType = TASK_RUNLEVEL_TYPE;
 
   TASK_STATE = (
     TASK_STATE_UNKNOWN,
@@ -301,8 +301,8 @@ type
     TASK_STATE_READY,
     TASK_STATE_RUNNING
   );
-  TTaskState = TASK_STATE;
   {$EXTERNALSYM TASK_STATE}
+  TTaskState = TASK_STATE;
 
   TASK_CREATION = (
     TASK_VALIDATE_ONLY = $1,
@@ -313,8 +313,8 @@ type
     TASK_DONT_ADD_PRINCIPAL_ACE = $10,
     TASK_IGNORE_REGISTRATION_TRIGGERS = $20
   );
-  TTaskCreation = TASK_CREATION;
   {$EXTERNALSYM TASK_CREATION}
+  TTaskCreation = TASK_CREATION;
 
   TASK_TRIGGER_TYPE2 = (
     TASK_TRIGGER_EVENT  = 0,
@@ -329,10 +329,11 @@ type
     TASK_TRIGGER_LOGON  = 9,
     TASK_TRIGGER_SESSION_STATE_CHANGE   = 11
   );
+  {$EXTERNALSYM TASK_TRIGGER_TYPE2}
   TTaskTriggerType2 = TASK_TRIGGER_TYPE2;
   PTASK_TRIGGER_TYPE2 = ^TASK_TRIGGER_TYPE2;
+  {$EXTERNALSYM PTASK_TRIGGER_TYPE2}
   PTaskTriggerType2 = PTASK_TRIGGER_TYPE2;
-  {$EXTERNALSYM TASK_TRIGGER_TYPE2}
 
   TASK_SESSION_STATE_CHANGE_TYPE = (
     TASK_CONSOLE_CONNECT    = 1,
@@ -342,8 +343,8 @@ type
     TASK_SESSION_LOCK       = 7,
     TASK_SESSION_UNLOCK     = 8
   );
-  TTaskSessionStateChangeType = TASK_SESSION_STATE_CHANGE_TYPE;
   {$EXTERNALSYM TASK_SESSION_STATE_CHANGE_TYPE}
+  TTaskSessionStateChangeType = TASK_SESSION_STATE_CHANGE_TYPE;
 
   TASK_ACTION_TYPE = (
     TASK_ACTION_EXEC         = 0,
@@ -351,8 +352,8 @@ type
     TASK_ACTION_SEND_EMAIL   = 6,
     TASK_ACTION_SHOW_MESSAGE = 7
   );
-  TTaskActionType = TASK_ACTION_TYPE;
   {$EXTERNALSYM TASK_ACTION_TYPE}
+  TTaskActionType = TASK_ACTION_TYPE;
 
   TASK_INSTANCES_POLICY = (
     TASK_INSTANCES_PARALLEL      = 0,
@@ -360,44 +361,44 @@ type
     TASK_INSTANCES_IGNORE_NEW    = 2,
     TASK_INSTANCES_STOP_EXISTING = 3
   );
-  TTaskInstancesPolicy = TASK_INSTANCES_POLICY;
   {$EXTERNALSYM TASK_INSTANCES_POLICY}
+  TTaskInstancesPolicy = TASK_INSTANCES_POLICY;
 
   TASK_COMPATIBILITY = (
     TASK_COMPATIBILITY_AT   = 0,
     TASK_COMPATIBILITY_V1   = 1,
     TASK_COMPATIBILITY_V2   = 2
   );
-  TTaskCompatibility = TASK_COMPATIBILITY;
   {$EXTERNALSYM TASK_COMPATIBILITY}
+  TTaskCompatibility = TASK_COMPATIBILITY;
 
   DAILY = packed record
     DaysInterval: Word;
   end;
-  TDaily = DAILY;
   {$EXTERNALSYM DAILY}
+  TDaily = DAILY;
 
   MONTHLYDATE = packed record
     rgfDays: DWORD;
     rgfMonths: WORD;
   end;
-  TMonthlyDate = MONTHLYDATE;
   {$EXTERNALSYM MONTHLYDATE}
+  TMonthlyDate = MONTHLYDATE;
 
   MONTHLYDOW = packed record
     wWhichWeek: WORD;
     rgfDaysOfTheWeek: WORD;
     rgfMonths: WORD;
   end;
-  TMonthlyDow = MONTHLYDOW;
   {$EXTERNALSYM MONTHLYDOW}
+  TMonthlyDow = MONTHLYDOW;
 
   WEEKLY = packed record
     WeeksInterval: WORD;
     rgfDaysOfTheWeek: WORD;
   end;
-  TWeekly = WEEKLY;
   {$EXTERNALSYM WEEKLY}
+  TWeekly = WEEKLY;
 
   TRIGGER_TYPE_UNION = record
     case Integer of
@@ -406,8 +407,8 @@ type
       2: ( MonthlyDate: MONTHLYDATE; );
       3: ( MonthlyDOW: MONTHLYDOW; );
   end;
-  TTriggerTypeUnion = TRIGGER_TYPE_UNION;
   {$EXTERNALSYM TRIGGER_TYPE_UNION}
+  TTriggerTypeUnion = TRIGGER_TYPE_UNION;
 
 type
   IActionCollection = interface;
@@ -985,7 +986,7 @@ type
     procedure set_Enabled(pEnabled: WordBool); safecall;
     function Run(params: OleVariant;
       out ppRunningTask: IRunningTask): HRESULT; stdcall;
-    function RunEx(params: OleVariant; flags: LONG; sessionID: LONG;
+    function RunEx(params: OleVariant; flags: TTaskRunFlags; sessionID: LONG;
       user: TBStr; out ppRunningTask: IRunningTask): HRESULT; stdcall;
     function GetInstances(flags: LONG;
       out ppRunningTasks: IRunningTaskCollection): HRESULT; stdcall;

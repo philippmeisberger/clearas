@@ -4,7 +4,7 @@ Ein Open-Source Projekt von PM Code Works
 Changelog
 =========
 
-Version 4.3  [??.02.16]
+Version 4.3  [??.04.16]
 
 - Neues Feature "Aufgaben":
   - Ermöglicht Bearbeiten von geplanten Aufgaben
@@ -16,10 +16,12 @@ Version 4.3  [??.02.16]
 - "Umbenennen" ist nun auch über Tastenkürzel "F2" möglich
 - Deaktivierungsdatum kann nun auch für Autostart ab Windows 8 angezeigt werden
 - Bug fixes:
-  - "Umbenennen" zeigt nun initial den korrekten Text
+  - "Umbenennen" zeigt nun den korrekten Text
   - Nach "Umbenennen" wird der neue Anzeigename aktualisiert, wenn "Beschreibung anzeigen" ausgewählt ist
+  - Eintrag kann nicht mehr zu bereits existierendem Eintrag umbenannt werden
   - Zähler der aktivierten Autostart Elemente funktioniert nun korrekt
   - Export von Autostart Elementen schlägt fehl, wenn noch kein Eintrag im Schlüssel StartupApproved vorhanden ist
+  - "ShellNew" Einträge können nicht mehr aktiviert und deaktiviert zur gleichen Zeit sein
 
 ---------------------------------
 

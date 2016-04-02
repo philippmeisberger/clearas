@@ -1931,7 +1931,7 @@ type
   TTaskList = class(TRootList<TTaskListItem>, IImportableList)
   private
     FTaskService: ITaskService;
-    function AddTaskItem(ATask: IRegisteredTask; ATaskFolder: ITaskFolder): Integer;
+    function AddTaskItem(ATask: IRegisteredTask): Integer;
   public
     /// <summary>
     ///   Constructor for creating a <c>TTaskList</c> instance.
@@ -2592,7 +2592,7 @@ begin
     end  //of begin
     else
     begin
-      // Execute 64-Bit RegEdit
+      // Execute 64 bit RegEdit
       Wow64FsRedirection(True);
       ExecuteProgram('regedit.exe');
       Wow64FsRedirection(False);
@@ -3032,7 +3032,7 @@ begin
     Exit;
   end;  //of begin
 
-  // Status is stored in 64-Bit registry
+  // Status is stored in 64 bit registry
   Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
 
   try
@@ -3240,7 +3240,7 @@ begin
   if (FEnabled or CheckWin32Version(6, 2)) then
     inherited OpenInRegEdit()
   else
-    // Disabled items are stored in 64-Bit Registry!
+    // Disabled items are stored in 64 bit Registry!
     OpenInRegEdit(False);
 end;
 
@@ -4240,7 +4240,7 @@ begin
     Exit;
   end;  //of if
 
-  // Status is stored in 64-Bit registry
+  // Status is stored in 64 bit registry
   Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ);
 
   try
@@ -5925,7 +5925,7 @@ begin
       // NOTE: Temporary workaround
       UpdateTask(FTask.Name, NewDefinition);
 
-      {// This does not work with 64-bit .exe
+      {// TODO: This does not work with 64 bit .exe
       OleCheck(FTaskService.GetFolder(PChar(Location), TaskFolder));
       OleCheck(TaskFolder.RegisterTaskDefinition(FTask.Name, NewDefinition,
         TASK_UPDATE, Null, Null, TASK_LOGON_NONE, Null, NewTask));
@@ -5994,7 +5994,7 @@ begin
   OleCheck(FTaskService.NewTask(0, NewDefinition));
   NewDefinition := FTask.Definition;
 
-  {// This does not work with 64-bit .exe
+  {// TODO: This does not work with 64 bit .exe
   // Register definition under new task name
   OleCheck(FTaskService.GetFolder(PChar(Location), TaskFolder));
   OleCheck(TaskFolder.RegisterTaskDefinition(PChar(ANewName), NewDefinition,
@@ -6032,7 +6032,7 @@ begin
   inherited Destroy;
 end;
 
-function TTaskList.AddTaskItem(ATask: IRegisteredTask; ATaskFolder: ITaskFolder): Integer;
+function TTaskList.AddTaskItem(ATask: IRegisteredTask): Integer;
 var
   Item: TTaskListItem;
   Action: IAction;
@@ -6119,14 +6119,50 @@ end;
 function TTaskList.ImportBackup(const AFileName: TFileName): Boolean;
 var
   ExtractDir, FileName: string;
-  TaskFolder: ITaskFolder;
-  NewTask: IRegisteredTask;
   ZipFile: TZipFile;
   i: Integer;
-  XmlTask: TStringList;
+  NewTask: IRegisteredTask;
 {$IFDEF WIN32}
   Win64: Boolean;
 {$ENDIF}
+
+  function ImportTask(AFileName: string): IRegisteredTask;
+  var
+    ExistingTask: IRegisteredTask;
+    TaskFolder: ITaskFolder;
+    //XmlTask: TStringList;
+
+  begin
+    OleCheck(FTaskService.GetFolder(PChar(ExtractFileDir(AFileName)), TaskFolder));
+
+    // Task exists?
+    if Succeeded(TaskFolder.GetTask(PChar(ExtractFileName(AFileName)), ExistingTask)) then
+      Exit(nil);
+
+    AFileName := Copy(AFileName, 2, Length(AFileName));
+
+    // Temporary workaround
+    // TODO: Use RegisterTask() instead
+    if not ExecuteProgram('schtasks', '/create /XML "'+ ExtractDir +'\'+ AFileName +'"'+
+      ' /tn "'+ ExtractFileName(AFileName) +'"', SW_HIDE, True, True) then
+      raise Exception.Create(SysErrorMessage(GetLastError()));
+
+    OleCheck(FTaskService.GetFolder(PChar(ExtractFileDir(AFileName)), TaskFolder));
+    TaskFolder.GetTask(PChar(ExtractFileName(AFileName)), Result);
+// TODO: This does not work in 64 bit .exe
+//    XmlTask := TStringList.Create;
+//
+//    try
+//      XmlTask.LoadFromFile(ExtractDir +'\'+ AFileName, TEncoding.Unicode);
+//
+//      // Register the task
+//      OleCheck(TaskFolder.RegisterTask(PChar(ExtractFileName(AFileName)),
+//        XmlTask.GetText(), TASK_CREATE, Null, Null, TASK_LOGON_INTERACTIVE_TOKEN,
+//        Null, Result));
+//    finally
+//      XmlTask.Free;
+//    end;  //of try
+  end;
 
 begin
   Result := False;
@@ -6148,7 +6184,6 @@ begin
 {$ENDIF}
 
   try
-    XmlTask := TStringList.Create;
     ZipFile := TZipFile.Create;
 
     try
@@ -6162,27 +6197,16 @@ begin
 
       for i := 0 to ZipFile.FileCount - 1 do
       begin
-        NewTask := nil;
-        TaskFolder := nil;
         FileName := ZipFile.FileName[i];
         ZipFile.Extract(FileName, ExtractDir);
         FileName := '\'+ StringReplace(FileName, '/', '\', [rfReplaceAll]);
-        OleCheck(FTaskService.GetFolder(PChar(ExtractFileDir(FileName)), TaskFolder));
+        NewTask := ImportTask(FileName);
 
-        // Task exists?
-        if Succeeded(TaskFolder.GetTask(PChar(ExtractFileName(FileName)), NewTask)) then
+        if not Assigned(NewTask) then
           Continue;
 
-        FileName := Copy(FileName, 2, Length(FileName));
-        XmlTask.LoadFromFile(ExtractDir +'\'+ FileName, TEncoding.Unicode);
-
-        // Register the task
-        OleCheck(TaskFolder.RegisterTask(PChar(ExtractFileName(FileName)),
-          XmlTask.GetText(), TASK_CREATE, Null, Null, TASK_LOGON_INTERACTIVE_TOKEN,
-          Null, NewTask));
-
         // Add new task to list
-        if (AddTaskItem(NewTask, TaskFolder) = -1) then
+        if (AddTaskItem(NewTask) = -1) then
           raise ETaskException.Create('Task could not be added!');
 
         Result := True;
@@ -6193,7 +6217,6 @@ begin
 
     finally
       ZipFile.Free;
-      XmlTask.Free;
     end;  //of try
 
     // Refresh TListView
@@ -6239,7 +6262,7 @@ begin
   while (Tasks.Next(1, TaskItem, Fetched) = S_OK) do
     try
       Task := (IDispatch(TaskItem) as IRegisteredTask);
-      AddTaskItem(Task, ATaskFolder);
+      AddTaskItem(Task);
 
     except
       // Task currupted: Skip it!

@@ -307,7 +307,6 @@ object Main: TMain
             Caption = 'Schl'#252'ssel'
             Width = 65
           end>
-        HideSelection = False
         ReadOnly = True
         RowSelect = True
         PopupMenu = PopupMenu
@@ -439,7 +438,6 @@ object Main: TMain
             Caption = 'Typ'
             Width = 75
           end>
-        HideSelection = False
         ReadOnly = True
         RowSelect = True
         PopupMenu = PopupMenu
@@ -696,7 +694,6 @@ object Main: TMain
             Caption = 'Ort'
             Width = 75
           end>
-        HideSelection = False
         ReadOnly = True
         RowSelect = True
         PopupMenu = PopupMenu
@@ -882,7 +879,7 @@ object Main: TMain
   object QuickSearchIconList: TImageList
     Left = 256
     Bitmap = {
-      494C010103000800240210001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C010103000800280210001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000001000000001002000000000000010
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
