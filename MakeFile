@@ -1,0 +1,36 @@
+PROJECTNAME=Clearas
+WIN32EXE=bin\Win32\$(PROJECTNAME).exe
+WIN64EXE=bin\Win64\$(PROJECTNAME).exe
+CERTSHA1=A9A273A222A5DD3ED9EC2F46232AAD8E087EA4ED
+MSBUILD=C:\Windows\Microsoft.NET\Framework\v3.5\MSBUILD.exe
+ZIP="C:\Program Files (x86)\GnuWin32\bin\zip.exe"
+SIGNTOOL="C:\Program Files (x86)\Windows Kits\8.1\bin\x86\signtool.exe"
+
+build: win32 win64
+
+sign: sign32 sign64
+
+source: src\*.pas Makefile
+	$(ZIP) -9 -r $(PROJECTNAME)-src.zip src -i *.pas -i *.dproj -i *.res -i *.rc -i *.dpr -i *.dfm -i *.inc -i *.dcr -i *.png -i *.ico
+
+win32: src\$(PROJECTNAME).dproj
+	SET BDS=C:\Program Files (x86)\Embarcadero\Studio\16.0
+	IF NOT EXIST bin\Win32 MKDIR bin\Win32
+	$(MSBUILD) /p:Config=Release /property:Platform=Win32 "src\$(PROJECTNAME).dproj"
+
+sign32: $(WIN32EXE)
+	$(SIGNTOOL) sign /v /sha1 $(CERTSHA1) /tr http://timestamp.globalsign.com/scripts/timstamp.dll /td SHA256 $(WIN32EXE)
+
+win64: src\$(PROJECTNAME).dproj
+	SET BDS=C:\Program Files (x86)\Embarcadero\Studio\16.0
+	IF NOT EXIST bin\Win64 MKDIR bin\Win64
+	$(MSBUILD) /p:Config=Release /property:Platform=Win64 "src\$(PROJECTNAME).dproj"
+
+sign64: $(WIN64EXE)
+	$(SIGNTOOL) sign /v /sha1 $(CERTSHA1) /tr http://timestamp.globalsign.com/scripts/timstamp.dll /td SHA256 $(WIN64EXE)
+
+release: win32 sign32 win64 sign64 source
+
+clean:
+	IF EXIST $(WIN32EXE) DEL $(WIN32EXE)
+	IF EXIST $(WIN64EXE) DEL $(WIN64EXE)
