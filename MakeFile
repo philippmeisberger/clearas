@@ -11,7 +11,7 @@ build: win32 win64
 sign: sign32 sign64
 
 source: src\*.pas Makefile
-	$(ZIP) -9 -r $(PROJECTNAME)-src.zip . src -x tests\* -i MakeFile -i MakeFile.bat -i LICENCE.txt -i COPYING.txt -i *.pas -i *.dproj -i *.res -i *.rc -i *.dpr -i *.dfm -i *.inc -i *.dcr -i *.ico
+	$(ZIP) -9 -r $(PROJECTNAME)-src.zip . src -x .hg\* -x tests\* -i MakeFile -i MakeFile.bat -i *.md -i *.txt -i *.pas -i *.dproj -i *.res -i *.rc -i *.dpr -i *.dfm -i *.inc -i *.dcr -i *.ico
 
 win32: src\$(PROJECTNAME).dproj
 	SET BDS=C:\Program Files (x86)\Embarcadero\Studio\16.0
