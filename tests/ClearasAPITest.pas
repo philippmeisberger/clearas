@@ -898,15 +898,8 @@ begin
 end;
 
 procedure TTaskListTest.LoadItems();
-var
-  TaskFolder: ITaskFolder;
-
 begin
-  // Open current folder
-  OleCheck(TTaskList(FRootList).TaskService.GetFolder('\', TaskFolder));
-
-  // Add tasks in folder to list
-  TTaskList(FRootList).LoadTasks(TaskFolder, False);
+  TTaskList(FRootList).Search(False);
 end;
 
 procedure TTaskListTest.AddEnabledTestItems;
