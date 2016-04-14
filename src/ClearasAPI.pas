@@ -504,7 +504,6 @@ type
 
   { Events }
   TItemChangeEvent = procedure(Sender: TObject; ANewStatus: TItemStatus) of object;
-  TSearchEvent = procedure(Sender: TObject; AProgress, AProgressMax: Cardinal) of object;
   TSearchErrorEvent = procedure(Sender: TObject; AErrorMessage: string) of object;
 
   /// <summary>
@@ -551,13 +550,14 @@ type
     FOnChanged: TItemChangeEvent;
     FOnSearchStart,
     FOnSearchFinish: TNotifyEvent;
-    FOnSearching: TSearchEvent;
     FOnSearchError: TSearchErrorEvent;
   protected
     FEnabledItemsCount: Integer;
     FInvalid: Boolean;
     FLock: TCriticalSection;
     procedure DoNotifyOnChanged(ANewStatus: TItemStatus);
+
+    { IInterface }
     function QueryInterface(const IID: TGUID; out Obj): HRESULT; stdcall;
     function _AddRef: Integer; stdcall;
     function _Release: Integer; stdcall;
@@ -700,7 +700,12 @@ type
     ///   If set to <c>True</c> use the expert search mode. Otherwise use the
     ///   default search mode.
     /// </param>
-    procedure Load(AExpertMode: Boolean = False); virtual; abstract;
+    /// <remarks>
+    ///   Asynchronous: A thread is launched! The <see cref="OnSearchStart"/>
+    ///   event occurs when the search starts. At the end the
+    ///   <see cref="OnSearchFinish"/> event occurs.
+    /// </remarks>
+    procedure Load(AExpertMode: Boolean = False);
 
     /// <summary>
     ///   Renames the current selected item.
@@ -709,6 +714,22 @@ type
     ///   The new name.
     /// </param>
     procedure RenameItem(const ANewName: string); virtual;
+
+    /// <summary>
+    ///   Searches for items and adds them to the list.
+    /// </summary>
+    /// <param name="AExpertMode">
+    ///   Use advanced search mode.
+    /// </param>
+    /// <param name="AUseWow64">
+    ///   If set to <c>True</c> search for WOW64 items. Otherwise search for
+    ///   native items.
+    /// </param>
+    /// <remarks>
+    ///   Do not call this method directly because it freezes the application!
+    ///   Use <c>Load()</c> to call this method from a thread.
+    /// </remarks>
+    procedure Search(AExpertMode: Boolean = False; AUseWow64: Boolean = False); virtual; abstract;
 
     /// <summary>
     ///   Allow items with the the same name.
@@ -730,11 +751,6 @@ type
     ///   Occurs when an item has changed.
     /// </summary>
     property OnChanged: TItemChangeEvent read FOnChanged write FOnChanged;
-
-    /// <summary>
-    ///   Occurs when item search is in progress.
-    /// </summary>
-    property OnSearching: TSearchEvent read FOnSearching write FOnSearching;
 
     /// <summary>
     ///   Occurs when item search has failed.
@@ -1211,20 +1227,6 @@ type
     /// <summary>
     ///   Searches for items and adds them to the list.
     /// </summary>
-    /// <param name="AExpertMode">
-    ///   If set to <c>True</c> use the expert search mode. Otherwise use the
-    ///   default search mode.
-    /// </param>
-    /// <remarks>
-    ///   Asynchronous: A thread is launched! The <see cref="OnSearchStart"/>
-    ///   event occurs when the search starts. At the end the
-    ///   <see cref="OnSearchFinish"/> event occurs.
-    /// </remarks>
-    procedure Load(AExpertMode: Boolean = False); overload; override;
-
-    /// <summary>
-    ///   Searches for items and adds them to the list.
-    /// </summary>
     /// <param name="AStartupLocation">
     ///   The startup location to search for items.
     /// </param>
@@ -1238,6 +1240,22 @@ type
     ///   <c>False</c> only search for default startup items.
     /// </param>
     procedure LoadDisabled(AStartupUser: Boolean); deprecated 'Since Windows 8';
+
+    /// <summary>
+    ///   Searches for items and adds them to the list.
+    /// </summary>
+    /// <param name="AExpertMode">
+    ///   Use advanced search mode.
+    /// </param>
+    /// <param name="AUseWow64">
+    ///   If set to <c>True</c> search for WOW64 items. Otherwise search for
+    ///   native items.
+    /// </param>
+    /// <remarks>
+    ///   Do not call this method directly because it freezes the application!
+    ///   Use <c>Load()</c> to call this method from a thread.
+    /// </remarks>
+    procedure Search(AExpertMode: Boolean = False; AUseWow64: Boolean = False); override;
 
     /// <summary>
     ///   Gets or sets the behaviour that startup user backup files should be
@@ -1551,6 +1569,9 @@ type
   ///   list is locked.
   /// </summary>
   TContextList = class(TRootList<TContextListItem>)
+  private
+    procedure Search(AExpertMode: Boolean; AUseWow64: Boolean;
+      const ARoot: string = ''); reintroduce; overload;
   public
     /// <summary>
     ///   Adds an item to the list.
@@ -1604,20 +1625,6 @@ type
     /// <summary>
     ///   Searches for items and adds them to the list.
     /// </summary>
-    /// <param name="AExpertMode">
-    ///   If set to <c>True</c> use the expert search mode. Otherwise use the
-    ///   default search mode.
-    /// </param>
-    /// <remarks>
-    ///   Asynchronous: A thread is launched! The <see cref="OnSearchStart"/>
-    ///   event occurs when the search starts. At the end the
-    ///   <see cref="OnSearchFinish"/> event occurs.
-    /// </remarks>
-    procedure Load(AExpertMode: Boolean = False); override;
-
-    /// <summary>
-    ///   Searches for items and adds them to the list.
-    /// </summary>
     /// <param name="ALocationRoot">
     ///   The root location e.g. <c>Drives</c>.
     /// </param>
@@ -1642,6 +1649,22 @@ type
     /// </param>
     procedure LoadContextmenu(const ALocationRoot: string;
       AShellItemType: TShellItemType; AWow64: Boolean); overload;
+
+    /// <summary>
+    ///   Searches for items and adds them to the list.
+    /// </summary>
+    /// <param name="AExpertMode">
+    ///   Use advanced search mode.
+    /// </param>
+    /// <param name="AUseWow64">
+    ///   If set to <c>True</c> search for WOW64 items. Otherwise search for
+    ///   native items.
+    /// </param>
+    /// <remarks>
+    ///   Do not call this method directly because it freezes the application!
+    ///   Use <c>Load()</c> to call this method from a thread.
+    /// </remarks>
+    procedure Search(AExpertMode: Boolean = False; AUseWow64: Boolean = False); overload; override;
   end;
 
 const
@@ -1794,20 +1817,6 @@ type
     procedure ExportList(const AFileName: string); override;
 
     /// <summary>
-    ///   Searches for items and adds them to the list.
-    /// </summary>
-    /// <param name="AExpertMode">
-    ///   If set to <c>True</c> use the expert search mode. Otherwise use the
-    ///   default search mode.
-    /// </param>
-    /// <remarks>
-    ///   Asynchronous: A thread is launched! The <see cref="OnSearchStart"/>
-    ///   event occurs when the search starts. At the end the
-    ///   <see cref="OnSearchFinish"/> event occurs.
-    /// </remarks>
-    procedure Load(AExpertMode: Boolean = False); override;
-
-    /// <summary>
     ///   Loads and adds a service item to the list.
     /// </summary>
     /// <param name="AName">
@@ -1824,6 +1833,22 @@ type
     /// </returns>
     function LoadService(const AName: string; AServiceHandle: SC_HANDLE;
       AIncludeDemand: Boolean = False): Integer;
+
+    /// <summary>
+    ///   Searches for items and adds them to the list.
+    /// </summary>
+    /// <param name="AExpertMode">
+    ///   Use advanced search mode.
+    /// </param>
+    /// <param name="AUseWow64">
+    ///   If set to <c>True</c> search for WOW64 items. Otherwise search for
+    ///   native items.
+    /// </param>
+    /// <remarks>
+    ///   Do not call this method directly because it freezes the application!
+    ///   Use <c>Load()</c> to call this method from a thread.
+    /// </remarks>
+    procedure Search(AExpertMode: Boolean = False; AUseWow64: Boolean = False); override;
 
     /// <summary>
     ///   Gets the current handle to the service manager.
@@ -1932,6 +1957,7 @@ type
   private
     FTaskService: ITaskService;
     function AddTaskItem(ATask: IRegisteredTask): Integer;
+    procedure Search(AExpertMode, AUseWow64: Boolean; const APath: string); reintroduce; overload;
   public
     /// <summary>
     ///   Constructor for creating a <c>TTaskList</c> instance.
@@ -1988,44 +2014,17 @@ type
     ///   Searches for items and adds them to the list.
     /// </summary>
     /// <param name="AExpertMode">
-    ///   If set to <c>True</c> use the expert search mode. Otherwise use the
-    ///   default search mode.
+    ///   Use advanced search mode.
+    /// </param>
+    /// <param name="AUseWow64">
+    ///   If set to <c>True</c> search for WOW64 items. Otherwise search for
+    ///   native items.
     /// </param>
     /// <remarks>
-    ///   Asynchronous: A thread is launched! The <see cref="OnSearchStart"/>
-    ///   event occurs when the search starts. At the end the
-    ///   <see cref="OnSearchFinish"/> event occurs.
+    ///   Do not call this method directly because it freezes the application!
+    ///   Use <c>Load()</c> to call this method from a thread.
     /// </remarks>
-    procedure Load(AExpertMode: Boolean = False); override;
-
-    /// <summary>
-    ///   Adds task items to the list.
-    /// </summary>
-    /// <param name="ATaskFolder">
-    ///
-    /// </param>
-    /// <param name="AIncludeHidden">
-    ///   If set to <c>True</c> include hidden tasks. Otherwise hidden tasks are
-    ///   skipped.
-    /// </param>
-    procedure LoadTasks(ATaskFolder: ITaskFolder; AIncludeHidden: Boolean); overload;
-
-    /// <summary>
-    ///   Searches for task items in specific folder and adds them to the list.
-    /// </summary>
-    /// <param name="APath">
-    ///   The relative path to the task folder. The root is <c>\</c>.
-    /// </param>
-    /// <param name="AExpertMode">
-    ///   If set to <c>True</c> tasks in subfolders and those who are hidden are
-    ///   included.
-    /// </param>
-    /// <remarks>
-    ///   Asynchronous: A thread is launched! The <see cref="OnSearchStart"/>
-    ///   event occurs when the search starts. At the end the
-    ///   <see cref="OnSearchFinish"/> event occurs.
-    /// </remarks>
-    procedure LoadTasks(APath: string = '\'; AExpertMode: Boolean = False); overload;
+    procedure Search(AExpertMode: Boolean = False; AUseWow64: Boolean = False); overload; override;
 
     /// <summary>
     ///   Gets the current task service.
@@ -2035,7 +2034,7 @@ type
 
 implementation
 
-uses StartupSearchThread, ContextSearchThread, ServiceSearchThread, TaskSearchThread;
+uses ClearasSearchThread;
 
 {$I LanguageIDs.inc}
 
@@ -2057,6 +2056,7 @@ begin
     Result := 0;
   end;  //of try
 end;
+
 
 { TLnkFile }
 
@@ -2721,12 +2721,15 @@ end;
 
 function TRootList<T>._AddRef(): Integer;
 begin
-  Result := -1;
+  InterlockedIncrement(Result);
 end;
 
 function TRootList<T>._Release(): Integer;
 begin
-  Result := -1;
+  InterlockedDecrement(Result);
+
+  if (Result = 0) then
+    Free;
 end;
 
 procedure TRootList<T>.Clear();
@@ -2943,6 +2946,23 @@ begin
     FLock.Release();
 
   Result := not Entered;
+end;
+
+procedure TRootList<T>.Load(AExpertMode: Boolean = False);
+var
+  SearchThread: TClearasSearchThread;
+
+begin
+  SearchThread := TClearasSearchThread.Create(TRootList<TRootItem>(Self), FLock, AExpertMode);
+
+  with SearchThread do
+  begin
+    Win64 := (TOSVersion.Architecture = arIntelX64);
+    OnError := OnSearchError;
+    OnFinish := OnSearchFinish;
+    OnStart := OnSearchStart;
+    Start();
+  end;  // of with
 end;
 
 procedure TRootList<T>.RenameItem(const ANewName: string);
@@ -4129,26 +4149,6 @@ begin
   end;  //of try
 end;
 
-procedure TStartupList.Load(AExpertMode: Boolean = False);
-var
-  StartupSearchThread: TStartupSearchThread;
-
-begin
-  // Init search thread
-  StartupSearchThread := TStartupSearchThread.Create(TRootList<TRootItem>(Self),
-    FLock, AExpertMode);
-
-  with StartupSearchThread do
-  begin
-    Win64 := (TOSVersion.Architecture = arIntelX64);
-    OnError := OnSearchError;
-    OnFinish := OnSearchFinish;
-    OnStart := OnSearchStart;
-    OnSearching := OnSearching;
-    Start;
-  end;  // of with
-end;
-
 procedure TStartupList.LoadDisabled(AStartupUser: Boolean);
 var
   Reg: TRegistry;
@@ -4266,6 +4266,25 @@ begin
     Reg.CloseKey();
     Reg.Free;
   end;  //of try
+end;
+
+procedure TStartupList.Search(AExpertMode: Boolean = False; AUseWow64: Boolean = False);
+var
+  Location: TStartupLocation;
+
+begin
+  for Location := Low(TStartupLocation) to High(TStartupLocation) do
+  begin
+    // Include RunOnce in expert mode only
+    if ((Location in [slHkcuRunOnce, slHklmRunOnce, slHklmRunOnce32]) and not AExpertMode) then
+      Continue;
+
+    Load(Location);
+  end;  //of for
+
+  // Load disabled items from deprecated Registry keys only prior to Windows 7
+  LoadDisabled(False);
+  LoadDisabled(True);
 end;
 
 procedure TStartupList.Load(AStartupLocation: TStartupLocation);
@@ -5109,25 +5128,6 @@ begin
   end;  //of for
 end;
 
-procedure TContextList.Load(AExpertMode: Boolean = False);
-var
-  SearchThread: TContextSearchThread;
-
-begin
-  // Init search thread
-  SearchThread := TContextSearchThread.Create(Self, FLock, AExpertMode);
-
-  with SearchThread do
-  begin
-    Win64 := (TOSVersion.Architecture = arIntelX64);
-    OnError := OnSearchError;
-    OnFinish := OnSearchFinish;
-    OnStart := OnSearchStart;
-    OnSearching := OnSearching;
-    Start;
-  end;  // of with
-end;
-
 procedure TContextList.LoadContextmenu(const ALocationRoot: string;
   AWow64: Boolean);
 var
@@ -5320,6 +5320,103 @@ begin
   end;  //of try
 end;
 
+procedure TContextList.Search(AExpertMode: Boolean = False; AUseWow64: Boolean = False);
+begin
+  Search(AExpertMode, AUseWow64, '');
+end;
+
+procedure TContextList.Search(AExpertMode: Boolean; AUseWow64: Boolean;
+  const ARoot: string = '');
+var
+  Reg: TRegistry;
+
+  procedure SearchSubkey(const AKeyName: string);
+  var
+    Keys, Values: TStringList;
+    i: Integer;
+
+  begin
+    Keys := TStringList.Create;
+    Values := TStringList.Create;
+
+    try
+      if not Reg.OpenKey(AKeyName, False) then
+        Exit;
+
+      if Reg.HasSubKeys() then
+      begin
+        // Load subkeys
+        Reg.GetKeyNames(Keys);
+        Reg.CloseKey();
+
+        for i := 0 to Keys.Count - 1 do
+        begin
+          // Load Shell context menu items
+          if AnsiSameText(Keys[i], CM_SHELL) then
+            LoadContextmenu(AKeyName, stShell, AUseWow64);
+
+          // Load ShellEx context menu items
+          if AnsiSameText(Keys[i], CM_SHELLEX) then
+            LoadContextmenu(AKeyName, stShellEx, AUseWow64);
+
+          // Load ShellNew context menu items
+          if AnsiContainsStr(Keys[i], CM_SHELLNEW) then
+          begin
+            Reg.OpenKey(AKeyName +'\'+ Keys[i], False);
+            Reg.GetValueNames(Values);
+            Reg.CloseKey();
+
+            // Only valid ShellNew item when there are values inside
+            if (Values.Count > 0) then
+            begin
+              LoadContextmenu(AKeyName, stShellNew, AUseWow64);
+
+              // "ShellNew" and "_ShellNew" in same key are possible: Take only one
+              Exit;
+            end;  //of begin
+          end;  //of begin
+
+          // File extension: Search in subkey for ShellNew items
+          if (AKeyName[1] = '.') then
+            SearchSubkey(AKeyName +'\'+ Keys[i]);
+        end;  //of for
+      end;  //of begin
+
+    finally
+      Reg.CloseKey();
+      Values.Free;
+      Keys.Free;
+    end;  //of try
+  end;
+
+var
+  i: Integer;
+  Locations: TStringList;
+
+begin
+  Locations := TStringList.Create;
+
+  // Init Registry access with read-only
+  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ);
+  Reg.RootKey := HKEY_CLASSES_ROOT;
+  Reg.OpenKey(ARoot, False);
+
+  if AExpertMode then
+  begin
+    Reg.GetKeyNames(Locations);
+    Reg.CloseKey();
+  end  //of begin
+  else
+    Locations.CommaText := CM_LOCATIONS_DEFAULT;
+
+  for i := 0 to Locations.Count - 1 do
+  begin
+    if (ARoot <> '') then
+      SearchSubkey(ARoot +'\'+ Locations[i])
+    else
+      SearchSubkey(Locations[i]);
+  end;  //of for
+end;
 
 { TServiceStartHelper }
 
@@ -5718,23 +5815,6 @@ begin
   end;  //of try
 end;
 
-procedure TServiceList.Load(AExpertMode: Boolean = False);
-var
-  SearchThread: TServiceSearchThread;
-
-begin
-  SearchThread := TServiceSearchThread.Create(Self, FLock, FManager, AExpertMode);
-
-  with SearchThread do
-  begin
-    OnError := OnSearchError;
-    OnFinish := OnSearchFinish;
-    OnStart := OnSearchStart;
-    OnSearching := OnSearching;
-    Start;
-  end;  //of with
-end;
-
 function TServiceList.LoadService(const AName: string; AServiceHandle: SC_HANDLE;
   AIncludeDemand: Boolean = False): Integer;
 var
@@ -5823,6 +5903,66 @@ begin
   end;  //of try
 end;
 
+
+procedure TServiceList.Search(AExpertMode, AUseWow64: Boolean);
+var
+  Service: SC_HANDLE;
+  Services, ServicesCopy: PEnumServiceStatus;
+  BytesNeeded, ServicesReturned, ResumeHandle, LastError, ServiceType: DWORD;
+  i: Integer;
+
+begin
+  ServicesReturned := 0;
+  ResumeHandle := 0;
+  Services := nil;
+
+  // Include services that are shared with other processes?
+  if AExpertMode then
+    ServiceType := SERVICE_WIN32
+  else
+    ServiceType := SERVICE_WIN32_OWN_PROCESS;
+
+  // Determine the required size for buffer
+  EnumServicesStatus(FManager, ServiceType, SERVICE_STATE_ALL, Services^, 0,
+    BytesNeeded, ServicesReturned, ResumeHandle);
+
+  LastError := GetLastError();
+
+  // ERROR_MORE_DATA will be fired normally
+  if (LastError <> ERROR_MORE_DATA) then
+    raise EServiceException.Create(SysErrorMessage(LastError));
+
+  GetMem(Services, BytesNeeded);
+
+  try
+    ServicesReturned := 0;
+    ResumeHandle := 0;
+    ServicesCopy := Services;
+
+    // Read all services matching
+    if not EnumServicesStatus(FManager, ServiceType, SERVICE_STATE_ALL,
+      Services^, BytesNeeded, BytesNeeded, ServicesReturned, ResumeHandle) then
+      raise EServiceException.Create(SysErrorMessage(GetLastError()));
+
+    // Add services to list
+    for i := 0 to ServicesReturned - 1 do
+    begin
+      Service := OpenService(FManager, ServicesCopy^.lpServiceName, SERVICE_QUERY_CONFIG);
+
+      // Skip corrupted service
+      if (Service <> 0) then
+      begin
+        LoadService(ServicesCopy^.lpServiceName, Service, AExpertMode);
+        CloseServiceHandle(Service);
+      end;  //of if
+
+      Inc(ServicesCopy);
+    end;  //of for
+
+  finally
+    FreeMem(Services, BytesNeeded);
+  end;  //of try
+end;
 
 { TTaskListItem }
 
@@ -6233,60 +6373,84 @@ begin
   end;  //of try
 end;
 
-procedure TTaskList.Load(AExpertMode: Boolean = False);
+procedure TTaskList.Search(AExpertMode: Boolean = False; AUseWow64: Boolean = False);
 begin
-  LoadTasks('\', AExpertMode);
+  Search(AExpertMode, AUseWow64, '\');
 end;
 
-procedure TTaskList.LoadTasks(ATaskFolder: ITaskFolder; AIncludeHidden: Boolean);
-var
-  TaskCollection: IRegisteredTaskCollection;
-  Task: IRegisteredTask;
-  Tasks: IEnumVariant;
-  TaskItem: OleVariant;
-  Fetched: DWORD;
-  Flags: LONG;
+procedure TTaskList.Search(AExpertMode, AUseWow64: Boolean; const APath: string);
 
-begin
-  // Show hidden?
-  if AIncludeHidden then
-    Flags := LONG(TASK_ENUM_HIDDEN)
-  else
-    Flags := 0;
+  procedure LoadSubTasks(const APath: string);
+  var
+    FolderCollection: ITaskFolderCollection;
+    Folders: IEnumVariant;
+    TaskFolder: ITaskFolder;
+    FolderItem: OleVariant;
+    Fetched: DWORD;
+    TaskCollection: IRegisteredTaskCollection;
+    Task: IRegisteredTask;
+    Tasks: IEnumVariant;
+    TaskItem: OleVariant;
+    Flags: LONG;
 
-  // Add tasks in current folder
-  OleCheck(ATaskFolder.GetTasks(Flags, TaskCollection));
-  Tasks := (TaskCollection._NewEnum as IEnumVariant);
-
-  // Add tasks to list
-  while (Tasks.Next(1, TaskItem, Fetched) = S_OK) do
-    try
-      Task := (IDispatch(TaskItem) as IRegisteredTask);
-      AddTaskItem(Task);
-
-    except
-      // Task currupted: Skip it!
-      Continue;
-    end;  //of try
-end;
-
-procedure TTaskList.LoadTasks(APath: string = '\'; AExpertMode: Boolean = False);
-var
-  SearchThread: TTaskSearchThread;
-
-begin
-  SearchThread := TTaskSearchThread.Create(Self, FLock, FTaskService, AExpertMode);
-
-  with SearchThread do
   begin
-    Path := APath;
-    Win64 := (TOSVersion.Architecture = arIntelX64);
-    OnError := OnSearchError;
-    OnFinish := OnSearchFinish;
-    OnStart := OnSearchStart;
-    OnSearching := OnSearching;
-    Start;
-  end;  //of with
+    // Open current folder
+    OleCheck(FTaskService.GetFolder(PChar(APath), TaskFolder));
+
+    // Show hidden?
+    if AExpertMode then
+      Flags := LONG(TASK_ENUM_HIDDEN)
+    else
+      Flags := 0;
+
+    // Add tasks in current folder
+    OleCheck(TaskFolder.GetTasks(Flags, TaskCollection));
+    Tasks := (TaskCollection._NewEnum as IEnumVariant);
+
+    // Add tasks to list
+    while (Tasks.Next(1, TaskItem, Fetched) = S_OK) do
+      try
+        Task := (IDispatch(TaskItem) as IRegisteredTask);
+        AddTaskItem(Task);
+
+      except
+        // Task currupted: Skip it!
+        Continue;
+      end;  //of try
+
+    // Include subfolders?
+    if AExpertMode then
+    begin
+      // Read subfolders
+      OleCheck(TaskFolder.GetFolders(0, FolderCollection));
+      Folders := (FolderCollection._NewEnum as IEnumVariant);
+
+      // Search for tasks in subfolders
+      while (Folders.Next(1, FolderItem, Fetched) = S_OK) do
+      begin
+        TaskFolder := (IDispatch(FolderItem) as ITaskFolder);
+        LoadSubTasks(TaskFolder.Path);
+      end;  //of while
+    end;  //of begin
+  end;
+
+begin
+  try
+  {$IFDEF WIN32}
+    // Deny WOW64 redirection on 64 Bit Windows
+    if AUseWow64 then
+      Wow64FsRedirection(True);
+  {$ENDIF}
+
+    LoadSubTasks(APath);
+
+  finally
+  {$IFDEF WIN32}
+    // Allow WOW64 redirection on 64 Bit Windows again
+    if AUseWow64 then
+      Wow64FsRedirection(False);
+  {$ENDIF}
+  end;  //of try
 end;
 
 end.

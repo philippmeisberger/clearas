@@ -14,11 +14,13 @@ uses
   System.Classes, System.SyncObjs, System.SysUtils, ClearasAPI;
 
 type
+  /// <summary>
+  ///   Generic search thread.
+  /// </summary>
   TClearasSearchThread = class(TThread)
   private
     FOnStart,
     FOnFinish: TNotifyEvent;
-    FOnSearching: TSearchEvent;
     FOnError: TSearchErrorEvent;
     FOnChanged: TItemChangeEvent;
     FErrorMessage: string;
@@ -27,14 +29,10 @@ type
     procedure DoNotifyOnFinish();
     procedure DoNotifyOnStart();
   protected
-    FProgress,
-    FProgressMax: Cardinal;
     FExpertMode,
     FWin64: Boolean;
     FSelectedList: TRootList<TRootItem>;
-    procedure DoNotifyOnSearching();
-    procedure Execute; override; final;
-    procedure DoExecute; virtual; abstract;
+    procedure Execute(); override; final;
   public
     /// <summary>
     ///   Constructor for creating a <c>TClearasSearchThread</c> instance.
@@ -86,8 +84,6 @@ begin
   FLock := ALock;
   FExpertMode := AExpertMode;
   FOnChanged := FSelectedList.OnChanged;
-  FProgress := 0;
-  FProgressMax := 0;
 end;
 
 procedure TClearasSearchThread.DoNotifyOnError();
@@ -106,30 +102,22 @@ begin
     FOnChanged(Self, stDeleted);
 end;
 
-procedure TClearasSearchThread.DoNotifyOnSearching();
-begin
-  if Assigned(FOnSearching) then
-  begin
-    Inc(FProgress);
-    FOnSearching(Self, FProgress, FProgressMax);
-  end;  //of begin
-end;
-
 procedure TClearasSearchThread.DoNotifyOnStart();
 begin
   if Assigned(FOnStart) then
     FOnStart(Self);
 end;
 
-procedure TClearasSearchThread.Execute;
+procedure TClearasSearchThread.Execute();
 begin
   FLock.Acquire();
   Synchronize(DoNotifyOnStart);
-  FSelectedList.Clear();
 
   try
     try
-      DoExecute;
+      Assert(Assigned(FSelectedList));
+      FSelectedList.Clear();
+      FSelectedList.Search(FExpertMode, FWin64);
 
     finally
       FLock.Release();
