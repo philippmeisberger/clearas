@@ -16,7 +16,7 @@ interface
 
 uses
 {$IFDEF MSWINDOWS}
-  Windows, Classes, Registry, ShellAPI, ShlObj, Forms, SHFolder, Knownfolders,
+  Windows, Classes, Registry, ShellAPI, ShlObj, Forms, Knownfolders, ActiveX,
 {$ELSE}
   Process,
 {$ENDIF}
@@ -376,6 +376,7 @@ begin
   if Succeeded(SHGetKnownFolderPath(AFolderId, 0, 0, Path)) then
   begin
     AFolderPath := IncludeTrailingBackslash(string(Path));
+    CoTaskMemFree(Path);
     Result := True;
   end;  //of begin
 end;

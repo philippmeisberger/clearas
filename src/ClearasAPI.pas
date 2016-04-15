@@ -5394,27 +5394,33 @@ var
 
 begin
   Locations := TStringList.Create;
-
-  // Init Registry access with read-only
   Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ);
-  Reg.RootKey := HKEY_CLASSES_ROOT;
-  Reg.OpenKey(ARoot, False);
 
-  if AExpertMode then
-  begin
-    Reg.GetKeyNames(Locations);
-    Reg.CloseKey();
-  end  //of begin
-  else
-    Locations.CommaText := CM_LOCATIONS_DEFAULT;
+  try
+    Reg.RootKey := HKEY_CLASSES_ROOT;
+    Reg.OpenKey(ARoot, False);
 
-  for i := 0 to Locations.Count - 1 do
-  begin
-    if (ARoot <> '') then
-      SearchSubkey(ARoot +'\'+ Locations[i])
+    if AExpertMode then
+    begin
+      Reg.GetKeyNames(Locations);
+      Reg.CloseKey();
+    end  //of begin
     else
-      SearchSubkey(Locations[i]);
-  end;  //of for
+      Locations.CommaText := CM_LOCATIONS_DEFAULT;
+
+    for i := 0 to Locations.Count - 1 do
+    begin
+      if (ARoot <> '') then
+        SearchSubkey(ARoot +'\'+ Locations[i])
+      else
+        SearchSubkey(Locations[i]);
+    end;  //of for
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
+    Locations.Free;
+  end;  //of try
 end;
 
 
