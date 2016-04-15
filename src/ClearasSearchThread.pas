@@ -17,7 +17,7 @@ type
   /// <summary>
   ///   Generic search thread.
   /// </summary>
-  TClearasSearchThread = class(TThread)
+  TSearchThread = class(TThread)
   private
     FOnStart,
     FOnFinish: TNotifyEvent;
@@ -35,7 +35,7 @@ type
     procedure Execute(); override; final;
   public
     /// <summary>
-    ///   Constructor for creating a <c>TClearasSearchThread</c> instance.
+    ///   Constructor for creating a <c>TSearchThread</c> instance.
     /// </summary>
     /// <param name="ASelectedList">
     ///   A <c>TRootList</c> to be filled.
@@ -73,9 +73,9 @@ type
 
 implementation
 
-{ TClearasSearchThread }
+{ TSearchThread }
 
-constructor TClearasSearchThread.Create(ASelectedList: TRootList<TRootItem>;
+constructor TSearchThread.Create(ASelectedList: TRootList<TRootItem>;
   ALock: TCriticalSection; AExpertMode: Boolean = False);
 begin
   inherited Create(True);
@@ -86,13 +86,13 @@ begin
   FOnChanged := FSelectedList.OnChanged;
 end;
 
-procedure TClearasSearchThread.DoNotifyOnError();
+procedure TSearchThread.DoNotifyOnError();
 begin
   if Assigned(FOnError) then
     FOnError(Self, FErrorMessage);
 end;
 
-procedure TClearasSearchThread.DoNotifyOnFinish();
+procedure TSearchThread.DoNotifyOnFinish();
 begin
   if Assigned(FOnFinish) then
     FOnFinish(Self);
@@ -102,13 +102,13 @@ begin
     FOnChanged(Self, stDeleted);
 end;
 
-procedure TClearasSearchThread.DoNotifyOnStart();
+procedure TSearchThread.DoNotifyOnStart();
 begin
   if Assigned(FOnStart) then
     FOnStart(Self);
 end;
 
-procedure TClearasSearchThread.Execute();
+procedure TSearchThread.Execute();
 begin
   FLock.Acquire();
   Synchronize(DoNotifyOnStart);

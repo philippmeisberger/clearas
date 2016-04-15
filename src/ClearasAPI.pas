@@ -523,7 +523,7 @@ type
     function ImportBackup(const AFileName: TFileName): Boolean;
 
     /// <summary>
-    ///   Gets the file filter for an <c>TOpenDialogy</c> from a <c>TLanguageFile</c>.
+    ///   Gets the file filter for an <c>TOpenDialog</c> from a <c>TLanguageFile</c>.
     /// </summary>
     /// <param name="ALanguageFile">
     ///   A <c>TLanguageFile</c> that contains the translations.
@@ -1203,7 +1203,7 @@ type
     procedure ExportList(const AFileName: string); override;
 
     /// <summary>
-    ///   Gets the file filter for an <c>TOpenDialogy</c> from a <c>TLanguageFile</c>.
+    ///   Gets the file filter for an <c>TOpenDialog</c> from a <c>TLanguageFile</c>.
     /// </summary>
     /// <param name="ALanguageFile">
     ///   A <c>TLanguageFile</c> that contains the translations.
@@ -1957,7 +1957,6 @@ type
   private
     FTaskService: ITaskService;
     function AddTaskItem(ATask: IRegisteredTask): Integer;
-    procedure Search(AExpertMode, AUseWow64: Boolean; const APath: string); reintroduce; overload;
   public
     /// <summary>
     ///   Constructor for creating a <c>TTaskList</c> instance.
@@ -1989,7 +1988,7 @@ type
     function GetExportFilter(ALanguageFile: TLanguageFile): string; override;
 
     /// <summary>
-    ///   Gets the file filter for an <c>TOpenDialogy</c> from a <c>TLanguageFile</c>.
+    ///   Gets the file filter for an <c>TOpenDialog</c> from a <c>TLanguageFile</c>.
     /// </summary>
     /// <param name="ALanguageFile">
     ///   A <c>TLanguageFile</c> that contains the translations.
@@ -2024,7 +2023,7 @@ type
     ///   Do not call this method directly because it freezes the application!
     ///   Use <c>Load()</c> to call this method from a thread.
     /// </remarks>
-    procedure Search(AExpertMode: Boolean = False; AUseWow64: Boolean = False); overload; override;
+    procedure Search(AExpertMode: Boolean = False; AUseWow64: Boolean = False); override;
 
     /// <summary>
     ///   Gets the current task service.
@@ -2950,10 +2949,10 @@ end;
 
 procedure TRootList<T>.Load(AExpertMode: Boolean = False);
 var
-  SearchThread: TClearasSearchThread;
+  SearchThread: TSearchThread;
 
 begin
-  SearchThread := TClearasSearchThread.Create(TRootList<TRootItem>(Self), FLock, AExpertMode);
+  SearchThread := TSearchThread.Create(TRootList<TRootItem>(Self), FLock, AExpertMode);
 
   with SearchThread do
   begin
@@ -5418,6 +5417,7 @@ begin
   end;  //of for
 end;
 
+
 { TServiceStartHelper }
 
 function TServiceStartHelper.ToString(ALangFile: TLanguageFile): string;
@@ -6259,50 +6259,14 @@ end;
 function TTaskList.ImportBackup(const AFileName: TFileName): Boolean;
 var
   ExtractDir, FileName: string;
+  TaskFolder: ITaskFolder;
+  NewTask: IRegisteredTask;
   ZipFile: TZipFile;
   i: Integer;
-  NewTask: IRegisteredTask;
+  XmlTask: TStringList;
 {$IFDEF WIN32}
   Win64: Boolean;
 {$ENDIF}
-
-  function ImportTask(AFileName: string): IRegisteredTask;
-  var
-    ExistingTask: IRegisteredTask;
-    TaskFolder: ITaskFolder;
-    //XmlTask: TStringList;
-
-  begin
-    OleCheck(FTaskService.GetFolder(PChar(ExtractFileDir(AFileName)), TaskFolder));
-
-    // Task exists?
-    if Succeeded(TaskFolder.GetTask(PChar(ExtractFileName(AFileName)), ExistingTask)) then
-      Exit(nil);
-
-    AFileName := Copy(AFileName, 2, Length(AFileName));
-
-    // Temporary workaround
-    // TODO: Use RegisterTask() instead
-    if not ExecuteProgram('schtasks', '/create /XML "'+ ExtractDir +'\'+ AFileName +'"'+
-      ' /tn "'+ ExtractFileName(AFileName) +'"', SW_HIDE, True, True) then
-      raise Exception.Create(SysErrorMessage(GetLastError()));
-
-    OleCheck(FTaskService.GetFolder(PChar(ExtractFileDir(AFileName)), TaskFolder));
-    TaskFolder.GetTask(PChar(ExtractFileName(AFileName)), Result);
-// TODO: This does not work in 64 bit .exe
-//    XmlTask := TStringList.Create;
-//
-//    try
-//      XmlTask.LoadFromFile(ExtractDir +'\'+ AFileName, TEncoding.Unicode);
-//
-//      // Register the task
-//      OleCheck(TaskFolder.RegisterTask(PChar(ExtractFileName(AFileName)),
-//        XmlTask.GetText(), TASK_CREATE, Null, Null, TASK_LOGON_INTERACTIVE_TOKEN,
-//        Null, Result));
-//    finally
-//      XmlTask.Free;
-//    end;  //of try
-  end;
 
 begin
   Result := False;
@@ -6324,6 +6288,7 @@ begin
 {$ENDIF}
 
   try
+    XmlTask := TStringList.Create;
     ZipFile := TZipFile.Create;
 
     try
@@ -6337,13 +6302,24 @@ begin
 
       for i := 0 to ZipFile.FileCount - 1 do
       begin
+        NewTask := nil;
+        TaskFolder := nil;
         FileName := ZipFile.FileName[i];
         ZipFile.Extract(FileName, ExtractDir);
         FileName := '\'+ StringReplace(FileName, '/', '\', [rfReplaceAll]);
-        NewTask := ImportTask(FileName);
+        OleCheck(FTaskService.GetFolder(PChar(ExtractFileDir(FileName)), TaskFolder));
 
-        if not Assigned(NewTask) then
+        // Task exists?
+        if Succeeded(TaskFolder.GetTask(PChar(ExtractFileName(FileName)), NewTask)) then
           Continue;
+
+        FileName := Copy(FileName, 2, Length(FileName));
+        XmlTask.LoadFromFile(ExtractDir +'\'+ FileName, TEncoding.Unicode);
+
+        // Register the task
+        OleCheck(TaskFolder.RegisterTask(PChar(ExtractFileName(FileName)),
+          XmlTask.GetText(), TASK_CREATE, Null, Null, TASK_LOGON_INTERACTIVE_TOKEN,
+          Null, NewTask));
 
         // Add new task to list
         if (AddTaskItem(NewTask) = -1) then
@@ -6357,6 +6333,7 @@ begin
 
     finally
       ZipFile.Free;
+      XmlTask.Free;
     end;  //of try
 
     // Refresh TListView
@@ -6374,11 +6351,6 @@ begin
 end;
 
 procedure TTaskList.Search(AExpertMode: Boolean = False; AUseWow64: Boolean = False);
-begin
-  Search(AExpertMode, AUseWow64, '\');
-end;
-
-procedure TTaskList.Search(AExpertMode, AUseWow64: Boolean; const APath: string);
 
   procedure LoadSubTasks(const APath: string);
   var
@@ -6442,7 +6414,7 @@ begin
       Wow64FsRedirection(True);
   {$ENDIF}
 
-    LoadSubTasks(APath);
+    LoadSubTasks('\');
 
   finally
   {$IFDEF WIN32}
