@@ -580,6 +580,7 @@ procedure TContextListTest.SetUp;
 begin
   inherited SetUp;
   FRootList := TRootList<TRootItem>(TContextList.Create);
+  FRootList.Duplicates := True;
 
   FTestItems.Append(cShellCMItem);
   FTestItems.Append(cShellCMItemCascading);
