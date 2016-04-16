@@ -721,15 +721,15 @@ type
     /// <param name="AExpertMode">
     ///   Use advanced search mode.
     /// </param>
-    /// <param name="AUseWow64">
-    ///   If set to <c>True</c> search for WOW64 items. Otherwise search for
-    ///   native items.
+    /// <param name="AWin64">
+    ///   If set to <c>True</c> search for 64-bit items. Otherwise search for
+    ///   32-bit items.
     /// </param>
     /// <remarks>
-    ///   Do not call this method directly because it freezes the application!
+    ///   Do not call this method directly because it can freeze the application!
     ///   Use <c>Load()</c> to call this method from a thread.
     /// </remarks>
-    procedure Search(AExpertMode: Boolean = False; AUseWow64: Boolean = False); virtual; abstract;
+    procedure Search(AExpertMode: Boolean = False; AWin64: Boolean = True); virtual; abstract;
 
     /// <summary>
     ///   Allow items with the the same name.
@@ -1247,15 +1247,15 @@ type
     /// <param name="AExpertMode">
     ///   Use advanced search mode.
     /// </param>
-    /// <param name="AUseWow64">
-    ///   If set to <c>True</c> search for WOW64 items. Otherwise search for
-    ///   native items.
+    /// <param name="AWin64">
+    ///   If set to <c>True</c> search for 64-bit items. Otherwise search for
+    ///   32-bit items.
     /// </param>
     /// <remarks>
-    ///   Do not call this method directly because it freezes the application!
+    ///   Do not call this method directly because it can freeze the application!
     ///   Use <c>Load()</c> to call this method from a thread.
     /// </remarks>
-    procedure Search(AExpertMode: Boolean = False; AUseWow64: Boolean = False); override;
+    procedure Search(AExpertMode: Boolean = False; AWin64: Boolean = True); override;
 
     /// <summary>
     ///   Gets or sets the behaviour that startup user backup files should be
@@ -1570,7 +1570,7 @@ type
   /// </summary>
   TContextList = class(TRootList<TContextListItem>)
   private
-    procedure Search(AExpertMode: Boolean; AUseWow64: Boolean;
+    procedure Search(AExpertMode: Boolean; AWin64: Boolean;
       const ARoot: string = ''); reintroduce; overload;
   public
     /// <summary>
@@ -1656,15 +1656,15 @@ type
     /// <param name="AExpertMode">
     ///   Use advanced search mode.
     /// </param>
-    /// <param name="AUseWow64">
-    ///   If set to <c>True</c> search for WOW64 items. Otherwise search for
-    ///   native items.
+    /// <param name="AWin64">
+    ///   If set to <c>True</c> search for 64-bit items. Otherwise search for
+    ///   32-bit items.
     /// </param>
     /// <remarks>
-    ///   Do not call this method directly because it freezes the application!
+    ///   Do not call this method directly because it can freeze the application!
     ///   Use <c>Load()</c> to call this method from a thread.
     /// </remarks>
-    procedure Search(AExpertMode: Boolean = False; AUseWow64: Boolean = False); overload; override;
+    procedure Search(AExpertMode: Boolean = False; AWin64: Boolean = True); overload; override;
   end;
 
 const
@@ -1840,15 +1840,15 @@ type
     /// <param name="AExpertMode">
     ///   Use advanced search mode.
     /// </param>
-    /// <param name="AUseWow64">
-    ///   If set to <c>True</c> search for WOW64 items. Otherwise search for
-    ///   native items.
+    /// <param name="AWin64">
+    ///   If set to <c>True</c> search for 64-bit items. Otherwise search for
+    ///   32-bit items.
     /// </param>
     /// <remarks>
-    ///   Do not call this method directly because it freezes the application!
+    ///   Do not call this method directly because it can freeze the application!
     ///   Use <c>Load()</c> to call this method from a thread.
     /// </remarks>
-    procedure Search(AExpertMode: Boolean = False; AUseWow64: Boolean = False); override;
+    procedure Search(AExpertMode: Boolean = False; AWin64: Boolean = True); override;
 
     /// <summary>
     ///   Gets the current handle to the service manager.
@@ -2015,15 +2015,15 @@ type
     /// <param name="AExpertMode">
     ///   Use advanced search mode.
     /// </param>
-    /// <param name="AUseWow64">
-    ///   If set to <c>True</c> search for WOW64 items. Otherwise search for
-    ///   native items.
+    /// <param name="AWin64">
+    ///   If set to <c>True</c> search for 64-bit items. Otherwise search for
+    ///   32-bit items.
     /// </param>
     /// <remarks>
-    ///   Do not call this method directly because it freezes the application!
+    ///   Do not call this method directly because it can freeze the application!
     ///   Use <c>Load()</c> to call this method from a thread.
     /// </remarks>
-    procedure Search(AExpertMode: Boolean = False; AUseWow64: Boolean = False); override;
+    procedure Search(AExpertMode: Boolean = False; AWin64: Boolean = True); override;
 
     /// <summary>
     ///   Gets the current task service.
@@ -2956,7 +2956,6 @@ begin
 
   with SearchThread do
   begin
-    Win64 := (TOSVersion.Architecture = arIntelX64);
     OnError := OnSearchError;
     OnFinish := OnSearchFinish;
     OnStart := OnSearchStart;
@@ -4267,7 +4266,7 @@ begin
   end;  //of try
 end;
 
-procedure TStartupList.Search(AExpertMode: Boolean = False; AUseWow64: Boolean = False);
+procedure TStartupList.Search(AExpertMode: Boolean = False; AWin64: Boolean = True);
 var
   Location: TStartupLocation;
 
@@ -5319,12 +5318,12 @@ begin
   end;  //of try
 end;
 
-procedure TContextList.Search(AExpertMode: Boolean = False; AUseWow64: Boolean = False);
+procedure TContextList.Search(AExpertMode: Boolean = False; AWin64: Boolean = True);
 begin
-  Search(AExpertMode, AUseWow64, '');
+  Search(AExpertMode, AWin64, '');
 end;
 
-procedure TContextList.Search(AExpertMode: Boolean; AUseWow64: Boolean;
+procedure TContextList.Search(AExpertMode: Boolean; AWin64: Boolean;
   const ARoot: string = '');
 var
   Reg: TRegistry;
@@ -5352,11 +5351,11 @@ var
         begin
           // Load Shell context menu items
           if AnsiSameText(Keys[i], CM_SHELL) then
-            LoadContextmenu(AKeyName, stShell, AUseWow64);
+            LoadContextmenu(AKeyName, stShell, AWin64);
 
           // Load ShellEx context menu items
           if AnsiSameText(Keys[i], CM_SHELLEX) then
-            LoadContextmenu(AKeyName, stShellEx, AUseWow64);
+            LoadContextmenu(AKeyName, stShellEx, AWin64);
 
           // Load ShellNew context menu items
           if AnsiContainsStr(Keys[i], CM_SHELLNEW) then
@@ -5368,7 +5367,7 @@ var
             // Only valid ShellNew item when there are values inside
             if (Values.Count > 0) then
             begin
-              LoadContextmenu(AKeyName, stShellNew, AUseWow64);
+              LoadContextmenu(AKeyName, stShellNew, AWin64);
 
               // "ShellNew" and "_ShellNew" in same key are possible: Take only one
               Exit;
@@ -5910,7 +5909,7 @@ begin
 end;
 
 
-procedure TServiceList.Search(AExpertMode, AUseWow64: Boolean);
+procedure TServiceList.Search(AExpertMode: Boolean = False; AWin64: Boolean = True);
 var
   Service: SC_HANDLE;
   Services, ServicesCopy: PEnumServiceStatus;
@@ -6356,7 +6355,7 @@ begin
   end;  //of try
 end;
 
-procedure TTaskList.Search(AExpertMode: Boolean = False; AUseWow64: Boolean = False);
+procedure TTaskList.Search(AExpertMode: Boolean = False; AWin64: Boolean = True);
 
   procedure LoadSubTasks(const APath: string);
   var
@@ -6413,22 +6412,7 @@ procedure TTaskList.Search(AExpertMode: Boolean = False; AUseWow64: Boolean = Fa
   end;
 
 begin
-  try
-  {$IFDEF WIN32}
-    // Deny WOW64 redirection on 64 Bit Windows
-    if AUseWow64 then
-      Wow64FsRedirection(True);
-  {$ENDIF}
-
-    LoadSubTasks('\');
-
-  finally
-  {$IFDEF WIN32}
-    // Allow WOW64 redirection on 64 Bit Windows again
-    if AUseWow64 then
-      Wow64FsRedirection(False);
-  {$ENDIF}
-  end;  //of try
+  LoadSubTasks('\');
 end;
 
 end.

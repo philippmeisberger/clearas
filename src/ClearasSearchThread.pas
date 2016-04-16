@@ -66,7 +66,7 @@ type
     property OnStart: TNotifyEvent read FOnStart write FOnStart;
 
     /// <summary>
-    ///   Use the WOW64 technology.
+    ///   Search for 64-bit items.
     /// </summary>
     property Win64: Boolean read FWin64 write FWin64;
   end;
@@ -83,6 +83,7 @@ begin
   FSelectedList := ASelectedList;
   FLock := ALock;
   FExpertMode := AExpertMode;
+  FWin64 := (TOSVersion.Architecture = arIntelX64);
   FOnChanged := FSelectedList.OnChanged;
 end;
 
