@@ -173,7 +173,8 @@ var
 begin
   Assert(AFileName <> '', 'FileName of exported file must not be empty!');
   CheckEquals(0, FindFirst(AFileName +'.*', faAnyFile - faDirectory, SearchResult), 'Exported file "'+ AFileName +'" does not exist!');
-  Check(DeleteFile(PChar(SearchResult.Name)), 'Exported file could not be deleted!');
+  Check(DeleteFile(ExtractFilePath(AFileName) + SearchResult.Name), 'Exported file "'+ ExtractFileDir(AFileName) + SearchResult.Name +'"could not be deleted!');
+  FindClose(SearchResult);
 end;
 
 procedure TRootListTest.SelectItem(const AItemName: string);
@@ -325,8 +326,17 @@ end;
 procedure TRootListTest.TestExport(const AItemName: string);
 begin
   SelectItem(AItemName);
-  FRootList.ExportItem(FRootList.Selected.Name);
-  EnsureFileExportedAndDelete(FRootList.Selected.Name);
+
+  if not CheckWin32Version(6, 2) and (FRootList.Selected is TStartupUserItem) then
+  begin
+    FRootList.ExportItem(TStartupLnkFile.GetBackupDir() + FRootList.Selected.Name);
+    EnsureFileExportedAndDelete(TStartupLnkFile.GetBackupDir() + FRootList.Selected.Name)
+  end  //of begin
+  else
+  begin
+    FRootList.ExportItem(FRootList.Selected.Name);
+    EnsureFileExportedAndDelete(FRootList.Selected.Name);
+  end;  //of if
 end;
 
 procedure TRootListTest.TestLocking_SearchStart(Sender: TObject);
@@ -536,7 +546,7 @@ begin
       end  //of begin
       else
       begin
-        // Delete item from approved location (since to Windows 8)
+        // Delete item from approved location (since Windows 8)
         Reg.RootKey := ALocation.GetApprovedLocation().Key;
         Reg.OpenKey(ALocation.GetApprovedLocation().Value, False);
         Reg.DeleteValue(GetItemName(ALocation));
