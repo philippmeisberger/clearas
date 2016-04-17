@@ -8,7 +8,6 @@
 
 unit ClearasAPI;
 
-{$WARN SYMBOL_PLATFORM OFF}
 {$WARN SYMBOL_DEPRECATED OFF}
 
 interface
@@ -6009,7 +6008,7 @@ end;
 function TTaskListItem.GetFullLocation(): string;
 begin
   if GetKnownFolderPath(FOLDERID_System, Result) then
-    Result := IncludeTrailingBackslash(Result +'Tasks'+ GetLocation()) + Name;
+    Result := IncludeTrailingPathDelimiter(Result +'Tasks'+ GetLocation()) + Name;
 end;
 
 procedure TTaskListItem.UpdateTask(const AName: string;
