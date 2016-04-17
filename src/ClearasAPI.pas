@@ -832,10 +832,23 @@ type
     ///   <see cref="ST_DISABLED"/>.
     /// </summary>
     Status: UINT;
+
     /// <summary>
     ///   The deactivation time.
     /// </summary>
     DeactivationTime: TFileTime;
+
+    /// <summary>
+    ///   Constructor for a <c>TStartupItemStatus</c> record
+    /// </summary>
+    /// <param name="AEnabled">
+    ///   The status.
+    /// </param>
+    /// <param name="ADeactivationTime">
+    ///   The deactivation timestamp. NOTE: Only used when <c>AEnabled</c> is set
+    ///   to <c>False</c>.
+    /// </param>
+    constructor Create(AEnabled: Boolean; ADeactivationTime: TDateTime = 0);
   end;
 
   /// <summary>
@@ -855,7 +868,6 @@ type
     procedure ChangeStatus(const ANewStatus: Boolean); override;
     function Disable(): Boolean; virtual; deprecated 'Since Windows 8'; abstract;
     function Enable(): Boolean; virtual; deprecated 'Since Windows 8'; abstract;
-    function DateTimeToFileTime(const AFileTime: TDateTime): TFileTime;
     function DeleteValue(AKeyPath: string; AReallyWow64: Boolean = True): Boolean;
     function GetApprovedLocation(): string; virtual;
     function GetRootKey(): TRootKey; override;
@@ -2992,6 +3004,28 @@ begin
 end;
 
 
+{ TStartupItemStatus }
+
+constructor TStartupItemStatus.Create(AEnabled: Boolean; ADeactivationTime: TDateTime = 0);
+var
+  SystemTime: TSystemTime;
+  LocalFileTime: TFileTime;
+
+begin
+  ZeroMemory(@DeactivationTime, SizeOf(TFileTime));
+
+  if not AEnabled then
+  begin
+    Status := ST_DISABLED;
+    DateTimeToSystemTime(ADeactivationTime, SystemTime);
+    SystemTimeToFileTime(SystemTime, LocalFileTime);
+    LocalFileTimeToFileTime(LocalFileTime, DeactivationTime);
+  end  //of begin
+  else
+    Status := ST_ENABLED;
+end;
+
+
 { TStartupListItem }
 
 constructor TStartupListItem.Create(const AName, AFileName, ALocation: string;
@@ -3059,20 +3093,8 @@ begin
     if not Reg.OpenKey(GetApprovedLocation(), False) then
       raise EStartupException.Create('Key '''+ GetApprovedLocation() +''' does not exist!');
 
-    if ANewStatus then
-    begin
-      TimeNow := 0;
-      ItemStatus.Status := ST_ENABLED;
-      ItemStatus.DeactivationTime.dwLowDateTime := 0;
-      ItemStatus.DeactivationTime.dwHighDateTime := 0;
-    end  //of begin
-    else
-    begin
-      TimeNow := Now();
-      ItemStatus.Status := ST_DISABLED;
-      ItemStatus.DeactivationTime := DateTimeToFileTime(TimeNow);
-    end;  //of if
-
+    TimeNow := Now();
+    ItemStatus.Create(ANewStatus, TimeNow);
     Reg.WriteBinaryData(Name, ItemStatus, SizeOf(TStartupItemStatus));
     FTime := TimeNow;
     inherited ChangeStatus(ANewStatus);
@@ -3081,19 +3103,6 @@ begin
     Reg.CloseKey();
     Reg.Free;
   end;  //of try
-end;
-
-function TStartupListItem.DateTimeToFileTime(const AFileTime: TDateTime): TFileTime;
-var
-  LocalFileTime: TFileTime;
-  SystemTime: TSystemTime;
-
-begin
-  Result.dwLowDateTime := 0;
-  Result.dwHighDateTime := 0;
-  DateTimeToSystemTime(AFileTime, SystemTime);
-  SystemTimeToFileTime(SystemTime, LocalFileTime);
-  LocalFileTimeToFileTime(LocalFileTime, Result);
 end;
 
 function TStartupListItem.DeleteValue(AKeyPath: string;

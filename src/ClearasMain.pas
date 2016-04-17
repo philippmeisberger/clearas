@@ -431,7 +431,7 @@ begin
       else
         if FStartup.Selected.Enabled then
         begin
-          FStartup.ExportItem('');
+          StartupUserItem.LnkFile.CreateBackup();
           FLang.ShowMessage(FLang.Format(LID_BACKUP_CREATED, [StartupUserItem.LnkFile.BackupLnk]));
           bExportStartupItem.Enabled := False;
           pmExport.Enabled := False;
