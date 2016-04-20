@@ -1,6 +1,8 @@
 { *********************************************************************** }
 {                                                                         }
-{ Microsoft Windows TaskScheduler API v2.0 for Delphi                     }
+{ Windows task scheduler v2.0 unit                                        }
+{                                                                         }
+{ Copyright (c) 2011-2016 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
 { *********************************************************************** }
 
@@ -18,9 +20,6 @@ uses
 {$HPPEMIT '#include <taskschd.h>'}
 
 const
-  TaskSchedulerMajorVersion             = 2;
-  TaskSchedulerMinorVersion             = 0;
-
   SID_IAction                           = '{BAE54997-48B1-4CBE-9965-D6BE263EBEA4}';
   SID_IActionCollection                 = '{02820E19-7B98-4ED2-B2E8-FDCCCEFF619B}';
   SID_IBootTrigger                      = '{2A9C35DA-D357-41F4-BBC1-207AC1B1F3CB}';

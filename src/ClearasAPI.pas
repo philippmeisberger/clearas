@@ -13,10 +13,11 @@ unit ClearasAPI;
 interface
 
 uses
-  Windows, WinSvc, Classes, SysUtils, Registry, ShlObj, ActiveX, ComObj, Zip,
-  Graphics, CommCtrl, ShellAPI, SyncObjs, StrUtils, Variants, Generics.Collections,
-  Taskschd, PMCWOSUtils, PMCWLanguageFile, PMCWIniFileParser, KnownFolders,
-  IOUtils;
+  Winapi.Windows, Winapi.WinSvc, System.Classes, System.SysUtils, System.Win.Registry,
+  Winapi.ShlObj, Winapi.ActiveX, System.Win.ComObj, System.Zip, Vcl.Graphics,
+  Winapi.CommCtrl, Winapi.ShellAPI, System.SyncObjs, System.StrUtils,
+  System.Variants, System.Generics.Collections, Winapi.KnownFolders,
+  System.IOUtils, Winapi.Taskschd, PMCWOSUtils, PMCWLanguageFile, PMCWIniFileParser;
 
 type
   /// <summary>
@@ -1880,7 +1881,6 @@ type
     FTaskService: ITaskService;
     function GetTaskDefinition(): ITaskDefinition;
     function GetZipLocation(): string;
-    procedure UpdateTask(const AName: string; ANewDefinition: ITaskDefinition);
   protected
     procedure ChangeFilePath(const ANewFilePath: string); override;
     procedure ChangeStatus(const ANewStatus: Boolean); override;
@@ -2484,7 +2484,7 @@ begin
   if Win64 then
     Wow64FsRedirection(True);
 {$ENDIF}
-  Result := SysUtils.FileExists(GetFileNameOnly());
+  Result := System.SysUtils.FileExists(GetFileNameOnly());
 
 {$IFDEF WIN32}
   // Allow WOW64 redirection only on 64bit Windows
@@ -6011,43 +6011,6 @@ begin
     Result := IncludeTrailingPathDelimiter(Result +'Tasks'+ GetLocation()) + Name;
 end;
 
-procedure TTaskListItem.UpdateTask(const AName: string;
-  ANewDefinition: ITaskDefinition);
-var
-  ExtractDir, TempLocation, NewTaskName: string;
-  TaskFile: TStringList;
-  NewTask: IRegisteredTask;
-  TaskFolder: ITaskFolder;
-
-begin
-  ExtractDir := GetKnownFolderPath(FOLDERID_LocalAppData) +'Temp\Clearas';
-  TempLocation := ExtractDir + FTask.Path;
-  ForceDirectories(ExtractFileDir(TempLocation));
-  TaskFile := TStringList.Create;
-
-  try
-    TaskFile.SetText(ANewDefinition.XmlText);
-    TaskFile.SaveToFile(TempLocation, TEncoding.Unicode);
-    NewTaskName := IncludeTrailingPathDelimiter(ExtractFileDir(FTask.Path)) + AName;
-    NewTaskName := Copy(NewTaskName, 2, Length(NewTaskName));
-    Delete();
-
-    // Temporary workaround
-    // TODO: Use RegisterTaskDefinition() instead
-    if not ExecuteProgram('schtasks', '/create /XML "'+ TempLocation +'"'+
-      ' /tn "'+ NewTaskName +'"', SW_HIDE, True, True) then
-      raise Exception.Create(SysErrorMessage(GetLastError()));
-
-    OleCheck(FTaskService.GetFolder(PChar(Location), TaskFolder));
-    OleCheck(TaskFolder.GetTask(PChar(AName), NewTask));
-    TDirectory.Delete(ExtractDir, True);
-    FTask := NewTask;
-
-  finally
-    TaskFile.Free;
-  end;  //of try
-end;
-
 procedure TTaskListItem.ChangeFilePath(const ANewFilePath: string);
 var
   Actions: IEnumVariant;
@@ -6056,6 +6019,8 @@ var
   ExecAction: IExecAction;
   Fetched: DWORD;
   NewDefinition: ITaskDefinition;
+  TaskFolder: ITaskFolder;
+  NewTask: IRegisteredTask;
 
 begin
   OleCheck(FTaskService.NewTask(0, NewDefinition));
@@ -6074,16 +6039,11 @@ begin
       ExecAction.Path := PChar(ExtractPathToFile(ANewFilePath));
       ExecAction.Arguments := PChar(ExtractArguments(ANewFilePath));
 
-      // Update information
-      // NOTE: Temporary workaround
-      UpdateTask(FTask.Name, NewDefinition);
-
-      {// TODO: This does not work with 64 bit .exe
       OleCheck(FTaskService.GetFolder(PChar(Location), TaskFolder));
       OleCheck(TaskFolder.RegisterTaskDefinition(FTask.Name, NewDefinition,
         TASK_UPDATE, Null, Null, TASK_LOGON_NONE, Null, NewTask));
 
-      FTask := NewTask;}
+      FTask := NewTask;
       inherited ChangeFilePath(ANewFilePath);
     end;  //of begin
   end;  //of while
@@ -6139,15 +6099,14 @@ end;
 procedure TTaskListItem.Rename(const ANewName: string);
 var
   NewDefinition: ITaskDefinition;
-  //TaskFolder: ITaskFolder;
-  //NewTask: IRegisteredTask;
+  TaskFolder: ITaskFolder;
+  NewTask: IRegisteredTask;
 
 begin
   // Copy task definition
   OleCheck(FTaskService.NewTask(0, NewDefinition));
   NewDefinition := FTask.Definition;
 
-  {// TODO: This does not work with 64 bit .exe
   // Register definition under new task name
   OleCheck(FTaskService.GetFolder(PChar(Location), TaskFolder));
   OleCheck(TaskFolder.RegisterTaskDefinition(PChar(ANewName), NewDefinition,
@@ -6155,10 +6114,8 @@ begin
 
   // Delete old task
   OleCheck(TaskFolder.DeleteTask(FTask.Name, 0));
-  FTask := NewTask;}
 
-  // NOTE: Temporary workaround
-  UpdateTask(ANewName, NewDefinition);
+  FTask := NewTask;
   inherited Rename(ANewName);
 end;
 
