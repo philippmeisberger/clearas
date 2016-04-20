@@ -4,12 +4,18 @@
 {                                                                         }
 { *********************************************************************** }
 
-unit Taskschd;
+unit Winapi.Taskschd;
+
+{$ALIGN ON}
+{$MINENUMSIZE 4}
+{$WEAKPACKAGEUNIT}
 
 interface
 
 uses
   Windows, ActiveX;
+
+{$HPPEMIT '#include <taskschd.h>'}
 
 const
   TaskSchedulerMajorVersion             = 2;
@@ -430,6 +436,7 @@ type
     property StopAtDurationEnd: WordBool read get_StopAtDurationEnd write set_StopAtDurationEnd;
   end;
   {$EXTERNALSYM IRepetitionPattern}
+  {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(IRepetitionPattern)'}
 
   ITaskNamedValuePair = interface(IDispatch)
     [SID_ITaskNamedValuePair]
@@ -442,6 +449,7 @@ type
     property Value: TBStr read get_Value write set_Value;
   end;
   {$EXTERNALSYM ITaskNamedValuePair}
+  {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(ITaskNamedValuePair)'}
 
   ITaskNamedValueCollection = interface(IDispatch)
     [SID_ITaskNamedValueCollection]
@@ -457,6 +465,7 @@ type
     property _NewEnum: IUnknown read get__NewEnum;
   end;
   {$EXTERNALSYM ITaskNamedValueCollection}
+  {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(ITaskNamedValueCollection)'}
 
   IRegistrationInfo = interface(IDispatch)
     [SID_IRegistrationInfo]
@@ -490,6 +499,7 @@ type
     property Source: TBStr read get_Source write set_Source;
   end;
   {$EXTERNALSYM IRegistrationInfo}
+  {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(IRegistrationInfo)'}
 
   ITrigger = interface(IDispatch)
     [SID_ITrigger]
@@ -516,6 +526,7 @@ type
     property Enabled: WordBool read get_Enabled write set_Enabled;
   end;
   {$EXTERNALSYM ITrigger}
+  {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(ITrigger)'}
 
   IBootTrigger = interface(ITrigger)
     [SID_IBootTrigger]
@@ -525,6 +536,7 @@ type
     property Delay: TBStr read get_Delay write set_Delay;
   end;
   {$EXTERNALSYM IBootTrigger}
+  {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(IBootTrigger)'}
 
   IDailyTrigger = interface(ITrigger)
     [SID_IDailyTrigger]
@@ -537,6 +549,7 @@ type
     property RandomDelay: TBStr read get_RandomDelay write set_RandomDelay;
   end;
   {$EXTERNALSYM IDailyTrigger}
+  {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(IDailyTrigger)'}
 
   IEventTrigger = interface(ITrigger)
     [SID_IEventTrigger]
@@ -552,11 +565,13 @@ type
     property ValueQueries: ITaskNamedValueCollection read get_ValueQueries write set_ValueQueries;
   end;
   {$EXTERNALSYM IEventTrigger}
+  {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(IEventTrigger)'}
 
   IIdleTrigger = interface(ITrigger)
     [SID_IIdleTrigger]
   end;
   {$EXTERNALSYM IIdleTrigger}
+  {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(IIdleTrigger)'}
 
   ILogonTrigger = interface(ITrigger)
     [SID_ILogonTrigger]
@@ -569,6 +584,7 @@ type
     property UserId: TBStr read get_UserId write set_UserId;
   end;
   {$EXTERNALSYM ILogonTrigger}
+  {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(ILogonTrigger)'}
 
   IMonthlyTrigger = interface(ITrigger)
     [SID_IMonthlyTrigger]
@@ -587,6 +603,7 @@ type
     property RandomDelay: TBStr read get_RandomDelay write set_RandomDelay;
   end;
   {$EXTERNALSYM IMonthlyTrigger}
+  {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(IMonthlyTrigger)'}
 
   IMonthlyDOWTrigger = interface(ITrigger)
     [SID_IMonthlyDOWTrigger]
@@ -608,6 +625,7 @@ type
     property RandomDelay: TBStr read get_RandomDelay write set_RandomDelay;
   end;
   {$EXTERNALSYM IMonthlyDOWTrigger}
+  {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(IMonthlyDOWTrigger)'}
 
   IRegistrationTrigger = interface(ITrigger)
     [SID_IRegistrationTrigger]
@@ -617,6 +635,7 @@ type
     property Delay: TBStr read get_Delay write set_Delay;
   end;
   {$EXTERNALSYM IRegistrationTrigger}
+  {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(IRegistrationTrigger)'}
 
   ISessionStateChangeTrigger = interface(ITrigger)
     [SID_ISessionStateChangeTrigger]
@@ -632,6 +651,7 @@ type
     property StateChange: TASK_SESSION_STATE_CHANGE_TYPE read get_StateChange write set_StateChange;
   end;
   {$EXTERNALSYM ISessionStateChangeTrigger}
+  {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(ISessionStateChangeTrigger)'}
 
   ITimeTrigger = interface(ITrigger)
     [SID_ITimeTrigger]
@@ -641,6 +661,7 @@ type
     property RandomDelay: TBStr read get_RandomDelay write set_RandomDelay;
   end;
   {$EXTERNALSYM ITimeTrigger}
+  {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(ITimeTrigger)'}
 
   IWeeklyTrigger = interface(ITrigger)
     [SID_IWeeklyTrigger]
@@ -656,6 +677,7 @@ type
     property RandomDelay: TBStr read get_RandomDelay write set_RandomDelay;
   end;
   {$EXTERNALSYM IWeeklyTrigger}
+  {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(IWeeklyTrigger)'}
 
   ITriggerCollection = interface(IDispatch)
     [SID_ITriggerCollection]
@@ -671,6 +693,7 @@ type
     property _NewEnum: IUnknown read get__NewEnum;
   end;
   {$EXTERNALSYM ITriggerCollection}
+  {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(ITriggerCollection)'}
 
   IIdleSettings = interface(IDispatch)
     [SID_IIdleSettings]
@@ -689,6 +712,7 @@ type
     property RestartOnIdle: WordBool read get_RestartOnIdle write set_RestartOnIdle;
   end;
   {$EXTERNALSYM IIdleSettings}
+  {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(IIdleSettings)'}
 
   INetworkSettings = interface(IDispatch)
     [SID_INetworkSettings]
@@ -701,6 +725,7 @@ type
     property Id: TBStr read get_Id write set_Id;
   end;
   {$EXTERNALSYM INetworkSettings}
+  {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(INetworkSettings)'}
 
   ITaskSettings = interface(IDispatch)
     [SID_ITaskSettings]
@@ -767,6 +792,7 @@ type
     property NetworkSettings: INetworkSettings read get_NetworkSettings write set_NetworkSettings;
   end;
   {$EXTERNALSYM ITaskSettings}
+  {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(ITaskSettings)'}
 
   ITaskSettings2 = interface(IDispatch)
     [SID_ITaskSettings2]
@@ -779,6 +805,7 @@ type
     property UseUnifiedSchedulingEngine: WordBool read get_UseUnifiedSchedulingEngine write set_UseUnifiedSchedulingEngine;
   end;
   {$EXTERNALSYM ITaskSettings2}
+  {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(ITaskSettings2)'}
 
   IPrincipal = interface(IDispatch)
     [SID_IPrincipal]
@@ -803,6 +830,7 @@ type
     property RunLevel: TASK_RUNLEVEL_TYPE read get_RunLevel write set_RunLevel;
   end;
   {$EXTERNALSYM IPrincipal}
+  {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(IPrincipal)'}
 
   IAction = interface(IDispatch)
     [SID_IAction]
@@ -813,6 +841,7 @@ type
     property ActionType: TASK_ACTION_TYPE read get_type;
   end;
   {$EXTERNALSYM IAction}
+  {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(IAction)'}
 
   IComHandlerAction = interface(IAction)
     [SID_IComHandlerAction]
@@ -825,6 +854,7 @@ type
     property Data: TBStr read get_Data write set_Data;
   end;
   {$EXTERNALSYM IComHandlerAction}
+  {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(IComHandlerAction)'}
 
   IEmailAction = interface(IAction)
     [SID_IEmailAction]
@@ -861,6 +891,7 @@ type
     property Attachments: PSafeArray read get_Attachments write set_Attachments;
   end;
   {$EXTERNALSYM IEmailAction}
+  {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(IEmailAction)'}
 
   IExecAction = interface(IAction)
     [SID_IExecAction]
@@ -876,6 +907,7 @@ type
     property WorkingDirectory: TBStr read get_WorkingDirectory write set_WorkingDirectory;
   end;
   {$EXTERNALSYM IExecAction}
+  {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(IExecAction)'}
 
   IShowMessageAction = interface(IAction)
     [SID_IShowMessageAction]
@@ -888,6 +920,7 @@ type
     property MessageBody: TBStr read get_MessageBody write set_MessageBody;
   end;
   {$EXTERNALSYM IShowMessageAction}
+  {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(IShowMessageAction)'}
 
   IActionCollection = interface(IDispatch)
     [SID_IActionCollection]
@@ -909,6 +942,7 @@ type
     property Context: TBStr read get_Context write set_Context;
   end;
   {$EXTERNALSYM IActionCollection}
+  {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(IActionCollection)'}
 
   ITaskVariables = interface(IUnknown)
     [SID_ITaskVariables]
@@ -917,6 +951,7 @@ type
     function GetContext(out pContext: TBStr): HRESULT; stdcall;
   end;
   {$EXTERNALSYM ITaskVariables}
+  {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(ITaskVariables)'}
 
   ITaskDefinition = interface(IDispatch)
     [SID_ITaskDefinition]
@@ -944,6 +979,7 @@ type
     property XmlText: TBStr read get_XmlText write set_XmlText;
   end;
   {$EXTERNALSYM ITaskDefinition}
+  {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(ITaskDefinition)'}
 
   IRunningTask = interface(IDispatch)
     [SID_IRunningTask]
@@ -964,6 +1000,7 @@ type
     property EnginePID: LongWord read get_EnginePID;
   end;
   {$EXTERNALSYM IRunningTask}
+  {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(IRunningTask)'}
 
   IRunningTaskCollection = interface(IDispatch)
     [SID_IRunningTaskCollection]
@@ -976,6 +1013,7 @@ type
     property _NewEnum: IUnknown read get__NewEnum;
   end;
   {$EXTERNALSYM IRunningTaskCollection}
+  {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(IRunningTaskCollection)'}
 
   IRegisteredTask = interface(IDispatch)
     [SID_IRegisteredTask]
@@ -1015,6 +1053,7 @@ type
     property XML: TBStr read get_Xml;
   end;
   {$EXTERNALSYM IRegisteredTask}
+  {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(IRegisteredTask)'}
 
   IRegisteredTaskCollection = interface(IDispatch)
     [SID_IRegisteredTaskCollection]
@@ -1027,6 +1066,7 @@ type
     property _NewEnum: IUnknown read get__NewEnum;
   end;
   {$EXTERNALSYM IRegisteredTaskCollection}
+  {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(IRegisteredTaskCollection)'}
 
   ITaskHandler = interface(IUnknown)
     [SID_ITaskHandler]
@@ -1036,6 +1076,7 @@ type
     function Resume: HRESULT; stdcall;
   end;
   {$EXTERNALSYM ITaskHandler}
+  {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(ITaskHandler)'}
 
   ITaskHandlerStatus = interface(IUnknown)
     [SID_ITaskHandlerStatus]
@@ -1043,6 +1084,7 @@ type
     function TaskCompleted(taskErrCode: HRESULT): HRESULT; stdcall;
   end;
   {$EXTERNALSYM ITaskHandlerStatus}
+  {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(ITaskHandlerStatus)'}
 
   ITaskFolder = interface(IDispatch)
     [SID_ITaskFolder]
@@ -1070,6 +1112,7 @@ type
     property Path: TBStr read get_Path;
   end;
   {$EXTERNALSYM ITaskFolder}
+  {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(ITaskFolder)'}
 
   ITaskFolderCollection = interface(IDispatch)
     [SID_ITaskFolderCollection]
@@ -1082,6 +1125,7 @@ type
     property _NewEnum: IUnknown read get__NewEnum;
   end;
   {$EXTERNALSYM ITaskFolderCollection}
+  {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(ITaskFolderCollection)'}
 
   ITaskService = interface(IDispatch)
     [SID_ITaskService]
@@ -1102,6 +1146,7 @@ type
     property HighestVersion: LongWord read get_HighestVersion;
   end;
   {$EXTERNALSYM ITaskService}
+  {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(ITaskService)'}
 
 implementation
 
