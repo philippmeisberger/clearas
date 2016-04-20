@@ -1,6 +1,6 @@
 { *********************************************************************** }
 {                                                                         }
-{ PM Code Works Initialization file parser Unit v1.2.2                    }
+{ Initialization file parser Unit v1.3                                    }
 {                                                                         }
 { Copyright (c) 2011-2016 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
@@ -18,125 +18,792 @@ uses
 {$ENDIF}
   Classes, SysUtils, StrUtils;
 
-{$IFDEF MSWINDOWS}
-const
-  REG_BINARY = 'hex:';
-  REG_INTEGER = 'dword:';
-  REG_EXPANDSTRING = 'hex(2):';
-{$ENDIF}
-
 type
-  { Exception classes }
   EInvalidIniFormat = class(Exception);
 
-  { TIniFile }
+  /// <summary>
+  ///   A <c>TIniFile</c> provides methods for reading and manipulating an INI
+  ///   file.
+  /// </summary>
   TIniFile = class(TObject)
   private
     FFile: TStringList;
     FFileName: string;
     FSaveOnDestroy: Boolean;
-    function Add(AIndex: Integer; AString: string): Integer;
-    function FindNextItem(AStartIndex: Integer = 0; AEndIndex: Integer = -1): Integer;
+    function Insert(AIndex: Integer; const AString: string): Integer;
+    function FindNextItem(AStartIndex: Integer = 0; AEndIndex: Integer = -1): Integer; inline;
     function FindNextSection(AStartIndex: Integer = 0): Integer;
     function FindNextSectionItem(AStartIndex: Integer = 0): Integer;
     function GetEndOfItem(AIndex: Integer): Integer; overload;
-    function GetEndOfItem(ASectionName, AKey: string): Integer; overload;
+    //function GetEndOfItem(const ASectionName, AKey: string): Integer; overload;
     function GetEndOfSection(AIndex: Integer): Integer; overload;
-    function GetEndOfSection(ASectionName: string): Integer; overload;
+    function GetEndOfSection(const ASectionName: string): Integer; overload;
     function GetKey(AIndex: Integer): string;
     function GetLength(): Integer;
     function GetValue(AIndex: Integer): string;
     function Remove(AStartIndex, AEndIndex: Integer): Boolean; overload;
   protected
-    function AddRaw(ALine: string): Integer;
+    /// <summary>
+    ///   Adds a raw string.
+    /// </summary>
+    /// <remarks>
+    ///   Can be used to add comments.
+    /// </remarks>
+    /// <returns>
+    ///   The index of the line where the data was added.
+    /// </returns>
+    function AddRaw(const ALine: string): Integer;
+
+    /// <summary>
+    ///   Extracts the key property from a key-value-pair.
+    /// </summary>
+    /// <param name="AKeyValuePair">
+    ///   The key-value-pair that is formatted like: <c>key=value</c>
+    /// </param>
+    /// <returns>
+    ///   The extracted key.
+    /// </returns>
     function ExtractKey(const AKeyValuePair: string): string;
+
+    /// <summary>
+    ///   Extracts the item value from a key-value-pair.
+    /// </summary>
+    /// <param name="AKeyValuePair">
+    ///   The key-value-pair that is formatted like: <c>key=value</c>
+    /// </param>
+    /// <returns>
+    ///   The extracted value.
+    /// </returns>
     function ExtractValue(const AKeyValuePair: string): string;
   public
-    constructor Create(const AFileName: string; AOverwriteIfExists: Boolean = False;
+    /// <summary>
+    ///   Constructor for creating a <c>TIniFile</c> instance.
+    /// </summary>
+    /// <param name="AFileName">
+    ///   The absolute filename to the .ini file.
+    /// </param>
+    /// <param name="AOverwriteIfExists">
+    ///   Optional: Allow overwrite if a file with the same name already exists.
+    /// </param>
+    /// <param name="ASaveOnDestroy">
+    ///   Optional: Automatically save the file when <c>Free()</c> is called.
+    /// </param>
+    constructor Create(const AFileName: TFileName; AOverwriteIfExists: Boolean = False;
       ASaveOnDestroy: Boolean = False);
+
+    /// <summary>
+    ///   Destructor for destroying a <c>TIniFile</c> instance.
+    /// </summary>
     destructor Destroy; override;
-    procedure AddRemove(ASectionName, AKey, AValue: string);
-    function AddSection(ASectionName: string): Boolean; overload;
-    function AddSection(ASectionName: string; AHashMap: TStrings): Boolean; overload;
-    procedure Clear();
-    procedure GetKeys(ASectionName: string; AKeys: TStrings);
-    procedure GetSections(ASections: TStrings);
-    function IndexOfKey(ASectionName, AKey: string): Integer;
-    function IndexOfSection(ASectionName: string): Integer;
+
+    /// <summary>
+    ///   Adds a new or changes an existing value.
+    /// </summary>
+    /// <param name="ASectionName">
+    ///    The name of the section.
+    /// </param>
+    /// <param name="AKey">
+    ///    The key of the item.
+    /// </param>
+    /// <param name="AValue">
+    ///   The value of the item. If this value is empty the item will be removed.
+    /// </param>
+    procedure AddRemove(const ASectionName, AKey, AValue: string);
+
+    /// <summary>
+    ///   Adds a new section if not exist.
+    /// </summary>
+    /// <param name="ASectionName">
+    ///    The name of the section.
+    /// </param>
+    /// <returns>
+    ///   <c>True</c> if the section was added successfully or <c>False</c>
+    ///   otherwise.
+    /// </returns>
+    function AddSection(const ASectionName: string): Boolean; overload;
+
+    /// <summary>
+    ///   Adds a new section with content.
+    /// </summary>
+    /// <param name="ASectionName">
+    ///    The name of the section.
+    /// </param>
+    /// <param name="AHashMap">
+    ///   A line must be formatted like <c>key=value</c>.
+    /// </param>
+    /// <returns>
+    ///   <c>True</c> if the section was added successfully or <c>False</c>
+    ///   otherwise.
+    /// </returns>
+    function AddSection(const ASectionName: string; AHashMap: TStrings): Boolean; overload;
+
+    /// <summary>
+    ///   Deletes all contents from the file.
+    /// </summary>
+    procedure Clear(); virtual;
+
+    /// <summary>
+    ///   Reads the keys of a section.
+    /// </summary>
+    /// <param name="ASectionName">
+    ///    The name of the section.
+    /// </param>
+    /// <param name="AKeys">
+    ///    The list where the keys will be appended.
+    /// </param>
+    procedure GetKeys(const ASectionName: string; var AKeys: TStrings);
+
+    /// <summary>
+    ///   Reads and collects all section names.
+    /// </summary>
+    /// <param name="ASections">
+    ///   The list where the sections will be appended.
+    /// </param>
+    procedure GetSections(var ASections: TStrings);
+
+    /// <summary>
+    ///   Returns the index of a key.
+    /// </summary>
+    /// <param name="ASectionName">
+    ///    The name of the section.
+    /// </param>
+    /// <param name="AKey">
+    ///    The name of the key to search for.
+    /// </param>
+    /// <returns>
+    ///   The index of the found item. If the item was not found <c>-1</c> is
+    ///   returned.
+    /// </returns>
+    function IndexOfKey(const ASectionName, AKey: string): Integer;
+
+    /// <summary>
+    ///   Returns the index of a section.
+    /// </summary>
+    /// <param name="ASectionName">
+    ///    The name of the section to search for.
+    /// </param>
+    /// <returns>
+    ///   The index of the found item. If the item was not found <c>-1</c> is
+    ///   returned.
+    /// </returns>
+    function IndexOfSection(const ASectionName: string): Integer;
+
+    /// <summary>
+    ///   Checks if a line at a specified index is a section.
+    /// </summary>
+    /// <param name="AIndex">
+    ///   The index of the line to check.
+    /// </param>
+    /// <remarks>
+    ///   Sections are formatted like: <c>[section]</c>
+    /// </remarks>
+    /// <returns>
+    ///   <c>True</c> if the line is a section or <c>False</c> otherwise.
+    /// </returns>
     function IsSection(AIndex: Integer): Boolean;
-    function KeyExists(ASectionName, AKey: string): Boolean;
-    function ReadBoolean(ASectionName, AKey: string): Boolean;
-    function ReadInteger(ASectionName, AKey: string; ADefault: Integer = -1): Integer;
-    function ReadString(ASectionName, AKey: string; ADefault: string = ''): string;
-    function Remove(ASectionName, AKey: string): Boolean; overload;
-    function RemoveSection(ASectionName: string): Boolean;
+
+    /// <summary>
+    ///   Checks if a key exists.
+    /// </summary>
+    /// <param name="ASectionName">
+    ///    The name of the section.
+    /// </param>
+    /// <param name="AKey">
+    ///    The name of the key to search for.
+    /// </param>
+    /// <remarks>
+    ///   Keys and values are formatted like: <c>key=value</c>
+    /// </remarks>
+    /// <returns>
+    ///   <c>True</c> if the key exists or <c>False</c> otherwise.
+    /// </returns>
+    function KeyExists(const ASectionName, AKey: string): Boolean;
+
+    /// <summary>
+    ///   Reads a boolean value of a key in section.
+    /// </summary>
+    /// <param name="ASectionName">
+    ///    The name of the section.
+    /// </param>
+    /// <param name="AKey">
+    ///    The name of the key.
+    /// </param>
+    /// <returns>
+    ///   The read value.
+    /// </returns>
+    function ReadBoolean(const ASectionName, AKey: string): Boolean;
+
+    /// <summary>
+    ///   Reads an integer value of a key in section.
+    /// </summary>
+    /// <param name="ASectionName">
+    ///    The name of the section.
+    /// </param>
+    /// <param name="AKey">
+    ///    The name of the key.
+    /// </param>
+    /// <param name="ADefault">
+    ///   Optional: A default value that is returned when item was not found.
+    /// </param>
+    /// <returns>
+    ///   The read value.
+    /// </returns>
+    function ReadInteger(const ASectionName, AKey: string; ADefault: Integer = -1): Integer;
+
+    /// <summary>
+    ///   Reads a string value of a key in section.
+    /// </summary>
+    /// <param name="ASectionName">
+    ///    The name of the section.
+    /// </param>
+    /// <param name="AKey">
+    ///    The name of the key.
+    /// </param>
+    /// <param name="ADefault">
+    ///   Optional: A default value that is returned when item was not found.
+    /// </param>
+    /// <returns>
+    ///   The read value.
+    /// </returns>
+    function ReadString(const ASectionName, AKey: string; const ADefault: string = ''): string;
+
+    /// <summary>
+    ///   Removes a key inside a section.
+    /// </summary>
+    /// <param name="ASectionName">
+    ///    The name of the section.
+    /// </param>
+    /// <param name="AKey">
+    ///    The name of the key to be deleted.
+    /// </param>
+    /// <returns>
+    ///   <c>True</c> if the key was removed successfully or <c>>False</c>
+    ///   otherwise.
+    /// </returns>
+    function Remove(const ASectionName, AKey: string): Boolean; overload;
+
+    /// <summary>
+    ///   Removes an entire section with all items.
+    /// </summary>
+    /// <param name="ASectionName">
+    ///    The name of the section to be deleted.
+    /// </param>
+    /// <returns>
+    ///   <c>True</c> if the section was removed successfully or <c>>False</c>
+    ///   otherwise.
+    /// </returns>
+    function RemoveSection(const ASectionName: string): Boolean;
+
+    /// <summary>
+    ///   Writes current file to disk.
+    /// </summary>
     procedure Save(); overload; virtual;
 {$IFDEF MSWINDOWS}
+    /// <summary>
+    ///    Writes current file with explicit encoding to disk.
+    /// </summary>
+    /// <param name="AEncoding">
+    ///   The used file encoding. Recommended is <c>TEncoding.UTF8</c>.
+    /// </param>
     procedure Save(AEncoding: TEncoding); overload;
 {$ENDIF}
-    function SectionExists(ASectionName: string): Boolean;
-    function WriteBoolean(ASectionName, AKey: string; AValue: Boolean): Integer;
-    function WriteInteger(ASectionName, AKey: string; AValue: Integer): Integer;
-    function WriteString(ASectionName, AKey, AValue: string): Integer;
-    function WriteStrings(ASectionName, AKey: string; AValues: TStrings): Integer;
-    { external }
+    /// <summary>
+    ///   Checks if a section exists.
+    /// </summary>
+    /// <param name="ASectionName">
+    ///    The name of the section to search for.
+    /// </param>
+    /// <returns>
+    ///   <c>True</c> if the section exists or <c>>False</c> otherwise.
+    /// </returns>
+    function SectionExists(const ASectionName: string): Boolean;
+
+    /// <summary>
+    ///   Writes an boolean value to a key in section.
+    /// </summary>
+    /// <param name="ASectionName">
+    ///    The name of the section.
+    /// </param>
+    /// <param name="AKey">
+    ///    The name of the key.
+    /// </param>
+    /// <param name="AValue">
+    ///   The value to be written.
+    /// </param>
+    /// <returns>
+    ///   The index of the line where the item was written.
+    /// </returns>
+    function WriteBoolean(const ASectionName, AKey: string; AValue: Boolean): Integer;
+
+    /// <summary>
+    ///   Writes an integer value to a key in section.
+    /// </summary>
+    /// <param name="ASectionName">
+    ///    The name of the section.
+    /// </param>
+    /// <param name="AKey">
+    ///    The name of the key.
+    /// </param>
+    /// <param name="AValue">
+    ///   The value to be written.
+    /// </param>
+    /// <returns>
+    ///   The index of the line where the item was written.
+    /// </returns>
+    function WriteInteger(const ASectionName, AKey: string; AValue: Integer): Integer;
+
+    /// <summary>
+    ///   Writes a string value to a key in section.
+    /// </summary>
+    /// <param name="ASectionName">
+    ///    The name of the section.
+    /// </param>
+    /// <param name="AKey">
+    ///    The name of the key.
+    /// </param>
+    /// <param name="AValue">
+    ///   The value to be written.
+    /// </param>
+    /// <returns>
+    ///   The index of the line where the item was written.
+    /// </returns>
+    function WriteString(const ASectionName, AKey, AValue: string): Integer; virtual;
+
+    /// <summary>
+    ///   Writes a multi-line string value to a key in section.
+    /// </summary>
+    /// <param name="ASectionName">
+    ///    The name of the section.
+    /// </param>
+    /// <param name="AKey">
+    ///    The name of the key.
+    /// </param>
+    /// <param name="AValues">
+    ///   The values to be written.
+    /// </param>
+    /// <returns>
+    ///   The index of the line where last item was written.
+    /// </returns>
+    function WriteStrings(const ASectionName, AKey: string; AValues: TStrings): Integer;
+
+    /// <summary>
+    ///   Gets the filename of the current used file.
+    /// </summary>
     property FileName: string read FFileName;
+
+    /// <summary>
+    ///   Gets the count of lines in the current file.
+    /// </summary>
     property Lines: Integer read GetLength;
+
+    /// <summary>
+    ///   Gets the key at specified index.
+    /// </summary>
     property Keys[AIndex: Integer]: string read GetKey; default;
+
+    /// <summary>
+    ///   Gets or sets if the file is saved automatically before calling
+    ///   <c>Free()</c>.
+    /// </summary>
     property SaveOnDestroy: Boolean read FSaveOnDestroy write FSaveOnDestroy;
+
+    /// <summary>
+    ///   Gets the value at specified index.
+    /// </summary>
     property Values[AIndex: Integer]: string read GetValue;
   end;
 
 {$IFDEF MSWINDOWS}
-  { Filter set }
-  TFilterDataTypes = set of TRegDataType;
+type
+  ERegistryFileException = class(Exception);
 
-  { TRegistryFile }
+  /// <summary>
+  ///   Filter to export only specified Registry values.
+  /// </summary>
+  TRegistryFilter = set of TRegDataType;
+
+  TRegistryPrefix = record helper for TRegDataType
+    function GetPrefix(): string;
+  end;
+
+  /// <summary>
+  ///   A <c>TRegistryFile</c> provides methods for reading and manipulating a
+  ///   Registry file used by Windows. This class is especially designed for
+  ///   exporting Registry keys to a .reg file that can later be imported again.
+  /// </summary>
   TRegistryFile = class(TIniFile)
   private
-    FOnExportBegin, FOnExportEnd: TNotifyEvent;
+    FOnExportBegin,
+    FOnExportEnd: TNotifyEvent;
     FReg: TRegistry;
     FAccess64: Boolean;
     function EscapeIdentifier(const AIdent: string): string;
     function GetKey(AIndex: Integer): string;
     function GetValue(AIndex: Integer): string;
-    procedure SetAccess(AAccess64: Boolean);
-    procedure WriteBinary(ASection, AIdent: string; ARegBinary: Boolean;
+    procedure SetAccess(const AAccess64: Boolean);
+    procedure WriteBinary(const ASection, AIdent: string; ARegBinary: Boolean;
       ABytes: array of Byte); overload;
   public
+    /// <summary>
+    ///   Constructor for creating a <c>TRegistryFile</c> instance.
+    /// </summary>
+    /// <param name="AFileName">
+    ///   The absolute filename to the .reg file.
+    /// </param>
+    /// <param name="AOverwriteIfExists">
+    ///   Optional: Allow overwrite if a file with the same name already exists.
+    /// </param>
+    /// <param name="ASaveOnDestroy">
+    ///   Optional: Automatically save the file when <c>Free()</c> is called.
+    /// </param>
     constructor Create(const AFileName: string; AOverwriteIfExists: Boolean = False;
       ASaveOnDestroy: Boolean = False);
+
+    /// <summary>
+    ///   Destructor for destroying a <c>TRegistryFile</c> instance.
+    /// </summary>
     destructor Destroy; override;
-    procedure AddRemove(ASection, AIdent, AValue: string);
-    function AddSection(AHKey: HKEY; AKeyPath: string): Boolean; reintroduce;
-    procedure Clear();
+
+    /// <summary>
+    ///   Adds a new or changes an existing value.
+    /// </summary>
+    /// <param name="ASectionName">
+    ///    The name of the section.
+    /// </param>
+    /// <param name="AKey">
+    ///    The key of the item.
+    /// </param>
+    /// <param name="AValue">
+    ///   The value of the item. If this value is empty the item will be removed.
+    /// </param>
+    procedure AddRemove(const ASection, AIdent, AValue: string);
+
+    /// <summary>
+    ///   Adds a new section.
+    /// </summary>
+    function AddSection(AHKey: HKEY; const AKeyPath: string): Boolean; reintroduce;
+
+    /// <summary>
+    ///   Deletes all contents from the file.
+    /// </summary>
+    procedure Clear(); override;
+
+    /// <summary>
+    ///   Deletes all quote chars <c>"</c> from a string.
+    /// </summary>
+    /// <param name="AText">
+    ///   The string.
+    /// </param>
+    /// <returns>
+    ///   The string without quote chars.
+    /// </returns>
     function DeleteQuoteChars(const AText: string): string;
+
+    /// <summary>
+    ///   Escapes all path delimiters in a path.
+    /// </summary>
+    /// <param name="APath">
+    ///   The path.
+    /// </param>
+    /// <returns>
+    ///   The path with escaped path delimiters.
+    /// </returns>
     function EscapePathDelimiter(const APath: string): string;
-    procedure ExportKey(AHKey: HKEY; AKeyPath: string; ARecursive: Boolean;
-      AFilterValues: TStrings = nil; AFilterTypes: TFilterDataTypes = []);
-    procedure ExportReg(AHKey: HKEY; AKeyPath: string; ARecursive: Boolean = True;
-      AFilterValues: TStrings = nil; AFilterTypes: TFilterDataTypes = []); overload;
-    procedure ExportReg(AHKey: HKEY; AKeyPath, AValueName: string); overload;
-    function GetSection(AHKey: HKEY; AKeyPath: string): string;
+
+    /// <summary>
+    ///   Exports an entire Registry key.
+    /// </summary>
+    /// <param name="AHKey">
+    ///   The root Registry key.
+    /// </param>
+    /// <param name="AKeyPath">
+    ///   The key path relative to <c>AHKey</c>.
+    /// </param>
+    /// <param name="ARecursive">
+    ///   Export sub-keys.
+    /// </param>
+    /// <param name="AFilterValues">
+    ///   Optional: Export only specified Registry values.
+    /// </param>
+    /// <param name="AFilterTypes">
+    ///   Optional: Export only specified Registry value types.
+    /// </param>
+    procedure ExportKey(AHKey: HKEY; const AKeyPath: string; ARecursive: Boolean;
+      AFilterValues: TStrings = nil; AFilterTypes: TRegistryFilter = []);
+
+    /// <summary>
+    ///   Exports an entire Registry key and saves it as .reg file.
+    /// </summary>
+    /// <param name="AHKey">
+    ///   The root Registry key.
+    /// </param>
+    /// <param name="AKeyPath">
+    ///   The key path relative to <c>AHKey</c>.
+    /// </param>
+    /// <param name="ARecursive">
+    ///   Optional: Export sub-keys.
+    /// </param>
+    /// <param name="AFilterValues">
+    ///   Optional: Export only specified Registry values.
+    /// </param>
+    /// <param name="AFilterTypes">
+    ///   Optional: Export only specified Registry value types.
+    /// </param>
+    /// <remarks>
+    ///   The <c>OnExportBegin</c> event is issued when the export starts.
+    ///   When finished <c>OnExportEnd</c> is issued.
+    /// </remarks>
+    procedure ExportReg(AHKey: HKEY; const AKeyPath: string; ARecursive: Boolean = True;
+      AFilterValues: TStrings = nil; AFilterTypes: TRegistryFilter = []); overload;
+
+    /// <summary>
+    ///   Exports a single Registry value and saves it as .reg file.
+    /// </summary>
+    /// <param name="AHKey">
+    ///   The root Registry key.
+    /// </param>
+    /// <param name="AKeyPath">
+    ///   The key path relative to <c>AHKey</c>.
+    /// </param>
+    /// <param name="AValueName">
+    ///   The name of the Registry value that should be exported.
+    /// </param>
+    /// <exception>
+    ///   <c>ERegistryFileException</c> when key or value does not exist.
+    /// </exception>
+    procedure ExportReg(AHKey: HKEY; const AKeyPath, AValueName: string); overload;
+
+    /// <summary>
+    ///   Builds the concatination of a <c>HKEY</c> and a key path.
+    /// </summary>
+    /// <param name="AHKey">
+    ///   The root Registry key.
+    /// </param>
+    /// <param name="AKeyPath">
+    ///   The key path relative to <c>AHKey</c>.
+    /// </param>
+    /// <remarks>
+    ///   A section is formatted like: <c>[HKEY_CURRENT_USER\Software]</c>
+    /// </remarks>
+    /// <returns>
+    ///   The formatted section.
+    /// </returns>
+    function GetSection(AHKey: HKEY; const AKeyPath: string): string;
+
+    /// <summary>
+    ///   Adds the first line of a Registry file.
+    /// </summary>
+    /// <remarks>
+    ///   IMPORTANT: Must be used only once!
+    /// </remarks>
     procedure MakeHeadline();
-    function ReadBinary(ASection, AIdent: string): TBytes;
-    function ReadBoolean(ASection, AIdent: string): Boolean;
-    function ReadExpandString(ASection, AIdent: string): string;
-    function ReadInteger(ASection, AIdent: string): Integer;
-    function ReadString(ASection, AIdent: string): string;
-    function Remove(ASection, AIdent: string): Boolean;
+
+    /// <summary>
+    ///   Reads a little endian encoded binary value from the file.
+    /// </summary>
+    /// <param name="ASection">
+    ///    The name of the section.
+    /// </param>
+    /// <param name="AIdent">
+    ///    The name of the identifier.
+    /// </param>
+    /// <returns>
+    ///   The read value.
+    /// </returns>
+    function ReadBinary(const ASection, AIdent: string): TBytes;
+
+    /// <summary>
+    ///   Reads a boolean value from the file.
+    /// </summary>
+    /// <param name="ASection">
+    ///    The name of the section.
+    /// </param>
+    /// <param name="AIdent">
+    ///    The name of the identifier.
+    /// </param>
+    /// <returns>
+    ///   The read value.
+    /// </returns>
+    function ReadBoolean(const ASection, AIdent: string): Boolean;
+
+    /// <summary>
+    ///   Reads an expanded string value from the file.
+    /// </summary>
+    /// <param name="ASection">
+    ///    The name of the section.
+    /// </param>
+    /// <param name="AIdent">
+    ///    The name of the identifier.
+    /// </param>
+    /// <returns>
+    ///   The read value.
+    /// </returns>
+    function ReadExpandString(const ASection, AIdent: string): string;
+
+    /// <summary>
+    ///   Reads an integer value from the file.
+    /// </summary>
+    /// <param name="ASection">
+    ///    The name of the section.
+    /// </param>
+    /// <param name="AIdent">
+    ///    The name of the identifier.
+    /// </param>
+    /// <returns>
+    ///   The read value.
+    /// </returns>
+    function ReadInteger(const ASection, AIdent: string): Integer;
+
+    /// <summary>
+    ///   Reads a string value from the file.
+    /// </summary>
+    /// <param name="ASection">
+    ///    The name of the section.
+    /// </param>
+    /// <param name="AIdent">
+    ///    The name of the identifier.
+    /// </param>
+    /// <returns>
+    ///   The read value.
+    /// </returns>
+    function ReadString(const ASection, AIdent: string): string;
+
+    /// <summary>
+    ///   Removes an identifier inside a section.
+    /// </summary>
+    /// <param name="ASection">
+    ///    The name of the section.
+    /// </param>
+    /// <param name="AIdent">
+    ///    The name of the identifier.
+    /// </param>
+    /// <returns>
+    ///   <c>True</c> if the identifier was removed successfully or <c>False</c>
+    ///   otherwise.
+    /// </returns>
+    function Remove(const ASection, AIdent: string): Boolean;
+
+    /// <summary>
+    ///   Writes current file to disk.
+    /// </summary>
     procedure Save(); override;
+
+    /// <summary>
+    ///   Deletes the path escape chars from a path
+    /// </summary>
+    /// <param name="APath">
+    ///   The path.
+    /// </param>
+    /// <remarks>
+    ///   An escaped path is formatted like: <c>C:\\Windows\\explorer.exe</c>
+    /// </remarks>
+    /// <returns>
+    ///   The string without escaped path delimiters.
+    /// </returns>
     function UnescapePathDelimiter(const APath: string): string;
-    procedure WriteBinary(ASection, AIdent: string; AValue: TBytes); overload;
-    procedure WriteBoolean(ASection, AIdent: string; AValue: Boolean);
-    procedure WriteExpandString(ASection, AIdent, AValue: string);
-    procedure WriteInteger(ASection, AIdent: string; AValue: Integer);
-    procedure WriteString(ASection, AIdent, AValue: string);
-    { external }
+
+    /// <summary>
+    ///   Writes a little endian encoded binary value to a .reg file.
+    /// </summary>
+    /// <param name="ASection">
+    ///    The name of the section.
+    /// </param>
+    /// <param name="AIdent">
+    ///    The name of the identifier.
+    /// </param>
+    /// <param name="AValue">
+    ///   The value to be written.
+    /// </param>
+    procedure WriteBinary(const ASection, AIdent: string; AValue: TBytes); overload;
+
+    /// <summary>
+    ///   Writes an boolean value to a a key in section.
+    /// </summary>
+    /// <param name="ASection">
+    ///    The name of the section.
+    /// </param>
+    /// <param name="AIdent">
+    ///    The name of the identifier.
+    /// </param>
+    /// <param name="AValue">
+    ///   The value to be written.
+    /// </param>
+    /// <returns>
+    ///   The index of the line where the item was written.
+    /// </returns>
+    function WriteBoolean(const ASection, AIdent: string; AValue: Boolean): Integer;
+
+    /// <summary>
+    ///   Writes an expand string in little endian encoding to the file.
+    /// </summary>
+    /// <param name="ASection">
+    ///    The name of the section.
+    /// </param>
+    /// <param name="AIdent">
+    ///    The name of the identifier.
+    /// </param>
+    /// <param name="AValue">
+    ///   The value to be written.
+    /// </param>
+    procedure WriteExpandString(const ASection, AIdent, AValue: string);
+
+    /// <summary>
+    ///    Writes an escaped integer to the file.
+    /// </summary>
+    /// <param name="ASection">
+    ///    The name of the section.
+    /// </param>
+    /// <param name="AIdent">
+    ///    The name of the identifier.
+    /// </param>
+    /// <param name="AValue">
+    ///   The value to be written.
+    /// </param>
+    /// <returns>
+    ///   The index of the line where the item was written.
+    /// </returns>
+    function WriteInteger(const ASection, AIdent: string; AValue: Integer): Integer;
+
+    /// <summary>
+    ///   Writes an escaped string to the file.
+    /// </summary>
+    /// <param name="ASection">
+    ///    The name of the section.
+    /// </param>
+    /// <param name="AIdent">
+    ///    The name of the identifier.
+    /// </param>
+    /// <param name="AValue">
+    ///   The value to be written.
+    /// </param>
+    /// <returns>
+    ///   The index of the line where the item was written.
+    /// </returns>
+    function WriteString(const ASection, AIdent, AValue: string): Integer; override;
+
+    /// <summary>
+    ///   Gets or sets if the 64-bit Registry should be used.
+    /// </summary>
     property Access64: Boolean read FAccess64 write SetAccess;
+
+    /// <summary>
+    ///   Gets the key at specified index.
+    /// </summary>
     property Keys[AIndex: Integer]: string read GetKey; default;
+
+    /// <summary>
+    ///   Issued by <see cref="ExportReg"/> when export has started.
+    /// </summary>
     property OnExportBegin: TNotifyEvent read FOnExportBegin write FOnExportBegin;
+
+    /// <summary>
+    ///   Issued by <see cref="ExportReg"/> when export has finished.
+    /// </summary>
     property OnExportEnd: TNotifyEvent read FOnExportEnd write FOnExportEnd;
+
+    /// <summary>
+    ///   Gets the value at specified index.
+    /// </summary>
     property Values[AIndex: Integer]: string read GetValue;
   end;
 {$ENDIF}
@@ -145,11 +812,7 @@ implementation
 
 { TIniFile }
 
-{ public TIniFile.Create
-
-  General constructor for creating a TIniFile instance. }
-
-constructor TIniFile.Create(const AFileName: string;
+constructor TIniFile.Create(const AFileName: TFileName;
   AOverwriteIfExists: Boolean = False; ASaveOnDestroy: Boolean = False);
 begin
   inherited Create;
@@ -165,10 +828,6 @@ begin
     FFile.LoadFromFile(AFileName);
 end;
 
-{ public TIniFile.Destroy
-
-  General destructor for destroying a TIniFile instance. }
-
 destructor TIniFile.Destroy;
 begin
   // Automatically save on destroy?
@@ -179,11 +838,7 @@ begin
   inherited Destroy;
 end;
 
-{ private TIniFile.Add
-
-  Inserts or adds a key/value pair to file. }
-
-function TIniFile.Add(AIndex: Integer; AString: string): Integer;
+function TIniFile.Insert(AIndex: Integer; const AString: string): Integer;
 begin
   if (AIndex + 1 < FFile.Count) then
   begin
@@ -195,10 +850,6 @@ begin
     // Append at the end
     Result := FFile.Add(AString);
 end;
-
-{ private TIniFile.FindNextItem
-
-  Returns the next index of an item beginning the search from AStartIndex. }
 
 function TIniFile.FindNextItem(AStartIndex: Integer = 0; AEndIndex: Integer = -1): Integer;
 var
@@ -220,7 +871,8 @@ begin
       Line := Trim(FFile[i]);
 
       // Current line is neither empty nor a comment or a section and contains "="
-      if ((Line <> '') and not (Line[1] in ['#', ';', '[']) and AnsiContainsStr(Line, '=')) then
+      if ((Line <> '') and (Line[1] <> '#') and (Line[1] <> ';') and
+        (Line[1] <> '[') and AnsiContainsStr(Line, '=')) then
       begin
         Result := i;
         Break;
@@ -249,19 +901,10 @@ begin
       end;  //of begin
 end;
 
-{ private TIniFile.FindNextSectionItem
-
-  Returns the next index of an item in section beginning the search from
-  AStartIndex until section ends. }
-
 function TIniFile.FindNextSectionItem(AStartIndex: Integer = 0): Integer;
 begin
   Result := FindNextItem(AStartIndex, FindNextSection(AStartIndex));
 end;
-
-{ private TIniFile.GetEndOfItem
-
-  Returns the last line index of an item for appending text. }
 
 function TIniFile.GetEndOfItem(AIndex: Integer): Integer;
 var
@@ -287,18 +930,10 @@ begin
     Result := -1;
 end;
 
-{ private TIniFile.GetEndOfItem
-
-  Returns the last line index of an item for appending text. }
-
-function TIniFile.GetEndOfItem(ASectionName, AKey: string): Integer;
+{function TIniFile.GetEndOfItem(const ASectionName, AKey: string): Integer;
 begin
   Result := GetEndOfItem(IndexOfKey(ASectionName, AKey));
-end;
-
-{ private TIniFile.GetEndOfSection
-
-  Returns the last line index of a section for appending text. }
+end; }
 
 function TIniFile.GetEndOfSection(AIndex: Integer): Integer;
 var
@@ -324,36 +959,20 @@ begin
     Result := -1;
 end;
 
-{ private TIniFile.GetEndOfSection
-
-  Returns the last line index of a section for appending text. }
-
-function TIniFile.GetEndOfSection(ASectionName: string): Integer;
+function TIniFile.GetEndOfSection(const ASectionName: string): Integer;
 begin
   Result := GetEndOfSection(IndexOfSection(ASectionName));
 end;
-
-{ private TIniFile.GetKey
-
-  Returns the name of an item at index. }
 
 function TIniFile.GetKey(AIndex: Integer): string;
 begin
   Result := ExtractKey(FFile[AIndex]);
 end;
 
-{ private TIniFile.GetLength
-
-  Returns the number of lines. }
-
 function TIniFile.GetLength(): Integer;
 begin
   Result := FFile.Count;
 end;
-
-{ private TIniFile.GetValue
-
-  Returns the value of an item at index. }
 
 function TIniFile.GetValue(AIndex: Integer): string;
 var
@@ -385,10 +1004,6 @@ begin
   end;  //of try
 end;
 
-{ private TIniFile.Remove
-
-  Removes lines from start to end index. }
-
 function TIniFile.Remove(AStartIndex, AEndIndex: Integer): Boolean;
 var
   i: Integer;
@@ -406,18 +1021,10 @@ begin
     Result := False;
 end;
 
-{ protected TIniFile.AddRaw
-
-  Adds a raw string. Can be used to add comments. }
-
-function TIniFile.AddRaw(ALine: string): Integer;
+function TIniFile.AddRaw(const ALine: string): Integer;
 begin
   Result := FFile.Add(ALine);
 end;
-
-{ protected TIniFile.ExtractKey
-
-  Extracts the key property from a key-value-pair. }
 
 function TIniFile.ExtractKey(const AKeyValuePair: string): string;
 var
@@ -434,10 +1041,6 @@ begin
     Result := '';
 end;
 
-{ protected TIniFile.ExtractValue
-
-  Extracts the item value from a key-value-pair. }
-
 function TIniFile.ExtractValue(const AKeyValuePair: string): string;
 var
   Line: string;
@@ -453,12 +1056,7 @@ begin
     Result := '';
 end;
 
-{ public TIniFile.AddRemove
-
-  Adds a new or changes an existing value. If the new value is empty the item
-  will be removed. }
-
-procedure TIniFile.AddRemove(ASectionName, AKey, AValue: string);
+procedure TIniFile.AddRemove(const ASectionName, AKey, AValue: string);
 begin
   if (AValue <> '') then
     WriteString(ASectionName, AKey, AValue)
@@ -466,11 +1064,7 @@ begin
     Remove(ASectionName, AKey);
 end;
 
-{ public TIniFile.AddSection
-
-  Adds a new section if not exist. }
-
-function TIniFile.AddSection(ASectionName: string): Boolean;
+function TIniFile.AddSection(const ASectionName: string): Boolean;
 var
   Exists: Boolean;
 
@@ -493,11 +1087,7 @@ begin
   Result := Exists;
 end;
 
-{ public TIniFile.AddSection
-
-  Adds a new section with content. A line in AHashMap must be key=value }
-
-function TIniFile.AddSection(ASectionName: string; AHashMap: TStrings): Boolean;
+function TIniFile.AddSection(const ASectionName: string; AHashMap: TStrings): Boolean;
 var
   InsertPos, i: Integer;
 
@@ -513,7 +1103,7 @@ begin
   begin
     // Write section content
     for i := 0 to AHashMap.Count -1 do
-      Add(InsertPos + i, AHashMap[i]);
+      Insert(InsertPos + i, AHashMap[i]);
 
     Result := True;
   end  //of begin
@@ -521,20 +1111,12 @@ begin
     Result := False;
 end;
 
-{ public TIniFile.Clear
-
-  Empties the current file. }
-
 procedure TIniFile.Clear();
 begin
   FFile.Clear;
 end;
 
-{ public TIniFile.GetKeys
-
-  Reads the keys of a section. }
-
-procedure TIniFile.GetKeys(ASectionName: string; AKeys: TStrings);
+procedure TIniFile.GetKeys(const ASectionName: string; var AKeys: TStrings);
 var
   Index, EndIndex, i: Integer;
   Key: string;
@@ -558,11 +1140,7 @@ begin
     end;  //of for
 end;
 
-{ public TIniFile.GetSections
-
-  Reads and collects all section names. }
-
-procedure TIniFile.GetSections(ASections: TStrings);
+procedure TIniFile.GetSections(var ASections: TStrings);
 var
   Index: Integer;
   Line: string;
@@ -583,33 +1161,7 @@ begin
   end;  //of while
 end;
 
-{ public TIniFile.IndexOfSection
-
-  Returns the index of a section. }
-
-function TIniFile.IndexOfSection(ASectionName: string): Integer;
-var
-  Index: Integer;
-
-begin
-  Index := FindNextSection(0);
-
-  while (Index <> -1) do
-  begin
-    if (FFile[Index] = '['+ ASectionName +']') then
-      Break;
-
-    Index := FindNextSection(Index);
-  end;  //of while
-
-  Result := Index;
-end;
-
-{ public TIniFile.IndexOfKey
-
-  Returns the index of a key. }
-
-function TIniFile.IndexOfKey(ASectionName, AKey: string): Integer;
+function TIniFile.IndexOfKey(const ASectionName, AKey: string): Integer;
 var
   Index: Integer;
 
@@ -634,9 +1186,23 @@ begin
   Result := Index;
 end;
 
-{ public TIniFile.IsSection
+function TIniFile.IndexOfSection(const ASectionName: string): Integer;
+var
+  Index: Integer;
 
-  Checks if a line contains a section. }
+begin
+  Index := FindNextSection(0);
+
+  while (Index <> -1) do
+  begin
+    if (FFile[Index] = '['+ ASectionName +']') then
+      Break;
+
+    Index := FindNextSection(Index);
+  end;  //of while
+
+  Result := Index;
+end;
 
 function TIniFile.IsSection(AIndex: Integer): Boolean;
 var
@@ -651,39 +1217,25 @@ begin
   result := ((Line <> '') and (Line[1] = '[') and (Line[Length(Line)] = ']'));
 end;
 
-{ public TIniFile.KeyExists
-
-  Checks if a value name exists. }
-
-function TIniFile.KeyExists(ASectionName, AKey: string): Boolean;
+function TIniFile.KeyExists(const ASectionName, AKey: string): Boolean;
 begin
   Result := (IndexOfKey(ASectionName, AKey) <> -1);
 end;
 
-{ public TIniFile.ReadBoolean
-
-  Returns a boolean value of a key in section. }
-
-function TIniFile.ReadBoolean(ASectionName, AKey: string): Boolean;
+function TIniFile.ReadBoolean(const ASectionName, AKey: string): Boolean;
 begin
   Result := (ReadInteger(ASectionName, AKey) = 1);
 end;
 
-{ public TIniFile.ReadInteger
-
-  Returns an integer value of a key in section. }
-
-function TIniFile.ReadInteger(ASectionName, AKey: string; ADefault: Integer = -1): Integer;
+function TIniFile.ReadInteger(const ASectionName, AKey: string;
+  ADefault: Integer = -1): Integer;
 begin
   if not TryStrToInt(ReadString(ASectionName, AKey), Result) then
     Result := ADefault;
 end;
 
-{ public TIniFile.ReadString
-
-  Returns a string value of a key in section. }
-
-function TIniFile.ReadString(ASectionName, AKey: string; ADefault: string = ''): string;
+function TIniFile.ReadString(const ASectionName, AKey: string;
+  const ADefault: string = ''): string;
 var
   Index: Integer;
 
@@ -698,11 +1250,7 @@ begin
     Result := ADefault;
 end;
 
-{ public TIniFile.Remove
-
-  Removes a key inside a section. }
-
-function TIniFile.Remove(ASectionName, AKey: string): Boolean;
+function TIniFile.Remove(const ASectionName, AKey: string): Boolean;
 var
   StartIndex, EndIndex: Integer;
 
@@ -718,18 +1266,10 @@ begin
   Result := Remove(StartIndex, EndIndex);
 end;
 
-{ public TIniFile.RemoveSection
-
-  Removes an entire section with all items. }
-
-function TIniFile.RemoveSection(ASectionName: string): Boolean;
+function TIniFile.RemoveSection(const ASectionName: string): Boolean;
 begin
   Result := Remove(IndexOfSection(ASectionName), GetEndOfSection(ASectionName));
 end;
-
-{ public TIniFile.Save
-
-  Writes current file to disk. }
 
 procedure TIniFile.Save();
 begin
@@ -741,48 +1281,30 @@ begin
 end;
 
 {$IFDEF MSWINDOWS}
-{ public TIniFile.Save
-
-  Writes current file with explicit encoding to disk. }
-
 procedure TIniFile.Save(AEncoding: TEncoding);
 begin
   FFile.SaveToFile(FFileName, AEncoding);
 end;
 {$ENDIF}
 
-{ public TIniFile.SectionExists
-
-  Checks if a section exists. }
-
-function TIniFile.SectionExists(ASectionName: string): Boolean;
+function TIniFile.SectionExists(const ASectionName: string): Boolean;
 begin
   Result := (IndexOfSection(ASectionName) <> -1);
 end;
 
-{ public TIniFile.WriteBoolean
-
-  Writes an boolean value to a a key in section. }
-
-function TIniFile.WriteBoolean(ASectionName, AKey: string; AValue: Boolean): Integer;
+function TIniFile.WriteBoolean(const ASectionName, AKey: string;
+  AValue: Boolean): Integer;
 begin
   Result := WriteInteger(ASectionName, AKey, Ord(AValue));
 end;
 
-{ public TIniFile.WriteInteger
-
-  Writes an integer value to a key in section. }
-
-function TIniFile.WriteInteger(ASectionName, AKey: string; AValue: Integer): Integer;
+function TIniFile.WriteInteger(const ASectionName, AKey: string;
+  AValue: Integer): Integer;
 begin
   Result := WriteString(ASectionName, AKey, IntToStr(AValue));
 end;
 
-{ public TIniFile.WriteString
-
-  Writes a string value to a key in section. }
-
-function TIniFile.WriteString(ASectionName, AKey, AValue: string): Integer;
+function TIniFile.WriteString(const ASectionName, AKey, AValue: string): Integer;
 var
   Index: Integer;
 
@@ -812,14 +1334,11 @@ begin
     Remove(Index, GetEndOfItem(Index));
 
   // Add item
-  Result := Add(Index, AKey +'='+ AValue);
+  Result := Insert(Index, AKey +'='+ AValue);
 end;
 
-{ public TIniFile.WriteStrings
-
-  Writes a multi-line string value to a key in section. }
-
-function TIniFile.WriteStrings(ASectionName, AKey: string; AValues: TStrings): Integer;
+function TIniFile.WriteStrings(const ASectionName, AKey: string;
+  AValues: TStrings): Integer;
 var
   Index, i: Integer;
 
@@ -831,22 +1350,32 @@ begin
   for i := 1 to AValues.Count -1 do
   begin
     Inc(Index);
-    Add(Index, AValues[i]);
+    Insert(Index, AValues[i]);
   end;  //of for
 
   // Insert empty line before another section
   if IsSection(Index + 1) then
-    Add(Index + 1, '');
+    Insert(Index + 1, '');
 
   Result := Index;
 end;
 
 {$IFDEF MSWINDOWS}
+
+{ TRegistryPrefix }
+
+function TRegistryPrefix.GetPrefix(): string;
+begin
+  case Self of
+    rdExpandString: Result := 'hex(2):';
+    rdInteger:      Result := 'dword:';
+    rdBinary:       Result := 'hex:';
+    else            Result := '';
+  end;  //of case
+end;
+
+
 { TRegistryFile }
-
-{ public TRegistryFile.Create
-
-  General constructor for creating a TRegistryFile instance. }
 
 constructor TRegistryFile.Create(const AFileName: string;
   AOverwriteIfExists: Boolean = False; ASaveOnDestroy: Boolean = False);
@@ -860,19 +1389,11 @@ begin
   FReg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ);
 end;
 
-{ public TRegistryFile.Destroy
-
-  Destructor for destroying a TRegistryFile instance. }
-
 destructor TRegistryFile.Destroy;
 begin
   FReg.Free;
   inherited Destroy;
 end;
-
-{ private TRegistryFile.EscapeIdentifier
-
-  Returns the identifier quoted. }
 
 function TRegistryFile.EscapeIdentifier(const AIdent: string): string;
 begin
@@ -882,29 +1403,17 @@ begin
     Result := '"'+ AIdent +'"';
 end;
 
-{ private TRegistryFile.GetKey
-
-  Returns the name of an item at index. }
-
 function TRegistryFile.GetKey(AIndex: Integer): string;
 begin
   Result := DeleteQuoteChars(inherited GetKey(AIndex));
 end;
-
-{ private TRegistryFile.GetValue
-
-  Returns the item value at index. }
 
 function TRegistryFile.GetValue(AIndex: Integer): string;
 begin
   Result := DeleteQuoteChars(inherited GetValue(AIndex));
 end;
 
-{ private TRegistryFile.SetAccess
-
-  Sets the current registry access rights. }
-
-procedure TRegistryFile.SetAccess(AAccess64: Boolean);
+procedure TRegistryFile.SetAccess(const AAccess64: Boolean);
 begin
   if AAccess64 then
     FReg.Access := KEY_WOW64_64KEY or KEY_READ
@@ -914,12 +1423,8 @@ begin
   FAccess64 := AAccess64;
 end;
 
-{ private TRegistryFile.WriteBinary
-
-  Writes a little endian encoded binary value to a .reg file. }
-
-procedure TRegistryFile.WriteBinary(ASection, AIdent: string; ARegBinary: Boolean;
-  ABytes: array of Byte);
+procedure TRegistryFile.WriteBinary(const ASection, AIdent: string;
+  ARegBinary: Boolean; ABytes: array of Byte);
 var
   i: Integer;
   Line: string;
@@ -928,9 +1433,9 @@ var
 begin
   // rdBinary or rdExpandString?
   if ARegBinary then
-    Line := REG_BINARY
+    Line := rdBinary.GetPrefix()
   else
-    Line := REG_EXPANDSTRING;
+    Line := rdExpandString.GetPrefix();
 
   // Init line cache
   Lines := TStringList.Create;
@@ -967,12 +1472,7 @@ begin
   end;  //of try
 end;
 
-{ public TRegistryFile.AddRemove
-
-  Adds a new or changes an existing value. If the new value is empty the item
-  will be removed. }
-
-procedure TRegistryFile.AddRemove(ASection, AIdent, AValue: string);
+procedure TRegistryFile.AddRemove(const ASection, AIdent, AValue: string);
 begin
   if (AValue <> '') then
     WriteString(ASection, AIdent, AValue)
@@ -980,18 +1480,10 @@ begin
     Remove(ASection, AIdent);
 end;
 
-{ public TRegistryFile.AddSection
-
-  Adds a new section. }
-
-function TRegistryFile.AddSection(AHKey: HKEY; AKeyPath: string): Boolean;
+function TRegistryFile.AddSection(AHKey: HKEY; const AKeyPath: string): Boolean;
 begin
   Result := inherited AddSection(GetSection(AHKey, AKeyPath));
 end;
-
-{ public TRegistryFile.Clear
-
-  Empties the current file. }
 
 procedure TRegistryFile.Clear();
 begin
@@ -999,18 +1491,10 @@ begin
   MakeHeadline();
 end;
 
-{ public TRegistryFile.DeleteQuoteChars
-
- Deletes all quote chars " from a string. }
-
 function TRegistryFile.DeleteQuoteChars(const AText: string): string;
 begin
   Result := StringReplace(AText, '"', '', [rfReplaceAll]);
 end;
-
-{ public TRegistryFile.EscapePathDelimiter
-
- Escapes all baskslashes in a string. }
 
 function TRegistryFile.EscapePathDelimiter(const APath: string): string;
 begin
@@ -1021,12 +1505,8 @@ begin
   Result := StringReplace(Result, '"', '\"', [rfReplaceAll]);
 end;
 
-{ public TRegistryFile.ExportKey
-
-  Collects data from a key path and writes it to .reg file. }
-
-procedure TRegistryFile.ExportKey(AHKey: HKEY; AKeyPath: string;
-  ARecursive: Boolean; AFilterValues: TStrings = nil; AFilterTypes: TFilterDataTypes = []);
+procedure TRegistryFile.ExportKey(AHKey: HKEY; const AKeyPath: string;
+  ARecursive: Boolean; AFilterValues: TStrings = nil; AFilterTypes: TRegistryFilter = []);
 var
   Values, Keys: TStringList;
   i: Cardinal;
@@ -1107,13 +1587,9 @@ begin
   end;  //of try
 end;
 
-{ public TRegistryFile.ExportReg
-
-  Exports an entire Registry key (opt. recursive) and saves it as .reg file. }
-
-procedure TRegistryFile.ExportReg(AHKey: HKEY; AKeyPath: string;
+procedure TRegistryFile.ExportReg(AHKey: HKEY; const AKeyPath: string;
   ARecursive: Boolean = True; AFilterValues: TStrings = nil;
-  AFilterTypes: TFilterDataTypes = []);
+  AFilterTypes: TRegistryFilter = []);
 begin
   if Assigned(FOnExportBegin) then
     FOnExportBegin(Self);
@@ -1126,11 +1602,7 @@ begin
     FOnExportEnd(Self);
 end;
 
-{ public TRegistryFile.ExportReg
-
-  Exports a single Registry value and saves it as .reg file. }
-
-procedure TRegistryFile.ExportReg(AHKey: HKEY; AKeyPath, AValueName: string);
+procedure TRegistryFile.ExportReg(AHKey: HKEY; const AKeyPath, AValueName: string);
 var
   Section: string;
   Buffer: TBytes;
@@ -1142,11 +1614,11 @@ begin
 
     // Invalid key?
     if not FReg.OpenKey(AKeyPath, False) then
-      raise ERegistryException.Create('Error while exporting value: Key does not exist!');
+      raise ERegistryFileException.Create('Error while exporting value: Key does not exist!');
 
     // Invalid value?
     if not FReg.ValueExists(AValueName) then
-      raise ERegistryException.Create('Error while exporting value: Value does not exist!');
+      raise ERegistryFileException.Create('Error while exporting value: Value does not exist!');
 
     MakeHeadline();
 
@@ -1175,11 +1647,7 @@ begin
   end;  //of try
 end;
 
-{ public TRegistryFile.GetSection
-
-  Returns the concat of AHKEY and AKeyPath. }
-
-function TRegistryFile.GetSection(AHKey: HKEY; AKeyPath: string): string;
+function TRegistryFile.GetSection(AHKey: HKEY; const AKeyPath: string): string;
 var
   Reg: TRegistry;
 
@@ -1195,21 +1663,13 @@ begin
   end;  //of try
 end;
 
-{ public TRegistryFile.MakeHeadline
-
-  Adds the first line of an .reg file. Must be used only once. }
-
 procedure TRegistryFile.MakeHeadline();
 begin
   if (Lines = 0) then
     AddRaw('Windows Registry Editor Version 5.00');
 end;
 
-{ public TRegistryFile.ReadBinary
-
-  Reads a little endian encoded binary value from a .reg file. }
-
-function TRegistryFile.ReadBinary(ASection, AIdent: string): TBytes;
+function TRegistryFile.ReadBinary(const ASection, AIdent: string): TBytes;
 var
   StringValue: string;
   StartIndex, EndIndex, i, j: Integer;
@@ -1219,8 +1679,8 @@ begin
   StringValue := ReadString(ASection, AIdent);
 
   // No binary data?
-  if (not AnsiStartsStr(REG_BINARY, StringValue) and
-    not AnsiStartsStr(REG_EXPANDSTRING, StringValue)) then
+  if (not AnsiStartsStr(rdBinary.GetPrefix(), StringValue) and
+    not AnsiStartsStr(rdExpandString.GetPrefix(), StringValue)) then
     Exit;
 
   StartIndex := AnsiPos(':', StringValue);
@@ -1254,20 +1714,12 @@ begin
   end;  //of while
 end;
 
-{ public TRegistryFile.ReadBoolean
-
-  Returns a boolean value of a key in section. }
-
-function TRegistryFile.ReadBoolean(ASection, AIdent: string): Boolean;
+function TRegistryFile.ReadBoolean(const ASection, AIdent: string): Boolean;
 begin
   Result := (ReadInteger(ASection, AIdent) = 1);
 end;
 
-{ public TRegistryFile.ReadExpandString
-
-  Returns a expand string value of a key in section. }
-
-function TRegistryFile.ReadExpandString(ASection, AIdent: string): string;
+function TRegistryFile.ReadExpandString(const ASection, AIdent: string): string;
 var
   i: Integer;
   Bytes: TBytes;
@@ -1286,11 +1738,7 @@ begin
   Bytes := nil;
 end;
 
-{ public TRegistryFile.ReadInteger
-
-  Reads an integer from a .reg file. }
-
-function TRegistryFile.ReadInteger(ASection, AIdent: string): Integer;
+function TRegistryFile.ReadInteger(const ASection, AIdent: string): Integer;
 var
   StringVal: string;
 
@@ -1298,18 +1746,14 @@ begin
   Result := -1;
   StringVal := inherited ReadString(ASection, EscapeIdentifier(AIdent));
 
-  if AnsiContainsStr(StringVal, REG_INTEGER) then
+  if AnsiContainsStr(StringVal, rdInteger.GetPrefix()) then
   begin
     StringVal := Copy(StringVal, 7, Length(StringVal));
     Result := StrToInt('$'+ StringVal);
   end;  //of begin
 end;
 
-{ public TRegistryFile.ReadString
-
-  Reads a string from a .reg file. }
-
-function TRegistryFile.ReadString(ASection, AIdent: string): string;
+function TRegistryFile.ReadString(const ASection, AIdent: string): string;
 var
   Value: string;
 
@@ -1319,27 +1763,15 @@ begin
   Result := DeleteQuoteChars(Value);
 end;
 
-{ public TRegistryFile.Remove
-
-  Removes a key inside a section. }
-
-function TRegistryFile.Remove(ASection, AIdent: string): Boolean;
+function TRegistryFile.Remove(const ASection, AIdent: string): Boolean;
 begin
   Result := inherited Remove(ASection, EscapeIdentifier(AIdent));
 end;
-
-{ public TRegistryFile.Save
-
-  Writes current .reg file to disk. }
 
 procedure TRegistryFile.Save();
 begin
   inherited Save(TEncoding.Unicode);
 end;
-
-{ public TRegistryFile.UnescapePathDelimiter
-
- Deletes escape chars from a string. }
 
 function TRegistryFile.UnescapePathDelimiter(const APath: string): string;
 begin
@@ -1350,29 +1782,18 @@ begin
   Result := StringReplace(Result, '\"', '"', [rfReplaceAll]);
 end;
 
-{ public TRegistryFile.WriteBinary
-
-  Writes a little endian encoded binary value to a .reg file. }
-
-procedure TRegistryFile.WriteBinary(ASection, AIdent: string; AValue: TBytes);
+procedure TRegistryFile.WriteBinary(const ASection, AIdent: string; AValue: TBytes);
 begin
   WriteBinary(ASection, AIdent, True, AValue);
 end;
 
-{ public TRegistryFile.WriteBoolean
-
-  Writes an boolean value to a a key in section. }
-
-procedure TRegistryFile.WriteBoolean(ASection, AIdent: string; AValue: Boolean);
+function TRegistryFile.WriteBoolean(const ASection, AIdent: string;
+  AValue: Boolean): Integer;
 begin
-  WriteInteger(ASection, AIdent, Ord(AValue));
+  Result := WriteInteger(ASection, AIdent, Ord(AValue));
 end;
 
-{ public TRegistryFile.WriteExpandString
-
-  Writes an expand string in little endian encoding to a .reg file. }
-
-procedure TRegistryFile.WriteExpandString(ASection, AIdent, AValue: string);
+procedure TRegistryFile.WriteExpandString(const ASection, AIdent, AValue: string);
 var
   i, j: Integer;
   Bytes: array of Byte;
@@ -1391,27 +1812,16 @@ begin
 
   // Write binary data with linebreaks to .reg file
   WriteBinary(ASection, AIdent, False, Bytes);
-
-  // Mark array as removable
-  Bytes := nil;
 end;
 
-{ public TRegistryFile.WriteInteger
-
-  Writes an escaped integer to a .reg file. }
-
-procedure TRegistryFile.WriteInteger(ASection, AIdent: string; AValue: Integer);
+function TRegistryFile.WriteInteger(const ASection, AIdent: string; AValue: Integer): Integer;
 begin
-  inherited WriteString(ASection, EscapeIdentifier(AIdent), REG_INTEGER + IntToHex(AValue, 8));
+  Result := inherited WriteString(ASection, EscapeIdentifier(AIdent), rdInteger.GetPrefix() + IntToHex(AValue, 8));
 end;
 
-{ public TRegistryFile.WriteString
-
-  Writes an escaped string to a .reg file. }
-
-procedure TRegistryFile.WriteString(ASection, AIdent, AValue: string);
+function TRegistryFile.WriteString(const ASection, AIdent, AValue: string): Integer;
 begin
-  inherited WriteString(ASection, EscapeIdentifier(AIdent), '"'+ EscapePathDelimiter(AValue) +'"');
+  Result := inherited WriteString(ASection, EscapeIdentifier(AIdent), '"'+ EscapePathDelimiter(AValue) +'"');
 end;
 {$ENDIF}
 

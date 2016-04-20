@@ -1,5 +1,5 @@
-v4.3
-- Cascading Shell submenus (ExtendedSubCommandsKey)
-
 v4.4
+- "Import backup" supports merging existing items (especially scheduled tasks)
+
+- Cascading Shell submenus (ExtendedSubCommandsKey)
 - Shell bags cleaning

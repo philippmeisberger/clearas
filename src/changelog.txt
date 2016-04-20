@@ -4,12 +4,12 @@ Ein Open-Source Projekt von PM Code Works
 Changelog
 =========
 
-Version 4.3  [??.04.16]
+Version 4.3  [23.04.16]
 
 - Neues Feature "Aufgaben":
   - Ermöglicht Bearbeiten von geplanten Aufgaben
   - "Einträge exportieren" speichert alle Aufgaben als ZIP-Datei
-  - "Backup importieren" importiert zuvor exportierte Aufgaben
+  - "Backup importieren" importiert zuvor exportierte Aufgabe(n)
   - "Expertenmodus" findet versteckte Aufgaben
 - Änderungen auf der Seite "Kontextmenü":
   - Kontextmenü-Einträge "Cascading", die ein Menü beinhalten, werden nun gefunden
