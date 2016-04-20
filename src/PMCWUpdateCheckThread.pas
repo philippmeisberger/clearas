@@ -1,6 +1,6 @@
 { *********************************************************************** }
 {                                                                         }
-{ PM Code Works Cross Plattform Update Check Thread v3.0                  }
+{ PM Code Works Cross Plattform Update Check Thread v3.0.2                }
 {                                                                         }
 { Copyright (c) 2011-2016 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
@@ -89,6 +89,9 @@ type
 
 implementation
 
+uses
+  PMCWUpdater;
+
 { TUpdateCheckThread }
 
 constructor TUpdateCheckThread.Create(ACurrentBuild: Cardinal;
@@ -105,13 +108,8 @@ begin
   // Setup some HTTP options
   with FHttp.Request do
   begin
-    // Set the user-agent because of some issues with default
-    UserAgent := 'Updater/3.0 (PM Code Works Update Utility)';
-
-    // Only accept plain text
+    UserAgent := UPDATER_USER_AGENT;
     Accept := 'text/plain';
-
-    // Close connection after completion of the response
     Connection := 'close';
   end;  //of with
 end;

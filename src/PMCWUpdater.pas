@@ -15,6 +15,7 @@ interface
 uses
   SysUtils, Classes, Dialogs, PMCWUpdateCheckThread, PMCWLanguageFile, Forms,
 {$IFDEF MSWINDOWS}
+{$WARN UNIT_PLATFORM OFF}
   PMCWDownloadThread, Windows, FileCtrl, StdCtrls, ComCtrls, Controls,
   System.Win.TaskbarCore, Vcl.Taskbar, UITypes, Registry, ShellAPI;
 {$ELSE}
@@ -25,27 +26,37 @@ const
   /// <summary>
   ///   URL to the PHP web downloader script.
   /// </summary>
-  URL_DOWNLOAD = URL_DIR + 'downloader.php?file=';
+  URL_DOWNLOAD       = URL_DIR + 'downloader.php?file=';
+
+  /// <summary>
+  ///   The version of the updater.
+  /// </summary>
+  UPDATER_VERSION    = '3.0';
+
+  /// <summary>
+  ///   The used user-agent string during the HTTP(S) connection.
+  /// </summary>
+  UPDATER_USER_AGENT = 'Updater/'+ UPDATER_VERSION +' (PM Code Works Update Utility)';
 
   /// <summary>
   ///   Extract the major version information out of a <see cref="TFileProductVersion"/>.
   /// </summary>
-  VERSION_MAJOR   = 0;
+  VERSION_MAJOR      = 0;
 
   /// <summary>
   ///   Extract the minor version information out of a <see cref="TFileProductVersion"/>.
   /// </summary>
-  VERSION_MINOR   = 1;
+  VERSION_MINOR      = 1;
 
   /// <summary>
   ///   Extract the service version information out of a <see cref="TFileProductVersion"/>.
   /// </summary>
-  VERSION_SERVICE = 2;
+  VERSION_SERVICE    = 2;
 
   /// <summary>
   ///   Extract the build version information out of a <see cref="TFileProductVersion"/>.
   /// </summary>
-  VERSION_BUILD   = 3;
+  VERSION_BUILD      = 3;
 
 {$IFDEF MSWINDOWS}
 {$I Certificate.inc}

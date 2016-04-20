@@ -119,6 +119,9 @@ type
 
 implementation
 
+uses
+  PMCWUpdater;
+
 { TDownloadThread }
 
 constructor TDownloadThread.Create(const AUrl, AFileName: string;
@@ -144,7 +147,7 @@ begin
     OnReceiveData := Downloading;
     OnValidateServerCertificate := Self.OnValidateServerCertificate;
     Accept := 'application/*';
-    UserAgent := 'Updater/3.0 (PM Code Works Update Utility)';
+    UserAgent := UPDATER_USER_AGENT;
   end;  //of begin
 end;
 
