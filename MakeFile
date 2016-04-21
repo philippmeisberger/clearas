@@ -1,17 +1,18 @@
 PROJECTNAME=Clearas
 WIN32EXE=bin\Win32\$(PROJECTNAME).exe
 WIN64EXE=bin\Win64\$(PROJECTNAME).exe
-CERTSHA1=A9A273A222A5DD3ED9EC2F46232AAD8E087EA4ED
 MSBUILD=C:\Windows\Microsoft.NET\Framework\v3.5\MSBUILD.exe
 ZIP="C:\Program Files (x86)\GnuWin32\bin\zip.exe"
+CERTSHA1=A9A273A222A5DD3ED9EC2F46232AAD8E087EA4ED
 SIGNTOOL="C:\Program Files (x86)\Windows Kits\8.1\bin\x86\signtool.exe"
+SIGN=$(SIGNTOOL) sign /v /sha1 $(CERTSHA1) /tr http://timestamp.globalsign.com/scripts/timstamp.dll /td SHA256 /fd SHA256
 
 build: win32 win64
 
 sign: sign32 sign64
 
 source: src\*.pas Makefile
-	$(ZIP) -9 -r $(PROJECTNAME)-src.zip . src -x .hg\* -x tests\* -i MakeFile -i MakeFile.bat -i *.md -i *.txt -i *.pas -i *.dproj -i *.res -i *.rc -i *.dpr -i *.dfm -i *.inc -i *.dcr -i *.ico
+	$(ZIP) -9 -r $(PROJECTNAME)-src.zip . src -x .hg\* -x tests\* -x BACKUP\* -i MakeFile -i MakeFile.bat -i *.md -i *.txt -i *.pas -i *.dproj -i *.res -i *.rc -i *.dpr -i *.dfm -i *.inc -i *.dcr -i *.ico
 
 win32: src\$(PROJECTNAME).dproj
 	SET BDS=C:\Program Files (x86)\Embarcadero\Studio\16.0
@@ -19,7 +20,7 @@ win32: src\$(PROJECTNAME).dproj
 	$(MSBUILD) /p:Config=Release /property:Platform=Win32 "src\$(PROJECTNAME).dproj"
 
 sign32: $(WIN32EXE)
-	$(SIGNTOOL) sign /v /sha1 $(CERTSHA1) /tr http://timestamp.globalsign.com/scripts/timstamp.dll /td SHA256 $(WIN32EXE)
+	$(SIGN) $(WIN32EXE)
 
 win64: src\$(PROJECTNAME).dproj
 	SET BDS=C:\Program Files (x86)\Embarcadero\Studio\16.0
@@ -27,7 +28,7 @@ win64: src\$(PROJECTNAME).dproj
 	$(MSBUILD) /p:Config=Release /property:Platform=Win64 "src\$(PROJECTNAME).dproj"
 
 sign64: $(WIN64EXE)
-	$(SIGNTOOL) sign /v /sha1 $(CERTSHA1) /tr http://timestamp.globalsign.com/scripts/timstamp.dll /td SHA256 $(WIN64EXE)
+	$(SIGN) $(WIN64EXE)
 
 release: win32 sign32 win64 sign64 source
 
