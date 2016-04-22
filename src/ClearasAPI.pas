@@ -820,8 +820,8 @@ type
 
   /// <summary>
   ///   A <c>TStartupItemStatus</c> represents the new status of startup items
-  ///   since Windows 8. The status of startup items is a binary value of 12.
-  ///   digits. The first 4 bytes contain the enabled value. This can be
+  ///   since Windows 8. The status of startup items is a binary value of 12
+  ///   bytes. The first 4 bytes contain the enabled value. This can be
   ///   <c>ST_ENABLED</c> or <c>ST_DISABLED</c>. In case the value is
   ///   <c>ST_DISABLED</c> the last 8 bytes are a timestamp containing the
   ///   deactivation time as <c>TFileTime</c>.
@@ -839,7 +839,7 @@ type
     DeactivationTime: TFileTime;
 
     /// <summary>
-    ///   Constructor for a <c>TStartupItemStatus</c> record
+    ///   Constructor for a <c>TStartupItemStatus</c> record.
     /// </summary>
     /// <param name="AEnabled">
     ///   The status.
@@ -849,6 +849,22 @@ type
     ///   to <c>False</c>.
     /// </param>
     constructor Create(AEnabled: Boolean; ADeactivationTime: TDateTime = 0);
+
+    /// <summary>
+    ///   Converts the deactivation time to <c>TDateTime</c>.
+    /// </summary>
+    /// <returns>
+    ///   The deactivation time.
+    /// </returns>
+    function GetDeactivationTime(): TDateTime;
+
+    /// <summary>
+    ///   Determines if the status is enabled.
+    /// </summary>
+    /// <returns>
+    ///   <c>True</c> if the status is enabled or <c>False</c> otherwise.
+    /// </returns>
+    function Enabled(): Boolean;
   end;
 
   /// <summary>
@@ -2048,26 +2064,6 @@ uses ClearasSearchThread;
 
 {$I LanguageIDs.inc}
 
-function FileTimeToDateTime(const AFileTime: TFileTime): TDateTime;
-var
-  ModifiedTime: TFileTime;
-  SystemTime: TSystemTime;
-
-begin
-  try
-    if ((AFileTime.dwLowDateTime = 0) and (AFileTime.dwHighDateTime = 0)) then
-      Abort;
-
-    FileTimeToLocalFileTime(AFileTime, ModifiedTime);
-    FileTimeToSystemTime(ModifiedTime, SystemTime);
-    Result := SystemTimeToDateTime(SystemTime);
-
-  except
-    Result := 0;
-  end;  //of try
-end;
-
-
 { TLnkFile }
 
 constructor TLnkFile.Create(AFileName: TFileName);
@@ -3022,6 +3018,30 @@ begin
   end  //of begin
   else
     Status := ST_ENABLED;
+end;
+
+function TStartupItemStatus.GetDeactivationTime(): TDateTime;
+var
+  ModifiedTime: TFileTime;
+  SystemTime: TSystemTime;
+
+begin
+  try
+    if ((DeactivationTime.dwLowDateTime = 0) and (DeactivationTime.dwHighDateTime = 0)) then
+      Abort;
+
+    FileTimeToLocalFileTime(DeactivationTime, ModifiedTime);
+    FileTimeToSystemTime(ModifiedTime, SystemTime);
+    Result := SystemTimeToDateTime(SystemTime);
+
+  except
+    Result := 0;
+  end;  //of try
+end;
+
+function TStartupItemStatus.Enabled(): Boolean;
+begin
+  Result := (Status = ST_ENABLED);
 end;
 
 
@@ -4262,11 +4282,11 @@ begin
     end;  //of begin
 
     Reg.ReadBinaryData(AName, ItemStatus, SizeOf(TStartupItemStatus));
-    Result.Key := (ItemStatus.Status = ST_ENABLED);
+    Result.Key := ItemStatus.Enabled();
 
     // Get deactivation time
     if not Result.Key then
-      Result.Value := FileTimeToDateTime(ItemStatus.DeactivationTime);
+      Result.Value := ItemStatus.GetDeactivationTime();
 
   finally
     Reg.CloseKey();
