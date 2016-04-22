@@ -3269,7 +3269,7 @@ begin
 
       except
         // Approved item does not exist?
-        on E: ERegistryException do
+        on E: ERegistryFileException do
           // Just continue!
       end;
     end  //of begin
