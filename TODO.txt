@@ -1,5 +1,5 @@
-v4.4
+Ideas:
+- Add "Execute" to popup menu
 - "Import backup" supports merging existing items (especially scheduled tasks)
-
 - Cascading Shell submenus (ExtendedSubCommandsKey)
 - Shell bags cleaning
