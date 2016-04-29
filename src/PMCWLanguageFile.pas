@@ -73,6 +73,9 @@ const
   LID_CERTIFICATE_ALREADY_INSTALLED = 27;
   LID_CERTIFICATE_NO_CERTUTIL       = 28;
 
+  { End mark of the predefined range }
+  LID_LAST                          = 40;
+
 type
   { Exception class }
   ELanguageException = class(Exception);
