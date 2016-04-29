@@ -188,7 +188,7 @@ type
     ///   successfully or <c>False</c> otherwise.
     /// </returns>
     class function GetFileVersion(const AFileName: string;
-      var AVersionInfo: TFileProductVersion): Boolean;
+      var AVersionInfo: TFileProductVersion): Boolean; static;
 
     /// <summary>
     ///   Removes a listener from the notification list.

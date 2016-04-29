@@ -71,7 +71,7 @@ type
     lwContext: TListView;
     lContext: TLabel;
     lVersion2: TLabel;
-    lVersion: TLabel;
+    lVersion1: TLabel;
     pbContextProgress: TProgressBar;
     cbContextExpert: TCheckBox;
     lWindows2: TLabel;
@@ -237,6 +237,9 @@ const
   VCL event that is called when form is being created. }
 
 procedure TMain.FormCreate(Sender: TObject);
+var
+  VersionInfo: TFileProductVersion;
+
 begin
   // Setup languages
   FLang := TLanguageFile.Create(Self);
@@ -300,6 +303,15 @@ begin
 
   // Set title
   Caption := Application.Title + PLATFORM_ARCH;
+
+  // Get version information
+  if TUpdateCheck.GetFileVersion(Application.ExeName, VersionInfo) then
+  begin
+    lVersion1.Caption := Format('v%d.%d', [VersionInfo[VERSION_MAJOR],
+      VersionInfo[VERSION_MINOR]]);
+    lVersion2.Caption := lVersion1.Caption;
+    lVersion3.Caption := lVersion3.Caption;
+  end;  //of begin
 end;
 
 { TMain.FormDestroy
