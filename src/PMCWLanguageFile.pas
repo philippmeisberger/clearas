@@ -1,6 +1,6 @@
 ﻿{ *********************************************************************** }
 {                                                                         }
-{ PM Code Works Cross Plattform Language Handler Unit v2.1                }
+{ PM Code Works Cross Plattform Language Handler Unit v2.1.1              }
 {                                                                         }
 { Copyright (c) 2011-2016 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
@@ -10,13 +10,12 @@ unit PMCWLanguageFile;
 
 {$IFDEF LINUX} {$mode delphi}{$H+} {$ENDIF}
 
-{$WARN SYMBOL_PLATFORM OFF}
-
 interface
 
 uses
   Classes, SysUtils, Forms, Dialogs, IdURI, Menus,
 {$IFDEF MSWINDOWS}
+{$WARN SYMBOL_PLATFORM OFF}
   Windows, CommCtrl, System.Generics.Collections, ShellAPI, UITypes;
 {$ELSE}
   LCLType, PMCWIniFileParser;
@@ -99,10 +98,8 @@ type
   );
 
   TLocale = Word;
-  TFormatArgument = TVarRec;
 {$ELSE}
   TLocale = WideString;
-  TFormatArgument = type of const;
 {$ENDIF}
   TLanguageId = Word;
 
@@ -189,7 +186,7 @@ type
     ///   The formatted string.
     /// </returns>
     function Format(const AIndex: TLanguageId; const AArgs: array of
-      TFormatArgument): string; overload;
+      {$IFDEF FPC}const{$ELSE}TVarRec{$ENDIF}): string; overload;
 
     /// <summary>
     ///   Embeds data into a multiple strings by replacing a special flag
@@ -205,7 +202,7 @@ type
     ///   The formatted string.
     /// </returns>
     function Format(const AIndices: array of TLanguageId; const AArgs: array of
-      TFormatArgument): string; overload;
+      {$IFDEF FPC}const{$ELSE}TVarRec{$ENDIF}): string; overload;
   {$IFDEF MSWINDOWS}
     /// <summary>
     ///   Shows a balloon tip inside an edit field with more comfortable usage.
@@ -393,7 +390,7 @@ type
     ///   Which button the user has clicked.
     /// </returns>
     function ShowMessage(ATitle: TLanguageId; AIndices: array of TLanguageId;
-      AArgs: array of TFormatArgument; AMessageType: TMsgDlgType = mtInformation): Integer; overload;
+      AArgs: array of const; AMessageType: TMsgDlgType = mtInformation): Integer; overload;
 
     /// <summary>
     ///   Shows an exception message with additional information.
@@ -418,7 +415,7 @@ type
     /// <summary>
     ///   An application defined interval between languages.
     /// </summary>
-    property Interval: Word read FInterval write FInterval;
+    property Interval: Word read FInterval write FInterval default 200;
   {$ENDIF}
 
     /// <summary>
@@ -629,13 +626,13 @@ end;
 {$ENDIF}
 
 function TLanguageFile.Format(const AIndex: TLanguageId; const AArgs: array of
-  TFormatArgument): string;
+  {$IFDEF FPC}const{$ELSE}TVarRec{$ENDIF}): string;
 begin
   Result := SysUtils.Format(GetString(AIndex), AArgs);
 end;
 
 function TLanguageFile.Format(const AIndices: array of TLanguageId;
-  const AArgs: array of TFormatArgument): string;
+  const AArgs: array of {$IFDEF FPC}const{$ELSE}TVarRec{$ENDIF}): string;
 var
   i: Integer;
   Text: string;
@@ -724,7 +721,7 @@ begin
   FLangId := FLanguages[FLocale];
 {$ELSE}
 var
-  Languages: TStringList;
+  Languages: TStrings;
   i: Integer;
 
 begin
@@ -844,7 +841,7 @@ begin
 end;
 
 function TLanguageFile.ShowMessage(ATitle: TLanguageId; AIndices: array of TLanguageId;
-  AArgs: array of TFormatArgument; AMessageType: TMsgDlgType = mtInformation): Integer;
+  AArgs: array of const; AMessageType: TMsgDlgType = mtInformation): Integer;
 begin
   Result := ShowMessage(GetString(ATitle), Format(AIndices, AArgs), AMessageType);
 end;
