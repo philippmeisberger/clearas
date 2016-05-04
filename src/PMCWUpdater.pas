@@ -410,7 +410,18 @@ type
     /// <param name="AOwner">
     ///   The owner.
     /// </param>
-    constructor Create(AOwner: TComponent); reintroduce;
+    constructor Create(AOwner: TComponent); overload; override;
+
+    /// <summary>
+    ///   Constructor for creating a <c>TUpdate</c> instance.
+    /// </summary>
+    /// <param name="AOwner">
+    ///   The owner.
+    /// </param>
+    /// <param name="ALanguageFile">
+    ///   The user interface translation file to use.
+    /// </param>
+    constructor Create(AOwner: TComponent; ALanguageFile: TLanguageFile); reintroduce; overload;
 
     /// <summary>
     ///   Destructor for destroying a <c>TUpdate</c> instance.
@@ -1005,6 +1016,12 @@ begin
   end;  //of with
 
   FTaskBar := TTaskbar.Create(FForm);
+end;
+
+constructor TUpdate.Create(AOwner: TComponent; ALanguageFile: TLanguageFile);
+begin
+  Create(AOwner);
+  FLanguageFile := ALanguageFile;
 end;
 
 destructor TUpdate.Destroy;

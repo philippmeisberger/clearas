@@ -34,7 +34,7 @@ type
     N2: TMenuItem;
     pmCopyLocation: TMenuItem;
     mmHelp: TMenuItem;
-    mmInfo: TMenuItem;
+    mmAbout: TMenuItem;
     mmEdit: TMenuItem;
     mmContext: TMenuItem;
     mmFile: TMenuItem;
@@ -157,7 +157,7 @@ type
     procedure mmImportClick(Sender: TObject);
     procedure mmRefreshClick(Sender: TObject);
     procedure mmDefaultClick(Sender: TObject);
-    procedure mmInfoClick(Sender: TObject);
+    procedure mmAboutClick(Sender: TObject);
     procedure mmUpdateClick(Sender: TObject);
     procedure mmInstallCertificateClick(Sender: TObject);
     procedure mmReportClick(Sender: TObject);
@@ -370,13 +370,12 @@ begin
     FLang.GetString(LID_UPDATE_CONFIRM_DOWNLOAD), mtConfirmation) = IDYES) then
   begin
     // init TUpdate instance
-    Updater := TUpdate.Create(Self);
+    Updater := TUpdate.Create(Self, FLang);
 
     try
       // Set updater options
       with Updater do
       begin
-        LanguageFile := FLang;
         FileNameLocal := 'Clearas.exe';
 
       {$IFDEF WIN64}
@@ -1361,7 +1360,7 @@ begin
     mmUpdate.Caption := GetString(LID_UPDATE_SEARCH);
     mmInstallCertificate.Caption := GetString(LID_CERTIFICATE_INSTALL);
     mmReport.Caption := GetString(LID_REPORT_BUG);
-    mmInfo.Caption := Format(LID_ABOUT, [Application.Title]);
+    mmAbout.Caption := Format(LID_ABOUT, [Application.Title]);
 
     // "Startup" tab TButton labels
     tsStartup.Caption := GetString(LID_STARTUP);
@@ -2714,8 +2713,7 @@ var
   Updater: TUpdate;
 
 begin
-  Updater := TUpdate.Create(Self);
-  Updater.LanguageFile := FLang;
+  Updater := TUpdate.Create(Self, FLang);
 
   try
     // Certificate already installed?
@@ -2749,18 +2747,24 @@ begin
   OpenUrl(URL_CONTACT);
 end;
 
-{ TMain.mmInfoClick
+{ TMain.mmAboutClick
 
   MainMenu entry that shows a info page with build number and version history. }
 
-procedure TMain.mmInfoClick(Sender: TObject);
+procedure TMain.mmAboutClick(Sender: TObject);
 var
-  Info: TInfo;
+  AboutDialog: TAboutDialog;
 
 begin
-  Application.CreateForm(TInfo, Info);
-  Info.ShowModal;
-  Info.Free;
+  AboutDialog := TAboutDialog.Create(Self);
+
+  try
+    AboutDialog.Title := mmAbout.Caption;
+    AboutDialog.Execute();
+
+  finally
+    AboutDialog.Free;
+  end;  //of begin
 end;
 
 { TMain.lCopyClick
