@@ -2759,7 +2759,7 @@ begin
   AboutDialog := TAboutDialog.Create(Self);
 
   try
-    AboutDialog.Title := mmAbout.Caption;
+    AboutDialog.Title := StripHotkey(mmAbout.Caption);
     AboutDialog.Execute();
 
   finally
