@@ -13,10 +13,11 @@ unit PMCWLanguageFile;
 interface
 
 uses
-  Classes, SysUtils, Forms, Dialogs, IdURI, Menus,
+  Classes, SysUtils, Forms, Dialogs, Menus,
 {$IFDEF MSWINDOWS}
 {$WARN SYMBOL_PLATFORM OFF}
-  Windows, CommCtrl, System.Generics.Collections, ShellAPI, UITypes;
+  Winapi.Windows, Winapi.CommCtrl, System.Generics.Collections, Winapi.ShellAPI,
+  System.UITypes, System.NetEncoding;
 {$ELSE}
   LCLType, PMCWIniFileParser;
 {$ENDIF}
@@ -44,6 +45,8 @@ const
   LID_SELECT_LANGUAGE               = 25;
   LID_TO_WEBSITE                    = 29;
   LID_REPORT_BUG                    = 26;
+  LID_REPORT_BUG_SUBJECT            = 19;
+  LID_REPORT_BUG_BODY               = 20;
   LID_FATAL_ERROR                   = 31;
   LID_TECHNICAL_DETAILS             = 32;
   LID_FILTER_REGISTRY_FILE          = 36;
@@ -223,7 +226,7 @@ type
     ///   <c>True</c> if balloon tip was shown successful or <c>False</c>
     ///   otherwise.
     /// </returns>
-    function EditBalloonTip(AEditHandle: THandle; ATitle, AText: WideString;
+    function EditBalloonTip(AEditHandle: THandle; const ATitle, AText: WideString;
       AIcon: TBalloonIcon = biInfo): Boolean; overload;
 
     /// <summary>
@@ -314,7 +317,7 @@ type
     /// <returns>
     ///   Which button the user has clicked.
     /// </returns>
-    function ShowMessage(AText: string;
+    function ShowMessage(const AText: string;
       AMessageType: TMsgDlgType = mtInformation): Integer; overload;
 
     /// <summary>
@@ -332,7 +335,7 @@ type
     /// <returns>
     ///   Which button the user has clicked.
     /// </returns>
-    function ShowMessage(ATitle, AText: string;
+    function ShowMessage(const ATitle, AText: string;
       AMessageType: TMsgDlgType = mtInformation): Integer; overload;
 
     /// <summary>
@@ -404,7 +407,7 @@ type
     /// <param name="AOptions">
     ///   Additional <c>TTaskDialogFlags</c> to use.
     /// </param>
-    procedure ShowException(AText, AInformation: string{$IFDEF MSWINDOWS};
+    procedure ShowException(const AText, AInformation: string{$IFDEF MSWINDOWS};
       AOptions: TTaskDialogFlags = []{$ENDIF});
 
     /// <summary>
@@ -425,6 +428,8 @@ type
   end;
 
 implementation
+
+uses PMCWUpdater;
 
 {$IFDEF MSWINDOWS}
 {$R lang.res}
@@ -461,8 +466,7 @@ end;
 destructor TLanguageFile.Destroy;
 begin
 {$IFDEF LINUX}
-  if Assigned(FIni) then
-    FIni.Free;
+  FreeAndNil(FIni);
 {$ENDIF}
   FreeAndNil(FLanguages);
   FreeAndNil(FListeners);
@@ -472,8 +476,11 @@ end;
 {$IFDEF MSWINDOWS}
 procedure TLanguageFile.OnHyperlinkClicked(Sender: TObject);
 begin
-  if (Sender is TTaskDialog) then
-    ShellExecute(0, 'open', PChar((Sender as TTaskDialog).URL), nil, nil, SW_SHOWNORMAL);
+  // Try to send the report by mail client
+  if (Sender is TTaskDialog) and (ShellExecute(0, 'open',
+    PChar((Sender as TTaskDialog).URL), nil, nil, SW_SHOWNORMAL) <= 32) then
+    // No mail client installed: Send it by report bug formular on website
+    ShellExecute(0, 'open', URL_CONTACT, nil, nil, SW_SHOWNORMAL);
 end;
 {$ENDIF}
 
@@ -599,8 +606,8 @@ begin
 end;
 
 {$IFDEF MSWINDOWS}
-function TLanguageFile.EditBalloonTip(AEditHandle: THandle; ATitle, AText: WideString;
-  AIcon: TBalloonIcon = biInfo): Boolean;
+function TLanguageFile.EditBalloonTip(AEditHandle: THandle; const ATitle,
+  AText: WideString; AIcon: TBalloonIcon = biInfo): Boolean;
 var
   BalloonTip: TEditBalloonTip;
 
@@ -750,13 +757,13 @@ begin
   FListeners.Remove(AListener);
 end;
 
-function TLanguageFile.ShowMessage(AText: string;
+function TLanguageFile.ShowMessage(const AText: string;
   AMessageType: TMsgDlgType = mtInformation): Integer;
 begin
   Result := ShowMessage('', AText, AMessageType);
 end;
 
-function TLanguageFile.ShowMessage(ATitle, AText: string;
+function TLanguageFile.ShowMessage(const ATitle, AText: string;
   AMessageType: TMsgDlgType = mtInformation): Integer;
 var
   Buttons: TMsgDlgButtons;
@@ -846,12 +853,23 @@ begin
   Result := ShowMessage(GetString(ATitle), Format(AIndices, AArgs), AMessageType);
 end;
 
-procedure TLanguageFile.ShowException(AText, AInformation: string{$IFDEF MSWINDOWS};
+procedure TLanguageFile.ShowException(const AText, AInformation: string{$IFDEF MSWINDOWS};
   AOptions: TTaskDialogFlags = []{$ENDIF});
 {$IFDEF MSWINDOWS}
+const
+  URL_MAILTO = '<a href="mailto:%s?subject=%s&body=%s">%s</a>';
+
 var
   TaskDialog: TTaskDialog;
   MailSubject, MailBody: string;
+
+  function URLEncode(const AString: string): string;
+  begin
+    Result := TNetEncoding.URL.Encode(AString);
+    // Embarcadero encodes spaces as '+' which is generally correct but not in
+    // mailto hyperlinks: there it must be '%20' to generate a correct mail!
+    Result := StringReplace(Result, '+', '%20', [rfReplaceAll]);
+  end;
 
 begin
   // TaskDialogIndirect only possible for Windows >= Vista!
@@ -873,11 +891,10 @@ begin
       Text := AText;
       ExpandedText := AInformation;
       ExpandButtonCaption := GetString(LID_TECHNICAL_DETAILS);
-      MailSubject := TIdURI.ParamsEncode('Bug Report "'+ Application.Title +'"');
-      MailBody := TIdURI.ParamsEncode('Dear PM Code Works,'+ sLineBreak + sLineBreak +
-        'I found a possible bug:'+ sLineBreak + AText +' '+ AInformation);
-      FooterText := '<a href="mailto:team@pm-codeworks.de?subject='+ MailSubject +
-        '&body='+ MailBody +'">'+ GetString(LID_REPORT_BUG) +'</a>';
+      MailSubject := URLEncode(Format(LID_REPORT_BUG_SUBJECT, [Application.Title]));
+      MailBody := URLEncode(Format(LID_REPORT_BUG_BODY, [AText, AInformation]));
+      FooterText := SysUtils.Format(URL_MAILTO, ['team@pm-codeworks.de', MailSubject,
+        MailBody, GetString(LID_REPORT_BUG)]);
       Flags := [tfExpandFooterArea, tfEnableHyperlinks] + AOptions;
       CommonButtons := [tcbClose];
       OnHyperlinkClicked := Self.OnHyperlinkClicked;

@@ -23,9 +23,6 @@ uses
   SysUtils, StrUtils;
 
 const
-  { PMCW Website URLs }
-  URL_BASE = 'http://www.pm-codeworks.de/';
-  URL_CONTACT = URL_BASE +'kontakt.html';
 {$IFDEF WIN64}
   PLATFORM_ARCH = ' [64-Bit]';
 {$ELSE}

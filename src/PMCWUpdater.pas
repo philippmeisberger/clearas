@@ -25,14 +25,24 @@ uses
 
 const
   /// <summary>
+  ///   URL to the website.
+  /// </summary>
+  URL_BASE = 'http://www.pm-codeworks.de/';
+
+  /// <summary>
   ///   URL to the download (base) directory on website.
   /// </summary>
-  URL_DIR            = 'http://www.pm-codeworks.de/media/';
+  URL_DIR            = URL_BASE + 'media/';
 
   /// <summary>
   ///   URL to the PHP web downloader script.
   /// </summary>
   URL_DOWNLOAD       = URL_DIR + 'downloader.php?file=';
+
+  /// <summary>
+  ///   URL to the report bug formular on the website.
+  /// </summary>
+  URL_CONTACT        = URL_BASE +'kontakt.html';
 
   /// <summary>
   ///   The version of the updater.
