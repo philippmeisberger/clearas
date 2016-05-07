@@ -15,7 +15,7 @@ uses
   Vcl.ComCtrls, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Dialogs, Vcl.Menus, Vcl.Graphics,
   Vcl.ClipBrd, Registry, StrUtils, System.ImageList, Winapi.CommCtrl,
   System.UITypes, ClearasAPI, ExportListThread, PMCWAbout, PMCWLanguageFile,
-  PMCWOSUtils, PMCWUpdater, PMCWDialogs, Vcl.ImgList;
+  PMCWOSUtils, PMCWUpdater, PMCWDialogs, Vcl.ImgList, Messages;
 
 const
   KEY_RECYCLEBIN = 'CLSID\{645FF040-5081-101B-9F08-00AA002F954E}\shell';
@@ -186,6 +186,8 @@ type
     FTasks: TTaskList;
     FLang: TLanguageFile;
     FUpdateCheck: TUpdateCheck;
+    const
+      DELAY_TIMER = 1;
     function CreateStartupUserBackup(): Boolean;
     function DeleteItem(AConfirmMessageId: TLanguageId): Boolean;
     procedure DeleteStartupItem(Sender: TObject);
@@ -216,6 +218,7 @@ type
     function ShowExportItemDialog(): Boolean;
     procedure ShowColumnDate(AListView: TListView; AShow: Boolean = True);
     function UpdateContextPath(): Boolean;
+    procedure WMTimer(var Message: TMessage); message WM_TIMER;
   end;
 
 var
@@ -1565,6 +1568,12 @@ begin
   end;  //of try
 end;
 
+procedure TMain.WMTimer(var Message: TMessage);
+begin
+  KillTimer(Handle, DELAY_TIMER);
+  GetSelectedList().OnSearchFinish(Self);
+end;
+
 { TMain.bDeleteItemClick
 
   Event method that is called when user wants to delete an item. }
@@ -1700,8 +1709,8 @@ begin
     (Sender as TButtonedEdit).RightButton.PressedImageIndex := 2;
   end;  //of if
 
-  // Refresh TListView
-  GetSelectedList().OnSearchFinish(Self);
+  // Refresh TListView delayed
+  SetTimer(Handle, DELAY_TIMER, 250, nil);
 end;
 
 { TMain.eSearchRightButtonClick
