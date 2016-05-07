@@ -16,9 +16,8 @@ uses
   SysUtils, Classes, Dialogs, Forms, IdHTTP, StrUtils, PMCWLanguageFile,
 {$IFDEF MSWINDOWS}
 {$WARN UNIT_PLATFORM OFF}
-  System.Net.HttpClientComponent, System.Net.HttpClient, System.Net.URLClient,
-  System.NetConsts, Windows, FileCtrl, StdCtrls, ComCtrls, Controls, UITypes,
-  System.Win.TaskbarCore, Vcl.Taskbar, Registry, ShellAPI;
+  Windows, FileCtrl, StdCtrls, ComCtrls, Controls, UITypes, System.Win.TaskbarCore,
+  Vcl.Taskbar, Registry, ShellAPI, System.Net.HttpClient, System.Net.URLClient;
 {$ELSE}
   LCLType, Resource, ElfReader, VersionResource, LResources, VersionTypes;
 {$ENDIF}
@@ -204,7 +203,7 @@ type
     /// <param name="ALang">
     ///   The specific user interface translation file to use.
     /// </param>
-    constructor Create(ARemoteDirName: string; ALang: TLanguageFile); reintroduce; overload;
+    constructor Create(const ARemoteDirName: string; ALang: TLanguageFile); reintroduce; overload;
 
     /// <summary>
     ///    Constructor for creating a <c>TUpdateCheck</c> instance.
@@ -218,7 +217,7 @@ type
     /// <param name="ALang">
     ///   The specific user interface translation file to use.
     /// </param>
-    constructor Create(AOwner: IUpdateListener; ARemoteDirName: string;
+    constructor Create(AOwner: IUpdateListener; const ARemoteDirName: string;
       ALang: TLanguageFile); reintroduce; overload;
 
     /// <summary>
@@ -548,7 +547,7 @@ end;
 
 destructor TUpdateCheckThread.Destroy;
 begin
-  FHttp.Free;
+  FreeAndNil(FHttp);
   inherited Destroy;
 end;
 
@@ -617,7 +616,7 @@ end;
 
 { TUpdateCheck }
 
-constructor TUpdateCheck.Create(ARemoteDirName: string; ALang: TLanguageFile);
+constructor TUpdateCheck.Create(const ARemoteDirName: string; ALang: TLanguageFile);
 begin
   inherited Create;
   FLang := ALang;
@@ -625,7 +624,7 @@ begin
   FListeners := TInterfaceList.Create;
 end;
 
-constructor TUpdateCheck.Create(AOwner: IUpdateListener; ARemoteDirName: string;
+constructor TUpdateCheck.Create(AOwner: IUpdateListener; const ARemoteDirName: string;
   ALang: TLanguageFile);
 begin
   Create(ARemoteDirName, ALang);
@@ -818,7 +817,7 @@ end;
 
 destructor TDownloadThread.Destroy;
 begin
-  FHttp.Free;
+  FreeAndNil(FHttp);
   inherited Destroy;
 end;
 
