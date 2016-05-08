@@ -17,7 +17,8 @@ uses
 {$IFDEF MSWINDOWS}
 {$WARN UNIT_PLATFORM OFF}
   Windows, FileCtrl, StdCtrls, ComCtrls, Controls, UITypes, System.Win.TaskbarCore,
-  Vcl.Taskbar, Registry, ShellAPI, System.Net.HttpClient, System.Net.URLClient;
+  Vcl.Taskbar, Registry, ShellAPI, System.Net.HttpClient, System.Net.URLClient,
+  System.NetConsts;
 {$ELSE}
   LCLType, Resource, ElfReader, VersionResource, LResources, VersionTypes;
 {$ENDIF}
@@ -26,7 +27,7 @@ const
   /// <summary>
   ///   URL to the website.
   /// </summary>
-  URL_BASE = 'http://www.pm-codeworks.de/';
+  URL_BASE           = 'http://www.pm-codeworks.de/';
 
   /// <summary>
   ///   URL to the download (base) directory on website.
