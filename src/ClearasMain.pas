@@ -218,7 +218,7 @@ type
     function ShowExportItemDialog(): Boolean;
     procedure ShowColumnDate(AListView: TListView; AShow: Boolean = True);
     function UpdateContextPath(): Boolean;
-    procedure WMTimer(var Message: TMessage); message WM_TIMER;
+    procedure WMTimer(var Message: TWMTimer); message WM_TIMER;
   end;
 
 var
@@ -1568,7 +1568,7 @@ begin
   end;  //of try
 end;
 
-procedure TMain.WMTimer(var Message: TMessage);
+procedure TMain.WMTimer(var Message: TWMTimer);
 begin
   KillTimer(Handle, DELAY_TIMER);
   GetSelectedList().OnSearchFinish(Self);
