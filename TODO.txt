@@ -1,5 +1,4 @@
 Ideas:
-- Add delay to quick search
 - Add "Execute" to popup menu
 - "Import backup" supports merging existing items (especially scheduled tasks)
 - Cascading Shell submenus (ExtendedSubCommandsKey)

@@ -2,11 +2,11 @@ object Main: TMain
   Left = 371
   Top = 165
   Caption = 'Clearas'
-  ClientHeight = 307
-  ClientWidth = 541
+  ClientHeight = 313
+  ClientWidth = 543
   Color = clBtnFace
-  Constraints.MinHeight = 365
-  Constraints.MinWidth = 557
+  Constraints.MinHeight = 372
+  Constraints.MinWidth = 559
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clBlack
   Font.Height = -11
@@ -18,9 +18,6 @@ object Main: TMain
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnShow = FormShow
-  DesignSize = (
-    541
-    307)
   PixelsPerInch = 96
   TextHeight = 14
   object PageControl: TPageControl
@@ -29,7 +26,7 @@ object Main: TMain
     Width = 543
     Height = 313
     ActivePage = tsStartup
-    Anchors = [akLeft, akTop, akRight, akBottom]
+    Align = alClient
     TabOrder = 0
     OnChange = PageControlChange
     object tsStartup: TTabSheet
@@ -45,13 +42,13 @@ object Main: TMain
         Caption = 'Folgende Programme werden bei jedem Start ausgef'#252'hrt.'
       end
       object lCopy1: TLabel
-        Left = 211
-        Top = 262
-        Width = 112
+        Left = 223
+        Top = 261
+        Width = 88
         Height = 14
         Hint = 'Zur Website'
         Anchors = [akBottom]
-        Caption = #169' P.Meisberger 2016'
+        Caption = 'PM Code Works'
         Font.Charset = ANSI_CHARSET
         Font.Color = clBlack
         Font.Height = -11
@@ -184,29 +181,10 @@ object Main: TMain
     object tsContext: TTabSheet
       Caption = 'Kontextmen'#252
       ImageIndex = 1
+      ExplicitWidth = 533
       DesignSize = (
         535
         284)
-      object lCopy2: TLabel
-        Left = 211
-        Top = 262
-        Width = 112
-        Height = 14
-        Hint = 'Zur Website'
-        Anchors = [akBottom]
-        Caption = #169' P.Meisberger 2016'
-        Font.Charset = ANSI_CHARSET
-        Font.Color = clBlack
-        Font.Height = -11
-        Font.Name = 'Arial'
-        Font.Style = [fsBold]
-        ParentFont = False
-        ParentShowHint = False
-        ShowHint = True
-        OnClick = lCopy1Click
-        OnMouseEnter = lCopy1MouseEnter
-        OnMouseLeave = lCopy1MouseLeave
-      end
       object lContext: TLabel
         Left = 21
         Top = 32
@@ -230,6 +208,30 @@ object Main: TMain
         Height = 14
         Caption = 'Windows'
       end
+      object lCopy2: TLabel
+        Left = 223
+        Top = 261
+        Width = 88
+        Height = 14
+        Hint = 'Zur Website'
+        Margins.Left = 0
+        Margins.Top = 0
+        Margins.Right = 0
+        Margins.Bottom = 8
+        Anchors = [akBottom]
+        Caption = 'PM Code Works'
+        Font.Charset = ANSI_CHARSET
+        Font.Color = clBlack
+        Font.Height = -11
+        Font.Name = 'Arial'
+        Font.Style = [fsBold]
+        ParentFont = False
+        ParentShowHint = False
+        ShowHint = True
+        OnClick = lCopy1Click
+        OnMouseEnter = lCopy1MouseEnter
+        OnMouseLeave = lCopy1MouseLeave
+      end
       object bExportContextItem: TButton
         Left = 428
         Top = 136
@@ -240,6 +242,7 @@ object Main: TMain
         Enabled = False
         TabOrder = 3
         OnClick = bExportItemClick
+        ExplicitLeft = 426
       end
       object bDeleteContextItem: TButton
         Left = 428
@@ -251,6 +254,7 @@ object Main: TMain
         Enabled = False
         TabOrder = 4
         OnClick = bDeleteItemClick
+        ExplicitLeft = 426
       end
       object bCloseContext: TButton
         Left = 428
@@ -261,6 +265,7 @@ object Main: TMain
         Caption = 'Beenden'
         TabOrder = 5
         OnClick = bCloseStartupClick
+        ExplicitLeft = 426
       end
       object bDisableContextItem: TButton
         Left = 428
@@ -272,6 +277,7 @@ object Main: TMain
         Enabled = False
         TabOrder = 2
         OnClick = bDisableItemClick
+        ExplicitLeft = 426
       end
       object bEnableContextItem: TButton
         Left = 428
@@ -283,6 +289,7 @@ object Main: TMain
         Enabled = False
         TabOrder = 1
         OnClick = bEnableContextItemClick
+        ExplicitLeft = 426
       end
       object lwContext: TListView
         Left = 21
@@ -317,6 +324,7 @@ object Main: TMain
         OnDblClick = lwContextDblClick
         OnKeyPress = ListViewKeyPress
         OnSelectItem = lwContextSelectItem
+        ExplicitWidth = 394
       end
       object pbContextProgress: TProgressBar
         Left = 21
@@ -337,6 +345,7 @@ object Main: TMain
         Caption = 'Expertenmodus'
         TabOrder = 6
         OnClick = mmRefreshClick
+        ExplicitLeft = 412
       end
       object eContextSearch: TButtonedEdit
         Left = 21
@@ -359,6 +368,7 @@ object Main: TMain
     object tsService: TTabSheet
       Caption = 'Dienste'
       ImageIndex = 2
+      ExplicitWidth = 533
       DesignSize = (
         535
         284)
@@ -376,14 +386,23 @@ object Main: TMain
         Height = 14
         Caption = 'Eintr'#228'ge dieser Liste werden beim Start von Windows gestartet.'
       end
+      object lVersion3: TLabel
+        Left = 510
+        Top = 4
+        Width = 21
+        Height = 14
+        Alignment = taRightJustify
+        Anchors = [akTop, akRight]
+        Caption = 'v4.3'
+      end
       object lCopy3: TLabel
-        Left = 211
-        Top = 262
-        Width = 112
+        Left = 223
+        Top = 261
+        Width = 88
         Height = 14
         Hint = 'Zur Website'
         Anchors = [akBottom]
-        Caption = #169' P.Meisberger 2016'
+        Caption = 'PM Code Works'
         Font.Charset = ANSI_CHARSET
         Font.Color = clBlack
         Font.Height = -11
@@ -395,15 +414,6 @@ object Main: TMain
         OnClick = lCopy1Click
         OnMouseEnter = lCopy1MouseEnter
         OnMouseLeave = lCopy1MouseLeave
-      end
-      object lVersion3: TLabel
-        Left = 510
-        Top = 4
-        Width = 21
-        Height = 14
-        Alignment = taRightJustify
-        Anchors = [akTop, akRight]
-        Caption = 'v4.3'
       end
       object pbServiceProgress: TProgressBar
         Left = 21
@@ -448,6 +458,7 @@ object Main: TMain
         OnDblClick = lwServiceDblClick
         OnKeyPress = ListViewKeyPress
         OnSelectItem = lwServiceSelectItem
+        ExplicitWidth = 394
       end
       object bExportServiceItem: TButton
         Left = 428
@@ -459,6 +470,7 @@ object Main: TMain
         Enabled = False
         TabOrder = 3
         OnClick = bExportItemClick
+        ExplicitLeft = 426
       end
       object bDeleteServiceItem: TButton
         Left = 428
@@ -470,6 +482,7 @@ object Main: TMain
         Enabled = False
         TabOrder = 4
         OnClick = bDeleteItemClick
+        ExplicitLeft = 426
       end
       object bCloseService: TButton
         Left = 428
@@ -480,6 +493,7 @@ object Main: TMain
         Caption = 'Beenden'
         TabOrder = 5
         OnClick = bCloseStartupClick
+        ExplicitLeft = 426
       end
       object bDisableServiceItem: TButton
         Left = 428
@@ -491,6 +505,7 @@ object Main: TMain
         Enabled = False
         TabOrder = 2
         OnClick = bDisableItemClick
+        ExplicitLeft = 426
       end
       object bEnableServiceItem: TButton
         Left = 428
@@ -502,6 +517,7 @@ object Main: TMain
         Enabled = False
         TabOrder = 1
         OnClick = bEnableServiceItemClick
+        ExplicitLeft = 426
       end
       object cbServiceExpert: TCheckBox
         Left = 414
@@ -512,6 +528,7 @@ object Main: TMain
         Caption = 'Expertenmodus'
         TabOrder = 6
         OnClick = mmRefreshClick
+        ExplicitLeft = 412
       end
       object eServiceSearch: TButtonedEdit
         Left = 21
@@ -534,29 +551,10 @@ object Main: TMain
     object tsTasks: TTabSheet
       Caption = 'Aufgaben'
       ImageIndex = 3
+      ExplicitWidth = 533
       DesignSize = (
         535
         284)
-      object lCopy4: TLabel
-        Left = 211
-        Top = 262
-        Width = 112
-        Height = 14
-        Hint = 'Zur Website'
-        Anchors = [akBottom]
-        Caption = #169' P.Meisberger 2016'
-        Font.Charset = ANSI_CHARSET
-        Font.Color = clBlack
-        Font.Height = -11
-        Font.Name = 'Arial'
-        Font.Style = [fsBold]
-        ParentFont = False
-        ParentShowHint = False
-        ShowHint = True
-        OnClick = lCopy1Click
-        OnMouseEnter = lCopy1MouseEnter
-        OnMouseLeave = lCopy1MouseLeave
-      end
       object lTasks: TLabel
         Left = 21
         Top = 32
@@ -580,6 +578,26 @@ object Main: TMain
         Height = 14
         Caption = 'Windows'
       end
+      object lCopy4: TLabel
+        Left = 223
+        Top = 261
+        Width = 88
+        Height = 14
+        Hint = 'Zur Website'
+        Anchors = [akBottom]
+        Caption = 'PM Code Works'
+        Font.Charset = ANSI_CHARSET
+        Font.Color = clBlack
+        Font.Height = -11
+        Font.Name = 'Arial'
+        Font.Style = [fsBold]
+        ParentFont = False
+        ParentShowHint = False
+        ShowHint = True
+        OnClick = lCopy1Click
+        OnMouseEnter = lCopy1MouseEnter
+        OnMouseLeave = lCopy1MouseLeave
+      end
       object pbTaskProgress: TProgressBar
         Left = 21
         Top = 255
@@ -599,6 +617,7 @@ object Main: TMain
         Caption = 'Beenden'
         TabOrder = 5
         OnClick = bCloseStartupClick
+        ExplicitLeft = 426
       end
       object bDeleteTaskItem: TButton
         Left = 428
@@ -610,6 +629,7 @@ object Main: TMain
         Enabled = False
         TabOrder = 4
         OnClick = bDeleteItemClick
+        ExplicitLeft = 426
       end
       object bDisableTaskitem: TButton
         Left = 428
@@ -621,6 +641,7 @@ object Main: TMain
         Enabled = False
         TabOrder = 2
         OnClick = bDisableItemClick
+        ExplicitLeft = 426
       end
       object bEnableTaskItem: TButton
         Left = 428
@@ -632,6 +653,7 @@ object Main: TMain
         Enabled = False
         TabOrder = 1
         OnClick = bEnableTaskItemClick
+        ExplicitLeft = 426
       end
       object bExportTaskItem: TButton
         Left = 428
@@ -643,6 +665,7 @@ object Main: TMain
         Enabled = False
         TabOrder = 3
         OnClick = bExportItemClick
+        ExplicitLeft = 426
       end
       object cbTaskExpert: TCheckBox
         Left = 414
@@ -653,6 +676,7 @@ object Main: TMain
         Caption = 'Expertenmodus'
         TabOrder = 6
         OnClick = mmRefreshClick
+        ExplicitLeft = 412
       end
       object eTaskSearch: TButtonedEdit
         Left = 21
@@ -704,6 +728,7 @@ object Main: TMain
         OnDblClick = lwTasksDblClick
         OnKeyPress = ListViewKeyPress
         OnSelectItem = lwTasksSelectItem
+        ExplicitWidth = 394
       end
     end
   end
@@ -879,7 +904,7 @@ object Main: TMain
   object QuickSearchIconList: TImageList
     Left = 256
     Bitmap = {
-      494C010103000800300210001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C0101030008003C0210001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000001000000001002000000000000010
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000

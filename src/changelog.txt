@@ -4,6 +4,16 @@ Ein Open-Source Projekt von PM Code Works
 Changelog
 =========
 
+Version 4.?  [??.??.16]
+
+- Zeitverzögerung zur "Quick-Search" hinzugefügt
+  - Suche wird dadurch erst gestartet, wenn Eingabe beendet wurde
+- Layout Verbesserungen
+- neues Manifest für Kompatibilität mit Windows 10
+- Signierung der Programmdatei mit SHA-256
+
+---------------------------------
+
 Version 4.3  [22.04.16]
 
 - Neues Feature "Aufgaben":

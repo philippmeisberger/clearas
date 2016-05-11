@@ -62,7 +62,6 @@ type
     bDeleteStartupItem: TButton;
     bExportStartupItem: TButton;
     lCopy1: TLabel;
-    lCopy2: TLabel;
     bExportContextItem: TButton;
     bDeleteContextItem: TButton;
     bCloseContext: TButton;
@@ -94,7 +93,6 @@ type
     bCloseService: TButton;
     bDisableServiceItem: TButton;
     bEnableServiceItem: TButton;
-    lCopy3: TLabel;
     lVersion3: TLabel;
     bEnableStartupItem: TButton;
     cbServiceExpert: TCheckBox;
@@ -111,7 +109,6 @@ type
     bExportTaskItem: TButton;
     cbTaskExpert: TCheckBox;
     eTaskSearch: TButtonedEdit;
-    lCopy4: TLabel;
     lTasks: TLabel;
     lVersion4: TLabel;
     lWindows4: TLabel;
@@ -122,6 +119,9 @@ type
     pmDeleteIcon: TMenuItem;
     N5: TMenuItem;
     mmShowCaptions: TMenuItem;
+    lCopy2: TLabel;
+    lCopy3: TLabel;
+    lCopy4: TLabel;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
