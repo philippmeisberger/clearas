@@ -4,10 +4,12 @@ Ein Open-Source Projekt von PM Code Works
 Changelog
 =========
 
-Version 4.?  [??.??.16]
+Version 4.3.1  [27.05.16]
 
 - Zeitverzögerung zur "Quick-Search" hinzugefügt
   - Suche wird dadurch erst gestartet, wenn Eingabe beendet wurde
+- Bug fix:
+  - Deaktivieren von Autostarteinträgen funktioniert nun nach Upgrade auf Windows 10
 - Layout Verbesserungen
 - neues Manifest für Kompatibilität mit Windows 10
 - Signierung der Programmdatei mit SHA-256

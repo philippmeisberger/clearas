@@ -803,13 +803,13 @@ const
   STARTUP_USER_XP             = 'Startup' deprecated;
 
   /// <summary>
-  ///   Used in <see cref="TStartupItemStatus"/> to signal that a startup item 
+  ///   Used in <see cref="TStartupItemStatus"/> to signal that a startup item
   ///   is enabled.
   /// </summary>
   ST_ENABLED                  = $2;
 
   /// <summary>
-  ///   Used in <see cref="TStartupItemStatus"/> to signal that a startup item 
+  ///   Used in <see cref="TStartupItemStatus"/> to signal that a startup item
   ///   is disabled.
   /// </summary>
   ST_DISABLED                 = $3;
@@ -1391,7 +1391,7 @@ type
     ///   The status.
     /// </param>
     /// <param name="AExtended">
-    ///   The contextmenu item is only shown when shift-key is pressed and a 
+    ///   The contextmenu item is only shown when shift-key is pressed and a
     ///   right click is performed. Otherwise the item is always shown.
     /// </param>
     constructor Create(const AName, ACaption, AFileName, ALocation: string;
@@ -1469,10 +1469,10 @@ type
     ///   The status.
     /// </param>
     /// <param name="AExtended">
-    ///   The contextmenu item is only shown when shift-key is pressed and a 
+    ///   The contextmenu item is only shown when shift-key is pressed and a
     ///   right click is performed. Otherwise the item is always shown.
     /// </param>
-    constructor Create(const AName, ACaption, ALocation: string; AEnabled, 
+    constructor Create(const AName, ACaption, ALocation: string; AEnabled,
       AExtended: Boolean);
 
     /// <summary>
@@ -3108,10 +3108,7 @@ begin
 
   try
     Reg.RootKey := FRootKey.ToHKey();
-
-    if not Reg.OpenKey(GetApprovedLocation(), False) then
-      raise EStartupException.Create('Key '''+ GetApprovedLocation() +''' does not exist!');
-
+    Reg.OpenKey(GetApprovedLocation(), True);
     TimeNow := Now();
     ItemStatus.Create(ANewStatus, TimeNow);
     Reg.WriteBinaryData(Name, ItemStatus, SizeOf(TStartupItemStatus));
@@ -3583,7 +3580,7 @@ end;
 function TStartupUserItem.GetFullLocation(): string;
 begin
   if FEnabled then
-    // Enabled startup user items have a filesystem location! 
+    // Enabled startup user items have a filesystem location!
     Result := FLocation
   else
     // Windows 8?
@@ -5089,7 +5086,7 @@ begin
       Reg.WriteString('', FullPath);
 
       // Adds item to list
-      Result := (Add(TShellItem.Create(Name, ACaption, FullPath, FileType, True, 
+      Result := (Add(TShellItem.Create(Name, ACaption, FullPath, FileType, True,
         AExtended)) <> -1);
 
       // Refresh TListView
@@ -5173,7 +5170,7 @@ var
   ItemName, Key, FileName, GuID, Caption: string;
   Enabled, Wow64, Extended: Boolean;
   Access64: LongWord;
-  
+
 begin
   Access64 := KEY_WOW64_64KEY or KEY_READ;
   Reg := TRegistry.Create(Access64);
@@ -5264,7 +5261,7 @@ begin
         // Get status and caption of Shell item
         Enabled := not Reg.ValueExists(CM_SHELL_DISABLED);
         Extended := Reg.ValueExists('Extended');
-        
+
         // Cascading shell item?
         if not Reg.OpenKey('command', False) then
         begin
@@ -5273,7 +5270,7 @@ begin
             Continue;
 
           Caption := Reg.ReadString('MUIVerb');
-          Add(TShellCascadingItem.Create(ItemName, Caption, ALocationRoot, 
+          Add(TShellCascadingItem.Create(ItemName, Caption, ALocationRoot,
             Enabled, Extended));
           Continue;
         end;  //of begin
@@ -5287,7 +5284,7 @@ begin
           Continue;
 
         FileName := Reg.ReadString('');
-        Add(TShellItem.Create(ItemName, Caption, FileName, ALocationRoot, 
+        Add(TShellItem.Create(ItemName, Caption, FileName, ALocationRoot,
           Enabled, Extended));
       end  //of begin
       else
