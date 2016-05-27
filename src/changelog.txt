@@ -8,10 +8,14 @@ Version 4.3.1  [27.05.16]
 
 - Zeitverzögerung zur "Quick-Search" hinzugefügt
   - Suche wird dadurch erst gestartet, wenn Eingabe beendet wurde
-- Bug fix:
-  - Deaktivieren von Autostarteinträgen funktioniert nun nach Upgrade auf Windows 10
+- Bug fixes:
+  - Deaktivieren und Löschen von Autostarteinträgen funktioniert nun nach Upgrade auf Windows 10
 - Layout Verbesserungen
 - neues Manifest für Kompatibilität mit Windows 10
+- Verwendung des neuen "Über ..."- Dialogs
+- Fehler-Melde-System verbessert:
+  - Übersetzungen für deutsch, englisch, französisch hinzugefügt
+  - Falls kein Mail-Client für Senden des Fehlerberichts installiert ist, wird Website aufgerufen
 - Signierung der Programmdatei mit SHA-256
 
 ---------------------------------

@@ -884,7 +884,7 @@ type
     procedure ChangeStatus(const ANewStatus: Boolean); override;
     function Disable(): Boolean; virtual; deprecated 'Since Windows 8'; abstract;
     function Enable(): Boolean; virtual; deprecated 'Since Windows 8'; abstract;
-    function DeleteValue(AKeyPath: string; AReallyWow64: Boolean = True): Boolean;
+    function DeleteValue(const AKeyPath: string; AReallyWow64: Boolean = True): Boolean;
     function GetApprovedLocation(): string; virtual;
     function GetRootKey(): TRootKey; override;
     function GetWow64Key(): string; virtual;
@@ -3121,7 +3121,7 @@ begin
   end;  //of try
 end;
 
-function TStartupListItem.DeleteValue(AKeyPath: string;
+function TStartupListItem.DeleteValue(const AKeyPath: string;
   AReallyWow64: Boolean = True): Boolean;
 var
   Reg: TRegistry;
@@ -3136,15 +3136,13 @@ begin
 
   try
     Reg.RootKey := FRootKey.ToHKey();
+    Reg.OpenKey(AKeyPath, False);
 
-    // Key invalid?
-    if not Reg.OpenKey(AKeyPath, False) then
-      raise EStartupException.Create('Key does not exist!');
-
-    // Delete value
+    // Try to delete value
     if (Reg.ValueExists(Name) and not Reg.DeleteValue(Name)) then
       raise EStartupException.Create('Could not delete value!');
 
+    // Deleted or does not exist
     Result := True;
 
   finally
