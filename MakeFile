@@ -9,8 +9,6 @@ SIGN=$(SIGNTOOL) sign /v /sha1 $(CERTSHA1) /tr http://timestamp.globalsign.com/s
 
 build: win32 win64
 
-sign: sign32 sign64
-
 source: src\*.pas Makefile
 	$(ZIP) -9 -r $(PROJECTNAME)-src.zip . src -x .hg\* -x tests\* -x BACKUP\* -x src\AdminManifest.rc -x TODO.txt -i MakeFile -i MakeFile.bat -i *.md -i *.txt -i *.pas -i *.dproj -i *.res -i *.rc -i *.dpr -i *.dfm -i *.inc -i *.dcr -i *.ico
 
@@ -19,18 +17,15 @@ win32: src\$(PROJECTNAME).dproj
 	IF NOT EXIST bin\Win32 MKDIR bin\Win32
 	$(MSBUILD) /p:Config=Release /property:Platform=Win32 "src\$(PROJECTNAME).dproj"
 
-sign32: $(WIN32EXE)
-	$(SIGN) $(WIN32EXE)
-
 win64: src\$(PROJECTNAME).dproj
 	SET BDS=C:\Program Files (x86)\Embarcadero\Studio\16.0
 	IF NOT EXIST bin\Win64 MKDIR bin\Win64
 	$(MSBUILD) /p:Config=Release /property:Platform=Win64 "src\$(PROJECTNAME).dproj"
 
-sign64: $(WIN64EXE)
-	$(SIGN) $(WIN64EXE)
+sign: $(WIN32EXE) $(WIN64EXE)
+	$(SIGN) $(WIN32EXE) $(WIN64EXE)
 
-release: win32 sign32 win64 sign64 source
+release: win32 win64 sign source
 
 clean:
 	IF EXIST $(WIN32EXE) DEL $(WIN32EXE)
