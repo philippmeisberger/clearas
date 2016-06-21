@@ -186,8 +186,6 @@ type
     FTasks: TTaskList;
     FLang: TLanguageFile;
     FUpdateCheck: TUpdateCheck;
-    const
-      DELAY_TIMER = 1;
     function CreateStartupUserBackup(): Boolean;
     function DeleteItem(AConfirmMessageId: TLanguageId): Boolean;
     procedure DeleteStartupItem(Sender: TObject);
@@ -218,6 +216,8 @@ type
     function ShowExportItemDialog(): Boolean;
     procedure ShowColumnDate(AListView: TListView; AShow: Boolean = True);
     function UpdateContextPath(): Boolean;
+    const
+      DELAY_TIMER = 1;
     procedure WMTimer(var Message: TWMTimer); message WM_TIMER;
   end;
 

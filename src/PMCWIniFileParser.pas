@@ -1,6 +1,6 @@
 { *********************************************************************** }
 {                                                                         }
-{ Initialization file parser Unit v1.3                                    }
+{ Initialization file parser Unit v1.3.1                                  }
 {                                                                         }
 { Copyright (c) 2011-2016 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
@@ -367,7 +367,7 @@ type
     /// <returns>
     ///   The index of the line where the item was written.
     /// </returns>
-    function WriteString(const ASectionName, AKey, AValue: string): Integer; virtual;
+    function WriteString(const ASectionName, AKey, AValue: string): Integer;
 
     /// <summary>
     ///   Writes a multi-line string value to a key in section.
@@ -487,17 +487,6 @@ type
     ///   Deletes all contents from the file.
     /// </summary>
     procedure Clear(); override;
-
-    /// <summary>
-    ///   Deletes all quote chars <c>"</c> from a string.
-    /// </summary>
-    /// <param name="AText">
-    ///   The string.
-    /// </param>
-    /// <returns>
-    ///   The string without quote chars.
-    /// </returns>
-    function DeleteQuoteChars(const AText: string): string;
 
     /// <summary>
     ///   Escapes all path delimiters in a path.
@@ -779,7 +768,7 @@ type
     /// <returns>
     ///   The index of the line where the item was written.
     /// </returns>
-    function WriteString(const ASection, AIdent, AValue: string): Integer; override;
+    function WriteString(const ASection, AIdent, AValue: string): Integer; reintroduce;
 
     /// <summary>
     ///   Gets or sets if the 64-bit Registry should be used.
@@ -834,7 +823,7 @@ begin
   if FSaveOnDestroy then
     Save();
 
-  FFile.Free;
+  FreeAndNil(FFile);
   inherited Destroy;
 end;
 
@@ -879,10 +868,6 @@ begin
       end;  //of begin
     end;  //of for
 end;
-
-{ private TIniFile.FindNextSection
-
-  Returns the next index of a section beginning the search from AStartIndex. }
 
 function TIniFile.FindNextSection(AStartIndex: Integer = 0): Integer;
 var
@@ -1391,7 +1376,7 @@ end;
 
 destructor TRegistryFile.Destroy;
 begin
-  FReg.Free;
+  FreeAndNil(FReg);
   inherited Destroy;
 end;
 
@@ -1400,17 +1385,17 @@ begin
   if ((AIdent = '') or (AIdent = '@')) then
     Result := '@'
   else
-    Result := '"'+ AIdent +'"';
+    Result := AIdent.QuotedString('"');
 end;
 
 function TRegistryFile.GetKey(AIndex: Integer): string;
 begin
-  Result := DeleteQuoteChars(inherited GetKey(AIndex));
+  Result := inherited GetKey(AIndex).DeQuotedString('"');
 end;
 
 function TRegistryFile.GetValue(AIndex: Integer): string;
 begin
-  Result := DeleteQuoteChars(inherited GetValue(AIndex));
+  Result := inherited GetValue(AIndex).DeQuotedString('"');
 end;
 
 procedure TRegistryFile.SetAccess(const AAccess64: Boolean);
@@ -1489,11 +1474,6 @@ procedure TRegistryFile.Clear();
 begin
   inherited Clear();
   MakeHeadline();
-end;
-
-function TRegistryFile.DeleteQuoteChars(const AText: string): string;
-begin
-  Result := StringReplace(AText, '"', '', [rfReplaceAll]);
 end;
 
 function TRegistryFile.EscapePathDelimiter(const APath: string): string;
@@ -1760,7 +1740,7 @@ var
 begin
   Value := inherited ReadString(ASection, EscapeIdentifier(AIdent));
   Value := UnescapePathDelimiter(Value);
-  Result := DeleteQuoteChars(Value);
+  Result := Value.DeQuotedString('"');
 end;
 
 function TRegistryFile.Remove(const ASection, AIdent: string): Boolean;
