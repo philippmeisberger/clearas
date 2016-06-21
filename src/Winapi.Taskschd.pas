@@ -418,8 +418,11 @@ type
 type
   IActionCollection = interface;
   {$EXTERNALSYM IActionCollection}
+  {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(IActionCollection)'}
+
   ITaskFolderCollection = interface;
   {$EXTERNALSYM ITaskFolderCollection}
+  {$HPPEMIT 'DECLARE_DINTERFACE_TYPE(ITaskFolderCollection)'}
 
   IRepetitionPattern = interface(IDispatch)
     [SID_IRepetitionPattern]

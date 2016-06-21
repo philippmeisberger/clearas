@@ -253,7 +253,7 @@ type
   /// <remarks>
   ///   This class is intended to be only ancenstor for items.
   /// </remarks>
-  TRootItem = class(TObject)
+  TRootItem = class abstract(TObject)
   private
     function GetArguments(): string;
     function GetFileNameOnly(): string;
@@ -543,7 +543,7 @@ type
   /// <remarks>
   ///   This class is intended to be used only as ancestor for other classes.
   /// </remarks>
-  TRootList<T: TRootItem> = class(TObjectList<T>, IInterface)
+  TRootList<T: TRootItem> = class abstract(TObjectList<T>, IInterface)
   strict private
     FItem: T;
     FDuplicates: Boolean;
@@ -821,12 +821,12 @@ type
   /// <summary>
   ///   A <c>TStartupItemStatus</c> represents the new status of startup items
   ///   since Windows 8. The status of startup items is a binary value of 12
-  ///   bytes. The first 4 bytes contain the enabled value. This can be
-  ///   <c>ST_ENABLED</c> or <c>ST_DISABLED</c>. In case the value is
-  ///   <c>ST_DISABLED</c> the last 8 bytes are a timestamp containing the
-  ///   deactivation time as <c>TFileTime</c>.
+  ///   bytes. The first 4 bytes contain the enabled value. If the status is
+  ///   disabled the last 8 bytes are a timestamp containing the deactivation
+  ///   time as <c>TFileTime</c>.
   /// </summary>
   TStartupItemStatus = record
+
     /// <summary>
     ///   The status value. Can be either <see cref="ST_ENABLED"/> or
     ///   <see cref="ST_DISABLED"/>.
@@ -837,18 +837,6 @@ type
     ///   The deactivation time.
     /// </summary>
     DeactivationTime: TFileTime;
-
-    /// <summary>
-    ///   Constructor for a <c>TStartupItemStatus</c> record.
-    /// </summary>
-    /// <param name="AEnabled">
-    ///   The status.
-    /// </param>
-    /// <param name="ADeactivationTime">
-    ///   The deactivation timestamp. NOTE: Only used when <c>AEnabled</c> is set
-    ///   to <c>False</c>.
-    /// </param>
-    constructor Create(AEnabled: Boolean; ADeactivationTime: TDateTime = 0);
 
     /// <summary>
     ///   Converts the deactivation time to <c>TDateTime</c>.
@@ -864,7 +852,15 @@ type
     /// <returns>
     ///   <c>True</c> if the status is enabled or <c>False</c> otherwise.
     /// </returns>
-    function Enabled(): Boolean;
+    function GetEnabled(): Boolean;
+
+    /// <summary>
+    ///   Changes the status.
+    /// </summary>
+    /// <param name="AEnabled">
+    ///   The new status.
+    /// </param>
+    procedure SetEnabled(AEnabled: Boolean);
   end;
 
   /// <summary>
@@ -2727,15 +2723,14 @@ end;
 
 function TRootList<T>._AddRef(): Integer;
 begin
-  InterlockedIncrement(Result);
+  // No ref-counting!
+  Result := -1;
 end;
 
 function TRootList<T>._Release(): Integer;
 begin
-  InterlockedDecrement(Result);
-
-  if (Result = 0) then
-    Free;
+  // No ref-counting!
+  Result := -1;
 end;
 
 procedure TRootList<T>.Clear();
@@ -3001,7 +2996,28 @@ end;
 
 { TStartupItemStatus }
 
-constructor TStartupItemStatus.Create(AEnabled: Boolean; ADeactivationTime: TDateTime = 0);
+function TStartupItemStatus.GetDeactivationTime(): TDateTime;
+var
+  SystemTime: TSystemTime;
+  LocalFileTime: TFileTime;
+
+begin
+  if not GetEnabled() then
+  begin
+    FileTimeToLocalFileTime(DeactivationTime, LocalFileTime);
+    FileTimeToSystemTime(LocalFileTime, SystemTime);
+    Result := SystemTimeToDateTime(SystemTime);
+  end  //of begin
+  else
+    Result := 0;
+end;
+
+function TStartupItemStatus.GetEnabled(): Boolean;
+begin
+  Result := (Status <> ST_DISABLED);
+end;
+
+procedure TStartupItemStatus.SetEnabled(AEnabled: Boolean);
 var
   SystemTime: TSystemTime;
   LocalFileTime: TFileTime;
@@ -3012,36 +3028,12 @@ begin
   if not AEnabled then
   begin
     Status := ST_DISABLED;
-    DateTimeToSystemTime(ADeactivationTime, SystemTime);
+    DateTimeToSystemTime(Now(), SystemTime);
     SystemTimeToFileTime(SystemTime, LocalFileTime);
     LocalFileTimeToFileTime(LocalFileTime, DeactivationTime);
   end  //of begin
   else
-    Status := ST_ENABLED;
-end;
-
-function TStartupItemStatus.GetDeactivationTime(): TDateTime;
-var
-  ModifiedTime: TFileTime;
-  SystemTime: TSystemTime;
-
-begin
-  try
-    if ((DeactivationTime.dwLowDateTime = 0) and (DeactivationTime.dwHighDateTime = 0)) then
-      Abort;
-
-    FileTimeToLocalFileTime(DeactivationTime, ModifiedTime);
-    FileTimeToSystemTime(ModifiedTime, SystemTime);
-    Result := SystemTimeToDateTime(SystemTime);
-
-  except
-    Result := 0;
-  end;  //of try
-end;
-
-function TStartupItemStatus.Enabled(): Boolean;
-begin
-  Result := (Status = ST_ENABLED);
+    Status := ST_ENABLED
 end;
 
 
@@ -3082,7 +3074,6 @@ procedure TStartupListItem.ChangeStatus(const ANewStatus: Boolean);
 var
   Reg: TRegistry;
   ItemStatus: TStartupItemStatus;
-  TimeNow: TDateTime;
 
 begin
   if not CheckWin32Version(6, 2) then
@@ -3109,10 +3100,9 @@ begin
   try
     Reg.RootKey := FRootKey.ToHKey();
     Reg.OpenKey(GetApprovedLocation(), True);
-    TimeNow := Now();
-    ItemStatus.Create(ANewStatus, TimeNow);
+    ItemStatus.SetEnabled(ANewStatus);
     Reg.WriteBinaryData(Name, ItemStatus, SizeOf(TStartupItemStatus));
-    FTime := TimeNow;
+    FTime := ItemStatus.GetDeactivationTime();
     inherited ChangeStatus(ANewStatus);
 
   finally
@@ -4277,7 +4267,7 @@ begin
     end;  //of begin
 
     Reg.ReadBinaryData(AName, ItemStatus, SizeOf(TStartupItemStatus));
-    Result.Key := ItemStatus.Enabled();
+    Result.Key := ItemStatus.GetEnabled();
 
     // Get deactivation time
     if not Result.Key then
