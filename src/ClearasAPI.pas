@@ -241,9 +241,20 @@ type
     property StartupUser: Boolean read FStartupUser;
   end;
 
-  { Exception classes }
+  /// <summary>
+  ///   Raised when no item is selected.
+  /// </summary>
   EInvalidItem = class(EAccessViolation);
+
+  /// <summary>
+  ///   Raised when another operation is pending on the current list and
+  ///   therefore locked.
+  /// </summary>
   EListBlocked = class(EAbort);
+
+  /// <summary>
+  ///   A non-critical warning.
+  /// </summary>
   EWarning = class(EAbort);
 
   /// <summary>
@@ -496,14 +507,46 @@ type
   end;
 
   /// <summary>
-  ///   The possible basically item changes.
+  ///   The possible basically item changes that needs a visual update.
   /// </summary>
   TItemStatus = (
-    stEnabled, stDisabled, stDeleted
+
+    /// <summary>
+    ///   Item has been enabled
+    /// </summary>
+    stEnabled,
+
+    /// <summary>
+    ///   Item has been disabled.
+    /// </summary>
+    stDisabled,
+
+    /// <summary>
+    ///   Item has been deleted.
+    /// </summary>
+    stDeleted
   );
 
-  { Events }
+  /// <summary>
+  ///   Occurs when an item has changed and needs a visual update.
+  /// </summary>
+  /// <param name="Sender">
+  ///   The sender.
+  /// </param>
+  /// <param name="ANewStatus">
+  ///   The new item status.
+  /// </param>
   TItemChangeEvent = procedure(Sender: TObject; ANewStatus: TItemStatus) of object;
+
+  /// <summary>
+  ///   Occurs when the search has failed.
+  /// </summary>
+  /// <param name="Sender">
+  ///   The sender.
+  /// </param>
+  /// <param name="AErrorMessage">
+  ///   The error message.
+  /// </param>
   TSearchErrorEvent = procedure(Sender: TObject; AErrorMessage: string) of object;
 
   /// <summary>
@@ -773,6 +816,63 @@ type
     property Selected: T read FItem write FItem;
   end;
 
+  /// <summary>
+  ///   Performs a search.
+  /// </summary>
+  TSearchThread = class(TThread)
+  private
+    FOnStart,
+    FOnFinish: TNotifyEvent;
+    FOnError: TSearchErrorEvent;
+    FOnChanged: TItemChangeEvent;
+    FErrorMessage: string;
+    FLock: TCriticalSection;
+    procedure DoNotifyOnError();
+    procedure DoNotifyOnFinish();
+    procedure DoNotifyOnStart();
+  protected
+    FExpertMode,
+    FWin64: Boolean;
+    FSelectedList: TRootList<TRootItem>;
+    procedure Execute(); override; final;
+  public
+    /// <summary>
+    ///   Constructor for creating a <c>TSearchThread</c> instance.
+    /// </summary>
+    /// <param name="ASelectedList">
+    ///   A <c>TRootList</c> to be filled.
+    /// </param>
+    /// <param name="ALock">
+    ///   The mutex.
+    /// </param>
+    /// <param name="AExpertMode">
+    ///   If set to <c>True</c> use the expert search mode. Otherwise use the
+    ///   default search mode.
+    /// </param>
+    constructor Create(ASelectedList: TRootList<TRootItem>; ALock: TCriticalSection;
+      AExpertMode: Boolean = False);
+
+    /// <summary>
+    ///   Occurs when search has failed.
+    /// </summary>
+    property OnError: TSearchErrorEvent read FOnError write FOnError;
+
+    /// <summary>
+    ///   Occurs when search has finished.
+    /// </summary>
+    property OnFinish: TNotifyEvent read FOnFinish write FOnFinish;
+
+    /// <summary>
+    ///   Occurs when search has started.
+    /// </summary>
+    property OnStart: TNotifyEvent read FOnStart write FOnStart;
+
+    /// <summary>
+    ///   Search for 64-bit items.
+    /// </summary>
+    property Win64: Boolean read FWin64 write FWin64;
+  end;
+
 const
   { Startup registry keys until Windows 7 }
   KEY_STARTUP_DISABLED        = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\startupreg\' deprecated;
@@ -815,7 +915,9 @@ const
   ST_DISABLED                 = $3;
 
 type
-  { Exception class }
+  /// <summary>
+  ///   Raised by startup feature classes.
+  /// </summary>
   EStartupException = class(Exception);
 
   /// <summary>
@@ -1170,7 +1272,7 @@ type
     function AddUserItem(ALnkFile: TStartupLnkFile; AStartupUser: Boolean): Integer;
     function DeleteBackupFile(): Boolean; deprecated 'Since Windows 8';
     function LoadStatus(const AName: string;
-      AStartupLocation: TStartupLocation): TPair<Boolean, TDateTime>;
+      AStartupLocation: TStartupLocation): TStartupItemStatus;
   public
     /// <summary>
     ///   Constructor for creating a <c>TStartupList</c> instance.
@@ -1305,7 +1407,9 @@ const
   CM_LOCATIONS_DEFAULT        = 'Directory, Folder, *, Drive';
 
 type
-  { Exception class }
+  /// <summary>
+  ///   Raised by context menu feature classes.
+  /// </summary>
   EContextMenuException = class(Exception);
 
   /// <summary>
@@ -1697,7 +1801,9 @@ const
   KEY_SERVICE_ENABLED         = 'SYSTEM\CurrentControlSet\services\';
 
 type
-  { Exception class }
+  /// <summary>
+  ///   Raised by service feature classes.
+  /// </summary>
   EServiceException = class(Exception);
 
   /// <summary>
@@ -1880,7 +1986,9 @@ type
     property Manager: SC_HANDLE read FManager;
   end;
 
-  { Exception class }
+  /// <summary>
+  ///   Raised by scheduled tasks feature classes.
+  /// </summary>
   ETaskException = class(EOleError);
 
   /// <summary>
@@ -2055,8 +2163,6 @@ type
   end;
 
 implementation
-
-uses ClearasSearchThread;
 
 {$I LanguageIDs.inc}
 
@@ -2994,6 +3100,68 @@ begin
 end;
 
 
+{ TSearchThread }
+
+constructor TSearchThread.Create(ASelectedList: TRootList<TRootItem>;
+  ALock: TCriticalSection; AExpertMode: Boolean = False);
+begin
+  inherited Create(True);
+  FreeOnTerminate := True;
+  FSelectedList := ASelectedList;
+  FLock := ALock;
+  FExpertMode := AExpertMode;
+  FWin64 := (TOSVersion.Architecture = arIntelX64);
+  FOnChanged := FSelectedList.OnChanged;
+end;
+
+procedure TSearchThread.DoNotifyOnError();
+begin
+  if Assigned(FOnError) then
+    FOnError(Self, FErrorMessage);
+end;
+
+procedure TSearchThread.DoNotifyOnFinish();
+begin
+  if Assigned(FOnFinish) then
+    FOnFinish(Self);
+
+  // Notify that GUI counter needs to be updated
+  if Assigned(FOnChanged) then
+    FOnChanged(Self, stDeleted);
+end;
+
+procedure TSearchThread.DoNotifyOnStart();
+begin
+  if Assigned(FOnStart) then
+    FOnStart(Self);
+end;
+
+procedure TSearchThread.Execute();
+begin
+  FLock.Acquire();
+  Synchronize(DoNotifyOnStart);
+
+  try
+    try
+      Assert(Assigned(FSelectedList));
+      FSelectedList.Clear();
+      FSelectedList.Search(FExpertMode, FWin64);
+
+    finally
+      FLock.Release();
+      Synchronize(DoNotifyOnFinish);
+    end;  //of try
+
+  except
+    on E: Exception do
+    begin
+      FErrorMessage := Format('%s: %s', [ClassName, E.Message]);
+      Synchronize(DoNotifyOnError);
+    end;
+  end;  //of try
+end;
+
+
 { TStartupItemStatus }
 
 function TStartupItemStatus.GetDeactivationTime(): TDateTime;
@@ -3002,7 +3170,9 @@ var
   LocalFileTime: TFileTime;
 
 begin
-  if not GetEnabled() then
+  // Disabled and time valid?
+  if (not GetEnabled() and (DeactivationTime.dwLowDateTime <> 0) and
+    (DeactivationTime.dwHighDateTime <> 0)) then
   begin
     FileTimeToLocalFileTime(DeactivationTime, LocalFileTime);
     FileTimeToSystemTime(LocalFileTime, SystemTime);
@@ -4237,19 +4407,17 @@ begin
 end;
 
 function TStartupList.LoadStatus(const AName: string;
-  AStartupLocation: TStartupLocation): TPair<Boolean, TDateTime>;
+  AStartupLocation: TStartupLocation): TStartupItemStatus;
 var
   Reg: TRegistry;
-  ItemStatus: TStartupItemStatus;
 
 begin
+  ZeroMemory(@Result, SizeOf(TStartupItemStatus));
+  Result.Status := ST_ENABLED;
+
   // Only on Windows 8 and later!
   if not CheckWin32Version(6, 2) then
-  begin
-    Result.Key := True;
-    Result.Value := 0;
     Exit;
-  end;  //of if
 
   // Status is stored in 64 bit registry
   Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ);
@@ -4258,20 +4426,9 @@ begin
     Reg.RootKey := AStartupLocation.GetApprovedLocation().Key;
     Reg.OpenKey(AStartupLocation.GetApprovedLocation.Value, False);
 
-    // Value does not exist or approved value is invalid?
-    if (not Reg.ValueExists(AName) or (Reg.GetDataSize(AName) <> SizeOf(TStartupItemStatus))) then
-    begin
-      Result.Key := True;
-      Result.Value := 0;
-      Exit;
-    end;  //of begin
-
-    Reg.ReadBinaryData(AName, ItemStatus, SizeOf(TStartupItemStatus));
-    Result.Key := ItemStatus.GetEnabled();
-
-    // Get deactivation time
-    if not Result.Key then
-      Result.Value := ItemStatus.GetDeactivationTime();
+    // Approved value exists and is valid?
+    if (Reg.ValueExists(AName) and (Reg.GetDataSize(AName) = SizeOf(TStartupItemStatus))) then
+      Reg.ReadBinaryData(AName, Result, SizeOf(TStartupItemStatus));
 
   finally
     Reg.CloseKey();
@@ -4308,7 +4465,7 @@ var
   StartupUser, Wow64, RunOnce: Boolean;
   RootKey: TRootKey;
   Item: TStartupListItem;
-  Status: TPair<Boolean, TDateTime>;
+  Status: TStartupItemStatus;
   Location, Name, FileName: string;
 
 begin
@@ -4339,8 +4496,8 @@ begin
           RootKey := rkUnknown;
 
         Item := TStartupUserItem.Create(Name, FileName, Location, RootKey,
-          Status.Key, LnkFile);
-        Item.Time := Status.Value;
+          Status.GetEnabled(), LnkFile);
+        Item.Time := Status.GetDeactivationTime();
         Add(Item);
       until FindNext(SearchResult) <> 0;
 
@@ -4378,10 +4535,9 @@ begin
       Status := LoadStatus(Name, AStartupLocation);
       Location := Reg.CurrentPath;
       FileName := Reg.ReadString(Items[i]);
-
-      Item := TStartupItem.Create(Name, FileName, Location, RootKey, Status.Key,
+      Item := TStartupItem.Create(Name, FileName, Location, RootKey, Status.GetEnabled(),
         Wow64, RunOnce);
-      Item.Time := Status.Value;
+      Item.Time := Status.GetDeactivationTime();
       Add(Item);
     end;  //of for
 

@@ -14,52 +14,80 @@ uses
   Classes, SysUtils, ClearasAPI;
 
 type
-  TExportEvent = procedure(Sender: TObject; APageControlIndex: Integer) of object;
+  /// <summary>
+  ///   The list export event.
+  /// </summary>
+  /// <param name="Sender">
+  ///   The sender.
+  /// </param>
+  /// <param name="APageControlIndex">
+  ///   The index of the <c>TPageControl</c> on which the export was invoked.
+  /// </param>
+  TExportListEvent = procedure(Sender: TObject; APageControlIndex: Integer) of object;
 
+  /// <summary>
+  ///   Exports a <see cref="TRootList"/> as .reg file.
+  /// </summary>
   TExportListThread = class(TThread)
   private
-    FList: TRootList<TRootItem>;
+    FSelectedList: TRootList<TRootItem>;
     FFileName,
     FErrorMessage: string;
-    FPageControlIndex: Byte;
+    FPageControlIndex: Integer;
     FOnFinish,
-    FOnStart: TExportEvent;
+    FOnStart: TExportListEvent;
     FOnError: TSearchErrorEvent;
     procedure DoNotifyOnError();
     procedure DoNotifyOnFinish();
     procedure DoNotifyOnStart();
   protected
-    procedure Execute; override;
+    procedure Execute; override; final;
   public
-    constructor Create(AList: TRootList<TRootItem>; const AFileName: string;
-      APageControlIndex: Byte);
-    { external }
+    /// <summary>
+    ///   Constructor for creating a <c>TExportListThread</c> instance.
+    /// </summary>
+    /// <param name="ASelectedList">
+    ///   A <c>TRootList</c> to be filled.
+    /// </param>
+    /// <param name="ALock">
+    ///   The mutex.
+    /// </param>
+    /// <param name="AExpertMode">
+    ///   If set to <c>True</c> use the expert search mode. Otherwise use the
+    ///   default search mode.
+    /// </param>
+    constructor Create(ASelectedList: TRootList<TRootItem>; const AFileName: string;
+      APageControlIndex: Integer);
+
+    /// <summary>
+    ///   Occurs when search has failed.
+    /// </summary>
     property OnError: TSearchErrorEvent read FOnError write FOnError;
-    property OnFinish: TExportEvent read FOnFinish write FOnFinish;
-    property OnStart: TExportEvent read FOnStart write FOnStart;
+
+    /// <summary>
+    ///   Occurs when the export has finished.
+    /// </summary>
+    property OnFinish: TExportListEvent read FOnFinish write FOnFinish;
+
+    /// <summary>
+    ///   Occurs when the export has started.
+    /// </summary>
+    property OnStart: TExportListEvent read FOnStart write FOnStart;
   end;
 
 implementation
 
 { TExportListThread }
 
-{ public TExportListThread.Create
-
-  Constructor for creating a TExportListThread instance. }
-
-constructor TExportListThread.Create(AList: TRootList<TRootItem>;
-  const AFileName: string; APageControlIndex: Byte);
+constructor TExportListThread.Create(ASelectedList: TRootList<TRootItem>;
+  const AFileName: string; APageControlIndex: Integer);
 begin
   inherited Create(True);
   FreeOnTerminate := True;
-  FList := AList;
+  FSelectedList := ASelectedList;
   FFileName := AFileName;
   FPageControlIndex := APageControlIndex;
 end;
-
-{ private TExportListThread.DoNotifyOnError
-
-  Synchronizable event method that is called when an error has occured. }
 
 procedure TExportListThread.DoNotifyOnError();
 begin
@@ -67,19 +95,11 @@ begin
     FOnError(Self, FErrorMessage);
 end;
 
-{ private TExportListThread.DoNotifyOnFinish
-
-  Synchronizable method that is called when thread has finished. }
-
 procedure TExportListThread.DoNotifyOnFinish();
 begin
   if Assigned(FOnFinish) then
     FOnFinish(Self, FPageControlIndex);
 end;
-
-{ private TExportListThread.DoNotifyOnStart
-
-  Synchronizable method that is called when thread has started. }
 
 procedure TExportListThread.DoNotifyOnStart();
 begin
@@ -87,17 +107,13 @@ begin
     FOnStart(Self, FPageControlIndex);
 end;
 
-{ protected TExportListThread.Execute
-
-  Exports a TRootRegList as .reg file. }
-
 procedure TExportListThread.Execute;
 begin
   try
     Synchronize(DoNotifyOnStart);
 
     try
-      FList.ExportList(FFileName);
+      FSelectedList.ExportList(FFileName);
 
     finally
       Synchronize(DoNotifyOnFinish);

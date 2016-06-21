@@ -5,14 +5,13 @@ program Clearas;
 
 uses
   Forms,
-{$IFNDEF DEBUG}
+  {$IFNDEF DEBUG}
   AdminManifest in 'AdminManifest.pas',
-{$ENDIF}
+  {$ENDIF }
   PMCWMutex in 'PMCWMutex.pas',
   ClearasMain in 'ClearasMain.pas' {Main},
   ClearasAPI in 'ClearasAPI.pas',
   ExportListThread in 'ExportListThread.pas',
-  ClearasSearchThread in 'ClearasSearchThread.pas',
   PMCWAbout in 'PMCWAbout.pas',
   PMCWUpdater in 'PMCWUpdater.pas';
 
