@@ -4,6 +4,13 @@ Ein Open-Source Projekt von PM Code Works
 Changelog
 =========
 
+Version 4.3.2  [??.07.16]
+
+- Bug fix in .reg Datei Export:
+  - Binäre Daten haben nun korrektes Format und können wieder importiert werden
+
+---------------------------------
+
 Version 4.3.1  [27.05.16]
 
 - Zeitverzögerung zur "Quick-Search" hinzugefügt
