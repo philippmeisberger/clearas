@@ -377,44 +377,6 @@ type
   {$EXTERNALSYM TASK_COMPATIBILITY}
   TTaskCompatibility = TASK_COMPATIBILITY;
 
-  DAILY = packed record
-    DaysInterval: Word;
-  end;
-  {$EXTERNALSYM DAILY}
-  TDaily = DAILY;
-
-  MONTHLYDATE = packed record
-    rgfDays: DWORD;
-    rgfMonths: WORD;
-  end;
-  {$EXTERNALSYM MONTHLYDATE}
-  TMonthlyDate = MONTHLYDATE;
-
-  MONTHLYDOW = packed record
-    wWhichWeek: WORD;
-    rgfDaysOfTheWeek: WORD;
-    rgfMonths: WORD;
-  end;
-  {$EXTERNALSYM MONTHLYDOW}
-  TMonthlyDow = MONTHLYDOW;
-
-  WEEKLY = packed record
-    WeeksInterval: WORD;
-    rgfDaysOfTheWeek: WORD;
-  end;
-  {$EXTERNALSYM WEEKLY}
-  TWeekly = WEEKLY;
-
-  TRIGGER_TYPE_UNION = record
-    case Integer of
-      0: ( Daily: DAILY; );
-      1: ( Weekly: WEEKLY; );
-      2: ( MonthlyDate: MONTHLYDATE; );
-      3: ( MonthlyDOW: MONTHLYDOW; );
-  end;
-  {$EXTERNALSYM TRIGGER_TYPE_UNION}
-  TTriggerTypeUnion = TRIGGER_TYPE_UNION;
-
 type
   IActionCollection = interface;
   {$EXTERNALSYM IActionCollection}
