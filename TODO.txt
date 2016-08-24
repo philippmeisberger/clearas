@@ -3,3 +3,4 @@ Ideas:
 - "Import backup" supports merging existing items (especially scheduled tasks)
 - Cascading Shell submenus (ExtendedSubCommandsKey)
 - Shell bags cleaning
+- Receive notifications about registry changes
