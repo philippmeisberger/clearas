@@ -1,18 +1,20 @@
 { *********************************************************************** }
 {                                                                         }
-{ PM Code Works Windows Administrator access rights manifest              }
+{ PM Code Works Certificate Authority                                     }
 {                                                                         }
-{ Copyright (c) 2011-2015 P.Meisberger (PM Code Works)                    }
+{ Copyright (c) 2011-2016 P.Meisberger (PM Code Works)                    }
 {                                                                         }
 { *********************************************************************** }
 
-unit AdminManifest;
+unit PMCW.CA;
 
 interface
 
-{$R AdminManifest.res}
+const
+  CERTIFICATE_FINGERPRINT_SHA1 = '9e358f6fdd418335baf6217d432e45ec36a4ffe1';
+
+{$R PMCW.CA.res}
 
 implementation
 
 end.
- 

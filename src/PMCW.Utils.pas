@@ -1,16 +1,14 @@
 { *********************************************************************** }
 {                                                                         }
-{ PM Code Works Operating System Utilities Unit v2.3                      }
+{ PM Code Works Utilities Unit v2.3.1                                     }
 {                                                                         }
 { Copyright (c) 2011-2016 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
 { *********************************************************************** }
 
-unit PMCWOSUtils;
+unit PMCW.Utils;
 
-{$IFDEF LINUX} {$mode delphi}{$H+} {$ENDIF}
-
-{$WARN SYMBOL_PLATFORM OFF}
+{$IFDEF FPC}{$mode delphiunicode}{$ENDIF}
 
 interface
 
@@ -23,10 +21,12 @@ uses
   SysUtils, StrUtils;
 
 const
+{$IFDEF MSWINDOWS}
 {$IFDEF WIN64}
   PLATFORM_ARCH = ' [64-Bit]';
 {$ELSE}
   PLATFORM_ARCH = ' [32-Bit]';
+{$ENDIF}
 {$ENDIF}
 
 type
@@ -78,7 +78,7 @@ type
     /// <param name="AShortHKey">
     ///   The <c>HKEY</c> short string representation.
     /// </param>
-    procedure FromString(AShortHKey: string);
+    procedure FromString(const AShortHKey: string);
 
     /// <summary>
     ///   Gets the string representation.
@@ -350,7 +350,7 @@ begin
 
   if Succeeded(SHGetFolderPath(0, ACSIDL, 0, 0, @Path)) then
   begin
-    AFolderPath := IncludeTrailingBackslash(Path);
+    AFolderPath := IncludeTrailingPathDelimiter(Path);
     Result := True;
   end;  //of begin
 end;
@@ -372,7 +372,7 @@ begin
 
   if Succeeded(SHGetKnownFolderPath(AFolderId, 0, 0, Path)) then
   begin
-    AFolderPath := IncludeTrailingBackslash(string(Path));
+    AFolderPath := IncludeTrailingPathDelimiter(string(Path));
     CoTaskMemFree(Path);
     Result := True;
   end;  //of begin
@@ -412,7 +412,7 @@ begin
       if (Length > 0) then
       begin
         SetLength(Directory, Length);
-        ASystemWow64Directory := IncludeTrailingBackslash(Directory);
+        ASystemWow64Directory := IncludeTrailingPathDelimiter(Directory);
         Result := True;
       end;  //of begin
     end;  //of begin
@@ -432,7 +432,7 @@ begin
   Path := '%TEMP%';
 
   if ExpandEnvironmentVar(Path) then
-    Result := IncludeTrailingBackslash(Path);
+    Result := IncludeTrailingPathDelimiter(Path);
 end;
 {$ENDIF}
 
@@ -578,7 +578,7 @@ begin
     raise EArgumentException.Create('Unknown HKEY!');
 end;
 
-procedure TRootKeyHelper.FromString(AShortHKey: string);
+procedure TRootKeyHelper.FromString(const AShortHKey: string);
 var
   RootKey, FoundKey: TRootKey;
 

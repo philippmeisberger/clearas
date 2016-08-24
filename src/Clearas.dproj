@@ -64,7 +64,7 @@
         <VerInfo_MinorVer>3</VerInfo_MinorVer>
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
         <VerInfo_MajorVer>4</VerInfo_MajorVer>
-        <VerInfo_Build>1710</VerInfo_Build>
+        <VerInfo_Build>1712</VerInfo_Build>
         <Manifest_File>$(BDS)\bin\default_app.manifest</Manifest_File>
         <DCC_DcuOutput>lib\$(Platform)\$(Config)</DCC_DcuOutput>
         <DCC_ExeOutput>..\bin\$(Platform)\$(Config)</DCC_ExeOutput>
@@ -72,7 +72,7 @@
         <SanitizedProjectName>Clearas</SanitizedProjectName>
         <DCC_S>false</DCC_S>
         <DCC_Namespace>Vcl;Vcl.Imaging;Vcl.Touch;Vcl.Samples;Vcl.Shell;System;Xml;Data;Datasnap;Web;Soap;Winapi;System.Win;$(DCC_Namespace)</DCC_Namespace>
-        <VerInfo_Keys>CompanyName=PM Code Works;FileDescription=Clearas;FileVersion=4.3.2.1710;InternalName=;LegalCopyright=Philipp Meisberger 2016;LegalTrademarks=PM Code Works;OriginalFilename=Clearas.exe;ProductName=Clearas;ProductVersion=4.3;Comments=Delphi XE8;CFBundleName=</VerInfo_Keys>
+        <VerInfo_Keys>CompanyName=PM Code Works;FileDescription=Clearas;FileVersion=4.3.2.1712;InternalName=;LegalCopyright=Philipp Meisberger 2016;LegalTrademarks=PM Code Works;OriginalFilename=Clearas.exe;ProductName=Clearas;ProductVersion=4.3;Comments=Delphi XE8;CFBundleName=</VerInfo_Keys>
         <VerInfo_Locale>1031</VerInfo_Locale>
         <DCC_F>false</DCC_F>
         <DCC_K>false</DCC_K>
@@ -124,15 +124,10 @@
         <RcCompile Include="description.rc">
             <Form>description.res</Form>
         </RcCompile>
-        <DCCReference Include="AdminManifest.pas"/>
-        <DCCReference Include="PMCWMutex.pas"/>
         <DCCReference Include="ClearasMain.pas">
             <Form>Main</Form>
         </DCCReference>
         <DCCReference Include="ClearasAPI.pas"/>
-        <DCCReference Include="ExportListThread.pas"/>
-        <DCCReference Include="PMCWAbout.pas"/>
-        <DCCReference Include="PMCWUpdater.pas"/>
         <RcCompile Include="lang.rc">
             <Form>lang.res</Form>
         </RcCompile>

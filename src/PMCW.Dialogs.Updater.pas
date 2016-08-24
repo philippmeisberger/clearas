@@ -1,24 +1,25 @@
 { *********************************************************************** }
 {                                                                         }
-{ PM Code Works Updater v3.0.3                                            }
+{ PM Code Works Updater v3.0.4                                            }
 {                                                                         }
 { Copyright (c) 2011-2016 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
 { *********************************************************************** }
 
-unit PMCWUpdater;
+unit PMCW.Dialogs.Updater;
 
-{$IFDEF LINUX} {$mode delphi}{$H+} {$ENDIF}
+{$IFDEF FPC}{$mode delphiunicode}{$ENDIF}
 
 interface
 
 uses
-  SysUtils, Classes, Dialogs, Forms, IdHTTP, StrUtils, PMCWLanguageFile,
-{$IFDEF MSWINDOWS}
+  SysUtils, Classes, Dialogs, Forms, IdHTTP, PMCW.LanguageFile,
+{$IFNDEF FPC}
 {$WARN UNIT_PLATFORM OFF}
   Windows, FileCtrl, StdCtrls, ComCtrls, Controls, UITypes, System.Win.TaskbarCore,
   Vcl.Taskbar, Registry, ShellAPI, System.Net.HttpClient, System.Net.URLClient,
-  System.NetConsts;
+  System.NetConsts, PMCW.CA;
+{$WARN UNIT_PLATFORM ON}
 {$ELSE}
   LCLType, Resource, ElfReader, VersionResource, LResources, VersionTypes;
 {$ENDIF}
@@ -74,17 +75,15 @@ const
   /// </summary>
   VERSION_BUILD      = 3;
 
-{$IFDEF MSWINDOWS}
-{$I Certificate.inc}
-{$ENDIF}
-
 type
-{$IFDEF MSWINDOWS}
+{$IFNDEF FPC}
   /// <summary>
   ///   A <c>TFileProductVersion</c> contains version information: major, minor,
-  ///   service and build. To access each version information use the <c>VERSION_*</c>
-  ///   constants above.
+  ///   service and build.
   /// </summary>
+  /// <remarks>
+  ///   To access each version information use the <c>VERSION_*</c> constants above.
+  /// </remarks>
   TFileProductVersion = array[VERSION_MAJOR..VERSION_BUILD] of Cardinal;
 {$ENDIF}
 
@@ -97,19 +96,37 @@ type
     /// <summary>
     ///   Is called when a new version is available on website.
     /// </summary>
-    /// <param name="Sender">
-    ///    The caller.
-    /// </param>
     /// <param name="ANewBuild">
     ///    The new build number which is available.
     /// </param>
-    procedure OnUpdate(Sender: TObject; const ANewBuild: Cardinal);
+    procedure OnUpdate(const ANewBuild: Cardinal);
   end;
 
-  { TUpdateCheckThread events }
+  /// <summary>
+  ///   Occurs when an update is available.
+  /// </summary>
+  /// <param name="Sender">
+  ///   The sender.
+  /// </param>
+  /// <param name="ANewBuild">
+  ///   The newest build number.
+  /// </param>
   TOnUpdateAvailableEvent = procedure(Sender: TThread; const ANewBuild: Cardinal) of object;
+
+  /// <summary>
+  ///   Occurs when checking for update has failed.
+  /// </summary>
+  /// <param name="Sender">
+  ///   The sender.
+  /// </param>
+  /// <param name="AResponseCode">
+  ///   The response code (usually a HTTP error code).
+  /// </param>
+  /// <param name="AResponseText">
+  ///   The message of the response code.
+  /// </param>
   TOnUpdateCheckErrorEvent = procedure(Sender: TThread; AResponseCode: Integer;
-    AResponseText: string) of object;
+    const AResponseText: string) of object;
 
   /// <summary>
   ///   A <c>TUpdateCheckThread</c> downloads the version.txt from the website
@@ -147,8 +164,8 @@ type
     ///   start the thread use the <c>Start()</c> method. If set to <c>False</c>
     ///   the thread starts directly executing!
     /// </param>
-    constructor Create(ACurrentBuild: Cardinal; ARemoteDirName: string;
-      ACreateSuspended: Boolean = True);
+    constructor Create(ACurrentBuild: Cardinal; const ARemoteDirName: string;
+      ACreateSuspended: Boolean = True); reintroduce;
 
     /// <summary>
     ///   Destructor for destroying a <c>TUpdateCheckThread</c> instance.
@@ -189,9 +206,8 @@ type
     FUserUpdate: Boolean;
     FRemoteDirName: string;
     FNewBuild: Cardinal;
-    { TUpdateCheckThread events }
     procedure OnCheckError(Sender: TThread; AResponseCode: Integer;
-      AResponseText: string);
+      const AResponseText: string);
     procedure OnNoUpdateAvailable(Sender: TObject);
     procedure OnUpdateAvailable(Sender: TThread; const ANewBuild: Cardinal);
   public
@@ -280,7 +296,7 @@ type
     procedure RemoveListener(AListener: IUpdateListener);
   end;
 
-{$IFDEF MSWINDOWS}
+{$IFNDEF FPC}
 const
   /// <summary>
   ///   Error saying that something went wrong with server certificate validation.
@@ -385,11 +401,11 @@ type
   end;
 
   /// <summary>
-  ///   <c>TUpdate</c> is a dialog which downloads a file from the website and
+  ///   <c>TUpdateDialog</c> is a dialog which downloads a file from the website and
   ///   shows the progress in a <c>TProgressBar</c> and on the taskbar. The
   ///   download is encrypted using TLS per default.
   /// </summary>
-  TUpdate = class(TCommonDialog)
+  TUpdateDialog = class(TCommonDialog)
   private
     FForm: TForm;
     FProgressBar: TProgressBar;
@@ -520,14 +536,10 @@ type
 
 implementation
 
-{$IFDEF MSWINDOWS}
-{$R CA.res}
-{$ENDIF}
-
 { TUpdateCheckThread }
 
 constructor TUpdateCheckThread.Create(ACurrentBuild: Cardinal;
-  ARemoteDirName: string; ACreateSuspended: Boolean = True);
+  const ARemoteDirName: string; ACreateSuspended: Boolean = True);
 begin
   inherited Create(ACreateSuspended);
   FreeOnTerminate := True;
@@ -642,7 +654,7 @@ begin
 end;
 
 procedure TUpdateCheck.OnCheckError(Sender: TThread; AResponseCode: Integer;
-  AResponseText: string);
+  const AResponseText: string);
 begin
   if FUserUpdate then
     if (AResponseCode > 0) then
@@ -671,7 +683,7 @@ begin
   // Notify all listeners
   for i := 0 to FListeners.Count - 1 do
     if Supports(FListeners[i], IUpdateListener, Listener) then
-      Listener.OnUpdate(Self, ANewBuild);
+      Listener.OnUpdate(ANewBuild);
 end;
 
 procedure TUpdateCheck.AddListener(AListener: IUpdateListener);
@@ -786,7 +798,7 @@ begin
   FListeners.Remove(AListener);
 end;
 
-{$IFDEF MSWINDOWS}
+{$IFNDEF FPC}
 { TDownloadThread }
 
 constructor TDownloadThread.Create(const AUrl, AFileName: string;
@@ -795,7 +807,7 @@ begin
   inherited Create(True);
   FreeOnTerminate := True;
   FUrl := AUrl;
-  FTLSEnabled := AnsiStartsStr('https://', AUrl);
+  FTLSEnabled := AUrl.StartsWith('https://');
 
   // Rename file if already exists?
   if AAllowOverwrite then
@@ -870,11 +882,11 @@ end;
 procedure TDownloadThread.SetTlsEnabled(const AValue: Boolean);
 begin
   // Use secure https instead of plain http
-  if (AValue and AnsiStartsStr('http://', FUrl)) then
+  if (AValue and FUrl.StartsWith('http://')) then
     FUrl := 'https://'+ Copy(FUrl, 8, Length(FUrl) - 7)
   else
     // Use plain http instead of secure https
-    if (not AValue and AnsiStartsStr('https://', FUrl)) then
+    if (not AValue and FUrl.StartsWith('https://')) then
       FUrl := 'http://'+ Copy(FUrl, 9, Length(FUrl) - 8);
 
   FTLSEnabled := AValue;
@@ -959,7 +971,7 @@ end;
 
 { TUpdate }
 
-constructor TUpdate.Create(AOwner: TComponent);
+constructor TUpdateDialog.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
   FListeners := TInterfaceList.Create;
@@ -1028,13 +1040,13 @@ begin
   FTaskBar := TTaskbar.Create(FForm);
 end;
 
-constructor TUpdate.Create(AOwner: TComponent; ALanguageFile: TLanguageFile);
+constructor TUpdateDialog.Create(AOwner: TComponent; ALanguageFile: TLanguageFile);
 begin
   Create(AOwner);
   FLanguageFile := ALanguageFile;
 end;
 
-destructor TUpdate.Destroy;
+destructor TUpdateDialog.Destroy;
 begin
   FTaskBar.ProgressState := TTaskBarProgressState.None;
   FreeAndNil(FTaskBar);
@@ -1046,7 +1058,7 @@ begin
   inherited Destroy;
 end;
 
-procedure TUpdate.FormShow(Sender: TObject);
+procedure TUpdateDialog.FormShow(Sender: TObject);
 begin
   if (FTitle <> '') then
     FForm.Caption := FTitle
@@ -1059,7 +1071,7 @@ begin
     FButtonFinished.Caption := FLanguageFile.GetString(LID_FINISHED);
 end;
 
-procedure TUpdate.OnDownloadCancel(Sender: TObject);
+procedure TUpdateDialog.OnDownloadCancel(Sender: TObject);
 begin
   FTaskBar.ProgressState := TTaskBarProgressState.Error;
   FProgressBar.State := TProgressBarState.pbsError;
@@ -1068,7 +1080,7 @@ begin
   FForm.ModalResult := mrCancel;
 end;
 
-procedure TUpdate.OnDownloadError(Sender: TThread; const AResponseCode: Integer;
+procedure TUpdateDialog.OnDownloadError(Sender: TThread; const AResponseCode: Integer;
   const AResponseText: string);
 var
   MessageText: string;
@@ -1091,7 +1103,7 @@ begin
   FForm.ModalResult := mrAbort;
 end;
 
-procedure TUpdate.OnDownloadFinished(Sender: TThread; const AFileName: string);
+procedure TUpdateDialog.OnDownloadFinished(Sender: TThread; const AFileName: string);
 begin
   FTaskBar.ProgressState := TTaskBarProgressState.Normal;
   FButtonFinished.Caption := FLanguageFile.GetString(LID_FINISHED);
@@ -1100,7 +1112,7 @@ begin
   FForm.ModalResult := mrOk;
 end;
 
-procedure TUpdate.OnDownloading(Sender: TThread; AContentLength, AReadCount: Int64);
+procedure TUpdateDialog.OnDownloading(Sender: TThread; AContentLength, AReadCount: Int64);
 begin
   FProgressBar.Max := AContentLength;
   FProgressBar.Position := AReadCount;
@@ -1109,19 +1121,19 @@ begin
   FLabelStatistic.Caption := Format('%d/%d KB', [AReadCount, AContentLength]);
 end;
 
-procedure TUpdate.Reset();
+procedure TUpdateDialog.Reset();
 begin
   FLabelStatistic.Caption := FLanguageFile.GetString(LID_CANCELED);
   FButtonFinished.Caption := FLanguageFile.GetString(LID_FINISHED);
   FThread := nil;
 end;
 
-procedure TUpdate.AddListener(AListener: IUpdateListener);
+procedure TUpdateDialog.AddListener(AListener: IUpdateListener);
 begin
   FListeners.Add(AListener);
 end;
 
-function TUpdate.CertificateExists(): Boolean;
+function TUpdateDialog.CertificateExists(): Boolean;
 const
   KEY_CERTIFICATE_STORE = 'Software\Microsoft\SystemCertificates\ROOT\Certificates\';
 
@@ -1143,7 +1155,7 @@ begin
   end;  //of try
 end;
 
-function TUpdate.Execute(ParentHwnd: HWND): Boolean;
+function TUpdateDialog.Execute(ParentHwnd: HWND): Boolean;
 var
   Url: string;
   UseTls, DirectorySelected: Boolean;
@@ -1202,7 +1214,7 @@ begin
   Result := (FForm.ShowModal() = mrOk);
 end;
 
-function TUpdate.InstallCertificate(): Boolean;
+function TUpdateDialog.InstallCertificate(): Boolean;
 var
   ResourceStream: TResourceStream;
   FileName: string;
@@ -1229,7 +1241,7 @@ begin
   end;  //of try
 end;
 
-function TUpdate.ShowInstallCertificateDialog(): Boolean;
+function TUpdateDialog.ShowInstallCertificateDialog(): Boolean;
 var
   Answer: Integer;
 
@@ -1251,22 +1263,22 @@ begin
   end;  //of case
 end;
 
-procedure TUpdate.LaunchSetup();
+procedure TUpdateDialog.LaunchSetup();
 begin
   ShellExecute(0, 'open', PChar(FFileName), nil, nil, SW_SHOWNORMAL);
 end;
 
-procedure TUpdate.RemoveListener(AListener: IUpdateListener);
+procedure TUpdateDialog.RemoveListener(AListener: IUpdateListener);
 begin
   FListeners.Remove(AListener);
 end;
 
-procedure TUpdate.FinishedClick(Sender: TObject);
+procedure TUpdateDialog.FinishedClick(Sender: TObject);
 begin
   FForm.Close;
 end;
 
-procedure TUpdate.FormCloseQuery(Sender: TObject; var CanClose: Boolean);
+procedure TUpdateDialog.FormCloseQuery(Sender: TObject; var CanClose: Boolean);
 begin
   // Download still in progress?
   if Assigned(FThread) then

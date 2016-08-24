@@ -14,8 +14,8 @@ uses
   Winapi.Windows, System.SysUtils, System.Classes, Vcl.Controls, Vcl.Forms,
   Vcl.ComCtrls, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Dialogs, Vcl.Menus, Vcl.Graphics,
   Vcl.ClipBrd, Registry, StrUtils, System.ImageList, Winapi.CommCtrl,
-  System.UITypes, ClearasAPI, ExportListThread, PMCWAbout, PMCWLanguageFile,
-  PMCWOSUtils, PMCWUpdater, PMCWDialogs, Vcl.ImgList, Messages;
+  System.UITypes, ClearasAPI, ExportListThread, PMCW.Dialogs.About, PMCW.Utils,
+  PMCW.LanguageFile, PMCW.Dialogs.Updater, PMCW.Dialogs, Vcl.ImgList, Messages;
 
 const
   KEY_RECYCLEBIN = 'CLSID\{645FF040-5081-101B-9F08-00AA002F954E}\shell';
@@ -211,14 +211,16 @@ type
     procedure OnTaskSearchStart(Sender: TObject);
     procedure OnTaskSearchEnd(Sender: TObject);
     procedure OnTaskItemChanged(Sender: TObject; ANewStatus: TItemStatus);
-    procedure OnUpdate(Sender: TObject; const ANewBuild: Cardinal);
-    procedure SetLanguage(Sender: TObject);
     function ShowExportItemDialog(): Boolean;
     procedure ShowColumnDate(AListView: TListView; AShow: Boolean = True);
     function UpdateContextPath(): Boolean;
     const
       DELAY_TIMER = 1;
     procedure WMTimer(var Message: TWMTimer); message WM_TIMER;
+    { IChangeLanguageListener }
+    procedure SetLanguage(ANewLanguage: TLocale);
+    { IUpdateListener }
+    procedure OnUpdate(const ANewBuild: Cardinal);
   end;
 
 var
@@ -361,9 +363,9 @@ end;
 
   Event that is called by TUpdateCheck when an update is available. }
 
-procedure TMain.OnUpdate(Sender: TObject; const ANewBuild: Cardinal);
+procedure TMain.OnUpdate(const ANewBuild: Cardinal);
 var
-  Updater: TUpdate;
+  Updater: TUpdateDialog;
 
 begin
   mmUpdate.Caption := FLang.GetString(LID_UPDATE_DOWNLOAD);
@@ -373,7 +375,7 @@ begin
     FLang.GetString(LID_UPDATE_CONFIRM_DOWNLOAD), mtConfirmation) = IDYES) then
   begin
     // init TUpdate instance
-    Updater := TUpdate.Create(Self, FLang);
+    Updater := TUpdateDialog.Create(Self, FLang);
 
     try
       // Set updater options
@@ -1326,7 +1328,7 @@ end;
 
   Updates all component captions with new language text. }
 
-procedure TMain.SetLanguage(Sender: TObject);
+procedure TMain.SetLanguage(ANewLanguage: TLocale);
 begin
   with FLang do
   begin
@@ -1458,7 +1460,7 @@ begin
     FTasks.Invalidate();
 
   // Update captions of current selected list
-  PageControlChange(Sender);
+  PageControlChange(Self);
 end;
 
 { private TMain.ShowColumnDate
@@ -2719,10 +2721,10 @@ end;
 
 procedure TMain.mmInstallCertificateClick(Sender: TObject);
 var
-  Updater: TUpdate;
+  Updater: TUpdateDialog;
 
 begin
-  Updater := TUpdate.Create(Self, FLang);
+  Updater := TUpdateDialog.Create(Self, FLang);
 
   try
     // Certificate already installed?

@@ -1,12 +1,12 @@
 { *********************************************************************** }
 {                                                                         }
-{ PM Code Works Windows Mutex Unit v1.3                                   }
+{ PM Code Works Application Mutex Unit                                    }
 {                                                                         }
 { Copyright (c) 2011-2016 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
 { *********************************************************************** }
 
-unit PMCWMutex;
+unit PMCW.Application.Mutex;
 
 interface
 

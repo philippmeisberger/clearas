@@ -6,9 +6,9 @@
 {                                                                         }
 { *********************************************************************** }
 
-unit PMCWIniFileParser;
+unit PMCW.IniFileParser;
 
-{$IFDEF LINUX} {$mode delphi}{$H+} {$ENDIF}
+{$IFDEF FPC}{$mode delphiunicode}{$ENDIF}
 
 interface
 
@@ -19,7 +19,10 @@ uses
   Classes, SysUtils, StrUtils;
 
 type
-  EInvalidIniFormat = class(Exception);
+  /// <summary>
+  ///   The INI file exception class.
+  /// </summary>
+  EIniFileException = class(Exception);
 
   /// <summary>
   ///   A <c>TIniFile</c> provides methods for reading and manipulating an INI
@@ -415,6 +418,9 @@ type
 
 {$IFDEF MSWINDOWS}
 type
+  /// <summary>
+  ///   The registry file exception class.
+  /// </summary>
   ERegistryFileException = class(Exception);
 
   /// <summary>
@@ -1056,7 +1062,7 @@ var
 begin
   // Check for invalid section name
   if (ASectionName = '') then
-    raise EInvalidIniFormat.Create('Section name must not be empty!');
+    raise EIniFileException.Create('Section name must not be empty!');
 
   Exists := not SectionExists(ASectionName);
 
@@ -1296,7 +1302,7 @@ var
 begin
   // Check for invalid key
   if (AKey = '') then
-    raise EInvalidIniFormat.Create('Key must not be empty!');
+    raise EIniFileException.Create('Key must not be empty!');
 
   // Search for key
   Index := IndexOfKey(ASectionName, AKey);

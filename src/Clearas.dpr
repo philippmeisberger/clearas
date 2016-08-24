@@ -6,14 +6,11 @@ program Clearas;
 uses
   Forms,
   {$IFNDEF DEBUG}
-  AdminManifest in 'AdminManifest.pas',
+  PMCW.AdminManifest,
   {$ENDIF }
-  PMCWMutex in 'PMCWMutex.pas',
+  PMCW.Application.Mutex,
   ClearasMain in 'ClearasMain.pas' {Main},
-  ClearasAPI in 'ClearasAPI.pas',
-  ExportListThread in 'ExportListThread.pas',
-  PMCWAbout in 'PMCWAbout.pas',
-  PMCWUpdater in 'PMCWUpdater.pas';
+  ClearasAPI in 'ClearasAPI.pas';
 
 {$R *.res}
 

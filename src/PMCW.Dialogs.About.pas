@@ -6,7 +6,9 @@
 {                                                                         }
 { *********************************************************************** }
 
-unit PMCWAbout;
+unit PMCW.Dialogs.About;
+
+{$IFDEF FPC}{$mode delphiunicode}{$ENDIF}
 
 interface
 
@@ -17,7 +19,7 @@ uses
   VersionTypes, Resource,
 {$ENDIF}
   SysUtils, Classes, Graphics, Controls, Forms, StdCtrls, ExtCtrls, ComCtrls,
-  Dialogs, PMCWUpdater;
+  Dialogs, PMCW.Dialogs.Updater;
 
 const
   /// <summary>
@@ -356,4 +358,4 @@ begin
   FForm.Caption := ATitle;
 end;
 
-end.
+end.

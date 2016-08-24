@@ -6,7 +6,7 @@
 {                                                                         }
 { *********************************************************************** }
 
-unit PMCWDialogs;
+unit PMCW.Dialogs;
 
 {$WARN SYMBOL_PLATFORM OFF}
 
