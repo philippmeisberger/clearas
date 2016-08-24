@@ -8,7 +8,7 @@
 
 unit PMCW.LanguageFile;
 
-{$IFDEF FPC}{$mode delphiunicode}{$ENDIF}
+{$IFDEF FPC}{$mode delphi}{$ENDIF}
 
 interface
 
@@ -100,7 +100,7 @@ type
   /// <summary>
   ///   The language code.
   /// </summary>
-  TLocale = WideString;
+  TLocale = string;
 {$ENDIF}
   /// <summary>
   ///   The identifier of a translation string.
@@ -661,6 +661,8 @@ var
   Text: string;
 
 begin
+  Text := '';
+
   for i := 0 to Length(AIndices) -1 do
     if (AIndices[i] = NEW_LINE) then
       Text := Text + sLineBreak
@@ -711,6 +713,8 @@ var
   Text: string;
 
 begin
+  Text := '';
+
   for i := 0 to Length(AIndices) - 1 do
     if (AIndices[i] = NEW_LINE) then
       Text := Text + sLineBreak

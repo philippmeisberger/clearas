@@ -8,7 +8,7 @@
 
 unit PMCW.Utils;
 
-{$IFDEF FPC}{$mode delphiunicode}{$ENDIF}
+{$IFDEF FPC}{$mode delphi}{$ENDIF}
 
 interface
 
@@ -20,8 +20,8 @@ uses
 {$ENDIF}
   SysUtils, StrUtils;
 
-const
 {$IFDEF MSWINDOWS}
+const
 {$IFDEF WIN64}
   PLATFORM_ARCH = ' [64-Bit]';
 {$ELSE}

@@ -8,7 +8,7 @@
 
 unit PMCW.Dialogs.Updater;
 
-{$IFDEF FPC}{$mode delphiunicode}{$ENDIF}
+{$IFDEF FPC}{$mode delphi}{$ENDIF}
 
 interface
 

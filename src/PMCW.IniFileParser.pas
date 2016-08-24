@@ -8,7 +8,7 @@
 
 unit PMCW.IniFileParser;
 
-{$IFDEF FPC}{$mode delphiunicode}{$ENDIF}
+{$IFDEF FPC}{$mode delphi}{$ENDIF}
 
 interface
 
@@ -973,6 +973,7 @@ var
 
 begin
   Lines := TStringList.Create;
+  Line := '';
 
   try
     EndIndex := GetEndOfItem(AIndex);
