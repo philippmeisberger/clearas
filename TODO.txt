@@ -1,6 +1,9 @@
 Ideas:
+- Mark invalid startup items
+- Never show icon for invalid startup items
+- Add "remove all invalid items"
 - Add "Execute" to popup menu
-- "Import backup" supports merging existing items (especially scheduled tasks)
-- Cascading Shell submenus (ExtendedSubCommandsKey)
-- Shell bags cleaning
+- Context menu: support cascading shell submenus (ExtendedSubCommandsKey)
 - Receive notifications about registry changes
+- New feature: shell bags cleaning
+- "Import backup" supports merging existing items (especially scheduled tasks)
