@@ -126,10 +126,7 @@ type
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure bCloseStartupClick(Sender: TObject);
-    procedure bEnableStartupItemClick(Sender: TObject);
-    procedure bEnableContextItemClick(Sender: TObject);
-    procedure bEnableServiceItemClick(Sender: TObject);
-    procedure bEnableTaskItemClick(Sender: TObject);
+    procedure bEnableItemClick(Sender: TObject);
     procedure bDeleteItemClick(Sender: TObject);
     procedure bDisableItemClick(Sender: TObject);
     procedure bExportStartupItemClick(Sender: TObject);
@@ -1596,74 +1593,23 @@ end;
 
 procedure TMain.bDisableItemClick(Sender: TObject);
 begin
-  DisableItem();
+  if (DisableItem() and GetSelectedItem().Eraseable) then
+    FLang.ShowMessage(LID_FILE_DOES_NOT_EXIST, LID_ENTRY_CAN_DE_DELETED, mtWarning);
 end;
 
-{ TMain.bEnableStartupItemClick
+{ TMain.bEnableItemClick
 
-  Enables currently selected startup item. }
+  Enables currently selected item. }
 
-procedure TMain.bEnableStartupItemClick(Sender: TObject);
+procedure TMain.bEnableItemClick(Sender: TObject);
 begin
-  // Successfully enabled item?
-  if EnableItem() then
-  begin
-    // Delete deactivation timestamp if necassary
-    if mmDate.Checked then
-      lwStartup.ItemFocused.SubItems[3] := '';
-
-    // Warn if file does not exist
-    if not FStartup.Selected.FileExists() then
-      FLang.ShowMessage(LID_FILE_DOES_NOT_EXIST, LID_ENTRY_CAN_DE_DELETED, mtWarning);
-  end;  //of begin
-end;
-
-{ TMain.bEnableContextItemClick
-
-  Enables currently selected context menu item. }
-
-procedure TMain.bEnableContextItemClick(Sender: TObject);
-begin
-  // Successfully enabled item?
-  if EnableItem() then
-  begin
-    // Warn if file does not exist
-    if (not (FContext.Selected is TShellNewItem) and not FContext.Selected.FileExists()) then
-      FLang.ShowMessage(LID_FILE_DOES_NOT_EXIST, LID_ENTRY_CAN_DE_DELETED, mtWarning);
-  end;  //of begin
-end;
-
-{ TMain.bEnableServiceItemClick
-
-  Enables currently selected service item. }
-
-procedure TMain.bEnableServiceItemClick(Sender: TObject);
-begin
-  // Successfully enabled item?
-  if EnableItem() then
-  begin
-    // Delete deactivation timestamp if necassary
-    if mmDate.Checked then
-      lwService.ItemFocused.SubItems[3] := '';
-
-    // Warn if file does not exist
-    if not FService.Selected.FileExists() then
-      FLang.ShowMessage(LID_FILE_DOES_NOT_EXIST, LID_ENTRY_CAN_DE_DELETED, mtWarning);
-  end;  //of begin
-end;
-
-{ TMain.bEnableTaskItemClick
-
-  Enables currently selected task item. }
-
-procedure TMain.bEnableTaskItemClick(Sender: TObject);
-begin
-  EnableItem();
+  if (EnableItem() and GetSelectedItem().Eraseable) then
+    FLang.ShowMessage(LID_FILE_DOES_NOT_EXIST, LID_ENTRY_CAN_DE_DELETED, mtWarning);
 end;
 
 { TMain.bExportStartupItemClick
 
-  Calls the export method of current selected deactivated startup item. }
+  Event method that is called when user wants to export an startup item. }
 
 procedure TMain.bExportStartupItemClick(Sender: TObject);
 begin
@@ -1672,7 +1618,7 @@ end;
 
 { TMain.bExportItemClick
 
-  Calls the export method of current selected context menu item. }
+  Event method that is called when user wants to export an item. }
 
 procedure TMain.bExportItemClick(Sender: TObject);
 begin

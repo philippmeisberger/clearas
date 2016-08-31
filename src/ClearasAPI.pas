@@ -259,7 +259,7 @@ type
 
   /// <summary>
   ///   A <c>TRootItem</c> represents an basic list item that can be added to a
-  ///   <c>TRootList<c/>.
+  ///   <c>TRootList</c>.
   /// </summary>
   /// <remarks>
   ///   This class is intended to be only ancenstor for items.
@@ -280,6 +280,7 @@ type
     function ExtractArguments(const APath: string): string;
     function ExtractPathToFile(const APath: string): string;
     procedure DestroyIconHandle();
+    function GetEraseable(): Boolean; virtual;
     function GetFullLocation(): string; virtual; abstract;
     function GetFileDescription(AFileName: TFileName): string;
     function GetIcon(): HICON; overload; virtual;
@@ -384,7 +385,12 @@ type
     property Enabled: Boolean read FEnabled write ChangeStatus;
 
     /// <summary>
-    ///   Gets or sets the filename with arguments.
+    ///   Determines if the item is invalid and can be deleted.
+    /// </summary>
+    property Eraseable: Boolean read GetEraseable;
+
+    /// <summary>
+    ///   Gets or sets the filename including arguments.
     /// </summary>
     property FileName: string read FFileName write ChangeFilePath;
 
@@ -1559,6 +1565,7 @@ type
     procedure GetSubCommands(var ASubCommands: TStrings);
   protected
     procedure ChangeFilePath(const ANewFileName: string); override;
+    function GetEraseable(): Boolean; override;
     procedure Rename(const ANewName: string); override;
   public
     /// <summary>
@@ -1646,6 +1653,7 @@ type
   /// </summary>
   TShellNewItem = class(TContextListItem)
   protected
+    function GetEraseable(): Boolean; override;
     function GetIcon(): HICON; override;
     procedure ChangeFilePath(const ANewFileName: string); override;
     procedure ChangeStatus(const ANewStatus: Boolean); override;
@@ -2014,6 +2022,7 @@ type
   protected
     procedure ChangeFilePath(const ANewFilePath: string); override;
     procedure ChangeStatus(const ANewStatus: Boolean); override;
+    function GetEraseable(): Boolean; override;
     function GetFullLocation(): string; override;
     procedure Rename(const ANewName: string); override;
   public
@@ -2429,6 +2438,11 @@ begin
   Result := ExtractArguments(FFileName).DeQuotedString('"');
 end;
 
+function TRootItem.GetEraseable(): Boolean;
+begin
+  Result := not FileExists();
+end;
+
 function TRootItem.GetFileNameOnly(): string;
 var
   Path: string;
@@ -2598,12 +2612,18 @@ begin
 end;
 
 function TRootItem.FileExists(): Boolean;
-{$IFDEF WIN32}
 var
+  FileName: string;
+{$IFDEF WIN32}
   Win64: Boolean;
 {$ENDIF}
 
 begin
+  FileName := GetFileNameOnly();
+
+  if (FileName = '') then
+    Exit(False);
+
 {$IFDEF WIN32}
   // 64bit Windows?
   Win64 := (TOSVersion.Architecture = arIntelX64);
@@ -2612,7 +2632,7 @@ begin
   if Win64 then
     Wow64FsRedirection(True);
 {$ENDIF}
-  Result := System.SysUtils.FileExists(GetFileNameOnly());
+  Result := System.SysUtils.FileExists(FileName);
 
 {$IFDEF WIN32}
   // Allow WOW64 redirection only on 64bit Windows
@@ -4857,6 +4877,12 @@ begin
   inherited Create(AName, ACaption, '', ALocation, AEnabled, AExtended);
 end;
 
+function TShellCascadingItem.GetEraseable(): Boolean;
+begin
+  // Does not have a file so wrongly marked as eraseable
+  Result := False;
+end;
+
 procedure TShellCascadingItem.GetSubCommands(var ASubCommands: TStrings);
 const
   CM_SUBCOMMANDS = 'SubCommands';
@@ -5146,6 +5172,12 @@ begin
     Reg.CloseKey();
     Reg.Free;
   end;  //of try
+end;
+
+function TShellNewItem.GetEraseable(): Boolean;
+begin
+  // Does not have a file so wrongly marked as eraseable
+  Result := False;
 end;
 
 function TShellNewItem.GetIcon(): HICON;
@@ -5682,9 +5714,7 @@ var
   Handle: SC_HANDLE;
 
 begin
-  if (FServiceManager = 0) then
-    raise EServiceException.Create('Service manager not initialized!');
-
+  Assert(FServiceManager <> 0, 'Service manager not initialized!');
   Handle := OpenService(FServiceManager, PChar(Name), AAccess);
 
   // Error occured?
@@ -6313,6 +6343,12 @@ begin
       Wow64FsRedirection(False);
   {$ENDIF}
   end;  //of try
+end;
+
+function TTaskListItem.GetEraseable(): Boolean;
+begin
+  // Tasks are always treated as valid
+  Result := False;
 end;
 
 function TTaskListItem.GetExportFilter(ALanguageFile: TLanguageFile): string;

@@ -1,6 +1,4 @@
 Ideas:
-- Mark invalid startup items
-- Never show icon for invalid startup items
 - Add "remove all invalid items"
 - Add "Execute" to popup menu
 - Context menu: support cascading shell submenus (ExtendedSubCommandsKey)
