@@ -274,15 +274,16 @@ type
     FName: string;
     FLocation: string;
     FCaption: string;
+    FIcon: HICON;
     procedure ChangeFilePath(const ANewFileName: string); virtual;
     procedure ChangeStatus(const ANewStatus: Boolean); virtual;
-    function DeleteQuoteChars(const APath: string): string;
     function ExtractArguments(const APath: string): string;
     function ExtractPathToFile(const APath: string): string;
+    procedure DestroyIconHandle();
     function GetFullLocation(): string; virtual; abstract;
     function GetFileDescription(AFileName: TFileName): string;
     function GetIcon(): HICON; overload; virtual;
-    function GetIcon(AExeFileName: TFileName): HICON; overload;
+    function GetIcon(AExeFileName: TFileName): HICON; overload; virtual;
     function GetLocation(): string; virtual;
     procedure Rename(const ANewName: string); virtual;
   public
@@ -306,6 +307,11 @@ type
     /// </param>
     constructor Create(const AName, ACaption, AFileName, ALocation: string;
       AEnabled: Boolean); reintroduce;
+
+    /// <summary>
+    ///   Destructor for destroying a <c>TRootItem</c> instance.
+    /// </summary>
+    destructor Destroy; override;
 
     /// <summary>
     ///   Deletes the item.
@@ -1468,6 +1474,8 @@ type
     procedure ChangeFilePath(const ANewFileName: string); override;
     procedure ChangeStatus(const ANewStatus: Boolean); override;
     function GetIcon(): HICON; override;
+    function GetIcon(AFileName: TFileName): HICON; override;
+    function GetIconFileName(): string;
     function GetLocation(): string; override;
     procedure Rename(const AValueName, ANewCaption: string); reintroduce; overload;
     procedure Rename(const ANewName: string); overload; override;
@@ -1608,6 +1616,7 @@ type
   /// </summary>
   TShellExItem = class(TContextListItem)
   protected
+    function GetIcon(): HICON; override;
     procedure ChangeFilePath(const ANewFileName: string); override;
     procedure ChangeStatus(const ANewStatus: Boolean); override;
     function GetLocation(): string; override;
@@ -1637,6 +1646,7 @@ type
   /// </summary>
   TShellNewItem = class(TContextListItem)
   protected
+    function GetIcon(): HICON; override;
     procedure ChangeFilePath(const ANewFileName: string); override;
     procedure ChangeStatus(const ANewStatus: Boolean); override;
     function GetLocation(): string; override;
@@ -2411,11 +2421,12 @@ begin
   FFileName := AFileName;
   FLocation := ALocation;
   FEnabled := AEnabled;
+  FIcon := 0;
 end;
 
 function TRootItem.GetArguments(): string;
 begin
-  Result := DeleteQuoteChars(ExtractArguments(FFileName));
+  Result := ExtractArguments(FFileName).DeQuotedString('"');
 end;
 
 function TRootItem.GetFileNameOnly(): string;
@@ -2423,7 +2434,7 @@ var
   Path: string;
 
 begin
-  Path := DeleteQuoteChars(ExtractPathToFile(FFileName));
+  Path := ExtractPathToFile(FFileName).DeQuotedString('"');
 
   // Path has to be expanded?
   if ((Path <> '') and (Path[1] = '%')) then
@@ -2473,9 +2484,19 @@ begin
   FFileName := ANewFileName;
 end;
 
-function TRootItem.DeleteQuoteChars(const APath: string): string;
+destructor TRootItem.Destroy;
 begin
-  Result := StringReplace(APath , '"', '', [rfReplaceAll]);
+  DestroyIconHandle();
+  inherited Destroy;
+end;
+
+procedure TRootItem.DestroyIconHandle();
+begin
+  if (FIcon <> 0) then
+  begin
+    DestroyIcon(FIcon);
+    FIcon := 0;
+  end;  //of begin
 end;
 
 function TRootItem.ExtractArguments(const APath: string): string;
@@ -2536,6 +2557,13 @@ var
 {$ENDIF}
 
 begin
+  Result := 0;
+  DestroyIconHandle();
+
+  // Only extract icon from .exe files
+  if ((AExeFileName = '') or (ExtractFileExt(AExeFileName) = '')) then
+    Exit;
+
 {$IFDEF WIN32}
   Win64 := (TOSVersion.Architecture = arIntelX64);
 
@@ -2543,13 +2571,15 @@ begin
   if Win64 then
     Wow64FsRedirection(True);
 {$ENDIF}
+  ZeroMemory(@FileInfo, SizeOf(FileInfo));
 
   if Succeeded(SHGetFileInfo(PChar(AExeFileName), 0, FileInfo, SizeOf(FileInfo),
     SHGFI_ICON or SHGFI_SMALLICON)) then
-    Result := FileInfo.hIcon
+    FIcon := FileInfo.hIcon
   else
-    Result := 0;
+    FIcon := 0;
 
+  Result := FIcon;
 {$IFDEF WIN32}
   // Allow WOW64 redirection only on 64bit Windows
   if Win64 then
@@ -3773,8 +3803,8 @@ begin
   if (not Enabled and not CheckWin32Version(6, 2)) then
     inherited ChangeFilePath(ANewFileName);
 
-  FLnkFile.ExeFileName := DeleteQuoteChars(ExtractPathToFile(ANewFileName));
-  FLnkFile.Arguments := DeleteQuoteChars(ExtractArguments(ANewFileName));
+  FLnkFile.ExeFileName := ExtractPathToFile(ANewFileName).DeQuotedString('"');
+  FLnkFile.Arguments := ExtractArguments(ANewFileName).DeQuotedString('"');
   FFileName := ANewFileName;
 
   // Rewrite backup
@@ -4628,15 +4658,46 @@ begin
   end;  //of try
 end;
 
-function TShellItem.GetIcon(): HICON;
+function TShellItem.GetIcon(AFileName: TFileName): HICON;
 var
-  Reg: TRegistry;
   Icon: TIcon;
-  IconPath: string;
 
 begin
   Result := 0;
+  DestroyIconHandle();
   Icon := TIcon.Create;
+
+  try
+    if (AFileName = '') then
+    begin
+      FIcon := 0;
+      Exit(FIcon);
+    end;  //of begin
+
+    if (ExtractFileExt(AFileName) = '.exe') then
+      Icon.Handle := inherited GetIcon(AFileName)
+    else
+      Icon.LoadFromFile(AFileName);
+
+    FIcon := Icon.Handle;
+    Result := FIcon;
+
+  finally
+    Icon.Free;
+  end;  //of try
+end;
+
+function TShellItem.GetIcon(): HICON;
+begin
+  Result := GetIcon(GetIconFileName());
+end;
+
+function TShellItem.GetIconFileName(): string;
+var
+  Reg: TRegistry;
+
+begin
+  Result := '';
   Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ);
 
   try
@@ -4647,21 +4708,11 @@ begin
       raise EContextMenuException.Create('Key does not exist!');
 
     if Reg.ValueExists('Icon') then
-    begin
-      IconPath := DeleteQuoteChars(Reg.ReadString('Icon'));
-
-      if (ExtractFileExt(IconPath) = '.exe') then
-        Icon.Handle := GetIcon(IconPath)
-      else
-        Icon.LoadFromFile(IconPath);
-    end;  //of begin
-
-    Result := Icon.Handle;
+      Result := Reg.ReadString('Icon').DeQuotedString('"');
 
   finally
     Reg.CloseKey();
     Reg.Free;
-    Icon.Free;
   end;  //of try
 end;
 
@@ -4710,6 +4761,8 @@ begin
     if not Reg.OpenKey(GetLocation(), False) then
       raise EContextMenuException.Create('Key does not exist!');
 
+    DestroyIconHandle();
+
     // Delete icon?
     if ((ANewIconFileName = '') and Reg.ValueExists('Icon')) then
       Exit(Reg.DeleteValue('Icon'));
@@ -4719,12 +4772,12 @@ begin
       case Reg.GetDataType('Icon') of
         rdExpandString: Reg.WriteExpandString('Icon', ANewIconFileName);
         rdString:       Reg.WriteString('Icon', ANewIconFileName);
-        else
-                        raise EContextMenuException.Create('Invalid data type!');
+        else            raise EContextMenuException.Create('Invalid data type!');
       end  //of case
     else
       Reg.WriteString('Icon', ANewIconFileName);
 
+    GetIcon(ANewIconFileName.DeQuotedString('"'));
     Result := True;
 
   finally
@@ -4940,6 +4993,12 @@ begin
   end;  //of try
 end;
 
+function TShellExItem.GetIcon(): HICON;
+begin
+  // Impossible!
+  Result := 0;
+end;
+
 function TShellExItem.GetLocation(): string;
 begin
   Result := inherited GetLocation() +'\'+ CM_SHELLEX_HANDLERS +'\'+ Name;
@@ -4975,8 +5034,7 @@ begin
     case Reg.GetDataType('') of
       rdExpandString: Reg.WriteExpandString('', ANewFileName);
       rdString:       Reg.WriteString('', ANewFileName);
-      else
-                      raise EContextMenuException.Create('Invalid data type!');
+      else            raise EContextMenuException.Create('Invalid data type!');
     end;  //of case
 
     // Update path
@@ -5088,6 +5146,11 @@ begin
     Reg.CloseKey();
     Reg.Free;
   end;  //of try
+end;
+
+function TShellNewItem.GetIcon(): HICON;
+begin
+  Result := 0;
 end;
 
 function TShellNewItem.GetLocation(): string;
