@@ -13,3 +13,7 @@ tests\__history\**
 **.stat
 **.db
 **.ini
+**.drc
+**.map
+**.mes
+**.orig
