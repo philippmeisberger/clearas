@@ -15,9 +15,16 @@ program ClearasTests;
 {$ENDIF}
 
 uses
+{$IFDEF madExcept}
+  madExcept,
+  madLinkDisAsm,
+  madListHardware,
+  madListProcesses,
+  madListModules,
+{$ENDIF}
   DUnitTestRunner,
 {$IFNDEF DEBUG}
-  AdminManifest in '..\src\AdminManifest.pas',
+  PMCW.AdminManifest in '..\src\PMCW.AdminManifest.pas',
 {$ENDIF}
   ClearasAPITest in 'ClearasAPITest.pas',
   ClearasAPI in '..\src\ClearasAPI.pas';

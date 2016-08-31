@@ -57,7 +57,6 @@
         <Manifest_File>None</Manifest_File>
         <SanitizedProjectName>ClearasTests</SanitizedProjectName>
         <DCC_UnitSearchPath>$(BDS)\Source\DUnit\src;..\src;$(DCC_UnitSearchPath)</DCC_UnitSearchPath>
-        <DCC_Define>_CONSOLE_TESTRUNNER;$(DCC_Define)</DCC_Define>
         <DCC_Namespace>System;Xml;Data;Datasnap;Web;Soap;Vcl;Vcl.Imaging;Vcl.Touch;Vcl.Samples;Vcl.Shell;$(DCC_Namespace)</DCC_Namespace>
         <DCC_DcuOutput>lib\$(Platform)\$(Config)\</DCC_DcuOutput>
         <DCC_ExeOutput>.\$(Platform)\$(Config)\</DCC_ExeOutput>
@@ -68,20 +67,19 @@
         <DCC_K>false</DCC_K>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Win32)'!=''">
-        <VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
         <VerInfo_Locale>1033</VerInfo_Locale>
         <DCC_UsePackage>FireDACASADriver;FireDACSqliteDriver;bindcompfmx;DBXSqliteDriver;FireDACPgDriver;FireDACODBCDriver;RESTBackendComponents;fmx;rtl;dbrtl;DbxClientDriver;IndySystem;FireDACCommon;bindcomp;inetdb;tethering;DBXInterBaseDriver;vclFireDAC;xmlrtl;svnui;DbxCommonDriver;vclimg;DUnitXRuntime;IndyProtocols;dbxcds;DBXMySQLDriver;FireDACCommonDriver;appanalytics;bindcompdbx;soaprtl;bindengine;vclactnband;vcldb;vcldsnap;bindcompvcl;vclie;fmxFireDAC;FireDACADSDriver;vcltouch;CustomIPTransport;vclribbon;VclSmp;FireDAC;dsnap;IndyIPServer;VCLRESTComponents;fmxase;vcl;IndyCore;IndyIPCommon;CloudService;CodeSiteExpressPkg;dsnapcon;FireDACIBDriver;inet;fmxobj;FireDACMySQLDriver;soapmidas;vclx;soapserver;inetdbxpress;svn;dsnapxml;fmxdae;RESTComponents;FireDACMSAccDriver;dbexpress;adortl;IndyIPClient;$(DCC_UsePackage)</DCC_UsePackage>
         <DCC_Namespace>Winapi;System.Win;Data.Win;Datasnap.Win;Web.Win;Soap.Win;Xml.Win;Bde;$(DCC_Namespace)</DCC_Namespace>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Base_Win64)'!=''">
-        <VerInfo_Keys>CompanyName=;FileDescription=;FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProductName=;ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
         <VerInfo_Locale>1033</VerInfo_Locale>
         <DCC_UsePackage>FireDACASADriver;FireDACSqliteDriver;bindcompfmx;DBXSqliteDriver;FireDACPgDriver;FireDACODBCDriver;RESTBackendComponents;fmx;rtl;dbrtl;DbxClientDriver;IndySystem;FireDACCommon;bindcomp;inetdb;tethering;DBXInterBaseDriver;vclFireDAC;xmlrtl;DbxCommonDriver;vclimg;IndyProtocols;dbxcds;DBXMySQLDriver;FireDACCommonDriver;appanalytics;bindcompdbx;soaprtl;bindengine;vclactnband;vcldb;vcldsnap;bindcompvcl;vclie;fmxFireDAC;FireDACADSDriver;vcltouch;CustomIPTransport;vclribbon;VclSmp;FireDAC;dsnap;IndyIPServer;VCLRESTComponents;fmxase;vcl;IndyCore;IndyIPCommon;CloudService;dsnapcon;FireDACIBDriver;inet;fmxobj;FireDACMySQLDriver;soapmidas;vclx;soapserver;inetdbxpress;dsnapxml;fmxdae;RESTComponents;FireDACMSAccDriver;dbexpress;adortl;IndyIPClient;$(DCC_UsePackage)</DCC_UsePackage>
         <DCC_Namespace>Winapi;System.Win;Data.Win;Datasnap.Win;Web.Win;Soap.Win;Xml.Win;$(DCC_Namespace)</DCC_Namespace>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1)'!=''">
-        <DCC_ExeOutput>.\$(Platform)\$(Config)\</DCC_ExeOutput>
-        <DCC_Define>DEBUG;$(DCC_Define)</DCC_Define>
+        <DCC_RangeChecking>true</DCC_RangeChecking>
+        <DCC_IntegerOverflowCheck>true</DCC_IntegerOverflowCheck>
+        <DCC_Define>madExcept;LeakChecking;DEBUG;$(DCC_Define)</DCC_Define>
         <DCC_DebugDCUs>true</DCC_DebugDCUs>
         <DCC_Optimize>false</DCC_Optimize>
         <DCC_GenerateStackFrames>true</DCC_GenerateStackFrames>
@@ -109,7 +107,7 @@
         <DelphiCompile Include="$(MainSource)">
             <MainSource>MainSource</MainSource>
         </DelphiCompile>
-        <DCCReference Include="..\src\AdminManifest.pas"/>
+        <DCCReference Include="..\src\PMCW.AdminManifest.pas"/>
         <DCCReference Include="ClearasAPITest.pas"/>
         <DCCReference Include="..\src\ClearasAPI.pas"/>
         <BuildConfiguration Include="Release">
