@@ -317,7 +317,8 @@ begin
     lVersion1.Caption := Format('v%d.%d', [VersionInfo[VERSION_MAJOR],
       VersionInfo[VERSION_MINOR]]);
     lVersion2.Caption := lVersion1.Caption;
-    lVersion3.Caption := lVersion3.Caption;
+    lVersion3.Caption := lVersion1.Caption;
+    lVersion4.Caption := lVersion1.Caption;
   end;  //of begin
 end;
 

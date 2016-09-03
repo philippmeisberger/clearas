@@ -5,9 +5,6 @@ program Clearas;
 
 uses
   Forms,
-  {$IFNDEF DEBUG}
-  PMCW.AdminManifest,
-  {$ENDIF }
   PMCW.Application.Mutex,
   ClearasMain in 'ClearasMain.pas' {Main},
   ClearasAPI in 'ClearasAPI.pas';
