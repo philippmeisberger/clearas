@@ -5442,11 +5442,9 @@ var
   List: TStringList;
   ItemName, Key, FileName, GuID, Caption: string;
   Enabled, Wow64, Extended: Boolean;
-  Access64: LongWord;
 
 begin
-  Access64 := KEY_WOW64_64KEY or KEY_READ;
-  Reg := TRegistry.Create(Access64);
+  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ);
   List := TStringList.Create;
 
   case AShellItemType of
@@ -5579,7 +5577,7 @@ begin
           Reg.CloseKey();
           Wow64 := False;
 
-          // Get file path of command
+          // Get file path of command (native hive)
           if Reg.OpenKey(Format(CM_SHELLEX_FILE, [GuID]), False) then
           begin
             if not (Reg.GetDataType('') in [rdString, rdExpandString]) then
@@ -5590,7 +5588,8 @@ begin
           else
             if AWow64 then
             begin
-              Reg.Access := KEY_READ;
+              // Try 32 bit hive
+              Reg.Access := KEY_WOW64_32KEY or KEY_READ;
               Wow64 := True;
 
               if Reg.OpenKey(Format(CM_SHELLEX_FILE, [GuID]), False) then
@@ -5601,7 +5600,8 @@ begin
                 FileName := Reg.ReadString('');
               end;  //of begin
 
-              Reg.Access := Access64;
+              // Switch back to 64 bit hive
+              Reg.Access := KEY_WOW64_64KEY or KEY_READ;
             end;  //of if
 
           // Add item to list
