@@ -14,13 +14,18 @@ const
 
 type
   TRootListTest = class(TTestCase)
+  const
+    cNewTestExe      = 'C:\Windows\notepad.exe';
+    cNewTestArgument = '-o';
+    cNewTestFileName = cNewTestExe +' '+ cNewTestArgument;
   strict private
     FLockingSuccessful: Boolean;
     procedure TestLocking_SearchStart(Sender: TObject);
     procedure EnsureFileExportedAndDelete(const AFileName: string);
   protected
     FRootList: TRootList<TRootItem>;
-    FTestItems: TStringList;
+    FTestItems,
+    FEraseableTestItems: TStringList;
     procedure LoadItems(); virtual; abstract;
     procedure SelectItem(const AItemName: string);
     procedure TestDisable(const AItemName: string);
@@ -28,7 +33,8 @@ type
     procedure TestDelete(const AItemName: string);
     procedure TestExport(const AItemName: string);
     procedure TestRename(const AItemName: string); virtual;
-    procedure TestChangeFilePath(const AItemName: string);
+    procedure TestChangeFilePath(const AItemName, AExpectedFilePath,
+      ANewFilePath: string);
   public
     procedure SetUp; override;
     procedure TearDown; override;
@@ -50,7 +56,8 @@ type
     procedure AddTestItemEnabled(ALocation: TStartupLocation;
       AEraseable: Boolean = False);
     procedure DeleteTestItem(ALocation: TStartupLocation);
-    function GetItemName(ALocation: TStartupLocation): string;
+    function GetItemName(ALocation: TStartupLocation;
+      AEraseable: Boolean = False): string;
   protected
     procedure LoadItems(); override;
   public
@@ -163,11 +170,13 @@ procedure TRootListTest.SetUp;
 begin
   inherited SetUp;
   FTestItems := TStringList.Create;
+  FEraseableTestItems := TStringList.Create;
 end;
 
 procedure TRootListTest.TearDown;
 begin
   FreeAndNil(FRootList);
+  FreeAndNil(FEraseableTestItems);
   FreeAndNil(FTestItems);
   inherited TearDown;
 end;
@@ -199,30 +208,47 @@ begin
   FRootList.Selected := FRootList[Index];
 end;
 
-procedure TRootListTest.TestChangeFilePath(const AItemName: string);
-const
-  cNewTestExe      = 'C:\Windows\notepad.exe';
-  cNewTestArgument = '-o';
-  cNewTestFileName = cNewTestExe +' '+ cNewTestArgument;
-
+procedure TRootListTest.TestChangeFilePath(const AItemName, AExpectedFilePath,
+  ANewFilePath: string);
 begin
   SelectItem(AItemName);
-  CheckEqualsString(cTestExe, FRootList.Selected.FileNameOnly, 'FileName of "'+ AItemName +'" does not match before changing file path');
-  FRootList.ChangeItemFilePath(cNewTestFileName);
-  CheckEqualsString(cNewTestFileName, FRootList.Selected.FileName, 'FileName of "'+ AItemName +'" does not match after changing file path');
-  CheckEqualsString(cNewTestExe, FRootList.Selected.FileNameOnly, 'FileNameOnly of "'+ AItemName +'" does not match after changing file path');
-  CheckEqualsString(cNewTestArgument, FRootList.Selected.Arguments, 'Arguments of "'+ AItemName +'" does not match after changing file path');
+  CheckEqualsString(AExpectedFilePath, FRootList.Selected.FileNameOnly, 'FileName of "'+ AItemName +'" does not match before changing file path');
+  FRootList.ChangeItemFilePath(ANewFilePath);
+  CheckEqualsString(ANewFilePath, FRootList.Selected.FileName, 'FileName of "'+ AItemName +'" does not match after changing file path');
 end;
 
 procedure TRootListTest.TestChangeItemFilePaths;
 var
-  i: Integer;
+  i, EraseableItems: Integer;
 
 begin
   LoadItems();
 
   for i := 0 to FTestItems.Count - 1 do
-    TestChangeFilePath(FTestItems[i]);
+  begin
+    TestChangeFilePath(FTestItems[i], cTestExe, cNewTestFileName);
+    CheckEqualsString(cNewTestArgument, FRootList.Selected.Arguments, 'Arguments of "'+ FTestItems[i] +'" does not match after changing file path');
+    CheckEqualsString(cNewTestExe, FRootList.Selected.FileNameOnly, 'FileNameOnly of "'+ FTestItems[i] +'" does not match after changing file path');
+  end;  //of for
+
+  // Turn eraseable items to normal items
+  EraseableItems := FRootList.EraseableItemsCount;
+  CheckEquals(FEraseableTestItems.Count, EraseableItems, 'EraseableItemsCount differs from eraseable items list count');
+
+  for i := 0 to FEraseableTestItems.Count - 1 do
+  begin
+    TestChangeFilePath(FEraseableTestItems[i], cTestExeEraseable, cNewTestFileName);
+    CheckEqualsString(cNewTestArgument, FRootList.Selected.Arguments, 'Arguments of "'+ FEraseableTestItems[i] +'" does not match after changing file path');
+    CheckEqualsString(cNewTestExe, FRootList.Selected.FileNameOnly, 'FileNameOnly of "'+ FEraseableTestItems[i] +'" does not match after changing file path');
+  end;  //of for
+
+  CheckEquals(0, FRootList.EraseableItemsCount, 'After changing file paths of eraseable items to a valid path EraseableItemsCount differs from expected');
+
+  // Turn normal items to eraseable items back
+  for i := 0 to EraseableItems - 1 do
+    TestChangeFilePath(FEraseableTestItems[i], cNewTestExe, cTestExeEraseable);
+
+  CheckEquals(EraseableItems, FRootList.EraseableItemsCount, 'After changing file paths of normal items back to eraseable EraseableItemsCount differs from expected');
 end;
 
 procedure TRootListTest.TestDelete(const AItemName: string);
@@ -251,6 +277,7 @@ var
 begin
   LoadItems();
   EraseableItems := FRootList.EraseableItemsCount;
+  CheckEquals(FEraseableTestItems.Count, EraseableItems, 'EraseableItemsCount differs from expected');
 
   for i := 0 to FTestItems.Count - 1 do
     TestDelete(FTestItems[i]);
@@ -405,24 +432,28 @@ end;
 { TStartupListTest }
 
 procedure TStartupListTest.SetUp;
+var
+  Location: TStartupLocation;
+
 begin
   inherited SetUp;
   FRootList := TRootList<TRootItem>(TStartupList.Create);
 
-  FTestItems.Append(GetItemName(slHkcuRun));
-  FTestItems.Append(GetItemName(slHkcuRunOnce));
-  FTestItems.Append(GetItemName(slStartupUser));
-{$IFNDEF DEBUG}
-  FTestItems.Append(GetItemName(slHklmRun));
-  FTestItems.Append(GetItemName(slHklmRunOnce));
-  FTestItems.Append(GetItemName(slCommonStartup));
-
-  if (TOSVersion.Architecture = arIntelX64) then
+  for Location := Low(TStartupLocation) to High(TStartupLocation) do
   begin
-    FTestItems.Append(GetItemName(slHklmRun32));
-    FTestItems.Append(GetItemName(slHklmRunOnce32));
-  end;  //of begin
-{$ENDIF}
+  {$IFDEF DEBUG}
+    if not (Location in [slHkcuRun, slHkcuRunOnce, slStartupUser]) then
+      Continue;
+  {$ELSE}
+    if (TOSVersion.Architecture = arIntelX64) then
+    begin
+      FTestItems.Append(GetItemName(slHklmRun32));
+      FTestItems.Append(GetItemName(slHklmRunOnce32));
+    end;  //of begin
+  {$ENDIF}
+    FTestItems.Append(GetItemName(Location));
+    FEraseableTestItems.Append(GetItemName(Location, True));
+  end;  //of for
 end;
 
 procedure TStartupListTest.TestImportBackup;
@@ -522,7 +553,7 @@ begin
   for Location := Low(TStartupLocation) to High(TStartupLocation) do
     TStartupList(FRootList).Load(Location);
 
-  CheckEquals(FTestItems.Count, FRootList.EraseableItemsCount, 'Count of eraseable items differs from expected');
+  CheckEquals(FEraseableTestItems.Count, FRootList.EraseableItemsCount, 'Count of eraseable items differs from expected');
 end;
 
 procedure TStartupListTest.CleanUp;
@@ -597,17 +628,27 @@ begin
   end;
 end;
 
-function TStartupListTest.GetItemName(ALocation: TStartupLocation): string;
+function TStartupListTest.GetItemName(ALocation: TStartupLocation;
+  AEraseable: Boolean = False): string;
+
+  function GetName(const AName: string; AEraseable: Boolean): string;
+  begin
+    if AEraseable then
+      Result := AName +' (eraseable)'
+    else
+      Result := AName;
+  end;
+
 begin
   case ALocation of
-    slHkcuRun:       Result := 'HKCU';
-    slHkcuRunOnce:   Result := 'HKCU RunOnce';
-    slHklmRun:       Result := 'HKLM';
-    slHklmRun32:     Result := 'HKLM32';
-    slHklmRunOnce:   Result := 'HKLM RunOnce';
-    slHklmRunOnce32: Result := 'HKLM RunOnce32';
-    slStartupUser:   Result := STARTUP_USER +'.lnk';
-    slCommonStartup: Result := STARTUP_COMMON +'.lnk';
+    slHkcuRun:       Result := GetName('HKCU', AEraseable);
+    slHkcuRunOnce:   Result := GetName('HKCU RunOnce', AEraseable);
+    slHklmRun:       Result := GetName('HKLM', AEraseable);
+    slHklmRun32:     Result := GetName('HKLM32', AEraseable);
+    slHklmRunOnce:   Result := GetName('HKLM RunOnce', AEraseable);
+    slHklmRunOnce32: Result := GetName('HKLM RunOnce32', AEraseable);
+    slStartupUser:   Result := GetName(STARTUP_USER, AEraseable) +'.lnk';
+    slCommonStartup: Result := GetName(STARTUP_COMMON, AEraseable) +'.lnk';
   end;  //of case
 end;
 
@@ -624,6 +665,9 @@ begin
   FTestItems.Append(cShellCMItemCascading);
   FTestItems.Append(cShellNewCMItem);
   FTestItems.Append(cShellExCMItem);
+
+  FEraseableTestItems.Append(cShellCMItemEraseable);
+  FEraseableTestItems.Append(cShellExGUIDEraseable);
 end;
 
 procedure TContextListTest.AddEnabledTestItems;
@@ -839,7 +883,7 @@ procedure TContextListTest.LoadItems();
 begin
   TContextList(FRootList).LoadContextmenu(cShellFileExt, False);
   TContextList(FRootList).LoadContextmenu(cShellFileExtEraseable, False);
-  CheckEquals(2, FRootList.EraseableItemsCount, 'Count of eraseable items differs from expected');
+  CheckEquals(FEraseableTestItems.Count, FRootList.EraseableItemsCount, 'Count of eraseable items differs from expected');
 end;
 
 procedure TContextListTest.TestChangeItemFilePaths;
@@ -909,6 +953,7 @@ begin
   inherited SetUp;
   FRootList := TRootList<TRootItem>(TServiceList.Create);
   FTestItems.Append(cService);
+  FEraseableTestItems.Append(cServiceEraseable);
 end;
 
 procedure TServiceListTest.AddEnabledTestItems;
@@ -930,7 +975,7 @@ begin
 {$ENDIF}
   LoadService(ChangeFileExt(ExtractFileName(cTestExe), ''));
   LoadService(ChangeFileExt(ExtractFileName(cTestExeEraseable), ''));
-  CheckEquals(FTestItems.Count, FRootList.EraseableItemsCount, 'Count of eraseable items differs from expected');
+  CheckEquals(FEraseableTestItems.Count, FRootList.EraseableItemsCount, 'Count of eraseable items differs from expected');
 end;
 
 procedure TServiceListTest.LoadService(const AName: string);
@@ -986,7 +1031,7 @@ end;
 procedure TTaskListTest.LoadItems();
 begin
   TTaskList(FRootList).Search(False);
-  CheckEquals(0, FRootList.EraseableItemsCount, 'Count of eraseable items differs from expected');
+  CheckEquals(FEraseableTestItems.Count, FRootList.EraseableItemsCount, 'Count of eraseable items differs from expected');
 end;
 
 initialization

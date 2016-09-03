@@ -524,7 +524,12 @@ type
   TItemStatus = (
 
     /// <summary>
-    ///   Item has been enabled
+    ///   Item has changed in any way and needs a full visual update.
+    /// </summary>
+    stAny,
+
+    /// <summary>
+    ///   Item has been enabled.
     /// </summary>
     stEnabled,
 
@@ -536,7 +541,17 @@ type
     /// <summary>
     ///   Item has been deleted.
     /// </summary>
-    stDeleted
+    stDeleted,
+
+    /// <summary>
+    ///   Path has changed.
+    /// </summary>
+    stPathChanged,
+
+    /// <summary>
+    ///   Name has changed.
+    /// </summary>
+    stRenamed
   );
 
   /// <summary>
@@ -2915,7 +2930,12 @@ begin
 
     // Update eraseable count
     if (ItemEraseable and not FItem.Eraseable) then
-      Dec(FEraseableItemsCount);
+      Dec(FEraseableItemsCount)
+    else
+      if (not ItemEraseable and FItem.Eraseable) then
+        Inc(FEraseableItemsCount);
+
+    DoNotifyOnChanged(stPathChanged);
 
   finally
     FLock.Release();
@@ -3185,6 +3205,7 @@ begin
     end;  //of begin
 
     FItem.Name := ANewName;
+    DoNotifyOnChanged(stRenamed);
 
   finally
     FLock.Release();
@@ -3870,6 +3891,7 @@ begin
   FLnkFile.ExeFileName := ExtractPathToFile(ANewFileName).DeQuotedString('"');
   FLnkFile.Arguments := ExtractArguments(ANewFileName).DeQuotedString('"');
   FFileName := ANewFileName;
+  FEraseable := not FileExists();
 
   // Rewrite backup
   if (not FEnabled and FLnkFile.BackupExists()) then
