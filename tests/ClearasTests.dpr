@@ -23,9 +23,6 @@ uses
   madListModules,
 {$ENDIF}
   DUnitTestRunner,
-{$IFNDEF DEBUG}
-  PMCW.AdminManifest in '..\src\PMCW.AdminManifest.pas',
-{$ENDIF}
   ClearasAPITest in 'ClearasAPITest.pas',
   ClearasAPI in '..\src\ClearasAPI.pas';
 

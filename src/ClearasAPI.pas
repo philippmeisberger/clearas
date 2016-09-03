@@ -4733,10 +4733,7 @@ begin
 
   try
     if (AFileName = '') then
-    begin
-      FIcon := 0;
-      Exit(FIcon);
-    end;  //of begin
+      Exit;
 
     if (ExtractFileExt(AFileName) = '.exe') then
       Icon.Handle := inherited GetIcon(AFileName)
@@ -6067,7 +6064,7 @@ begin
       if (LastError = ERROR_SERVICE_EXISTS) then
         Exit;
 
-      raise EServiceException.Create(SysErrorMessage(LastError));
+      raise EServiceException.Create('Could not create new service: '+ SysErrorMessage(LastError));
     end;  //of begin
 
     CloseServiceHandle(Service);
