@@ -3047,7 +3047,7 @@ begin
   if Assigned(FOnSearchFinish) then
     FOnSearchFinish(Self);
 
-  DoNotifyOnChanged(stDeleted);
+  DoNotifyOnChanged(stAny);
   FInvalid := False;
 end;
 
@@ -3240,7 +3240,7 @@ begin
 
   // Notify that GUI counter needs to be updated
   if Assigned(FOnChanged) then
-    FOnChanged(Self, stDeleted);
+    FOnChanged(Self, stAny);
 end;
 
 procedure TSearchThread.DoNotifyOnStart();

@@ -11,6 +11,7 @@ Version 4.4  [??.??.16]
   - Für ungültige Autostarteinträge wird kein Symbol mehr angezeigt
   - Warnung für ungültige Einträge beim Deaktivieren hinzugefügt
 - Potentielles Handle-Leak geschlossen
+- Bug fix in 64-Bit Version: Dateipfad von 32-Bit Kontextmenüeinträgen konnte nicht gefunden werden
 
 ---------------------------------
 

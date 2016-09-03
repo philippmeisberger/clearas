@@ -901,7 +901,7 @@ begin
         pmChangeStatus.Caption := bEnableContextItem.Caption;
       end;
 
-    stDeleted:
+    stAny, stDeleted:
       begin
         bEnableContextItem.Enabled := False;
         bDisableContextItem.Enabled := False;
@@ -987,6 +987,9 @@ end;
   Event method that is called when item status has been changed. }
 
 procedure TMain.OnStartupItemChanged(Sender: TObject; ANewStatus: TItemStatus);
+var
+  Icon: TIcon;
+
 begin
   // Refresh counter label
   if Assigned(FStartup) then
@@ -1019,12 +1022,26 @@ begin
           lwStartup.ItemFocused.SubItems[3] := DateTimeToStr(FStartup.Selected.Time);
       end;
 
-    stDeleted:
+    stAny, stDeleted:
       begin
         bEnableStartupItem.Enabled := False;
         bDisableStartupItem.Enabled := False;
         bDeleteStartupItem.Enabled := False;
         bExportStartupItem.Enabled := False;
+      end;
+
+    stPathChanged:
+      begin
+        Icon := TIcon.Create;
+
+        try
+          // Update icon
+          Icon.Handle := FStartup.Selected.Icon;
+          lwStartup.ItemFocused.ImageIndex := IconList.AddIcon(Icon);
+
+        finally
+          FreeAndNil(Icon);
+        end;  //of try
       end;
   end;  //of case
 end;
@@ -1138,7 +1155,7 @@ begin
           lwService.ItemFocused.SubItems[3] := DateTimeToStr(FService.Selected.Time);
       end;
 
-    stDeleted:
+    stAny, stDeleted:
       begin
         bEnableServiceItem.Enabled := False;
         bDisableServiceItem.Enabled := False;
@@ -1254,7 +1271,7 @@ begin
         pmChangeStatus.Caption := bEnableTaskItem.Caption;
       end;
 
-    stDeleted:
+    stAny, stDeleted:
       begin
         bEnableTaskItem.Enabled := False;
         bDisableTaskitem.Enabled := False;
@@ -2158,10 +2175,10 @@ end;
 procedure TMain.pmDeleteClick(Sender: TObject);
 begin
   case PageControl.ActivePageIndex of
-    0: bDeleteStartupItem.OnClick(Sender);
-    1: bDeleteContextItem.OnClick(Sender);
-    2: bDeleteServiceItem.OnClick(Sender);
-    3: bDeleteTaskItem.OnClick(Sender);
+    0: bDeleteStartupItem.Click();
+    1: bDeleteContextItem.Click();
+    2: bDeleteServiceItem.Click();
+    3: bDeleteTaskItem.Click();
   end;  //of case
 end;
 
@@ -2316,7 +2333,6 @@ end;
 procedure TMain.pmEditClick(Sender: TObject);
 var
   Path, EnteredPath: string;
-  Icon: TIcon;
 
 begin
   try
@@ -2332,21 +2348,6 @@ begin
 
     // Try to change the file path
     GetSelectedList().ChangeItemFilePath(EnteredPath);
-
-    // Update icon path in TListView
-    if (PageControl.ActivePageIndex = 0) then
-    begin
-      // Update icon
-      Icon := TIcon.Create;
-
-      try
-        Icon.Handle := FStartup.Selected.Icon;
-        lwStartup.ItemFocused.ImageIndex := IconList.AddIcon(Icon);
-
-      finally
-        Icon.Free;
-      end;  //of try
-    end;  //of begin
 
     // Update file path in TListView
     if (PageControl.ActivePageIndex <> 1) then
@@ -2483,10 +2484,9 @@ var
 
 begin
   case PageControl.ActivePageIndex of
-    0: ListView := lwStartup;
-    2: ListView := lwService;
-    else
-       Exit;
+    0:   ListView := lwStartup;
+    2:   ListView := lwService;
+    else Exit;
   end;  //of case
 
   if (WindowState = wsNormal) then

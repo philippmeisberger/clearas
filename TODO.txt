@@ -1,5 +1,4 @@
 Ideas:
-- Add "remove all invalid items"
 - Add "Execute" to popup menu
 - Context menu: support cascading shell submenus (ExtendedSubCommandsKey)
 - Receive notifications about registry changes

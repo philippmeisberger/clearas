@@ -444,12 +444,6 @@ begin
   {$IFDEF DEBUG}
     if not (Location in [slHkcuRun, slHkcuRunOnce, slStartupUser]) then
       Continue;
-  {$ELSE}
-    if (TOSVersion.Architecture = arIntelX64) then
-    begin
-      FTestItems.Append(GetItemName(slHklmRun32));
-      FTestItems.Append(GetItemName(slHklmRunOnce32));
-    end;  //of begin
   {$ENDIF}
     FTestItems.Append(GetItemName(Location));
     FEraseableTestItems.Append(GetItemName(Location, True));
@@ -667,7 +661,7 @@ begin
   FTestItems.Append(cShellExCMItem);
 
   FEraseableTestItems.Append(cShellCMItemEraseable);
-  FEraseableTestItems.Append(cShellExGUIDEraseable);
+  FEraseableTestItems.Append(cShellExCMItemEraseable);
 end;
 
 procedure TContextListTest.AddEnabledTestItems;
