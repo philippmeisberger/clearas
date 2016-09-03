@@ -269,7 +269,8 @@ type
     function GetArguments(): string;
     function GetFileNameOnly(): string;
   protected
-    FEnabled: Boolean;
+    FEnabled,
+    FEraseable: Boolean;
     FFileName: string;
     FName: string;
     FLocation: string;
@@ -280,7 +281,6 @@ type
     function ExtractArguments(const APath: string): string;
     function ExtractPathToFile(const APath: string): string;
     procedure DestroyIconHandle();
-    function GetEraseable(): Boolean; virtual;
     function GetFullLocation(): string; virtual; abstract;
     function GetFileDescription(AFileName: TFileName): string;
     function GetIcon(): HICON; overload; virtual;
@@ -387,7 +387,7 @@ type
     /// <summary>
     ///   Determines if the item is invalid and can be deleted.
     /// </summary>
-    property Eraseable: Boolean read GetEraseable;
+    property Eraseable: Boolean read FEraseable;
 
     /// <summary>
     ///   Gets or sets the filename including arguments.
@@ -606,11 +606,13 @@ type
     FOnSearchStart,
     FOnSearchFinish: TNotifyEvent;
     FOnSearchError: TSearchErrorEvent;
+    FEnabledItemsCount,
+    FEraseableItemsCount: Integer;
   protected
-    FEnabledItemsCount: Integer;
     FInvalid: Boolean;
     FLock: TCriticalSection;
     procedure DoNotifyOnChanged(ANewStatus: TItemStatus);
+    procedure Notify(const Item: T; Action: TCollectionNotification); override;
 
     { IInterface }
     function QueryInterface(const IID: TGUID; out Obj): HRESULT; stdcall;
@@ -626,18 +628,6 @@ type
     ///   Destructor for destroying a <c>TRootList</c> instance.
     /// </summary>
     destructor Destroy; override;
-
-    /// <summary>
-    ///   Adds an item to the list.
-    /// </summary>
-    /// <param name="AItem">
-    ///   The item.
-    /// </param>
-    /// <returns>
-    ///   The index of the item. If the item was not added <c>-1</c> is
-    ///   returned.
-    /// </returns>
-    function Add(const AItem: TRootItem): Integer; reintroduce;
 
     /// <summary>
     ///   Changes the file path of the current selected item.
@@ -656,6 +646,14 @@ type
     ///   Removes all items from the list.
     /// </summary>
     procedure Clear();
+
+    /// <summary>
+    ///   Deletes the eraseable marked items from the list.
+    /// </summary>
+    /// <returns>
+    ///   The number of deleted items.
+    /// </returns>
+    function DeleteEraseableItems(): Integer;
 
     /// <summary>
     ///   Deletes the current selected item.
@@ -736,7 +734,7 @@ type
     function IndexOf(const ANameOrCaption: string; AEnabled: Boolean): Integer; overload;
 
     /// <summary>
-    ///   Signals that list needs an visual update.
+    ///   Signals that list needs a visual update.
     /// </summary>
     procedure Invalidate();
 
@@ -795,6 +793,11 @@ type
     ///   Gets the count of enabled items in the list.
     /// </summary>
     property EnabledItemsCount: Integer read FEnabledItemsCount;
+
+    /// <summary>
+    ///   Gets the count of eraseable marked items.
+    /// </summary>
+    property EraseableItemsCount: Integer read FEraseableItemsCount;
 
     /// <summary>
     ///   Gets or sets the list visual state. If set to <c>True</c> and the list
@@ -1565,7 +1568,6 @@ type
     procedure GetSubCommands(var ASubCommands: TStrings);
   protected
     procedure ChangeFilePath(const ANewFileName: string); override;
-    function GetEraseable(): Boolean; override;
     procedure Rename(const ANewName: string); override;
   public
     /// <summary>
@@ -1653,7 +1655,6 @@ type
   /// </summary>
   TShellNewItem = class(TContextListItem)
   protected
-    function GetEraseable(): Boolean; override;
     function GetIcon(): HICON; override;
     procedure ChangeFilePath(const ANewFileName: string); override;
     procedure ChangeStatus(const ANewStatus: Boolean); override;
@@ -2022,7 +2023,6 @@ type
   protected
     procedure ChangeFilePath(const ANewFilePath: string); override;
     procedure ChangeStatus(const ANewStatus: Boolean); override;
-    function GetEraseable(): Boolean; override;
     function GetFullLocation(): string; override;
     procedure Rename(const ANewName: string); override;
   public
@@ -2431,16 +2431,12 @@ begin
   FLocation := ALocation;
   FEnabled := AEnabled;
   FIcon := 0;
+  FEraseable := not FileExists();
 end;
 
 function TRootItem.GetArguments(): string;
 begin
   Result := ExtractArguments(FFileName).DeQuotedString('"');
-end;
-
-function TRootItem.GetEraseable(): Boolean;
-begin
-  Result := not FileExists();
 end;
 
 function TRootItem.GetFileNameOnly(): string;
@@ -2496,6 +2492,7 @@ end;
 procedure TRootItem.ChangeFilePath(const ANewFileName: string);
 begin
   FFileName := ANewFileName;
+  FEraseable := not FileExists();
 end;
 
 destructor TRootItem.Destroy;
@@ -2851,6 +2848,7 @@ constructor TRootList<T>.Create;
 begin
   inherited Create;
   FEnabledItemsCount := 0;
+  FEraseableItemsCount := 0;
   FInvalid := True;
   FDuplicates := False;
   FLock := TCriticalSection.Create;
@@ -2893,18 +2891,14 @@ procedure TRootList<T>.Clear();
 begin
   inherited Clear;
   FEnabledItemsCount := 0;
+  FEraseableItemsCount := 0;
   FItem := nil;
 end;
 
-function TRootList<T>.Add(const AItem: TRootItem): Integer;
-begin
-  Result := inherited Add(AItem);
-
-  if ((Result <> -1) and AItem.Enabled) then
-    Inc(FEnabledItemsCount);
-end;
-
 procedure TRootList<T>.ChangeItemFilePath(const ANewFilePath: string);
+var
+  ItemEraseable: Boolean;
+
 begin
   // List locked?
   if not FLock.TryEnter() then
@@ -2916,7 +2910,12 @@ begin
       raise EInvalidItem.Create('No item selected!');
 
     // Change item file path
+    ItemEraseable := FItem.Eraseable;
     FItem.ChangeFilePath(ANewFilePath);
+
+    // Update eraseable count
+    if (ItemEraseable and not FItem.Eraseable) then
+      Dec(FEraseableItemsCount);
 
   finally
     FLock.Release();
@@ -2967,6 +2966,25 @@ begin
   end;  //of try
 end;
 
+function TRootList<T>.DeleteEraseableItems(): Integer;
+var
+  i: Integer;
+
+begin
+  Result := 0;
+
+  for i := Count - 1 downto 0 do
+    if (Items[i].Eraseable and Items[i].Delete()) then
+    begin
+      Delete(i);
+      Inc(Result);
+    end;  //of begin
+
+  // Refresh UI
+  if (Result > 0) then
+    DoNotifyOnFinished();
+end;
+
 function TRootList<T>.DeleteItem(): Boolean;
 var
   Deleted: Boolean;
@@ -2986,14 +3004,8 @@ begin
     // Successful?
     if Deleted then
     begin
-      // Item was enabled
-      if (FItem.Enabled and (FEnabledItemsCount > 0)) then
-        // Update active counter
-        Dec(FEnabledItemsCount);
-
       // Remove item from list
       Remove(FItem);
-      FItem := nil;
 
       // Notify delete
       DoNotifyOnChanged(stDeleted);
@@ -3119,6 +3131,36 @@ begin
     OnStart := OnSearchStart;
     Start();
   end;  // of with
+end;
+
+procedure TRootList<T>.Notify(const Item: T; Action: TCollectionNotification);
+begin
+  inherited Notify(Item, Action);
+
+  case Action of
+    cnAdded:
+      begin
+        if Item.Enabled then
+          Inc(FEnabledItemsCount);
+
+        if Item.Eraseable then
+          Inc(FEraseableItemsCount);
+      end;
+
+    cnRemoved:
+      begin
+        // Item was enabled
+        if (Item.Enabled and (FEnabledItemsCount > 0)) then
+          // Update active counter
+          Dec(FEnabledItemsCount);
+
+        // Update eraseable count
+        if Item.Eraseable then
+          Dec(FEraseableItemsCount);
+
+        FItem := nil;
+      end;
+  end;  //of case
 end;
 
 procedure TRootList<T>.RenameItem(const ANewName: string);
@@ -3346,11 +3388,13 @@ begin
 
   try
     Reg.RootKey := FRootKey.ToHKey();
-    Reg.OpenKey(AKeyPath, False);
+
+    if not Reg.OpenKey(AKeyPath, False) then
+      raise ERegistryException.Create('Could not open key '''+ Reg.RootKeyName +'\'+ AKeyPath +''': '+ Reg.LastErrorMsg);
 
     // Try to delete value
     if (Reg.ValueExists(Name) and not Reg.DeleteValue(Name)) then
-      raise EStartupException.Create('Could not delete value!');
+      raise ERegistryException.Create('Could not delete value '''+ Name +''': '+ Reg.LastErrorMsg);
 
     // Deleted or does not exist
     Result := True;
@@ -4875,12 +4919,7 @@ constructor TShellCascadingItem.Create(const AName, ACaption, ALocation: string;
   AEnabled, AExtended: Boolean);
 begin
   inherited Create(AName, ACaption, '', ALocation, AEnabled, AExtended);
-end;
-
-function TShellCascadingItem.GetEraseable(): Boolean;
-begin
-  // Does not have a file so wrongly marked as eraseable
-  Result := False;
+  FEraseable := False;
 end;
 
 procedure TShellCascadingItem.GetSubCommands(var ASubCommands: TStrings);
@@ -5126,6 +5165,7 @@ constructor TShellNewItem.Create(const AName, ACaption, ALocation: string;
   AEnabled: Boolean);
 begin
   inherited Create(AName, ACaption, '', ALocation, AEnabled, False);
+  FEraseable := False;
 end;
 
 procedure TShellNewItem.ChangeStatus(const ANewStatus: Boolean);
@@ -5172,12 +5212,6 @@ begin
     Reg.CloseKey();
     Reg.Free;
   end;  //of try
-end;
-
-function TShellNewItem.GetEraseable(): Boolean;
-begin
-  // Does not have a file so wrongly marked as eraseable
-  Result := False;
 end;
 
 function TShellNewItem.GetIcon(): HICON;
@@ -6239,6 +6273,7 @@ begin
   inherited Create(AName, '', AFileName, ALocation, AEnabled);
   FTask := ATask;
   FTaskService := ATaskService;
+  FEraseable := False;
 end;
 
 procedure TTaskListItem.ChangeStatus(const ANewStatus: Boolean);
@@ -6343,12 +6378,6 @@ begin
       Wow64FsRedirection(False);
   {$ENDIF}
   end;  //of try
-end;
-
-function TTaskListItem.GetEraseable(): Boolean;
-begin
-  // Tasks are always treated as valid
-  Result := False;
 end;
 
 function TTaskListItem.GetExportFilter(ALanguageFile: TLanguageFile): string;

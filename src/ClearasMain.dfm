@@ -109,6 +109,7 @@ object Main: TMain
         ViewStyle = vsReport
         OnColumnClick = ListViewColumnClick
         OnCompare = ListViewCompare
+        OnCustomDrawItem = ListViewCustomDrawItem
         OnDblClick = lwStartupDblClick
         OnKeyPress = ListViewKeyPress
         OnSelectItem = lwStartupSelectItem
@@ -181,6 +182,10 @@ object Main: TMain
     object tsContext: TTabSheet
       Caption = 'Kontextmen'#252
       ImageIndex = 1
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       DesignSize = (
         535
         284)
@@ -315,6 +320,7 @@ object Main: TMain
         ViewStyle = vsReport
         OnColumnClick = ListViewColumnClick
         OnCompare = ListViewCompare
+        OnCustomDrawItem = ListViewCustomDrawItem
         OnDblClick = lwContextDblClick
         OnKeyPress = ListViewKeyPress
         OnSelectItem = lwContextSelectItem
@@ -360,6 +366,10 @@ object Main: TMain
     object tsService: TTabSheet
       Caption = 'Dienste'
       ImageIndex = 2
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       DesignSize = (
         535
         284)
@@ -446,6 +456,7 @@ object Main: TMain
         ViewStyle = vsReport
         OnColumnClick = ListViewColumnClick
         OnCompare = ListViewCompare
+        OnCustomDrawItem = ListViewCustomDrawItem
         OnDblClick = lwServiceDblClick
         OnKeyPress = ListViewKeyPress
         OnSelectItem = lwServiceSelectItem
@@ -535,6 +546,10 @@ object Main: TMain
     object tsTasks: TTabSheet
       Caption = 'Aufgaben'
       ImageIndex = 3
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       DesignSize = (
         535
         284)
@@ -804,6 +819,13 @@ object Main: TMain
         Caption = 'Papierkorb Kontextmen'#252'-Eintrag'
         OnClick = mmContextClick
       end
+      object N11: TMenuItem
+        Caption = '-'
+      end
+      object mmDeleteEraseable: TMenuItem
+        Caption = 'Ung'#252'ltige l'#246'schen'
+        OnClick = mmDeleteEraseableClick
+      end
       object N8: TMenuItem
         Caption = '-'
       end
@@ -880,7 +902,7 @@ object Main: TMain
   object QuickSearchIconList: TImageList
     Left = 256
     Bitmap = {
-      494C010103000800440210001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C0101030008005C0210001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000001000000001002000000000000010
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000

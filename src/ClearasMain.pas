@@ -122,6 +122,8 @@ type
     lCopy2: TLabel;
     lCopy3: TLabel;
     lCopy4: TLabel;
+    N11: TMenuItem;
+    mmDeleteEraseable: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -141,6 +143,8 @@ type
     procedure ListViewColumnClick(Sender: TObject; Column: TListColumn);
     procedure ListViewCompare(Sender: TObject; Item1, Item2: TListItem;
       Data: Integer; var Compare: Integer);
+    procedure ListViewCustomDrawItem(Sender: TCustomListView; Item: TListItem;
+      State: TCustomDrawState; var DefaultDraw: Boolean);
     procedure lwStartupDblClick(Sender: TObject);
     procedure ListViewKeyPress(Sender: TObject; var Key: Char);
     procedure lwStartupSelectItem(Sender: TObject; Item: TListItem;
@@ -176,6 +180,7 @@ type
     procedure pmChangeIconClick(Sender: TObject);
     procedure pmDeleteIconClick(Sender: TObject);
     procedure mmShowCaptionsClick(Sender: TObject);
+    procedure mmDeleteEraseableClick(Sender: TObject);
   private
     FStartup: TStartupList;
     FContext: TContextList;
@@ -983,8 +988,9 @@ end;
 procedure TMain.OnStartupItemChanged(Sender: TObject; ANewStatus: TItemStatus);
 begin
   // Refresh counter label
-  lwStartup.Columns[1].Caption := FLang.Format(LID_PROGRAM_COUNTER,
-    [FStartup.EnabledItemsCount, FStartup.Count]);
+  if Assigned(FStartup) then
+    lwStartup.Columns[1].Caption := FLang.Format(LID_PROGRAM_COUNTER,
+      [FStartup.EnabledItemsCount, FStartup.Count]);
 
   // Change button states
   case ANewStatus of
@@ -1078,6 +1084,8 @@ begin
         // Get icon of program
         Icon.Handle := FStartup[i].Icon;
         ImageIndex := IconList.AddIcon(Icon);
+
+
       end;  //of with
 
   finally
@@ -1347,6 +1355,7 @@ begin
     mmEdit.Caption := GetString(LID_EDIT);
     mmContext.Caption := GetString(LID_RECYCLEBIN_ENTRY);
     mmDelBackup.Caption := GetString(LID_BACKUP_DELETE_ENABLED);
+    mmDeleteEraseable.Caption := GetString(LID_DELETE_ERASEABLE);
 
     // View menu labels
     mmView.Caption := GetString(LID_VIEW);
@@ -1538,6 +1547,39 @@ begin
   end;  //of try
 end;
 
+{ public TMain.mmDeleteEraseableClick
+
+  Deletes eraseable marked items. }
+
+procedure TMain.mmDeleteEraseableClick(Sender: TObject);
+var
+  ItemsEraseable, ItemsDeleted: Integer;
+
+begin
+  ItemsEraseable := GetSelectedList().EraseableItemsCount;
+
+  // No eraseable items?
+  if (ItemsEraseable = 0) then
+  begin
+    FLang.ShowMessage(FLang[LID_DELETE_ERASEABLE_NO_ITEMS]);
+    Exit;
+  end;  //of begin
+
+  if (FLang.ShowMessage(FLang.Format(LID_DELETE_ERASEABLE_CONFIRM, [ItemsEraseable]),
+    mtConfirmation) = IDYES) then
+  try
+    ItemsDeleted := GetSelectedList().DeleteEraseableItems();
+    FLang.ShowMessage(FLang.Format(LID_DELETE_ERASEABLE_SUCCESS, [ItemsDeleted]));
+
+  except
+    on E: EListBlocked do
+      FLang.ShowMessage(LID_OPERATION_PENDING1, LID_OPERATION_PENDING2, mtWarning);
+
+    on E: Exception do
+      FLang.ShowException(FLang.GetString([LID_DELETE, LID_IMPOSSIBLE]), E.Message);
+  end;  //of try
+end;
+
 { public TMain.UpdateContextPath
 
   Updates "Open Clearas" in recycle bin context menu. }
@@ -1669,6 +1711,20 @@ procedure TMain.eSearchRightButtonClick(Sender: TObject);
 begin
   if ((Sender as TButtonedEdit).Text <> '') then
     (Sender as TButtonedEdit).Clear;
+end;
+
+{ TMain.CustomDrawItem
+
+  Custom drawing of eraseable items. }
+
+procedure TMain.ListViewCustomDrawItem(Sender: TCustomListView;
+  Item: TListItem; State: TCustomDrawState; var DefaultDraw: Boolean);
+begin
+  // Mark eraseable items
+  if TRootItem(Item.SubItems.Objects[0]).Eraseable then
+    Sender.Canvas.Font.Color := clGray
+  else
+    Sender.Canvas.Font.Color := clBlack;
 end;
 
 { TMain.lwContextDblClick

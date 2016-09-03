@@ -125,6 +125,10 @@ BEGIN
   222, "Icon löschen"
   223, "Wollen Sie den Icon wirklich löschen?"
   224, "Beschreibung anzeigen"
+  225, "Ungültige Einträge löschen"
+  226, "Keine ungültigen Eintrage vorhanden."
+  227, "Wollen Sie wirklich %d ungültige(n) Einträg(e) löschen?"
+  228, "%d Einträg(e) gelöscht."
 END
 
 STRINGTABLE VERSION 1033 // english
@@ -254,6 +258,10 @@ BEGIN
   422, "Delete icon"
   423, "Are you sure you want to delete the icon?"
   424, "Show description"
+  425, "Delete invalid items"
+  426, "No invalid items present."
+  427, "Are you sure to delete %d item(s)?"
+  428, "Deleted %d item(s)."
 END
 
 STRINGTABLE VERSION 1036 // français
@@ -383,4 +391,8 @@ BEGIN
   622, "Supprimer l'icône"
   623, "Voulez-vous vraiment supprimer l'icône?"
   624, "Montrer la description"
+  625, "Supprimer les entrées non valides"
+  626, "Aucun élément valides présents."
+  627, "Voulez vous vraiment supprimer %d les entrées non valides?"
+  628, "Supprimé %d entrées."
 END
