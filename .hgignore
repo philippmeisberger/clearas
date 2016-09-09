@@ -1,7 +1,6 @@
 syntax: glob
 BACKUP/**
-src\__history\**
-tests\__history\**
+__history
 **.dcu
 **.exe
 **.zip
