@@ -2,7 +2,7 @@
 {                                                                         }
 { PM Code Works Certificate Authority                                     }
 {                                                                         }
-{ Copyright (c) 2011-2016 P.Meisberger (PM Code Works)                    }
+{ Copyright (c) 2011-2016 Phlipp Meisberger (PM Code Works)               }
 {                                                                         }
 { *********************************************************************** }
 
