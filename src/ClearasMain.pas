@@ -13,9 +13,9 @@ interface
 uses
   Winapi.Windows, System.SysUtils, System.Classes, Vcl.Controls, Vcl.Forms,
   Vcl.ComCtrls, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Dialogs, Vcl.Menus, Vcl.Graphics,
-  Vcl.ClipBrd, Registry, StrUtils, System.ImageList, Winapi.CommCtrl,
-  System.UITypes, ClearasAPI, ExportListThread, PMCW.Dialogs.About, PMCW.Utils,
-  PMCW.LanguageFile, PMCW.Dialogs.Updater, PMCW.Dialogs, Vcl.ImgList, Messages;
+  Vcl.ClipBrd, Registry, System.ImageList, Winapi.CommCtrl, System.UITypes,
+  ClearasAPI, ExportListThread, PMCW.Dialogs.About, PMCW.Utils, PMCW.LanguageFile,
+  PMCW.Dialogs.Updater, PMCW.Dialogs, Vcl.ImgList, Messages, PMCW.Registry;
 
 const
   KEY_RECYCLEBIN = 'CLSID\{645FF040-5081-101B-9F08-00AA002F954E}\shell';
@@ -847,8 +847,8 @@ begin
 
     // Filter items
     if ((eContextSearch.Text = '') or
-      (AnsiContainsText(Text, eContextSearch.Text) or
-      AnsiContainsText(FContext[i].LocationRoot, eContextSearch.Text))) then
+      (Text.Contains(eContextSearch.Text) or
+      FContext[i].LocationRoot.Contains(eContextSearch.Text))) then
       with lwContext.Items.Add do
       begin
         Caption := FContext[i].GetStatus(FLang);
@@ -1206,7 +1206,7 @@ begin
       Text := FService[i].Name;
 
     // Filter items
-    if ((eServiceSearch.Text = '') or (AnsiContainsText(Text, eServiceSearch.Text))) then
+    if ((eServiceSearch.Text = '') or (Text.Contains(eServiceSearch.Text))) then
       with lwService.Items.Add do
       begin
         Caption := FService[i].GetStatus(FLang);
@@ -1300,7 +1300,7 @@ begin
     Text := FTasks[i].Name;
 
     // Filter items
-    if ((eTaskSearch.Text = '') or (AnsiContainsText(Text, eTaskSearch.Text))) then
+    if ((eTaskSearch.Text = '') or (Text.Contains(eTaskSearch.Text))) then
       with lwTasks.Items.Add do
       begin
         Caption := FTasks[i].GetStatus(FLang);
@@ -2056,12 +2056,12 @@ begin
     Exit;
 
   // Current selected item already starts with key?
-  if AnsiStartsText(Key, List.ItemFocused.SubItems[0]) then
+  if List.ItemFocused.SubItems[0].StartsWith(Key, True) then
     StartIndex := List.ItemFocused.Index + 1;
 
   // Find next item whose first char starts with key
   for i := StartIndex to List.Items.Count - 1 do
-    if AnsiStartsText(Key, List.Items[i].SubItems[0]) then
+    if List.Items[i].SubItems[0].StartsWith(Key, True) then
     begin
       List.ItemIndex := i;
       List.ItemFocused := List.Items[i];
