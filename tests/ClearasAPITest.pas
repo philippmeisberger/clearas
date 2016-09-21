@@ -5,8 +5,8 @@ unit ClearasAPITest;
 interface
 
 uses
-  TestFramework, Windows, Classes, Registry, ComObj, SysUtils, ShellAPI,
-  Taskschd, WinSvc, Forms, ClearasAPI;
+  TestFramework, Windows, Classes, Registry, SysUtils, ShellAPI, Forms, WinSvc,
+  ClearasAPI;
 
 const
   cTestExe          = 'C:\Windows\regedit.exe';

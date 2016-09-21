@@ -29,6 +29,9 @@ uses
 {$R *.RES}
 
 begin
+{$IFNDEF madExcept}
+  ReportMemoryLeaksOnShutdown := True;
+{$ENDIF}
   DUnitTestRunner.RunRegisteredTests;
 end.
 
