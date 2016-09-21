@@ -1569,6 +1569,8 @@ begin
     end;  //of begin
 
   finally
+    FreeAndNil(Values);
+    FreeAndNil(Keys);
     FReg.CloseKey();
     Buffer := nil;
   end;  //of try
