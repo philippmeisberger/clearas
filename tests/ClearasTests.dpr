@@ -29,7 +29,8 @@ uses
 {$R *.RES}
 
 begin
-{$IFNDEF madExcept}
+{$IFDEF WIN64}
+  // madExcept leak checking does not seems to work in 64 bit builds
   ReportMemoryLeaksOnShutdown := True;
 {$ENDIF}
   DUnitTestRunner.RunRegisteredTests;
