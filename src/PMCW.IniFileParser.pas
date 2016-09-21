@@ -1515,62 +1515,72 @@ begin
 
     // Read all values from current key
     Values := TStringList.Create;
-    FReg.GetValueNames(Values);
 
-    // Build and append section header
-    Section := GetSection(AHKey, AKeyPath);
-    inherited AddSection(Section);
+    try
+      FReg.GetValueNames(Values);
 
-    if (Values.Count > 0) then
-      // Append key-value pairs
-      for i := 0 to Values.Count - 1 do
-      begin
-        // Filter values
-        if (Assigned(AFilterValues) and (AFilterValues.Count > 0)) then
-          if (AFilterValues.IndexOf(Values[i]) = -1) then
-            Continue;
+      // Build and append section header
+      Section := GetSection(AHKey, AKeyPath);
+      inherited AddSection(Section);
 
-        case FReg.GetDataType(Values[i]) of
-          rdString:
-            if (rdString in AFilterTypes) then
-              WriteString(Section, Values[i], FReg.ReadString(Values[i]));
+      if (Values.Count > 0) then
+        // Append key-value pairs
+        for i := 0 to Values.Count - 1 do
+        begin
+          // Filter values
+          if (Assigned(AFilterValues) and (AFilterValues.Count > 0)) then
+            if (AFilterValues.IndexOf(Values[i]) = -1) then
+              Continue;
 
-          rdInteger:
-            if (rdInteger in AFilterTypes) then
-              WriteInteger(Section, Values[i], FReg.ReadInteger(Values[i]));
+          case FReg.GetDataType(Values[i]) of
+            rdString:
+              if (rdString in AFilterTypes) then
+                WriteString(Section, Values[i], FReg.ReadString(Values[i]));
 
-          rdExpandString:
-            if (rdExpandString in AFilterTypes) then
-              WriteExpandString(Section, Values[i], FReg.ReadString(Values[i]));
+            rdInteger:
+              if (rdInteger in AFilterTypes) then
+                WriteInteger(Section, Values[i], FReg.ReadInteger(Values[i]));
 
-          rdBinary:
-            if (rdBinary in AFilterTypes) then
-            begin
-              SetLength(Buffer, FReg.GetDataSize(Values[i]));
-              FReg.ReadBinaryData(Values[i], Buffer[0], Length(Buffer));
-              WriteBinary(Section, Values[i], Buffer);
-            end;  //of begin
-        end;  //of case
-      end;  //of begin
+            rdExpandString:
+              if (rdExpandString in AFilterTypes) then
+                WriteExpandString(Section, Values[i], FReg.ReadString(Values[i]));
+
+            rdBinary:
+              if (rdBinary in AFilterTypes) then
+              begin
+                SetLength(Buffer, FReg.GetDataSize(Values[i]));
+                FReg.ReadBinaryData(Values[i], Buffer[0], Length(Buffer));
+                WriteBinary(Section, Values[i], Buffer);
+              end;  //of begin
+          end;  //of case
+        end;  //of begin
+
+    finally
+      FreeAndNil(Values);
+    end;  //of try
 
     // Include subkeys?
     if (ARecursive and FReg.HasSubKeys()) then
     begin
       Keys := TStringList.Create;
-      FReg.GetKeyNames(Keys);
 
-      // Start recursion of subkeys
-      for i := 0 to Keys.Count -1 do
-      begin
-        FReg.CloseKey();
-        ExportKey(AHKey, IncludeTrailingPathDelimiter(AKeyPath) + Keys[i], True,
-          AFilterValues, AFilterTypes);
-      end;  //of for
+      try
+        FReg.GetKeyNames(Keys);
+
+        // Start recursion of subkeys
+        for i := 0 to Keys.Count -1 do
+        begin
+          FReg.CloseKey();
+          ExportKey(AHKey, IncludeTrailingPathDelimiter(AKeyPath) + Keys[i], True,
+            AFilterValues, AFilterTypes);
+        end;  //of for
+
+      finally
+        FreeAndNil(Keys);
+      end;  //of try
     end;  //of begin
 
   finally
-    FreeAndNil(Values);
-    FreeAndNil(Keys);
     FReg.CloseKey();
     Buffer := nil;
   end;  //of try
