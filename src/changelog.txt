@@ -6,7 +6,7 @@ Changelog
 
 Version 4.4  [??.??.16]
 
-- Automatische Suche von ungültigen Einträgen hinzugefügt
+- Automatische Suche nach ungültigen Einträgen hinzugefügt
   - "Ungültige Einträge löschen" hinzugefügt
   - Für ungültige Autostarteinträge wird kein Symbol mehr angezeigt
   - Warnung für ungültige Einträge beim Deaktivieren hinzugefügt

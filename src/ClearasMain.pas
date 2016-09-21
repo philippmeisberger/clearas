@@ -847,8 +847,8 @@ begin
 
     // Filter items
     if ((eContextSearch.Text = '') or
-      (Text.Contains(eContextSearch.Text) or
-      FContext[i].LocationRoot.Contains(eContextSearch.Text))) then
+      (Text.ToLower().Contains(LowerCase(eContextSearch.Text)) or
+      FContext[i].LocationRoot.ToLower().Contains(LowerCase(eContextSearch.Text)))) then
       with lwContext.Items.Add do
       begin
         Caption := FContext[i].GetStatus(FLang);
@@ -1206,7 +1206,7 @@ begin
       Text := FService[i].Name;
 
     // Filter items
-    if ((eServiceSearch.Text = '') or (Text.Contains(eServiceSearch.Text))) then
+    if ((eServiceSearch.Text = '') or (Text.ToLower().Contains(LowerCase(eServiceSearch.Text)))) then
       with lwService.Items.Add do
       begin
         Caption := FService[i].GetStatus(FLang);
@@ -1300,7 +1300,7 @@ begin
     Text := FTasks[i].Name;
 
     // Filter items
-    if ((eTaskSearch.Text = '') or (Text.Contains(eTaskSearch.Text))) then
+    if ((eTaskSearch.Text = '') or (Text.ToLower().Contains(LowerCase(eTaskSearch.Text)))) then
       with lwTasks.Items.Add do
       begin
         Caption := FTasks[i].GetStatus(FLang);

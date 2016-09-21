@@ -271,7 +271,8 @@ type
     function GetFileNameOnly(): string;
   protected
     FEnabled,
-    FEraseable: Boolean;
+    FEraseable,
+    FInvalid: Boolean;
     FFileName: string;
     FName: string;
     FLocation: string;
@@ -1506,31 +1507,6 @@ type
     procedure Rename(const ANewName: string); overload; override;
   public
     /// <summary>
-    ///   Constructor for creating a <c>TShellItem</c> instance.
-    /// </summary>
-    /// <param name="AName">
-    ///   The internal name.
-    /// </param>
-    /// <param name="ACaption">
-    ///   The display name.
-    /// </param>
-    /// <param name="AFileName">
-    ///   The filename to an .exe file.
-    /// </param>
-    /// <param name="ALocation">
-    ///   The location where the item can be found.
-    /// </param>
-    /// <param name="AEnabled">
-    ///   The status.
-    /// </param>
-    /// <param name="AExtended">
-    ///   The contextmenu item is only shown when shift-key is pressed and a
-    ///   right click is performed. Otherwise the item is always shown.
-    /// </param>
-    constructor Create(const AName, ACaption, AFileName, ALocation: string;
-      AEnabled, AExtended: Boolean);
-
-    /// <summary>
     ///   Changes the icon of a contextmenu item.
     /// </summary>
     /// <param name="ANewIconFileName">
@@ -2447,7 +2423,7 @@ begin
   FLocation := ALocation;
   FEnabled := AEnabled;
   FIcon := 0;
-  FEraseable := not FileExists();
+  FEraseable := not FileExists() and not FInvalid;
 end;
 
 function TRootItem.GetArguments(): string;
@@ -2456,15 +2432,47 @@ begin
 end;
 
 function TRootItem.GetFileNameOnly(): string;
+const
+  RUNDLL32 = 'rundll32.exe';
+
 var
   Path: string;
+  Index: Integer;
 
 begin
-  Path := ExtractPathToFile(FFileName).DeQuotedString('"');
+  if (FFileName = '') then
+    Exit;
+
+  Index := FFileName.ToLower.IndexOf(RUNDLL32);
+
+  if (Index <> -1) then
+  begin
+    Index := Index + Length(RUNDLL32) + 1;
+    Path := FFileName.Substring(Index);
+    Path := Path.Substring(0, Path.IndexOf(',')).TrimLeft;
+  end  //of begin
+  else
+    Path := ExtractPathToFile(FFileName);
+
+  Path := Path.DeQuotedString('"');
 
   // Path has to be expanded?
   if ((Path <> '') and (Path[1] = '%')) then
     ExpandEnvironmentVar(Path);
+
+  FInvalid := (ExtractFileExt(Path) = '');
+
+  if (not FInvalid and IsRelativePath(Path)) then
+  begin
+    // File in system search path?
+    Result := FileSearch(Path, GetKnownFolderPath(FOLDERID_Windows) + PathSep +
+      GetKnownFolderPath(FOLDERID_System) + PathSep + GetKnownFolderPath(FOLDERID_SystemX86));
+
+    FInvalid := (Result = '');
+
+    if not FInvalid then
+      Exit;
+  end;  //of begin
 
   Result := Path;
 end;
@@ -2532,43 +2540,61 @@ var
   Ext, SpaceDelimiter: Integer;
 
 begin
-  // Cut path from extension until end
-  // Note: Garbage in worst case if a folder name contains a '.'!
-  Ext := AnsiPos('.', APath) - 1;
-
-  if (Ext >= 0) and (APath.Chars[Ext] = '.') then
-    ExtWithArguments := APath.SubString(Ext)
-  else
+  if (APath = '') then
     Exit;
 
+  // Cut path from extension until end
+  // Note: Garbage in worst case if a folder name contains a '.'!
+  Ext := APath.IndexOf('.');
+
+  if (Ext >= 0) then
+    ExtWithArguments := APath.SubString(Ext)
+  else
+    ExtWithArguments := ExtractFileExt(APath);
+
   // Find space delimter between extension and arguments
-  SpaceDelimiter := AnsiPos(' ', ExtWithArguments);
+  SpaceDelimiter := ExtWithArguments.IndexOf(' ');
 
   // No space char after extension: no arguments!
-  if (SpaceDelimiter = 0) then
+  if (SpaceDelimiter = -1) then
     Exit;
 
   // Copy arguments without entension and space char at front and end
-  Result := Trim(Copy(ExtWithArguments, SpaceDelimiter, Length(ExtWithArguments)));
+  Result := ExtWithArguments.Substring(SpaceDelimiter).Trim;
 end;
 
 function TRootItem.ExtractPathToFile(const APath: string): string;
 var
-  ArgumentsIndex: Integer;
+  Parts: TArray<string>;
+  i: Integer;
+  Line, ExtWithArguments: string;
 
 begin
-  // Find index of arguments
-  ArgumentsIndex := AnsiPos(ExtractArguments(APath), APath);
+  if (Length(APath) = 0) then
+    Exit;
 
-  // Copy path without arguments
-  if (ArgumentsIndex > 0) then
-    Result := Trim(Copy(APath, 0, ArgumentsIndex - 1))
+  if (APath[1] = '"') then
+  begin
+    Parts := APath.Split(['"']);
+
+    for i := Low(Parts) to High(Parts) do
+    begin
+      Line := Parts[i].Trim;
+
+      if (Line <> '') then
+      begin
+        Result := Line;
+        Break;
+      end;  //of begin
+    end;  //of for
+  end  //of begin
   else
-    Result := APath;
-
-  // Add missing quote
-  if ((Result = '"') and (Result[Length(Result)] <> '"')) then
-    Result := Result +'"';
+  begin
+    i := APath.LastDelimiter('.'+ PathDelim);
+    ExtWithArguments := APath.SubString(i + 1);
+    Parts := ExtWithArguments.Split([' ']);
+    Result := APath.Substring(0, APath.IndexOf(ExtWithArguments) + Length(Parts[0]));
+  end;  //of if
 end;
 
 function TRootItem.GetIcon(): HICON;
@@ -3889,7 +3915,7 @@ begin
   if (not Enabled and not CheckWin32Version(6, 2)) then
     inherited ChangeFilePath(ANewFileName);
 
-  FLnkFile.ExeFileName := ExtractPathToFile(ANewFileName).DeQuotedString('"');
+  FLnkFile.ExeFileName := ExtractPathToFile(ANewFileName);
   FLnkFile.Arguments := ExtractArguments(ANewFileName).DeQuotedString('"');
   FFileName := ANewFileName;
   FEraseable := not FileExists();
@@ -4217,7 +4243,7 @@ begin
 
   // File path already exists in another item?
   for i := 0 to Count - 1 do
-    if AnsiContainsStr(Items[i].FileName, AFileName) then
+    if Items[i].FileName.Contains(AFileName) then
       Exit(False);
 
   LnkFile := TStartupLnkFile.Create(AName, AStartupUser, AFileName, AArguments);
@@ -4700,18 +4726,11 @@ var
 begin
   UserChoice := GetRegStringValue(Format(KEY_USERCHOICE, [AFileExtension]),
     'ProgID', HKEY_CURRENT_USER);
-  Result := AnsiStartsText('Applications\', UserChoice);
+  Result := UserChoice.StartsWith('Applications\', True);
 end;
 
 
 { TShellItem }
-
-constructor TShellItem.Create(const AName, ACaption, AFileName, ALocation: string;
-  AEnabled, AExtended: Boolean);
-begin
-  inherited Create(AName, ACaption, AFileName, ALocation, AEnabled, False);
-  FExtended := AExtended;
-end;
 
 function TShellItem.GetLocation(): string;
 begin
@@ -4752,12 +4771,13 @@ var
 begin
   Result := 0;
   DestroyIconHandle();
+
+  if (AFileName = '') then
+    Exit;
+
   Icon := TIcon.Create;
 
   try
-    if (AFileName = '') then
-      Exit;
-
     if (ExtractFileExt(AFileName) = '.exe') then
       Icon.Handle := inherited GetIcon(AFileName)
     else
@@ -4818,8 +4838,7 @@ begin
     case Reg.GetDataType('') of
       rdExpandString: Reg.WriteExpandString('', ANewFileName);
       rdString:       Reg.WriteString('', ANewFileName);
-      else
-                      raise EContextMenuException.Create('Invalid data type!');
+      else            raise EContextMenuException.Create('Invalid data type!');
     end;  //of case
 
     inherited ChangeFilePath(ANewFileName);
@@ -5676,7 +5695,7 @@ var
             LoadContextmenu(AKeyName, stShellEx, AWin64);
 
           // Load ShellNew context menu items
-          if AnsiContainsStr(Keys[i], CM_SHELLNEW) then
+          if Keys[i].Contains(CM_SHELLNEW) then
           begin
             Reg.OpenKey(AKeyName +'\'+ Keys[i], False);
             Reg.GetValueNames(Values);
@@ -5943,7 +5962,7 @@ begin
 
     // Last status exists?
     if not Reg.ValueExists(Name) then
-      raise EStartupException.Create('Last status does not exist');
+      raise EStartupException.Create('Last status does not exist!');
 
     // Enable service
     if not ChangeServiceConfig(Service, SERVICE_NO_CHANGE, Reg.ReadInteger(Name),
@@ -6284,6 +6303,7 @@ begin
     FreeMem(Services, BytesNeeded);
   end;  //of try
 end;
+
 
 { TTaskListItem }
 

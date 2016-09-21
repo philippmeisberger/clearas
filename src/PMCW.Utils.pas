@@ -232,7 +232,7 @@ end;
 function ExpandEnvironmentVar(var AVariable: string): Boolean;
 var
   BufferSize: Integer;
-  Buffer: array of Char;
+  Buffer: string;
 
 begin
   Result := False;
@@ -246,7 +246,7 @@ begin
 
     if (ExpandEnvironmentStrings(PChar(AVariable), PChar(Buffer), BufferSize) <> 0) then
     begin
-      AVariable := StrPas(PChar(Buffer));
+      AVariable := PChar(Buffer);
       Result := True;
     end;  //of begin
   end;  //of begin
