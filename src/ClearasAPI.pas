@@ -2590,7 +2590,11 @@ begin
   end  //of begin
   else
   begin
-    i := APath.LastDelimiter('.'+ PathDelim);
+    if (APath.CountChar('.') = 1) then
+      i := APath.LastDelimiter(PathDelim +'.')
+    else
+      i := APath.LastDelimiter(PathDelim);
+
     ExtWithArguments := APath.SubString(i + 1);
     Parts := ExtWithArguments.Split([' ']);
     Result := APath.Substring(0, APath.IndexOf(ExtWithArguments) + Length(Parts[0]));
