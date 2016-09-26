@@ -10,7 +10,9 @@ Version 4.4  [??.??.16]
   - "Ungültige Einträge löschen" hinzugefügt
   - Für ungültige Autostarteinträge wird kein Symbol mehr angezeigt
   - Warnung für ungültige Einträge beim Deaktivieren hinzugefügt
+- "In Explorer öffnen" verbessert
 - Potentielles Handle-Leak geschlossen
+- Memory-Leak beim Exportieren geschlossen
 - Bug fix in 64-Bit Version: Dateipfad von 32-Bit Kontextmenüeinträgen konnte nicht gefunden werden
 
 ---------------------------------

@@ -269,6 +269,7 @@ type
   private
     function GetArguments(): string;
     function GetFileNameOnly(): string;
+    function GetEraseable(): Boolean;
   protected
     FEnabled,
     FEraseable,
@@ -389,7 +390,7 @@ type
     /// <summary>
     ///   Determines if the item is invalid and can be deleted.
     /// </summary>
-    property Eraseable: Boolean read FEraseable;
+    property Eraseable: Boolean read GetEraseable;
 
     /// <summary>
     ///   Gets or sets the filename including arguments.
@@ -2423,12 +2424,17 @@ begin
   FLocation := ALocation;
   FEnabled := AEnabled;
   FIcon := 0;
-  FEraseable := not FileExists() and not FInvalid;
+  FEraseable := not FileExists();
 end;
 
 function TRootItem.GetArguments(): string;
 begin
   Result := ExtractArguments(FFileName).DeQuotedString('"');
+end;
+
+function TRootItem.GetEraseable(): Boolean;
+begin
+  Result := not FInvalid and FEraseable;
 end;
 
 function TRootItem.GetFileNameOnly(): string;
