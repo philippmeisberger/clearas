@@ -255,8 +255,10 @@ begin
   // Init update notificator
   FUpdateCheck := TUpdateCheck.Create(Self, 'Clearas', FLang);
 
+{$IFNDEF DEBUG}
   // Check for update on startup
   FUpdateCheck.CheckForUpdate(False);
+{$ENDIF}
 
   // Init Clearas instances
   FStartup := TStartupList.Create;

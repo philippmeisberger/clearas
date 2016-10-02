@@ -1,4 +1,5 @@
 Ideas:
+- Export eraseable items before deleting
 - Visual grouping
 - Add "Execute" to popup menu
 - Context menu: support cascading shell submenus (ExtendedSubCommandsKey)
