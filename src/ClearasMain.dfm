@@ -30,26 +30,26 @@ object Main: TMain
     TabOrder = 0
     OnChange = PageControlChange
     object tsStartup: TTabSheet
-      Caption = 'Autostart'
+      Caption = 'Startup'
       DesignSize = (
         535
         284)
       object lStartup: TLabel
         Left = 21
         Top = 32
-        Width = 275
+        Width = 235
         Height = 14
-        Caption = 'Folgende Programme werden bei jedem Start ausgef'#252'hrt.'
+        Caption = 'The following programs are run at every startup.'
       end
       object lCopy1: TLabel
         Left = 223
         Top = 261
         Width = 88
         Height = 14
-        Hint = 'Zur Website'
+        Hint = 'Go to website'
         Anchors = [akBottom]
         Caption = 'PM Code Works'
-        Font.Charset = ANSI_CHARSET
+        Font.Charset = DEFAULT_CHARSET
         Font.Color = clBlack
         Font.Height = -11
         Font.Name = 'Arial'
@@ -68,7 +68,7 @@ object Main: TMain
         Height = 14
         Alignment = taRightJustify
         Anchors = [akTop, akRight]
-        Caption = 'v4.3'
+        Caption = 'v4.4'
       end
       object lWindows: TLabel
         Left = 21
@@ -85,19 +85,19 @@ object Main: TMain
         Anchors = [akLeft, akTop, akRight, akBottom]
         Columns = <
           item
-            Caption = 'Aktiviert'
+            Caption = 'Enabled'
             Width = 53
           end
           item
-            Caption = 'Programm (0/0)'
+            Caption = 'Program (0/0)'
             Width = 125
           end
           item
-            Caption = 'Datei'
+            Caption = 'File'
             Width = 122
           end
           item
-            Caption = 'Schl'#252'ssel'
+            Caption = 'Key'
             Width = 75
           end>
         ReadOnly = True
@@ -120,7 +120,7 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'Beenden'
+        Caption = 'Quit'
         TabOrder = 5
         OnClick = bCloseStartupClick
       end
@@ -130,7 +130,7 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'Deaktivieren'
+        Caption = 'Disable'
         Enabled = False
         TabOrder = 2
         OnClick = bDisableItemClick
@@ -141,7 +141,7 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'L'#246'schen'
+        Caption = 'Delete'
         Enabled = False
         TabOrder = 4
         OnClick = bDeleteItemClick
@@ -152,7 +152,7 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'Exportieren'
+        Caption = 'Export'
         Enabled = False
         TabOrder = 3
         OnClick = bExportStartupItemClick
@@ -163,7 +163,7 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'Aktivieren'
+        Caption = 'Enable'
         Enabled = False
         TabOrder = 1
         OnClick = bEnableItemClick
@@ -174,13 +174,13 @@ object Main: TMain
         Width = 105
         Height = 17
         Anchors = [akRight, akBottom]
-        Caption = 'RunOnce-Eintr'#228'ge'
+        Caption = 'RunOnce items'
         TabOrder = 6
         OnClick = mmRefreshClick
       end
     end
     object tsContext: TTabSheet
-      Caption = 'Kontextmen'#252
+      Caption = 'Context menu'
       ImageIndex = 1
       DesignSize = (
         535
@@ -188,9 +188,9 @@ object Main: TMain
       object lContext: TLabel
         Left = 21
         Top = 32
-        Width = 310
+        Width = 287
         Height = 14
-        Caption = 'Eintr'#228'ge dieser Liste sehen Sie in verschiedenen Kontextmen'#252's.'
+        Caption = 'The following items are included in different context menus.'
       end
       object lVersion2: TLabel
         Left = 510
@@ -199,7 +199,7 @@ object Main: TMain
         Height = 14
         Alignment = taRightJustify
         Anchors = [akTop, akRight]
-        Caption = 'v4.3'
+        Caption = 'v4.4'
       end
       object lWindows2: TLabel
         Left = 21
@@ -213,14 +213,14 @@ object Main: TMain
         Top = 261
         Width = 88
         Height = 14
-        Hint = 'Zur Website'
+        Hint = 'Go to website'
         Margins.Left = 0
         Margins.Top = 0
         Margins.Right = 0
         Margins.Bottom = 8
         Anchors = [akBottom]
         Caption = 'PM Code Works'
-        Font.Charset = ANSI_CHARSET
+        Font.Charset = DEFAULT_CHARSET
         Font.Color = clBlack
         Font.Height = -11
         Font.Name = 'Arial'
@@ -238,7 +238,7 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'Exportieren'
+        Caption = 'Export'
         Enabled = False
         TabOrder = 3
         OnClick = bExportItemClick
@@ -249,7 +249,7 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'L'#246'schen'
+        Caption = 'Delete'
         Enabled = False
         TabOrder = 4
         OnClick = bDeleteItemClick
@@ -260,7 +260,7 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'Beenden'
+        Caption = 'Quit'
         TabOrder = 5
         OnClick = bCloseStartupClick
       end
@@ -270,7 +270,7 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'Deaktivieren'
+        Caption = 'Disable'
         Enabled = False
         TabOrder = 2
         OnClick = bDisableItemClick
@@ -281,7 +281,7 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'Aktivieren'
+        Caption = 'Enable'
         Enabled = False
         TabOrder = 1
         OnClick = bEnableItemClick
@@ -294,19 +294,19 @@ object Main: TMain
         Anchors = [akLeft, akTop, akRight, akBottom]
         Columns = <
           item
-            Caption = 'Aktiviert'
+            Caption = 'Enabled'
             Width = 53
           end
           item
-            Caption = 'Eintrag (0/0)'
+            Caption = 'Item (0/0)'
             Width = 150
           end
           item
-            Caption = 'Ort'
+            Caption = 'Location'
             Width = 107
           end
           item
-            Caption = 'Schl'#252'ssel'
+            Caption = 'Key'
             Width = 65
           end>
         ReadOnly = True
@@ -337,7 +337,7 @@ object Main: TMain
         Width = 105
         Height = 17
         Anchors = [akRight, akBottom]
-        Caption = 'Expertenmodus'
+        Caption = 'Expert mode'
         TabOrder = 6
         OnClick = mmRefreshClick
       end
@@ -354,13 +354,13 @@ object Main: TMain
         RightButton.PressedImageIndex = 0
         RightButton.Visible = True
         TabOrder = 8
-        TextHint = 'Suchen ...'
+        TextHint = 'Search ...'
         OnChange = eSearchChange
         OnRightButtonClick = eSearchRightButtonClick
       end
     end
     object tsService: TTabSheet
-      Caption = 'Dienste'
+      Caption = 'Services'
       ImageIndex = 2
       DesignSize = (
         535
@@ -375,9 +375,9 @@ object Main: TMain
       object lService: TLabel
         Left = 21
         Top = 32
-        Width = 309
+        Width = 235
         Height = 14
-        Caption = 'Eintr'#228'ge dieser Liste werden beim Start von Windows gestartet.'
+        Caption = 'The following programs are run at every startup.'
       end
       object lVersion3: TLabel
         Left = 510
@@ -386,17 +386,17 @@ object Main: TMain
         Height = 14
         Alignment = taRightJustify
         Anchors = [akTop, akRight]
-        Caption = 'v4.3'
+        Caption = 'v4.4'
       end
       object lCopy3: TLabel
         Left = 223
         Top = 261
         Width = 88
         Height = 14
-        Hint = 'Zur Website'
+        Hint = 'Go to website'
         Anchors = [akBottom]
         Caption = 'PM Code Works'
-        Font.Charset = ANSI_CHARSET
+        Font.Charset = DEFAULT_CHARSET
         Font.Color = clBlack
         Font.Height = -11
         Font.Name = 'Arial'
@@ -426,19 +426,19 @@ object Main: TMain
         Anchors = [akLeft, akTop, akRight, akBottom]
         Columns = <
           item
-            Caption = 'Aktiviert'
+            Caption = 'Enabled'
             Width = 53
           end
           item
-            Caption = 'Dienst (0/0)'
+            Caption = 'Service (0/0)'
             Width = 125
           end
           item
-            Caption = 'Datei'
+            Caption = 'File'
             Width = 122
           end
           item
-            Caption = 'Typ'
+            Caption = 'Type'
             Width = 75
           end>
         ReadOnly = True
@@ -459,7 +459,7 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'Exportieren'
+        Caption = 'Export'
         Enabled = False
         TabOrder = 3
         OnClick = bExportItemClick
@@ -470,7 +470,7 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'L'#246'schen'
+        Caption = 'Delete'
         Enabled = False
         TabOrder = 4
         OnClick = bDeleteItemClick
@@ -481,7 +481,7 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'Beenden'
+        Caption = 'Quit'
         TabOrder = 5
         OnClick = bCloseStartupClick
       end
@@ -491,7 +491,7 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'Deaktivieren'
+        Caption = 'Disable'
         Enabled = False
         TabOrder = 2
         OnClick = bDisableItemClick
@@ -502,7 +502,7 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'Aktivieren'
+        Caption = 'Enable'
         Enabled = False
         TabOrder = 1
         OnClick = bEnableItemClick
@@ -513,7 +513,7 @@ object Main: TMain
         Width = 105
         Height = 17
         Anchors = [akRight, akBottom]
-        Caption = 'Expertenmodus'
+        Caption = 'Expert mode'
         TabOrder = 6
         OnClick = mmRefreshClick
       end
@@ -530,13 +530,13 @@ object Main: TMain
         RightButton.PressedImageIndex = 0
         RightButton.Visible = True
         TabOrder = 7
-        TextHint = 'Suchen ...'
+        TextHint = 'Search ...'
         OnChange = eSearchChange
         OnRightButtonClick = eSearchRightButtonClick
       end
     end
     object tsTasks: TTabSheet
-      Caption = 'Aufgaben'
+      Caption = 'Tasks'
       ImageIndex = 3
       DesignSize = (
         535
@@ -544,9 +544,9 @@ object Main: TMain
       object lTasks: TLabel
         Left = 21
         Top = 32
-        Width = 253
+        Width = 232
         Height = 14
-        Caption = 'Folgende Aufgaben werden wie geplant ausgef'#252'hrt.'
+        Caption = 'The following tasks are executed as scheduled.'
       end
       object lVersion4: TLabel
         Left = 510
@@ -555,7 +555,7 @@ object Main: TMain
         Height = 14
         Alignment = taRightJustify
         Anchors = [akTop, akRight]
-        Caption = 'v4.3'
+        Caption = 'v4.4'
       end
       object lWindows4: TLabel
         Left = 21
@@ -569,10 +569,10 @@ object Main: TMain
         Top = 261
         Width = 88
         Height = 14
-        Hint = 'Zur Website'
+        Hint = 'Go to website'
         Anchors = [akBottom]
         Caption = 'PM Code Works'
-        Font.Charset = ANSI_CHARSET
+        Font.Charset = DEFAULT_CHARSET
         Font.Color = clBlack
         Font.Height = -11
         Font.Name = 'Arial'
@@ -600,7 +600,7 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'Beenden'
+        Caption = 'Quit'
         TabOrder = 5
         OnClick = bCloseStartupClick
       end
@@ -610,7 +610,7 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'L'#246'schen'
+        Caption = 'Delete'
         Enabled = False
         TabOrder = 4
         OnClick = bDeleteItemClick
@@ -621,7 +621,7 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'Deaktivieren'
+        Caption = 'Disable'
         Enabled = False
         TabOrder = 2
         OnClick = bDisableItemClick
@@ -632,7 +632,7 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'Aktivieren'
+        Caption = 'Enable'
         Enabled = False
         TabOrder = 1
         OnClick = bEnableItemClick
@@ -643,7 +643,7 @@ object Main: TMain
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
-        Caption = 'Exportieren'
+        Caption = 'Export'
         Enabled = False
         TabOrder = 3
         OnClick = bExportItemClick
@@ -654,7 +654,7 @@ object Main: TMain
         Width = 105
         Height = 17
         Anchors = [akRight, akBottom]
-        Caption = 'Expertenmodus'
+        Caption = 'Expert mode'
         TabOrder = 6
         OnClick = mmRefreshClick
       end
@@ -671,7 +671,7 @@ object Main: TMain
         RightButton.PressedImageIndex = 0
         RightButton.Visible = True
         TabOrder = 7
-        TextHint = 'Suchen ...'
+        TextHint = 'Search ...'
         OnChange = eSearchChange
         OnRightButtonClick = eSearchRightButtonClick
       end
@@ -683,19 +683,19 @@ object Main: TMain
         Anchors = [akLeft, akTop, akRight, akBottom]
         Columns = <
           item
-            Caption = 'Aktiviert'
+            Caption = 'Enabled'
             Width = 53
           end
           item
-            Caption = 'Aufgabe (0/0)'
+            Caption = 'Task (0/0)'
             Width = 125
           end
           item
-            Caption = 'Datei'
+            Caption = 'File'
             Width = 122
           end
           item
-            Caption = 'Ort'
+            Caption = 'Location'
             Width = 75
           end>
         ReadOnly = True
@@ -723,7 +723,7 @@ object Main: TMain
       Caption = '-'
     end
     object pmCopyLocation: TMenuItem
-      Caption = 'Ort kopieren'
+      Caption = 'Copy location'
       ShortCut = 16451
       OnClick = pmCopyLocationClick
     end
@@ -732,16 +732,16 @@ object Main: TMain
       OnClick = pmEditClick
     end
     object pmExport: TMenuItem
-      Caption = 'Exportieren'
+      Caption = 'Export'
       OnClick = mmExportClick
     end
     object pmDelete: TMenuItem
-      Caption = 'L'#246'schen'
+      Caption = 'Delete'
       ShortCut = 46
       OnClick = pmDeleteClick
     end
     object pmRename: TMenuItem
-      Caption = 'Umbenennen'
+      Caption = 'Rename'
       ShortCut = 113
       OnClick = pmRenameClick
     end
@@ -749,12 +749,12 @@ object Main: TMain
       Caption = '-'
     end
     object pmChangeIcon: TMenuItem
-      Caption = 'Icon '#228'ndern'
+      Caption = 'Change icon'
       Visible = False
       OnClick = pmChangeIconClick
     end
     object pmDeleteIcon: TMenuItem
-      Caption = 'Icon l'#246'schen'
+      Caption = 'Delete icon'
       Visible = False
       OnClick = pmDeleteIconClick
     end
@@ -762,56 +762,56 @@ object Main: TMain
       Caption = '-'
     end
     object pmOpenRegedit: TMenuItem
-      Caption = 'In RegEdit '#246'ffnen'
+      Caption = 'Open in RegEdit'
       OnClick = pmOpenRegeditClick
     end
     object pmOpenExplorer: TMenuItem
-      Caption = 'In Explorer '#246'ffnen'
+      Caption = 'Open in Explorer'
       OnClick = pmOpenExplorerClick
     end
   end
   object MainMenu: TMainMenu
     Left = 440
     object mmFile: TMenuItem
-      Caption = 'Datei'
+      Caption = 'File'
       object mmAdd: TMenuItem
-        Caption = 'Programm hinzuf'#252'gen'
+        Caption = 'Add program'
         OnClick = mmAddClick
       end
       object mmImport: TMenuItem
-        Caption = 'Backup importieren'
+        Caption = 'Import backup'
         OnClick = mmImportClick
       end
       object N4: TMenuItem
         Caption = '-'
       end
       object mmExport: TMenuItem
-        Caption = 'Eintrag exportieren'
+        Caption = 'Export item'
         OnClick = mmExportClick
       end
       object mmExportList: TMenuItem
-        Caption = 'Eintr'#228'ge exportieren'
+        Caption = 'Export items'
         OnClick = mmExportListClick
       end
       object N3: TMenuItem
         Caption = '-'
       end
       object mmClose: TMenuItem
-        Caption = 'Beenden'
+        Caption = 'Quit'
         OnClick = bCloseStartupClick
       end
     end
     object mmEdit: TMenuItem
-      Caption = 'Bearbeiten'
+      Caption = 'Edit'
       object mmContext: TMenuItem
-        Caption = 'Papierkorb Kontextmen'#252'-Eintrag'
+        Caption = 'Recycle bin context menu item'
         OnClick = mmContextClick
       end
       object N11: TMenuItem
         Caption = '-'
       end
       object mmDeleteEraseable: TMenuItem
-        Caption = 'Ung'#252'ltige l'#246'schen'
+        Caption = 'Delete invalid items'
         OnClick = mmDeleteEraseableClick
       end
       object N8: TMenuItem
@@ -819,15 +819,15 @@ object Main: TMain
       end
       object mmDelBackup: TMenuItem
         AutoCheck = True
-        Caption = 'Backup beim Aktivieren l'#246'schen'
+        Caption = 'Delete backup after enabling'
         Checked = True
         OnClick = mmDelBackupClick
       end
     end
     object mmView: TMenuItem
-      Caption = 'Ansicht'
+      Caption = 'View'
       object mmRefresh: TMenuItem
-        Caption = 'Aktualisieren'
+        Caption = 'Refresh'
         ShortCut = 116
         OnClick = mmRefreshClick
       end
@@ -835,50 +835,50 @@ object Main: TMain
         Caption = '-'
       end
       object mmDefault: TMenuItem
-        Caption = 'Standard Spaltengr'#246#223'e'
+        Caption = 'Default column width'
         ShortCut = 117
         OnClick = mmDefaultClick
       end
       object mmShowCaptions: TMenuItem
         AutoCheck = True
-        Caption = 'Beschreibung anzeigen'
+        Caption = 'Show description'
         Checked = True
         OnClick = mmShowCaptionsClick
       end
       object mmDate: TMenuItem
         AutoCheck = True
-        Caption = 'Deaktivierungsdatum anzeigen'
+        Caption = 'Date of deactivation'
         OnClick = mmDateClick
       end
       object N6: TMenuItem
         Caption = '-'
       end
       object mmLang: TMenuItem
-        Caption = 'Sprache w'#228'hlen'
+        Caption = 'Choose language'
       end
     end
     object mmHelp: TMenuItem
-      Caption = 'Hilfe'
+      Caption = 'Help'
       object mmUpdate: TMenuItem
-        Caption = 'Nach Update suchen'
+        Caption = 'Search for Update'
         OnClick = mmUpdateClick
       end
       object N9: TMenuItem
         Caption = '-'
       end
       object mmInstallCertificate: TMenuItem
-        Caption = 'Zertifikat installieren'
+        Caption = 'Install certificate'
         OnClick = mmInstallCertificateClick
       end
       object mmReport: TMenuItem
-        Caption = 'Fehler melden'
+        Caption = 'Report a bug'
         OnClick = mmReportClick
       end
       object N10: TMenuItem
         Caption = '-'
       end
       object mmAbout: TMenuItem
-        Caption = #220'ber Clearas'
+        Caption = 'About Clearas'
         OnClick = mmAboutClick
       end
     end
