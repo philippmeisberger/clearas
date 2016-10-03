@@ -127,7 +127,7 @@ BEGIN
   224, "Beschreibung anzeigen"
   225, "Ungültige Einträge löschen"
   226, "Keine ungültigen Eintrage vorhanden."
-  227, "Wollen Sie wirklich %d ungültige(n) Einträg(e) löschen?"
+  227, "Wollen Sie den ungültigen Eintrag \"%s\" wirklich löschen?"
   228, "%d Einträg(e) gelöscht."
 END
 
@@ -260,7 +260,7 @@ BEGIN
   424, "Show description"
   425, "Delete invalid items"
   426, "No invalid items present."
-  427, "Are you sure to delete %d item(s)?"
+  427, "Are you sure to delete the invalid item \"%s\"?"
   428, "Deleted %d item(s)."
 END
 
@@ -393,6 +393,6 @@ BEGIN
   624, "Montrer la description"
   625, "Supprimer les entrées non valides"
   626, "Aucun élément valides présents."
-  627, "Voulez vous vraiment supprimer %d les entrées non valides?"
+  627, "Voulez vous vraiment supprimer l'entré non valide \"%s\"?"
   628, "Supprimé %d entrées."
 END

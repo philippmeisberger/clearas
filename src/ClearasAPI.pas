@@ -666,14 +666,6 @@ type
     procedure Clear();
 
     /// <summary>
-    ///   Deletes the eraseable marked items from the list.
-    /// </summary>
-    /// <returns>
-    ///   The number of deleted items.
-    /// </returns>
-    function DeleteEraseableItems(): Integer;
-
-    /// <summary>
     ///   Deletes the current selected item.
     /// </summary>
     /// <returns>
@@ -3021,25 +3013,6 @@ begin
   finally
     FLock.Release();
   end;  //of try
-end;
-
-function TRootList<T>.DeleteEraseableItems(): Integer;
-var
-  i: Integer;
-
-begin
-  Result := 0;
-
-  for i := Count - 1 downto 0 do
-    if (Items[i].Eraseable and Items[i].Delete()) then
-    begin
-      Delete(i);
-      Inc(Result);
-    end;  //of begin
-
-  // Refresh UI
-  if (Result > 0) then
-    DoNotifyOnFinished();
 end;
 
 function TRootList<T>.DeleteItem(): Boolean;

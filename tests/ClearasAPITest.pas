@@ -282,8 +282,18 @@ begin
   for i := 0 to FTestItems.Count - 1 do
     TestDelete(FTestItems[i]);
 
+  DeletedItems := 0;
+
   // Delete eraseable items
-  DeletedItems := FRootList.DeleteEraseableItems();
+  for i := FRootList.Count - 1 downto 0 do
+  begin
+    if (FRootList[i].Eraseable and FRootList[i].Delete()) then
+    begin
+      FRootList.Delete(i);
+      Inc(DeletedItems);
+    end;  //of begin
+  end;  //of for
+
   CheckEquals(EraseableItems, DeletedItems, 'Count of eraseable marked items differs from deleted items count');
   CheckEquals(0, FRootList.EraseableItemsCount, 'After deleting all eraseable items EraseableItemsCount must be 0');
   CleanUp();

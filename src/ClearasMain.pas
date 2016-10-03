@@ -17,9 +17,6 @@ uses
   ClearasAPI, ExportListThread, PMCW.Dialogs.About, PMCW.Utils, PMCW.LanguageFile,
   PMCW.Dialogs.Updater, PMCW.Dialogs, Vcl.ImgList, Messages, PMCW.Registry;
 
-const
-  KEY_RECYCLEBIN = 'CLSID\{645FF040-5081-101B-9F08-00AA002F954E}\shell';
-
 type
   { TMain }
   TMain = class(TForm, IChangeLanguageListener, IUpdateListener)
@@ -234,6 +231,7 @@ implementation
 {$R *.dfm}
 
 const
+  KEY_RECYCLEBIN  = 'CLSID\{645FF040-5081-101B-9F08-00AA002F954E}\shell';
   SORT_ASCENDING  = 0;
   SORT_DESCENDING = 1;
 
@@ -1573,30 +1571,78 @@ end;
 
 procedure TMain.mmDeleteEraseableClick(Sender: TObject);
 var
-  ItemsEraseable, ItemsDeleted: Integer;
+  i, Answer, ItemsDeleted: Integer;
+  RootList: TRootList<TRootItem>;
+  ListView: TListView;
 
 begin
-  ItemsEraseable := GetSelectedList().EraseableItemsCount;
-
-  // No eraseable items?
-  if (ItemsEraseable = 0) then
-  begin
-    FLang.ShowMessage(FLang[LID_DELETE_ERASEABLE_NO_ITEMS]);
-    Exit;
-  end;  //of begin
-
-  if (FLang.ShowMessage(FLang.Format(LID_DELETE_ERASEABLE_CONFIRM, [ItemsEraseable]),
-    mtConfirmation) = IDYES) then
   try
-    ItemsDeleted := GetSelectedList().DeleteEraseableItems();
-    FLang.ShowMessage(FLang.Format(LID_DELETE_ERASEABLE_SUCCESS, [ItemsDeleted]));
+    RootList := GetSelectedList();
+    ListView := GetSelectedListView();
+
+    // No eraseable items?
+    if (RootList.EraseableItemsCount = 0) then
+    begin
+      FLang.ShowMessage(FLang[LID_DELETE_ERASEABLE_NO_ITEMS]);
+      Exit;
+    end;  //of begin
+
+    if RootList.IsLocked() then
+      raise EListBlocked.Create('Another operation is pending. Please wait!');
+
+    ItemsDeleted := 0;
+    Answer := 0;
+
+    try
+      for i := 0 to ListView.Items.Count - 1 do
+      begin
+        RootList.Selected := TRootItem(ListView.Items[i].SubItems.Objects[0]);
+
+        if not RootList.Selected.Eraseable then
+          Continue;
+
+        // Confirm deletion of every eraseable item except "yes to all" was clicked
+        if (Answer <> mrYesToAll) then
+          Answer := TaskMessageDlg(FLang.Format([LID_DELETE_ERASEABLE_CONFIRM],
+            [ListView.Items[i].SubItems[0]]), FLang.GetString([LID_ITEM_DELETE_CONFIRM1,
+            LID_ITEM_DELETE_CONFIRM2]), mtConfirmation, mbYesNoCancel + [mbYesToAll], 0);
+
+        case Answer of
+          mrCancel:
+            Break;
+
+          mrNo:
+            Continue;
+
+          mrYes, mrYesToAll:
+            begin
+              if RootList.DeleteItem() then
+                Inc(ItemsDeleted);
+
+              // All eraseable items deleted?
+              if (RootList.EraseableItemsCount = 0) then
+                Break;
+            end;
+        end;  //of case
+      end;  //of for
+
+      FLang.ShowMessage(FLang.Format(LID_DELETE_ERASEABLE_SUCCESS, [ItemsDeleted]));
+
+    finally
+      if (ItemsDeleted > 0) then
+        RootList.DoNotifyOnFinished();
+    end;  //of try
 
   except
+    on E: EInvalidItem do
+      FLang.ShowMessage(FLang.GetString([LID_DELETE_ERASEABLE, LID_IMPOSSIBLE]),
+        FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
+
     on E: EListBlocked do
       FLang.ShowMessage(LID_OPERATION_PENDING1, LID_OPERATION_PENDING2, mtWarning);
 
     on E: Exception do
-      FLang.ShowException(FLang.GetString([LID_DELETE, LID_IMPOSSIBLE]), E.Message);
+      FLang.ShowException(FLang.GetString([LID_DELETE_ERASEABLE, LID_IMPOSSIBLE]), E.Message);
   end;  //of try
 end;
 

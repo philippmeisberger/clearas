@@ -26,7 +26,7 @@ type
   TExportListEvent = procedure(Sender: TObject; APageControlIndex: Integer) of object;
 
   /// <summary>
-  ///   Exports a <see cref="TRootList"/> as .reg file.
+  ///   Exports a <see cref="TRootList"/> as file.
   /// </summary>
   TExportListThread = class(TThread)
   private
