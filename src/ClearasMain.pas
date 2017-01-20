@@ -2,7 +2,7 @@
 {                                                                         }
 { Clearas Main Unit                                                       }
 {                                                                         }
-{ Copyright (c) 2011-2016 Philipp Meisberger (PM Code Works)              }
+{ Copyright (c) 2011-2017 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
 { *********************************************************************** }
 
@@ -375,7 +375,7 @@ begin
 
   // Ask user to permit download
   if (FLang.ShowMessage(FLang.Format(LID_UPDATE_AVAILABLE, [ANewBuild]),
-    FLang.GetString(LID_UPDATE_CONFIRM_DOWNLOAD), mtConfirmation) = IDYES) then
+    FLang.GetString(LID_UPDATE_CONFIRM_DOWNLOAD), mtConfirmation) = idYes) then
   begin
     // init TUpdate instance
     Updater := TUpdateDialog.Create(Self, FLang);
@@ -392,7 +392,7 @@ begin
         // Ask user to permit download of 64-Bit version
         if ((TOSVersion.Architecture = arIntelX64) and (FLang.ShowMessage(
           FLang.Format([LID_UPDATE_64BIT, LID_UPDATE_64BIT_CONFIRM], ['Clearas']),
-            mtConfirmation) = IDYES)) then
+            mtConfirmation) = idYes)) then
           FileNameRemote := 'clearas64.exe'
         else
           FileNameRemote := 'clearas.exe';
@@ -503,13 +503,13 @@ begin
     // Confirm deletion of item
     if (FLang.ShowMessage(FLang.Format([AConfirmMessageId],
       [ListView.ItemFocused.SubItems[0]]), FLang.GetString([LID_ITEM_DELETE_CONFIRM1,
-      LID_ITEM_DELETE_CONFIRM2]), mtCustom) = IDYES) then
+      LID_ITEM_DELETE_CONFIRM2]), mtCustom) = idYes) then
     begin
       // Ask user to export item
       Answer := FLang.ShowMessage(FLang.GetString(LID_ITEM_DELETE_STORE), mtConfirmation);
 
       // Abort if user clicks cancel!
-      if (((Answer = IDYES) and ShowExportItemDialog()) or (Answer = IDNO)) then
+      if (((Answer = idYes) and ShowExportItemDialog()) or (Answer = idNo)) then
         // Successfully deleted item physically?
         if RootList.DeleteItem() then
         begin
@@ -559,7 +559,7 @@ begin
     // Confirm deletion of item
     if (FLang.ShowMessage(FLang.Format([LID_STARTUP_DELETE_CONFIRM],
       [lwStartup.ItemFocused.SubItems[0]]), FLang.GetString([LID_ITEM_DELETE_CONFIRM1,
-      LID_ITEM_DELETE_CONFIRM2]), mtCustom) = IDYES) then
+      LID_ITEM_DELETE_CONFIRM2]), mtCustom) = idYes) then
     begin
       // Save the DeleteBackup flag
       DelBackup := FStartup.AutoDeleteBackup;
@@ -568,22 +568,22 @@ begin
       // Skip export dialog for enabled startup user item with exising backup
       if ((FStartup.Selected is TStartupUserItem) and FStartup.Selected.Enabled
         and BackupExists) then
-        Answer := IDCANCEL
+        Answer := idCancel
       else
         Answer := FLang.ShowMessage(FLang.GetString(LID_ITEM_DELETE_STORE), mtConfirmation);
 
       // Export item and only continue if this has succeeded
-      if (Answer = IDYES) then
+      if (Answer = idYes) then
         if CreateStartupUserBackup() then
           FStartup.AutoDeleteBackup := False
         else
           Exit;
 
       // Ask user to delete old existing backup
-      if ((Answer = IDCANCEL) or ((FStartup.Selected is TStartupUserItem)
+      if ((Answer = idCancel) or ((FStartup.Selected is TStartupUserItem)
         and not FStartup.Selected.Enabled and BackupExists)) then
         FStartup.AutoDeleteBackup := (FLang.ShowMessage(FLang.GetString(LID_BACKUP_DELETE_CONFIRM),
-          mtConfirmation) = IDYES);
+          mtConfirmation) = idYes);
 
       // Successfully deleted item physically?
       if FStartup.DeleteItem() then
@@ -1102,8 +1102,6 @@ begin
         // Get icon of program
         Icon.Handle := FStartup[i].Icon;
         ImageIndex := IconList.AddIcon(Icon);
-
-
       end;  //of with
 
   finally
