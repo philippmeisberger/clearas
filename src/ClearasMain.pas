@@ -15,7 +15,7 @@ uses
   Vcl.ComCtrls, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Dialogs, Vcl.Menus, Vcl.Graphics,
   Vcl.ClipBrd, Registry, System.ImageList, Winapi.CommCtrl, System.UITypes,
   ClearasAPI, ExportListThread, PMCW.Dialogs.About, PMCW.Utils, PMCW.LanguageFile,
-  PMCW.Dialogs.Updater, PMCW.Dialogs, Vcl.ImgList, Messages, PMCW.Registry;
+  PMCW.Dialogs.Updater, ClearasDialogs, Vcl.ImgList, Messages, PMCW.Registry;
 
 type
   { TMain }
