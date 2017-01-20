@@ -2,7 +2,7 @@
 {                                                                         }
 { Clearas API Interface Unit                                              }
 {                                                                         }
-{ Copyright (c) 2011-2016 Philipp Meisberger (PM Code Works)              }
+{ Copyright (c) 2011-2017 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
 { *********************************************************************** }
 
@@ -51,8 +51,8 @@ type
     ///   <c>True</c> if the .lnk file was successfully written or <c>False</c>
     ///   otherwise.
     /// </returns>
-    function Save(AFileName, AExeFileName: TFileName;
-      AArguments: string = ''): Boolean; overload;
+    function Save(const AFileName, AExeFileName: TFileName;
+      const AArguments: string = ''): Boolean; overload;
   public
     /// <summary>
     ///   Constructor for creating a <c>TLnkFile</c> instance.
@@ -60,7 +60,7 @@ type
     /// <param name="AFileName">
     ///   The filename of the .lnk file.
     /// </param>
-    constructor Create(AFileName: TFileName); reintroduce;
+    constructor Create(const AFileName: TFileName); reintroduce;
 
     /// <summary>
     ///   Deletes the .lnk file.
@@ -147,7 +147,7 @@ type
     /// <param name="AFileName">
     ///   The filename of the .lnk file.
     /// </param>
-    constructor Create(AFileName: TFileName); reintroduce; overload;
+    constructor Create(const AFileName: TFileName); reintroduce; overload;
 
     /// <summary>
     ///   Constructor for creating a <c>TStartupLnkFile</c> instance.
@@ -178,7 +178,7 @@ type
     ///   Optional arguments passed to the .exe.
     /// </param>
     constructor Create(const AName: string; AStartupUser: Boolean;
-      AExeFileName: TFileName; AArguments: string = ''); overload;
+      const AExeFileName: TFileName; const AArguments: string = ''); overload;
 
     /// <summary>
     ///   Checks if the backup .lnk file in <c>C:\Windows\pss\</c> exists.
@@ -285,9 +285,9 @@ type
     function ExtractPathToFile(const APath: string): string;
     procedure DestroyIconHandle();
     function GetFullLocation(): string; virtual; abstract;
-    function GetFileDescription(AFileName: TFileName): string;
+    function GetFileDescription(const AFileName: TFileName): string;
     function GetIcon(): HICON; overload; virtual;
-    function GetIcon(AExeFileName: TFileName): HICON; overload; virtual;
+    function GetIcon(const AExeFileName: TFileName): HICON; overload; virtual;
     function GetLocation(): string; virtual;
     procedure Rename(const ANewName: string); virtual;
   public
@@ -1292,8 +1292,8 @@ type
   TStartupList = class(TRootList<TStartupListItem>, IImportableList)
   private
     FDeleteBackup: Boolean;
-    function AddNewStartupUserItem(const AName: string; AFileName: TFileName;
-      AArguments: string = ''; AStartupUser: Boolean = True): Boolean;
+    function AddNewStartupUserItem(const AName: string; const AFileName: TFileName;
+      const AArguments: string = ''; AStartupUser: Boolean = True): Boolean;
     function AddUserItem(ALnkFile: TStartupLnkFile; AStartupUser: Boolean): Integer;
     function DeleteBackupFile(): Boolean; deprecated 'Since Windows 8';
     function LoadStatus(const AName: string;
@@ -1493,7 +1493,7 @@ type
     procedure ChangeFilePath(const ANewFileName: string); override;
     procedure ChangeStatus(const ANewStatus: Boolean); override;
     function GetIcon(): HICON; override;
-    function GetIcon(AFileName: TFileName): HICON; override;
+    function GetIcon(const AFileName: TFileName): HICON; override;
     function GetIconFileName(): string;
     function GetLocation(): string; override;
     procedure Rename(const AValueName, ANewCaption: string); reintroduce; overload;
@@ -2172,7 +2172,7 @@ implementation
 
 { TLnkFile }
 
-constructor TLnkFile.Create(AFileName: TFileName);
+constructor TLnkFile.Create(const AFileName: TFileName);
 begin
   inherited Create;
   FFileName := AFileName;
@@ -2276,8 +2276,8 @@ begin
   Result := Save(FFileName, FExeFileName, FArguments);
 end;
 
-function TLnkFile.Save(AFileName, AExeFileName: TFileName;
-  AArguments: string = ''): Boolean;
+function TLnkFile.Save(const AFileName, AExeFileName: TFileName;
+  const AArguments: string = ''): Boolean;
 var
   ShellLink: IShellLink;
   PersistFile: IPersistFile;
@@ -2315,7 +2315,7 @@ end;
 
 { TStartupUserLnkFile }
 
-constructor TStartupLnkFile.Create(AFileName: TFileName);
+constructor TStartupLnkFile.Create(const AFileName: TFileName);
 begin
   inherited Create(AFileName);
   FStartupUser := not (ExtractFileExt(AFileName) = EXT_STARTUP_COMMON);
@@ -2328,7 +2328,7 @@ begin
 end;
 
 constructor TStartupLnkFile.Create(const AName: string; AStartupUser: Boolean;
-  AExeFileName: TFileName; AArguments: string);
+  const AExeFileName: TFileName; const AArguments: string = '');
 begin
   Create(AName, AStartupUser);
   FExeFileName := AExeFileName;
@@ -2475,7 +2475,7 @@ begin
   Result := Path;
 end;
 
-function TRootItem.GetFileDescription(AFileName: TFileName): string;
+function TRootItem.GetFileDescription(const AFileName: TFileName): string;
 var
   FileInfo: TSHFileInfo;
   VersionSize, VersionHandle: DWORD;
@@ -2604,7 +2604,7 @@ begin
   Result := GetIcon(GetFileNameOnly());
 end;
 
-function TRootItem.GetIcon(AExeFileName: TFileName): HICON;
+function TRootItem.GetIcon(const AExeFileName: TFileName): HICON;
 var
   FileInfo: TSHFileInfo;
 {$IFDEF WIN32}
@@ -4215,8 +4215,9 @@ begin
     [EXT_STARTUP_USER, EXT_STARTUP_USER, EXT_STARTUP_COMMON, EXT_STARTUP_COMMON]);
 end;
 
-function TStartupList.AddNewStartupUserItem(const AName: string; AFileName: TFileName;
-  AArguments: string = ''; AStartupUser: Boolean = True): Boolean;
+function TStartupList.AddNewStartupUserItem(const AName: string;
+  const AFileName: TFileName; const AArguments: string = '';
+  AStartupUser: Boolean = True): Boolean;
 var
   i: Integer;
   LnkFile: TStartupLnkFile;
@@ -4747,7 +4748,7 @@ begin
   end;  //of try
 end;
 
-function TShellItem.GetIcon(AFileName: TFileName): HICON;
+function TShellItem.GetIcon(const AFileName: TFileName): HICON;
 var
   Icon: TIcon;
 
