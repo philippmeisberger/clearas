@@ -18,7 +18,7 @@ uses
   Winapi.CommCtrl, Winapi.ShellAPI, System.SyncObjs, System.StrUtils,
   System.Variants, System.Generics.Collections, Winapi.KnownFolders,
   System.IOUtils, Winapi.Taskschd, PMCW.Registry, PMCW.Utils, PMCW.LanguageFile,
-  PMCW.IniFileParser;
+  PMCW.IniFileParser, PMCW.FileSystem;
 
 type
   /// <summary>
@@ -2365,7 +2365,9 @@ end;
 
 class function TStartupLnkFile.GetBackupDir(): string;
 begin
-  if GetFolderPath(CSIDL_WINDOWS, Result) then
+  Result := GetFolderPath(CSIDL_WINDOWS);
+
+  if (Result <> '') then
     Result := Result +'pss\';
 end;
 
@@ -2392,15 +2394,15 @@ begin
   if CheckWin32Version(6) then
   begin
     if AStartupUser then
-      GetKnownFolderPath(FOLDERID_Startup, Result)
+      Result := GetKnownFolderPath(FOLDERID_Startup)
     else
-      GetKnownFolderPath(FOLDERID_CommonStartup, Result);
+      Result := GetKnownFolderPath(FOLDERID_CommonStartup);
   end  //of begin
   else
     if AStartupUser then
-      GetFolderPath(CSIDL_STARTUP, Result)
+      Result := GetFolderPath(CSIDL_STARTUP)
     else
-      GetFolderPath(CSIDL_COMMON_STARTUP, Result);
+      Result := GetFolderPath(CSIDL_COMMON_STARTUP);
 end;
 
 
@@ -2607,9 +2609,7 @@ end;
 function TRootItem.GetIcon(const AExeFileName: TFileName): HICON;
 var
   FileInfo: TSHFileInfo;
-{$IFDEF WIN32}
-  Win64: Boolean;
-{$ENDIF}
+  OldValue: Boolean;
 
 begin
   Result := 0;
@@ -2619,13 +2619,7 @@ begin
   if ((AExeFileName = '') or (ExtractFileExt(AExeFileName) = '')) then
     Exit;
 
-{$IFDEF WIN32}
-  Win64 := (TOSVersion.Architecture = arIntelX64);
-
-  // Deny WOW64 redirection only on 64bit Windows
-  if Win64 then
-    Wow64FsRedirection(True);
-{$ENDIF}
+  OldValue := DisableWow64FsRedirection();
   ZeroMemory(@FileInfo, SizeOf(FileInfo));
 
   if Succeeded(SHGetFileInfo(PChar(AExeFileName), 0, FileInfo, SizeOf(FileInfo),
@@ -2634,12 +2628,8 @@ begin
   else
     FIcon := 0;
 
+  RevertWow64FsRedirection(OldValue);
   Result := FIcon;
-{$IFDEF WIN32}
-  // Allow WOW64 redirection only on 64bit Windows
-  if Win64 then
-    Wow64FsRedirection(False);
-{$ENDIF}
 end;
 
 function TRootItem.GetLocation(): string;
@@ -2655,9 +2645,7 @@ end;
 function TRootItem.FileExists(): Boolean;
 var
   FileName: string;
-{$IFDEF WIN32}
-  Win64: Boolean;
-{$ENDIF}
+  OldValue: Boolean;
 
 begin
   FileName := GetFileNameOnly();
@@ -2665,21 +2653,9 @@ begin
   if (FileName = '') then
     Exit(False);
 
-{$IFDEF WIN32}
-  // 64bit Windows?
-  Win64 := (TOSVersion.Architecture = arIntelX64);
-
-  // Deny WOW64 redirection only on 64bit Windows
-  if Win64 then
-    Wow64FsRedirection(True);
-{$ENDIF}
+  OldValue := DisableWow64FsRedirection();
   Result := System.SysUtils.FileExists(FileName);
-
-{$IFDEF WIN32}
-  // Allow WOW64 redirection only on 64bit Windows
-  if Win64 then
-    Wow64FsRedirection(False);
-{$ENDIF}
+  RevertWow64FsRedirection(OldValue);
 end;
 
 function TRootItem.GetStatus(ALanguageFile: TLanguageFile): string;
@@ -2766,9 +2742,7 @@ const
 
 var
   Reg: TRegistry;
-{$IFDEF WIN64}
-  SystemWOW64: string;
-{$ENDIF}
+  OldValue: Boolean;
 
 begin
   Reg := TRegistry.Create(KEY_WRITE);
@@ -2780,21 +2754,14 @@ begin
 
     // Redirected 32-Bit item?
     if AWow64 then
-    begin
       // Execute 32-Bit RegEdit
-    {$IFDEF WIN64}
-      GetSystemWow64Directory(SystemWOW64);
-      ExecuteProgram(SystemWOW64 +'regedit.exe');
-    {$ELSE}
-      ExecuteProgram('regedit.exe');
-    {$ENDIF}
-    end  //of begin
+      ExecuteProgram({$IFDEF WIN64}GetSystemWow64Directory() +{$ENDIF}'regedit.exe')
     else
     begin
       // Execute 64 bit RegEdit
-      Wow64FsRedirection(True);
+      OldValue := DisableWow64FsRedirection();
       ExecuteProgram('regedit.exe');
-      Wow64FsRedirection(False);
+      RevertWow64FsRedirection(OldValue);
     end;  //of if
 
   finally
@@ -6320,7 +6287,9 @@ end;
 
 function TTaskListItem.GetFullLocation(): string;
 begin
-  if GetKnownFolderPath(FOLDERID_System, Result) then
+  Result := GetKnownFolderPath(FOLDERID_System);
+
+  if (Result <> '') then
     Result := IncludeTrailingPathDelimiter(Result +'Tasks'+ GetLocation()) + Name;
 end;
 
@@ -6375,17 +6344,10 @@ end;
 procedure TTaskListItem.ExportItem(const AFileName: string);
 var
   ZipFile: TZipFile;
-{$IFDEF WIN32}
-  Win64: Boolean;
-{$ENDIF}
-begin
-{$IFDEF WIN32}
-  Win64 := (TOSVersion.Architecture = arIntelX64);
+  OldValue: Boolean;
 
-  // Deny WOW64 redirection on 64 Bit Windows
-  if Win64 then
-    Wow64FsRedirection(True);
-{$ENDIF}
+begin
+  OldValue := DisableWow64FsRedirection();
   ZipFile := TZipFile.Create;
 
   try
@@ -6396,11 +6358,7 @@ begin
 
   finally
     ZipFile.Free;
-  {$IFDEF WIN32}
-    // Allow WOW64 redirection on 64 Bit Windows again
-    if Win64 then
-      Wow64FsRedirection(False);
-  {$ENDIF}
+    RevertWow64FsRedirection(OldValue);
   end;  //of try
 end;
 
@@ -6494,19 +6452,11 @@ procedure TTaskList.ExportList(const AFileName: string);
 var
   i: Integer;
   ZipFile: TZipFile;
-{$IFDEF WIN32}
-  Win64: Boolean;
-{$ENDIF}
+  OldValue: Boolean;
 
 begin
   FLock.Acquire();
-{$IFDEF WIN32}
-  Win64 := (TOSVersion.Architecture = arIntelX64);
-
-  // Deny WOW64 redirection on 64 Bit Windows
-  if Win64 then
-    Wow64FsRedirection(True);
-{$ENDIF}
+  OldValue := DisableWow64FsRedirection();
   ZipFile := TZipFile.Create;
 
   try
@@ -6520,11 +6470,7 @@ begin
 
   finally
     ZipFile.Free;
-  {$IFDEF WIN32}
-    // Allow WOW64 redirection on 64 Bit Windows again
-    if Win64 then
-      Wow64FsRedirection(False);
-  {$ENDIF}
+    RevertWow64FsRedirection(OldValue);
     FLock.Release();
   end;  //of try
 end;
@@ -6547,9 +6493,7 @@ var
   ZipFile: TZipFile;
   i: Integer;
   XmlTask: TStringList;
-{$IFDEF WIN32}
-  Win64: Boolean;
-{$ENDIF}
+  OldValue: Boolean;
 
 begin
   Result := False;
@@ -6562,13 +6506,7 @@ begin
   if not FLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
 
-{$IFDEF WIN32}
-  Win64 := (TOSVersion.Architecture = arIntelX64);
-
-  // Deny WOW64 redirection on 64 Bit Windows
-  if Win64 then
-    Wow64FsRedirection(True);
-{$ENDIF}
+  OldValue := DisableWow64FsRedirection();
 
   try
     XmlTask := TStringList.Create;
@@ -6624,12 +6562,8 @@ begin
       DoNotifyOnFinished();
 
   finally
-  {$IFDEF WIN32}
-    // Allow WOW64 redirection on 64 Bit Windows again
-    if Win64 then
-      Wow64FsRedirection(False);
-  {$ENDIF}
     FLock.Release();
+    RevertWow64FsRedirection(OldValue);
   end;  //of try
 end;
 

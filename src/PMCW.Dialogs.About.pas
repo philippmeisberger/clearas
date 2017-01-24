@@ -1,8 +1,8 @@
 { *********************************************************************** }
 {                                                                         }
-{ PM Code Works About Form v2.0                                           }
+{ PM Code Works About Form v2.0.1                                         }
 {                                                                         }
-{ Copyright (c) 2011-2016 Philipp Meisberger (PM Code Works)              }
+{ Copyright (c) 2011-2017 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
 { *********************************************************************** }
 
@@ -16,10 +16,10 @@ uses
 {$IFDEF MSWINDOWS}
   Windows,
 {$ELSE}
-  VersionTypes, Resource,
+  Resource,
 {$ENDIF}
   SysUtils, Classes, Graphics, Controls, Forms, StdCtrls, ExtCtrls, ComCtrls,
-  Dialogs, PMCW.Dialogs.Updater;
+  Dialogs, PMCW.FileSystem;
 
 const
   /// <summary>
@@ -280,22 +280,18 @@ end;
 
 function TAboutDialog.Execute({$IFNDEF FPC}AParentHwnd: HWND{$ENDIF}): Boolean;
 var
-  VersionInfo: TFileProductVersion;
+  FileVersion: TFileVersion;
 
 begin
   // Show version information
-  if TUpdateCheck.GetFileVersion(Application.ExeName, VersionInfo) then
+  if FileVersion.FromFile(Application.ExeName) then
   begin
-    // Long or short format?
-    if (VersionInfo[VERSION_SERVICE] <> 0) then
-      FVersionLabel.Caption := Format('v%d.%d.%d'+ sLineBreak +'(Build: %d)',
-        [VersionInfo[VERSION_MAJOR], VersionInfo[VERSION_MINOR],
-        VersionInfo[VERSION_SERVICE], VersionInfo[VERSION_BUILD]])
+    if (FileVersion.Service <> 0) then
+      FVersionLabel.Caption := FileVersion.ToString('v%d.%d.%d'+ sLineBreak +'(Build: %d)')
     else
-      FVersionLabel.Caption := Format('v%d.%d '+ sLineBreak +'(Build: %d)',
-        [VersionInfo[VERSION_MAJOR], VersionInfo[VERSION_MINOR],
-        VersionInfo[VERSION_BUILD]])
-  end;  //of begin
+      FVersionLabel.Caption := Format('v%d.%d'+ sLineBreak +'(Build: %d)',
+        [FileVersion.Major, FileVersion.Minor, FileVersion.Build]);
+  end;
 
   // Load application icon into TImage
 {$IFDEF MSWINDOWS}

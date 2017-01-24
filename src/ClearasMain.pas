@@ -15,7 +15,8 @@ uses
   Vcl.ComCtrls, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Dialogs, Vcl.Menus, Vcl.Graphics,
   Vcl.ClipBrd, Registry, System.ImageList, Winapi.CommCtrl, System.UITypes,
   ClearasAPI, ExportListThread, PMCW.Dialogs.About, PMCW.Utils, PMCW.LanguageFile,
-  PMCW.Dialogs.Updater, ClearasDialogs, Vcl.ImgList, Messages, PMCW.Registry;
+  PMCW.Dialogs.Updater, ClearasDialogs, Vcl.ImgList, Winapi.Messages, PMCW.Registry,
+  PMCW.FileSystem;
 
 type
   { TMain }
@@ -243,7 +244,7 @@ const
 
 procedure TMain.FormCreate(Sender: TObject);
 var
-  VersionInfo: TFileProductVersion;
+  FileVersion: TFileVersion;
 
 begin
   // Setup languages
@@ -312,10 +313,9 @@ begin
   Caption := Application.Title + PLATFORM_ARCH;
 
   // Get version information
-  if TUpdateCheck.GetFileVersion(Application.ExeName, VersionInfo) then
+  if FileVersion.FromFile(Application.ExeName) then
   begin
-    lVersion1.Caption := Format('v%d.%d', [VersionInfo[VERSION_MAJOR],
-      VersionInfo[VERSION_MINOR]]);
+    lVersion1.Caption := Format('v%d.%d', [FileVersion.Major, FileVersion.Minor]);
     lVersion2.Caption := lVersion1.Caption;
     lVersion3.Caption := lVersion1.Caption;
     lVersion4.Caption := lVersion1.Caption;
