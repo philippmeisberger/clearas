@@ -315,7 +315,7 @@ begin
   // Get version information
   if FileVersion.FromFile(Application.ExeName) then
   begin
-    lVersion1.Caption := Format('v%d.%d', [FileVersion.Major, FileVersion.Minor]);
+    lVersion1.Caption := FileVersion.ToString('v%d.%d');
     lVersion2.Caption := lVersion1.Caption;
     lVersion3.Caption := lVersion1.Caption;
     lVersion4.Caption := lVersion1.Caption;
