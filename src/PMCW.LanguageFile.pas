@@ -1,8 +1,8 @@
 ﻿{ *********************************************************************** }
 {                                                                         }
-{ PM Code Works Cross Plattform Language Handler Unit v2.1.2              }
+{ PM Code Works Cross Plattform Language Handler Unit v2.1.3              }
 {                                                                         }
-{ Copyright (c) 2011-2016 Philipp Meisberger (PM Code Works)              }
+{ Copyright (c) 2011-2017 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
 { *********************************************************************** }
 
@@ -19,7 +19,7 @@ uses
   Winapi.Windows, Winapi.CommCtrl, System.Generics.Collections, Winapi.ShellAPI,
   System.UITypes, System.NetEncoding;
 {$ELSE}
-  LCLType, PMCW.IniFileParser;
+  IniFiles;
 {$ENDIF}
 
 const
@@ -703,7 +703,7 @@ end;
 {$ELSE}
 function TLanguageFile.GetString(AIndex: TLanguageId): string;
 begin
-  Result := FIni.ReadString(FLangId, IntToStr(AIndex + FIRST_LANGUAGE_START_INDEX));
+  Result := FIni.ReadString(FLangId, IntToStr(AIndex + FIRST_LANGUAGE_START_INDEX), '');
 end;
 {$ENDIF}
 
@@ -757,11 +757,11 @@ begin
   Languages := TStringList.Create;
 
   try
-    FIni.GetSections(Languages);
+    FIni.ReadSections(Languages);
 
     for i := 0 to Languages.Count - 1 do
       FLanguages.CommaText := FLanguages.CommaText + FIni.ReadString(Languages[i],
-        IntToStr(FIRST_LANGUAGE_START_INDEX)) +'='+ Languages[i]+',';
+        IntToStr(FIRST_LANGUAGE_START_INDEX), '') +'='+ Languages[i]+',';
 
     FLanguages.CommaText := Copy(FLanguages.CommaText, 0, Length(FLanguages.CommaText) - 1);
 
