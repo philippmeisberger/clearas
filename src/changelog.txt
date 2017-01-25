@@ -14,6 +14,9 @@ Version 4.4  [??.??.16]
 - Potentielles Handle-Leak geschlossen
 - Memory-Leak beim Exportieren geschlossen
 - Bug fix in 64-Bit Version: Dateipfad von 32-Bit Kontextmenüeinträgen konnte nicht gefunden werden
+- Updater v3.1
+  - Abhängigkeit zur "Indy"-Komponenten Bibliothek entfernt
+  - Programmdatei bis zu 1 MB kleiner
 
 ---------------------------------
 
@@ -294,7 +297,7 @@ Features:
 - deaktivieren und
 - löschen von Autostart-Objekten
 
--------------------------------------------------------------------------------------------------
+-----------------------------------------------------------------------------------
 Clearas wurde unter der D-FSL-Lizenz veröffentlicht und ist somit Open-Source. Der Quelltext kann auf der Website heruntergeladen werden.
 
 Soll Clearas auf eine kommerzielle CD-ROM (mit Magazin) gepresst werden, wäre es nett, mir eine Ausgabe dieser CD-ROM (mit Magazin) zu schicken. Meine Adresse erfahren Sie unter team@pm-codeworks.de.
