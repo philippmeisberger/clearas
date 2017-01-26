@@ -4,7 +4,7 @@ Ein Open-Source Projekt von PM Code Works
 Changelog
 =========
 
-Version 4.4  [??.??.16]
+Version 4.4  [??.??.17]
 
 - Automatische Suche nach ungültigen Einträgen hinzugefügt
   - "Ungültige Einträge löschen" hinzugefügt
@@ -13,6 +13,7 @@ Version 4.4  [??.??.16]
 - "In Explorer öffnen" verbessert
 - Potentielles Handle-Leak geschlossen
 - Memory-Leak beim Exportieren geschlossen
+- Memory-Leak beim Importieren einer Aufgabe geschlossen
 - Bug fix in 64-Bit Version: Dateipfad von 32-Bit Kontextmenüeinträgen konnte nicht gefunden werden
 - Updater v3.1
   - Abhängigkeit zur "Indy"-Komponenten Bibliothek entfernt

@@ -6539,7 +6539,7 @@ begin
 
         // Register the task
         OleCheck(TaskFolder.RegisterTask(PChar(ExtractFileName(FileName)),
-          XmlTask.GetText(), TASK_CREATE, Null, Null, TASK_LOGON_INTERACTIVE_TOKEN,
+          PChar(XmlTask.Text), TASK_CREATE, Null, Null, TASK_LOGON_INTERACTIVE_TOKEN,
           Null, NewTask));
 
         // Add new task to list
