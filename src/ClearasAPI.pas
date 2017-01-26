@@ -15,10 +15,9 @@ interface
 uses
   Winapi.Windows, Winapi.WinSvc, System.Classes, System.SysUtils, System.Win.Registry,
   Winapi.ShlObj, Winapi.ActiveX, System.Win.ComObj, System.Zip, Vcl.Graphics,
-  Winapi.CommCtrl, Winapi.ShellAPI, System.SyncObjs, System.StrUtils,
-  System.Variants, System.Generics.Collections, Winapi.KnownFolders,
-  System.IOUtils, Winapi.Taskschd, PMCW.Registry, PMCW.Utils, PMCW.LanguageFile,
-  PMCW.IniFileParser, PMCW.FileSystem;
+  Winapi.ShellAPI, System.SyncObjs, System.Generics.Collections, System.IOUtils,
+  Winapi.KnownFolders, System.Variants, Winapi.Taskschd, PMCW.Registry, PMCW.Utils,
+  PMCW.LanguageFile, PMCW.IniFileParser, PMCW.FileSystem;
 
 type
   /// <summary>
@@ -4006,7 +4005,8 @@ var
 begin
   OldFileName := FLnkFile.FileName;
   NewName := ChangeFileExt(ANewName, '.lnk');
-  NewFileName := ReplaceText(OldFileName, ExtractFileName(OldFileName), NewName);
+  NewFileName := StringReplace(OldFileName, ExtractFileName(OldFileName),
+    NewName, [rfReplaceAll, rfIgnoreCase]);
 
   // Rename .lnk file
   FLnkFile.FileName := NewFileName;
@@ -4462,7 +4462,7 @@ begin
 
       if not AStartupUser then
       begin
-        Wow64 := AnsiContainsText(Reg.ReadString('key'), 'Wow6432Node');
+        Wow64 := (AnsiPos(AnsiUpperCase('Wow6432Node'), AnsiUpperCase(Reg.ReadString('key'))) > 0);
         RunOnce := (ExtractFileName(Reg.ReadString('key')) = 'RunOnce');
         Name := Items[i];
 
