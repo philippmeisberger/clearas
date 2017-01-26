@@ -2,7 +2,7 @@
 {                                                                         }
 { Windows task scheduler v2.0 unit                                        }
 {                                                                         }
-{ Copyright (c) 2011-2016 Philipp Meisberger (PM Code Works)              }
+{ Copyright (c) 2011-2017 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
 { *********************************************************************** }
 
@@ -230,38 +230,6 @@ const
   {$EXTERNALSYM SCHED_E_TASK_NOT_V1_COMPAT}
   SCHED_E_START_ON_DEMAND               = $80041328;   // The task settings do not allow the task to start on demand.
   {$EXTERNALSYM SCHED_E_START_ON_DEMAND}
-
-  // Authentication capabilities for CoInitializeSecurity()
-  EOAC_NONE                             = 0;
-  {$EXTERNALSYM EOAC_NONE}
-
-  // Authentication level constants for CoInitializeSecurity()
-  RPC_C_AUTHN_LEVEL_DEFAULT             = 0;
-  {$EXTERNALSYM RPC_C_AUTHN_LEVEL_DEFAULT}
-  RPC_C_AUTHN_LEVEL_NONE                = 1;
-  {$EXTERNALSYM RPC_C_AUTHN_LEVEL_NONE}
-  RPC_C_AUTHN_LEVEL_CONNECT             = 2;
-  {$EXTERNALSYM RPC_C_AUTHN_LEVEL_CONNECT}
-  RPC_C_AUTHN_LEVEL_CALL                = 3;
-  {$EXTERNALSYM RPC_C_AUTHN_LEVEL_CALL}
-  RPC_C_AUTHN_LEVEL_PKT                 = 4;
-  {$EXTERNALSYM RPC_C_AUTHN_LEVEL_PKT}
-  RPC_C_AUTHN_LEVEL_PKT_INTEGRITY       = 5;
-  {$EXTERNALSYM RPC_C_AUTHN_LEVEL_PKT_INTEGRITY}
-  RPC_C_AUTHN_LEVEL_PKT_PRIVACY         = 6;
-  {$EXTERNALSYM RPC_C_AUTHN_LEVEL_PKT_PRIVACY}
-
-  // Impersonation level constants for CoInitializeSecurity()
-  RPC_C_IMP_LEVEL_DEFAULT               = 0;
-  {$EXTERNALSYM RPC_C_IMP_LEVEL_DEFAULT}
-  RPC_C_IMP_LEVEL_ANONYMOUS             = 1;
-  {$EXTERNALSYM RPC_C_IMP_LEVEL_ANONYMOUS}
-  RPC_C_IMP_LEVEL_IDENTIFY              = 2;
-  {$EXTERNALSYM RPC_C_IMP_LEVEL_IDENTIFY}
-  RPC_C_IMP_LEVEL_IMPERSONATE           = 3;
-  {$EXTERNALSYM RPC_C_IMP_LEVEL_IMPERSONATE}
-  RPC_C_IMP_LEVEL_DELEGATE              = 4;
-  {$EXTERNALSYM RPC_C_IMP_LEVEL_DELEGATE}
 
 type
   TASK_RUN_FLAGS = (
