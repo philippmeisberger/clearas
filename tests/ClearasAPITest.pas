@@ -455,6 +455,10 @@ begin
     if not (Location in [slHkcuRun, slHkcuRunOnce, slStartupUser]) then
       Continue;
   {$ENDIF}
+    // 32 bit OS
+    if (TOSVersion.Architecture = arIntelX86) and (Location in [slHklmRun32, slHklmRunOnce32]) then
+      Continue;
+
     FTestItems.Append(GetItemName(Location));
     FEraseableTestItems.Append(GetItemName(Location, True));
   end;  //of for
