@@ -14,7 +14,7 @@ uses
   Winapi.Windows, System.SysUtils, System.Classes, Vcl.Controls, Vcl.Forms,
   Vcl.ComCtrls, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Dialogs, Vcl.Menus, Vcl.Graphics,
   Vcl.ClipBrd, Registry, System.ImageList, Winapi.CommCtrl, System.UITypes,
-  ClearasAPI, ExportListThread, PMCW.Dialogs.About, PMCW.Utils, PMCW.LanguageFile,
+  ClearasAPI, PMCW.Dialogs.About, PMCW.Utils, PMCW.LanguageFile,
   PMCW.Dialogs.Updater, ClearasDialogs, Vcl.ImgList, Winapi.Messages, PMCW.Registry,
   PMCW.FileSystem;
 
@@ -198,10 +198,10 @@ type
     procedure OnContextSearchStart(Sender: TObject);
     procedure OnContextSearchEnd(Sender: TObject);
     procedure OnContextItemChanged(Sender: TObject; ANewStatus: TItemStatus);
-    procedure OnExportListStart(Sender: TObject; APageControlIndex: Integer);
-    procedure OnExportListEnd(Sender: TObject; APageControlIndex: Integer);
-    procedure OnExportListError(Sender: TObject; AErrorMessage: string);
-    procedure OnSearchError(Sender: TObject; AErrorMessage: string);
+    procedure OnExportListStart(Sender: TObject);
+    procedure OnExportListEnd(Sender: TObject);
+    procedure OnExportListError(Sender: TObject; const AErrorMessage: string);
+    procedure OnSearchError(Sender: TObject; const AErrorMessage: string);
     procedure OnStartupSearchStart(Sender: TObject);
     procedure OnStartupSearchEnd(Sender: TObject);
     procedure OnStartupItemChanged(Sender: TObject; ANewStatus: TItemStatus);
@@ -915,11 +915,15 @@ end;
 
   Event that is called when export list starts. }
 
-procedure TMain.OnExportListStart(Sender: TObject; APageControlIndex: Integer);
-begin
-  PageControl.Pages[APageControlIndex].Cursor := crHourGlass;
+procedure TMain.OnExportListStart(Sender: TObject);
+var
+  Index: Integer;
 
-  case APageControlIndex of
+begin
+  Index := (Sender as TExportListThread).PageControlIndex;
+  PageControl.Pages[Index].Cursor := crHourGlass;
+
+  case Index of
     0: lwStartup.Cursor := crHourGlass;
 
     1: begin
@@ -946,11 +950,15 @@ end;
 
   Event that is called when export list ends. }
 
-procedure TMain.OnExportListEnd(Sender: TObject; APageControlIndex: Integer);
-begin
-  PageControl.Pages[APageControlIndex].Cursor := crDefault;
+procedure TMain.OnExportListEnd(Sender: TObject);
+var
+  Index: Integer;
 
-  case APageControlIndex of
+begin
+  Index := (Sender as TExportListThread).PageControlIndex;
+  PageControl.Pages[Index].Cursor := crDefault;
+
+  case Index of
     0: lwStartup.Cursor := crDefault;
 
     1: begin
@@ -977,7 +985,7 @@ end;
 
   Event method that is called when export thread has failed. }
 
-procedure TMain.OnExportListError(Sender: TObject; AErrorMessage: string);
+procedure TMain.OnExportListError(Sender: TObject; const AErrorMessage: string);
 begin
   FLang.ShowException(FLang.GetString([LID_EXPORT, LID_IMPOSSIBLE]), AErrorMessage);
 end;
@@ -1238,7 +1246,7 @@ end;
 
   Event method that is called when search thread has failed. }
 
-procedure TMain.OnSearchError(Sender: TObject; AErrorMessage: string);
+procedure TMain.OnSearchError(Sender: TObject; const AErrorMessage: string);
 begin
   FLang.ShowException(FLang.GetString([LID_REFRESH, LID_IMPOSSIBLE]), AErrorMessage);
 end;
@@ -2589,6 +2597,7 @@ begin
     // Show save dialog
     if PromptForFileName(FileName, Filter, DefaultExt, StripHotkey(mmExportList.Caption),
       '%USERPROFILE%', True) then
+    begin
       // Export list (threaded!)
       with TExportListThread.Create(SelectedList, FileName, PageControl.ActivePageIndex) do
       begin
@@ -2597,6 +2606,7 @@ begin
         OnError := OnExportListError;
         Start;
       end;  //of with
+    end;  //of begin
 
   except
     on E: EInvalidItem do

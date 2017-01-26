@@ -568,7 +568,7 @@ type
   TItemChangeEvent = procedure(Sender: TObject; ANewStatus: TItemStatus) of object;
 
   /// <summary>
-  ///   Occurs when the search has failed.
+  ///   Occurs when something has failed.
   /// </summary>
   /// <param name="Sender">
   ///   The sender.
@@ -576,7 +576,7 @@ type
   /// <param name="AErrorMessage">
   ///   The error message.
   /// </param>
-  TSearchErrorEvent = procedure(Sender: TObject; AErrorMessage: string) of object;
+  TErrorEvent = procedure(Sender: TObject; const AErrorMessage: string) of object;
 
   /// <summary>
   ///   This interface declares the capability to import an exported backup file.
@@ -622,7 +622,7 @@ type
     FOnChanged: TItemChangeEvent;
     FOnSearchStart,
     FOnSearchFinish: TNotifyEvent;
-    FOnSearchError: TSearchErrorEvent;
+    FOnSearchError: TErrorEvent;
     FEnabledItemsCount,
     FEraseableItemsCount: Integer;
   protected
@@ -822,7 +822,7 @@ type
     /// <summary>
     ///   Occurs when item search has failed.
     /// </summary>
-    property OnSearchError: TSearchErrorEvent read FOnSearchError write FOnSearchError;
+    property OnSearchError: TErrorEvent read FOnSearchError write FOnSearchError;
 
     /// <summary>
     ///   Occurs when item search has finished.
@@ -841,24 +841,53 @@ type
   end;
 
   /// <summary>
-  ///   Performs a search.
+  ///   Abstract progress thread.
   /// </summary>
-  TSearchThread = class(TThread)
-  private
+  /// <remarks>
+  ///   Implement <c>DoExecute()</c> in the derived class.
+  /// </remarks>
+  TProgressThread = class abstract(TThread)
+  strict private
     FOnStart,
     FOnFinish: TNotifyEvent;
-    FOnError: TSearchErrorEvent;
-    FOnChanged: TItemChangeEvent;
+    FOnError: TErrorEvent;
     FErrorMessage: string;
-    FLock: TCriticalSection;
     procedure DoNotifyOnError();
     procedure DoNotifyOnFinish();
     procedure DoNotifyOnStart();
   protected
-    FExpertMode,
-    FWin64: Boolean;
-    FSelectedList: TRootList<TRootItem>;
+    procedure DoExecute(); virtual; abstract;
     procedure Execute(); override; final;
+  public
+    /// <summary>
+    ///   Occurs when something went wrong.
+    /// </summary>
+    property OnError: TErrorEvent read FOnError write FOnError;
+
+    /// <summary>
+    ///   Occurs when thread has finished.
+    /// </summary>
+    property OnFinish: TNotifyEvent read FOnFinish write FOnFinish;
+
+    /// <summary>
+    ///   Occurs when thread has started.
+    /// </summary>
+    property OnStart: TNotifyEvent read FOnStart write FOnStart;
+  end;
+
+  /// <summary>
+  ///   Performs a search.
+  /// </summary>
+  TSearchThread = class(TProgressThread)
+  private
+    FLock: TCriticalSection;
+    FWin64,
+    FExpertMode: Boolean;
+    FSelectedList: TRootList<TRootItem>;
+    FOnChanged: TItemChangeEvent;
+    procedure DoNotifyOnChange();
+  protected
+    procedure DoExecute(); override;
   public
     /// <summary>
     ///   Constructor for creating a <c>TSearchThread</c> instance.
@@ -877,24 +906,52 @@ type
       AExpertMode: Boolean = False);
 
     /// <summary>
-    ///   Occurs when search has failed.
-    /// </summary>
-    property OnError: TSearchErrorEvent read FOnError write FOnError;
-
-    /// <summary>
-    ///   Occurs when search has finished.
-    /// </summary>
-    property OnFinish: TNotifyEvent read FOnFinish write FOnFinish;
-
-    /// <summary>
-    ///   Occurs when search has started.
-    /// </summary>
-    property OnStart: TNotifyEvent read FOnStart write FOnStart;
-
-    /// <summary>
     ///   Search for 64-bit items.
     /// </summary>
     property Win64: Boolean read FWin64 write FWin64;
+  end;
+
+  /// <summary>
+  ///   The list export event.
+  /// </summary>
+  /// <param name="Sender">
+  ///   The sender.
+  /// </param>
+  /// <param name="APageControlIndex">
+  ///   The index of the <c>TPageControl</c> on which the export was invoked.
+  /// </param>
+  TExportListEvent = procedure(Sender: TObject; APageControlIndex: Integer) of object;
+
+  /// <summary>
+  ///   Exports a <see cref="TRootList"/> as file.
+  /// </summary>
+  TExportListThread = class(TProgressThread)
+  private
+    FSelectedList: TRootList<TRootItem>;
+    FFileName: string;
+    FPageControlIndex: Integer;
+  protected
+    procedure DoExecute(); override;
+  public
+    /// <summary>
+    ///   Constructor for creating a <c>TExportListThread</c> instance.
+    /// </summary>
+    /// <param name="ASelectedList">
+    ///   A <c>TRootList</c> to be filled.
+    /// </param>
+    /// <param name="AFileName">
+    ///   The file.
+    /// </param>
+    /// <param name="APageControlIndex">
+    ///   The index of the <c>TPageControl</c> on which the export was invoked.
+    /// </param>
+    constructor Create(ASelectedList: TRootList<TRootItem>; const AFileName: string;
+      APageControlIndex: Integer);
+
+    /// <summary>
+    ///   The index of the <c>TPageControl</c> on which the export was invoked.
+    /// </summary>
+    property PageControlIndex: Integer read FPageControlIndex;
   end;
 
 const
@@ -1254,13 +1311,45 @@ type
   ///   The possible startup locations.
   /// </summary>
   TStartupLocation = (
+
+    /// <summary>
+    ///   HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\Run
+    /// </summary>
     slHkcuRun,
+
+    /// <summary>
+    ///   HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce
+    /// </summary>
     slHkcuRunOnce,
+
+    /// <summary>
+    ///   HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Run
+    /// </summary>
     slHklmRun,
+
+    /// <summary>
+    ///   HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Run
+    /// </summary>
     slHklmRun32,
+
+    /// <summary>
+    ///   HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce
+    /// </summary>
     slHklmRunOnce,
+
+    /// <summary>
+    ///   HKEY_LOCAL_MACHINE\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnce
+    /// </summary>
     slHklmRunOnce32,
+
+    /// <summary>
+    ///   C:\Users\<Username>\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup
+    /// </summary>
     slStartupUser,
+
+    /// <summary>
+    ///   C:\ProgramData\Microsoft\Windows\Start Menu\Programs\StartUp
+    /// </summary>
     slCommonStartup
   );
 
@@ -3189,6 +3278,45 @@ begin
 end;
 
 
+{ TProgressThread }
+
+procedure TProgressThread.DoNotifyOnError();
+begin
+  if Assigned(FOnError) then
+    FOnError(Self, FErrorMessage);
+end;
+
+procedure TProgressThread.DoNotifyOnFinish();
+begin
+  if Assigned(FOnFinish) then
+    FOnFinish(Self);
+end;
+
+procedure TProgressThread.DoNotifyOnStart();
+begin
+  if Assigned(FOnStart) then
+    FOnStart(Self);
+end;
+
+procedure TProgressThread.Execute();
+begin
+  Synchronize(DoNotifyOnStart);
+
+  try
+    DoExecute();
+
+  except
+    on E: Exception do
+    begin
+      FErrorMessage := Format('%s: %s', [ClassName, E.Message]);
+      Synchronize(DoNotifyOnError);
+    end;
+  end;  //of try
+
+  Synchronize(DoNotifyOnFinish);
+end;
+
+
 { TSearchThread }
 
 constructor TSearchThread.Create(ASelectedList: TRootList<TRootItem>;
@@ -3203,51 +3331,44 @@ begin
   FOnChanged := FSelectedList.OnChanged;
 end;
 
-procedure TSearchThread.DoNotifyOnError();
+procedure TSearchThread.DoExecute();
 begin
-  if Assigned(FOnError) then
-    FOnError(Self, FErrorMessage);
+  FLock.Acquire();
+
+  try
+    Assert(Assigned(FSelectedList));
+    FSelectedList.Clear();
+    FSelectedList.Search(FExpertMode, FWin64);
+
+  finally
+    FLock.Release();
+    Synchronize(DoNotifyOnChange);
+  end;  //of try
 end;
 
-procedure TSearchThread.DoNotifyOnFinish();
+procedure TSearchThread.DoNotifyOnChange();
 begin
-  if Assigned(FOnFinish) then
-    FOnFinish(Self);
-
   // Notify that GUI counter needs to be updated
   if Assigned(FOnChanged) then
     FOnChanged(Self, stAny);
 end;
 
-procedure TSearchThread.DoNotifyOnStart();
+
+{ TExportListThread }
+
+constructor TExportListThread.Create(ASelectedList: TRootList<TRootItem>;
+  const AFileName: string; APageControlIndex: Integer);
 begin
-  if Assigned(FOnStart) then
-    FOnStart(Self);
+  inherited Create(True);
+  FreeOnTerminate := True;
+  FSelectedList := ASelectedList;
+  FFileName := AFileName;
+  FPageControlIndex := APageControlIndex;
 end;
 
-procedure TSearchThread.Execute();
+procedure TExportListThread.DoExecute();
 begin
-  FLock.Acquire();
-  Synchronize(DoNotifyOnStart);
-
-  try
-    try
-      Assert(Assigned(FSelectedList));
-      FSelectedList.Clear();
-      FSelectedList.Search(FExpertMode, FWin64);
-
-    finally
-      FLock.Release();
-      Synchronize(DoNotifyOnFinish);
-    end;  //of try
-
-  except
-    on E: Exception do
-    begin
-      FErrorMessage := Format('%s: %s', [ClassName, E.Message]);
-      Synchronize(DoNotifyOnError);
-    end;
-  end;  //of try
+  FSelectedList.ExportList(FFileName);
 end;
 
 
