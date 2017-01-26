@@ -6461,6 +6461,8 @@ begin
 
   try
     ZipFile.Open(ChangeFileExt(AFileName, '.zip'), zmWrite);
+
+    // For validation purposes: "Clearas" is the comment
     ZipFile.Comment := 'Clearas';
 
     for i := 0 to Count - 1 do
@@ -6521,20 +6523,20 @@ begin
 
       ExtractDir := GetKnownFolderPath(FOLDERID_LocalAppData) +'Temp\Clearas';
 
+      // Extract all files inside the ZIP in a temporary directory
       for i := 0 to ZipFile.FileCount - 1 do
       begin
         NewTask := nil;
         TaskFolder := nil;
         FileName := ZipFile.FileName[i];
         ZipFile.Extract(FileName, ExtractDir);
-        FileName := '\'+ StringReplace(FileName, '/', '\', [rfReplaceAll]);
-        OleCheck(FTaskService.GetFolder(PChar(ExtractFileDir(FileName)), TaskFolder));
+        FileName := StringReplace(FileName, '/', '\', [rfReplaceAll]);
+        OleCheck(FTaskService.GetFolder(PChar('\'+ ExtractFileDir(FileName)), TaskFolder));
 
         // Task exists?
-        if Succeeded(TaskFolder.GetTask(PChar(ExtractFileName(FileName)), NewTask)) then
+        if Succeeded(TaskFolder.GetTask(PChar('\'+ ExtractFileName(FileName)), NewTask)) then
           Continue;
 
-        FileName := Copy(FileName, 2, Length(FileName));
         XmlTask.LoadFromFile(ExtractDir +'\'+ FileName, TEncoding.Unicode);
 
         // Register the task
@@ -6550,6 +6552,8 @@ begin
       end;  //of for
 
       ZipFile.Close();
+
+      // Delete the temporary folder
       TDirectory.Delete(ExtractDir, True);
 
     finally
@@ -6628,5 +6632,4 @@ begin
 end;
 
 end.
-
 
