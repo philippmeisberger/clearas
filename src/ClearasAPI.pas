@@ -1479,14 +1479,6 @@ type
     function Add(const AFileName, AArguments, ACaption: string): Boolean; overload;
 
     /// <summary>
-    ///   Checks if a startup user backup file already exists.
-    /// </summary>
-    /// <returns>
-    ///   <c>True</c> if the backup file already exists or <c>False</c> otherwise.
-    /// </returns>
-    function BackupExists(): Boolean; deprecated 'Since Windows 8';
-
-    /// <summary>
     ///   Changes the item status of the current selected item.
     /// </summary>
     /// <param name="ANewStatus">
@@ -1570,7 +1562,7 @@ type
     ///   automatically deleted after enabling or not.
     /// </summary>
     /// <remarks>
-    ///   Deprecated since Windows 8!
+    ///   DEPRECATED since Windows 8!
     /// </remarks>
     property AutoDeleteBackup: Boolean read FDeleteBackup write FDeleteBackup;
   end;
@@ -4517,17 +4509,6 @@ begin
   finally
     FLock.Release();
   end;  //of try
-end;
-
-function TStartupList.BackupExists(): Boolean;
-begin
-  if (not Assigned(Selected) or (IndexOf(Selected) = -1)) then
-    raise EInvalidItem.Create('No item selected!');
-
-  if (Selected is TStartupUserItem) then
-    Result := (Selected as TStartupUserItem).LnkFile.BackupExists()
-  else
-    Result := False;
 end;
 
 procedure TStartupList.ChangeItemStatus(const ANewStatus: Boolean);

@@ -185,9 +185,10 @@ type
     FTasks: TTaskList;
     FLang: TLanguageFile;
     FUpdateCheck: TUpdateCheck;
+    function BackupLnkExists(): Boolean;
     function CreateStartupUserBackup(): Boolean;
     function DeleteItem(AConfirmMessageId: TLanguageId): Boolean;
-    procedure DeleteStartupItem(Sender: TObject);
+    procedure DeleteStartupItem();
     function DisableItem(): Boolean;
     function EnableItem(): Boolean;
     function GetSelectedItem(): TRootItem;
@@ -411,6 +412,18 @@ begin
   end;  //of begin
 end;
 
+{ private TMain.BackupLnkExists
+
+  Checks if a backup .lnk of the current selected startup user item exists. }
+
+function TMain.BackupLnkExists(): Boolean;
+begin
+  if (Assigned(FStartup.Selected) and (FStartup.Selected is TStartupUserItem)) then
+    Result := (FStartup.Selected as TStartupUserItem).LnkFile.BackupExists()
+  else
+    Result := False;
+end;
+
 { private TMain.CreateStartupUserBackup
 
   Creates a special .lnk backup for currently selected startup user item. }
@@ -542,7 +555,7 @@ end;
 
   Deletes currently selected startup item. }
 
-procedure TMain.DeleteStartupItem(Sender: TObject);
+procedure TMain.DeleteStartupItem();
 var
   DelBackup, BackupExists: Boolean;
   Answer: Integer;
@@ -562,7 +575,7 @@ begin
     begin
       // Save the DeleteBackup flag
       DelBackup := FStartup.AutoDeleteBackup;
-      BackupExists := FStartup.BackupExists();
+      BackupExists := BackupLnkExists();
 
       // Skip export dialog for enabled startup user item with exising backup
       if ((FStartup.Selected is TStartupUserItem) and FStartup.Selected.Enabled
@@ -1009,7 +1022,7 @@ begin
       begin
         bEnableStartupItem.Enabled := False;
         bDisableStartupItem.Enabled := True;
-        bExportStartupItem.Enabled := not FStartup.BackupExists;
+        bExportStartupItem.Enabled := not BackupLnkExists();
         pmExport.Enabled := bExportStartupItem.Enabled;
         pmChangeStatus.Caption := bDisableStartupItem.Caption;
 
@@ -1693,7 +1706,7 @@ end;
 procedure TMain.bDeleteItemClick(Sender: TObject);
 begin
   case PageControl.ActivePageIndex of
-    0: DeleteStartupItem(Sender);
+    0: DeleteStartupItem();
     1: DeleteItem(LID_CONTEXT_MENU_DELETE_CONFIRM);
     2: DeleteItem(LID_SERVICE_DELETE_CONFIRM);
     3: DeleteItem(LID_TASKS_DELETE_CONFIRM);
@@ -2153,7 +2166,7 @@ begin
       pmOpenRegedit.Enabled := False;
 
       // Disable "export" if backup already exists
-      bExportStartupItem.Enabled := not FStartup.BackupExists();
+      bExportStartupItem.Enabled := not BackupLnkExists();
     end  //of begin
     else
     begin
