@@ -466,8 +466,8 @@ end;
 
 procedure TStartupListTest.TestImportBackup;
 begin
-  Check(TStartupList(FRootList).ImportBackup('..\..\data\'+ GetItemName(slStartupUser) + EXT_STARTUP_USER), STARTUP_USER +' file already exists!');
-  CheckFalse(TStartupList(FRootList).ImportBackup('..\..\data\'+ GetItemName(slStartupUser) + EXT_STARTUP_USER), STARTUP_USER +' file already exists so it must not be possible to import it again!');
+  Check(TStartupList(FRootList).ImportBackup('..\..\data\'+ GetItemName(slStartupUser) +  TStartupLnkFile.StartupUserBackupFileExtension), 'Startup User file already exists!');
+  CheckFalse(TStartupList(FRootList).ImportBackup('..\..\data\'+ GetItemName(slStartupUser) + TStartupLnkFile.StartupUserBackupFileExtension), 'Startup User file already exists so it must not be possible to import it again!');
 {$IFNDEF DEBUG}
   Check(TStartupList(FRootList).ImportBackup('..\..\data\'+ GetItemName(slCommonStartup) + EXT_STARTUP_COMMON), STARTUP_COMMON +' file already exists!');
   CheckFalse(TStartupList(FRootList).ImportBackup('..\..\data\'+ GetItemName(slCommonStartup) + EXT_STARTUP_COMMON), STARTUP_COMMON +' file already exists so it must not be possible to import it again!');
@@ -618,7 +618,7 @@ begin
       begin
         // Delete item from disabled location (prior to Windows 7)
         Reg.RootKey := HKEY_LOCAL_MACHINE;
-        Reg.OpenKey(KEY_STARTUP_DISABLED, False);
+        Reg.OpenKey(TStartupItem.DisabledKey, False);
         Reg.DeleteKey(GetItemName(ALocation));
       end  //of begin
       else
@@ -655,8 +655,8 @@ begin
     slHklmRun32:     Result := GetName('HKLM32', AEraseable);
     slHklmRunOnce:   Result := GetName('HKLM RunOnce', AEraseable);
     slHklmRunOnce32: Result := GetName('HKLM RunOnce32', AEraseable);
-    slStartupUser:   Result := GetName(STARTUP_USER, AEraseable) +'.lnk';
-    slCommonStartup: Result := GetName(STARTUP_COMMON, AEraseable) +'.lnk';
+    slStartupUser:   Result := GetName('Startup User', AEraseable) +'.lnk';
+    slCommonStartup: Result := GetName('Startup Common', AEraseable) +'.lnk';
   end;  //of case
 end;
 
@@ -876,7 +876,7 @@ begin
 
     Reg.CloseKey;
     Reg.RootKey := HKEY_CLASSES_ROOT;
-    Reg.OpenKey(AFileExt +'\'+ CM_SHELLNEW, True);
+    Reg.OpenKey(AFileExt +'\'+ TShellNewItem.CanonicalName, True);
     Reg.WriteExpandString('ItemName', '@%systemroot%\system32\mspaint.exe,-59414');
     Reg.WriteString('NullFile', '');
     CheckEqualsString('', Reg.LastErrorMsg, Reg.LastErrorMsg);
