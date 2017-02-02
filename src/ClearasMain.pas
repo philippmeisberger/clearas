@@ -437,7 +437,7 @@ begin
       if CheckWin32Version(6, 2) then
       begin
         Filter := StartupUserItem.GetExportFilter(FLang);
-        FileName := StartupUserItem.Name + StartupUserItem.LnkFile.BackupExt;
+        FileName := StartupUserItem.Name + StartupUserItem.LnkFile.GetBackupExt();
 
         // Show save dialog
         if PromptForFileName(FileName, Filter, '', bExportStartupItem.Caption,
@@ -451,7 +451,7 @@ begin
         if FStartup.Selected.Enabled then
         begin
           StartupUserItem.LnkFile.CreateBackup();
-          FLang.ShowMessage(FLang.Format(LID_BACKUP_CREATED, [StartupUserItem.LnkFile.BackupLnk]));
+          FLang.ShowMessage(FLang.Format(LID_BACKUP_CREATED, [StartupUserItem.LnkFile.GetBackupLnk()]));
           bExportStartupItem.Enabled := False;
           pmExport.Enabled := False;
           Result := True;

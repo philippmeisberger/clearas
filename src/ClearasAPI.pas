@@ -143,8 +143,6 @@ type
   TStartupLnkFile = class(TLnkFile)
   private
     FStartupUser: Boolean;
-    function GetBackupLnk(): string; deprecated 'Since Windows 8';
-    function GetBackupExt(): string;
   public
     const
       /// <summary>
@@ -241,7 +239,7 @@ type
     /// <summary>
     ///   Gets extension of the backup file.
     /// </summary>
-    property BackupExt: string read GetBackupExt;
+    function GetBackupExt(): string;
 
     /// <summary>
     ///   Gets the path to the backup .lnk file in <c>C:\Windows\pss\</c>.
@@ -249,7 +247,7 @@ type
     /// <remarks>
     ///   Deprecated since Windows 8!
     /// </remarks>
-    property BackupLnk: string read GetBackupLnk;
+    function GetBackupLnk(): string; deprecated 'Since Windows 8';
 
     /// <summary>
     ///   The .lnk file is located in the startup folder of the current user
@@ -2573,7 +2571,7 @@ begin
   if CheckWin32Version(6, 2) then
     Exit;
 
-  Result := GetBackupDir() + ExtractFileName(FFileName) + GetBackupExt();
+  Result := TStartupLnkFile.GetBackupDir() + ExtractFileName(FFileName) + GetBackupExt();
 end;
 
 class function TStartupLnkFile.GetStartUpDir(AStartupUser: Boolean): string;
@@ -4149,12 +4147,12 @@ begin
     Reg.WriteString('path', FLocation);
     Reg.WriteString('item', ChangeFileExt(ExtractFileName(Name), ''));
     Reg.WriteString('command', FileName);
-    Reg.WriteString('backup', FLnkFile.BackupLnk);
+    Reg.WriteString('backup', FLnkFile.GetBackupLnk());
 
     // Special Registry entries only for Windows >= Vista
     if CheckWin32Version(6) then
     begin
-      Reg.WriteString('backupExtension', FLnkFile.BackupExt);
+      Reg.WriteString('backupExtension', FLnkFile.GetBackupExt());
       Reg.WriteString('location', ExtractFileDir(FLocation));
       FTime := WriteTimestamp(Reg);
     end  //of begin
@@ -4183,7 +4181,7 @@ begin
   if FLnkFile.BackupExists() then
   begin
     // Failed to restore backup file?
-    if not CopyFile(PChar(FLnkFile.BackupLnk), PChar(FLnkFile.FileName), True) then
+    if not CopyFile(PChar(FLnkFile.GetBackupLnk()), PChar(FLnkFile.FileName), True) then
       raise EStartupException.Create('Could not restore backup .lnk file!');
   end  //of begin
   else
