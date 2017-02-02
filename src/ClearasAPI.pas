@@ -891,33 +891,40 @@ type
   end;
 
   /// <summary>
-  ///   Abstract progress thread.
+  ///   Abstract thread which should perform a long-lasting operation on a
+  ///   <see cref="TRootList"/>.
   /// </summary>
   /// <remarks>
   ///   Implement <c>DoExecute()</c> in the derived class.
   /// </remarks>
-  TProgressThread = class abstract(TThread)
+  TRootListThread = class abstract(TThread)
   strict private
-    FOnStart,
-    FOnFinish: TNotifyEvent;
+    FOnStart: TNotifyEvent;
     FOnError: TErrorEvent;
     FErrorMessage: string;
+    FLock: TCriticalSection;
     procedure DoNotifyOnError();
-    procedure DoNotifyOnFinish();
     procedure DoNotifyOnStart();
   protected
+    FSelectedList: TRootList<TRootItem>;
     procedure DoExecute(); virtual; abstract;
     procedure Execute(); override; final;
   public
     /// <summary>
+    ///   Contructor for creating a <c>TRootListThread</c> instance.
+    /// </summary>
+    /// <param name="ASelectedList">
+    ///   The list on which the operation should be performed.
+    /// </param>
+    /// <param name="ALock">
+    ///   The mutex.
+    /// </param>
+    constructor Create(ASelectedList: TRootList<TRootItem>; ALock: TCriticalSection);
+
+    /// <summary>
     ///   Occurs when something went wrong.
     /// </summary>
     property OnError: TErrorEvent read FOnError write FOnError;
-
-    /// <summary>
-    ///   Occurs when thread has finished.
-    /// </summary>
-    property OnFinish: TNotifyEvent read FOnFinish write FOnFinish;
 
     /// <summary>
     ///   Occurs when thread has started.
@@ -928,12 +935,10 @@ type
   /// <summary>
   ///   Performs a search.
   /// </summary>
-  TSearchThread = class(TProgressThread)
+  TSearchThread = class(TRootListThread)
   private
-    FLock: TCriticalSection;
     FWin64,
     FExpertMode: Boolean;
-    FSelectedList: TRootList<TRootItem>;
     FOnChanged: TItemChangeEvent;
     procedure DoNotifyOnChange();
   protected
@@ -975,7 +980,7 @@ type
   /// <summary>
   ///   Exports a <see cref="TRootList"/> as file.
   /// </summary>
-  TExportListThread = class(TProgressThread)
+  TExportListThread = class(TRootListThread)
   private
     FSelectedList: TRootList<TRootItem>;
     FFileName: string;
@@ -987,7 +992,10 @@ type
     ///   Constructor for creating a <c>TExportListThread</c> instance.
     /// </summary>
     /// <param name="ASelectedList">
-    ///   A <c>TRootList</c> to be filled.
+    ///   The <c>TRootList</c> which should be exported.
+    /// </param>
+    /// <param name="ALock">
+    ///   The mutex.
     /// </param>
     /// <param name="AFileName">
     ///   The file.
@@ -995,8 +1003,8 @@ type
     /// <param name="APageControlIndex">
     ///   The index of the <c>TPageControl</c> on which the export was invoked.
     /// </param>
-    constructor Create(ASelectedList: TRootList<TRootItem>; const AFileName: string;
-      APageControlIndex: Integer);
+    constructor Create(ASelectedList: TRootList<TRootItem>; ALock: TCriticalSection;
+      const AFileName: string; APageControlIndex: Integer);
 
     /// <summary>
     ///   The index of the <c>TPageControl</c> on which the export was invoked.
@@ -3325,7 +3333,7 @@ begin
   with SearchThread do
   begin
     OnError := OnSearchError;
-    OnFinish := OnSearchFinish;
+    OnTerminate := OnSearchFinish;
     OnStart := OnSearchStart;
     Start();
   end;  // of with
@@ -3391,32 +3399,41 @@ begin
 end;
 
 
-{ TProgressThread }
+{ TRootListThread }
 
-procedure TProgressThread.DoNotifyOnError();
+constructor TRootListThread.Create(ASelectedList: TRootList<TRootItem>;
+  ALock: TCriticalSection);
+begin
+  inherited Create(True);
+  FreeOnTerminate := True;
+  FSelectedList := ASelectedList;
+  FLock := ALock;
+end;
+
+procedure TRootListThread.DoNotifyOnError();
 begin
   if Assigned(FOnError) then
     FOnError(Self, FErrorMessage);
 end;
 
-procedure TProgressThread.DoNotifyOnFinish();
-begin
-  if Assigned(FOnFinish) then
-    FOnFinish(Self);
-end;
-
-procedure TProgressThread.DoNotifyOnStart();
+procedure TRootListThread.DoNotifyOnStart();
 begin
   if Assigned(FOnStart) then
     FOnStart(Self);
 end;
 
-procedure TProgressThread.Execute();
+procedure TRootListThread.Execute();
 begin
+  FLock.Acquire();
   Synchronize(DoNotifyOnStart);
 
   try
-    DoExecute();
+    try
+      DoExecute();
+
+    finally
+      FLock.Release();
+    end;  //of try
 
   except
     on E: Exception do
@@ -3425,8 +3442,6 @@ begin
       Synchronize(DoNotifyOnError);
     end;
   end;  //of try
-
-  Synchronize(DoNotifyOnFinish);
 end;
 
 
@@ -3435,10 +3450,7 @@ end;
 constructor TSearchThread.Create(ASelectedList: TRootList<TRootItem>;
   ALock: TCriticalSection; AExpertMode: Boolean = False);
 begin
-  inherited Create(True);
-  FreeOnTerminate := True;
-  FSelectedList := ASelectedList;
-  FLock := ALock;
+  inherited Create(ASelectedList, ALock);
   FExpertMode := AExpertMode;
   FWin64 := (TOSVersion.Architecture = arIntelX64);
   FOnChanged := FSelectedList.OnChanged;
@@ -3446,15 +3458,12 @@ end;
 
 procedure TSearchThread.DoExecute();
 begin
-  FLock.Acquire();
-
   try
     Assert(Assigned(FSelectedList));
     FSelectedList.Clear();
     FSelectedList.Search(FExpertMode, FWin64);
 
   finally
-    FLock.Release();
     Synchronize(DoNotifyOnChange);
   end;  //of try
 end;
@@ -3470,11 +3479,9 @@ end;
 { TExportListThread }
 
 constructor TExportListThread.Create(ASelectedList: TRootList<TRootItem>;
-  const AFileName: string; APageControlIndex: Integer);
+  ALock: TCriticalSection; const AFileName: string; APageControlIndex: Integer);
 begin
-  inherited Create(True);
-  FreeOnTerminate := True;
-  FSelectedList := ASelectedList;
+  inherited Create(ASelectedList, ALock);
   FFileName := AFileName;
   FPageControlIndex := APageControlIndex;
 end;
@@ -4550,7 +4557,6 @@ var
   Win8: Boolean;
 
 begin
-  FLock.Acquire();
   Win8 := CheckWin32Version(6, 2);
 
   // Init Reg file
@@ -4580,7 +4586,6 @@ begin
 
   finally
     RegFile.Free;
-    FLock.Release();
   end;  //of try
 end;
 
@@ -5576,8 +5581,6 @@ var
   Item: TContextListItem;
 
 begin
-  FLock.Acquire;
-
   // Init Reg file
   RegFile := TRegistryFile.Create(ChangeFileExt(AFileName, '.reg'), True);
 
@@ -5593,7 +5596,6 @@ begin
 
   finally
     RegFile.Free;
-    FLock.Release();
   end;  //of try
 end;
 
@@ -6285,8 +6287,6 @@ var
   Item: TServiceListItem;
 
 begin
-  FLock.Acquire;
-
   // Init Reg file
   RegFile := TRegistryFile.Create(ChangeFileExt(AFileName, '.reg'), True);
 
@@ -6306,7 +6306,6 @@ begin
 
   finally
     RegFile.Free;
-    FLock.Release();
   end;  //of try
 end;
 
@@ -6659,7 +6658,6 @@ var
   OldValue: Boolean;
 
 begin
-  FLock.Acquire();
   OldValue := DisableWow64FsRedirection();
   ZipFile := TZipFile.Create;
 
@@ -6677,7 +6675,6 @@ begin
   finally
     ZipFile.Free;
     RevertWow64FsRedirection(OldValue);
-    FLock.Release();
   end;  //of try
 end;
 
