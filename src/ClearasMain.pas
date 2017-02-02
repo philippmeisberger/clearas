@@ -14,9 +14,8 @@ uses
   Winapi.Windows, System.SysUtils, System.Classes, Vcl.Controls, Vcl.Forms,
   Vcl.ComCtrls, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Dialogs, Vcl.Menus, Vcl.Graphics,
   Vcl.ClipBrd, Registry, System.ImageList, Winapi.CommCtrl, System.UITypes,
-  ClearasAPI, PMCW.Dialogs.About, PMCW.Utils, PMCW.LanguageFile,
-  PMCW.Dialogs.Updater, ClearasDialogs, Vcl.ImgList, Winapi.Messages, PMCW.Registry,
-  PMCW.FileSystem;
+  ClearasAPI, PMCW.Dialogs.About, PMCW.Utils, PMCW.LanguageFile, PMCW.FileSystem,
+  PMCW.Dialogs.Updater, ClearasDialogs, Vcl.ImgList, Winapi.Messages, PMCW.Registry;
 
 type
   { TMain }
@@ -1537,7 +1536,7 @@ begin
         FileName := FContext.Selected.Name
       else
         if (FContext.Selected is TShellNewItem) then
-          FileName := FContext.Selected.Name +'_'+ CM_SHELLNEW
+          FileName := FContext.Selected.Name +'_'+ TShellNewItem.CanonicalName
         else
           FileName := FContext.Selected.Name +'_'+ FContext.Selected.LocationRoot;
     end  //of begin

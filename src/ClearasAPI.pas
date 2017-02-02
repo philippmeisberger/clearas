@@ -53,6 +53,12 @@ type
     function Save(const AFileName, AExeFileName: TFileName;
       const AArguments: string = ''): Boolean; overload;
   public
+    const
+      /// <summary>
+      ///   The symbolic link file extension.
+      /// </summary>
+      FileExtension = '.lnk';
+
     /// <summary>
     ///   Constructor for creating a <c>TLnkFile</c> instance.
     /// </summary>
@@ -135,11 +141,22 @@ type
   ///   A <c>TStartupUserLnkFile</c> represents a startup link file.
   /// </summary>
   TStartupLnkFile = class(TLnkFile)
-  strict private
+  private
     FStartupUser: Boolean;
     function GetBackupLnk(): string; deprecated 'Since Windows 8';
     function GetBackupExt(): string;
   public
+    const
+      /// <summary>
+      ///   Startup user item backup file extension.
+      /// </summary>
+      StartupUserBackupFileExtension   = '.Startup';
+
+      /// <summary>
+      ///   Startup common item backup file extension.
+      /// </summary>
+      StartupCommonBackupFileExtension = '.CommonStartup';
+
     /// <summary>
     ///   Constructor for creating a <c>TStartupLnkFile</c> instance.
     /// </summary>
@@ -955,32 +972,8 @@ type
   end;
 
 const
-  { Startup registry keys until Windows 7 }
-  KEY_STARTUP_DISABLED        = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\startupreg\' deprecated;
-  KEY_STARTUP_USER_DISABLED   = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\startupfolder\' deprecated;
-
-  { Startup registry keys since Windows 8 }
-  KEY_STARTUP_APPROVED        = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\';
-  KEY_STARTUP_RUN_APPROVED    = KEY_STARTUP_APPROVED +'Run';
-  KEY_STARTUP_RUN32_APPROVED  = KEY_STARTUP_APPROVED +'Run32';
-  KEY_STARTUP_USER_APPROVED   = KEY_STARTUP_APPROVED +'StartupFolder';
-
-  { General startup keys }
-  KEY_STARTUP_RUN             = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Run';
-  KEY_STARTUP_RUNONCE         = 'SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce';
-
-  { Redirected 32-Bit Registry keys by WOW64 }
-  KEY_STARTUP_RUN32           = 'SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Run';
-  KEY_STARTUP_RUNONCE32       = 'SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnce';
-
-  { Extensions of backup files }
-  EXT_STARTUP_COMMON          = '.CommonStartup';
-  EXT_STARTUP_USER            = '.Startup';
-
-  { Description type of startup user items }
-  STARTUP_COMMON              = 'Startup Common';
+  { Description types of startup user items for Windows XP}
   STARTUP_COMMON_XP           = 'Common Startup' deprecated;
-  STARTUP_USER                = 'Startup User';
   STARTUP_USER_XP             = 'Startup' deprecated;
 
   /// <summary>
@@ -1064,13 +1057,22 @@ type
     function Disable(): Boolean; virtual; deprecated 'Since Windows 8'; abstract;
     function Enable(): Boolean; virtual; deprecated 'Since Windows 8'; abstract;
     function DeleteValue(const AKeyPath: string; AReallyWow64: Boolean = True): Boolean;
-    function GetApprovedLocation(): string; virtual;
+    function GetApprovedLocation(): string; virtual; abstract;
     function GetRootKey(): TRootKey; override;
     function GetWow64Key(): string; virtual;
     procedure Rename(const ANewName: string); overload; override;
     function Rename(const AKeyPath, ANewName: string;
       AReallyWow64: Boolean = True): Boolean; reintroduce; overload;
   public
+    const
+      /// <summary>
+      ///   Registry status base key.
+      /// </summary>
+      /// <remarks>
+      ///   Only since Windows 8!
+      /// </remarks>
+      StartupApprovedBaseKey = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\';
+
     /// <summary>
     ///   Constructor for creating a <c>TStartupListItem</c> instance.
     /// </summary>
@@ -1158,8 +1160,64 @@ type
     function Disable(): Boolean; override;
     function Enable(): Boolean; override;
     function GetWow64Key(): string; override;
+    function GetApprovedLocation(): string; override;
     procedure Rename(const ANewName: string); override;
   public
+    const
+      /// <summary>
+      ///   Registry key of disabled items.
+      /// </summary>
+      /// <remarks>
+      ///   DEPRECATED since Windows 8!
+      /// </remarks>
+      DisabledKey          = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\startupreg\' deprecated;
+
+      /// <summary>
+      ///   Registry status key.
+      /// </summary>
+      /// <remarks>
+      ///   Only since Windows 8!
+      /// </remarks>
+      StartupApprovedKey   = TStartupListItem.StartupApprovedBaseKey +'Run';
+
+      /// <summary>
+      ///   Registry status key of 32-bit items.
+      /// </summary>
+      /// <remarks>
+      ///   Only present on 64-bit Windows and since Windows 8!
+      /// </remarks>
+      StartupApproved32Key = TStartupListItem.StartupApprovedBaseKey +'Run32';
+
+      /// <summary>
+      ///   Registry key of enabled items that are executed during every system
+      ///   startup.
+      /// </summary>
+      StartupRunKey        = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Run';
+
+      /// <summary>
+      ///   Registry key of enabled 32-bit items that are executed during every
+      ///   system startup.
+      /// </summary>
+      /// <remarks>
+      ///   Only present on 64-bit Windows!
+      /// </remarks>
+      StartupRunKey32      = 'SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Run';
+
+      /// <summary>
+      ///   Registry key of enabled items that are executed only during the next
+      ///   system startup.
+      /// </summary>
+      StartupRunOnceKey    = 'SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce';
+
+      /// <summary>
+      ///   Registry key of enabled 32-bit items that are executed only during
+      ///   the next system startup.
+      /// </summary>
+      /// <remarks>
+      ///   Only present on 64-bit Windows!
+      /// </remarks>
+      StartupRunOnceKey32  = 'SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\RunOnce';
+
     /// <summary>
     ///   Constructor for creating a <c>TStartupItem</c> instance.
     /// </summary>
@@ -1229,6 +1287,23 @@ type
     function GetFullLocation(): string; override;
     procedure Rename(const ANewName: string); override;
   public
+    const
+      /// <summary>
+      ///   Registry key of disabled items.
+      /// </summary>
+      /// <remarks>
+      ///   DEPRECATED since Windows 8!
+      /// </remarks>
+      DisabledKey = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\startupfolder\' deprecated;
+
+      /// <summary>
+      ///   Registry status key.
+      /// </summary>
+      /// <remarks>
+      ///   Only since Windows 8!
+      /// </remarks>
+      StartupApprovedKey  = TStartupListItem.StartupApprovedBaseKey +'StartupFolder';
+
     /// <summary>
     ///   Constructor for creating a <c>TStartupUserItem</c> instance.
     /// </summary>
@@ -1515,8 +1590,6 @@ const
   CM_SHELLEX                  = 'ShellEx';
   CM_SHELLEX_HANDLERS         = CM_SHELLEX +'\ContextMenuHandlers';
   CM_SHELLEX_FILE             = 'CLSID\%s\InProcServer32';
-  CM_SHELLNEW                 = 'ShellNew';
-  CM_SHELLNEW_DISABLED        = '_'+ CM_SHELLNEW;
   CM_LOCATIONS_DEFAULT        = 'Directory, Folder, *, Drive';
 
 type
@@ -1734,6 +1807,17 @@ type
     function GetLocation(): string; override;
     procedure Rename(const ANewName: string); override;
   public
+    const
+      /// <summary>
+      ///   The enabled registry key.
+      /// </summary>
+      CanonicalName         = 'ShellNew';
+
+      /// <summary>
+      ///   The disabled registry key.
+      /// </summary>
+      CanonicalNameDisabled = '_'+ CanonicalName;
+
     /// <summary>
     ///   Constructor for creating a <c>TShellNewItem</c> instance.
     /// </summary>
@@ -2422,12 +2506,12 @@ end;
 constructor TStartupLnkFile.Create(const AFileName: TFileName);
 begin
   inherited Create(AFileName);
-  FStartupUser := not (ExtractFileExt(AFileName) = EXT_STARTUP_COMMON);
+  FStartupUser := not (ExtractFileExt(AFileName) = StartupCommonBackupFileExtension);
 end;
 
 constructor TStartupLnkFile.Create(const AName: string; AStartupUser: Boolean);
 begin
-  inherited Create(GetStartUpDir(AStartupUser) + ChangeFileExt(AName, '.lnk'));
+  inherited Create(GetStartUpDir(AStartupUser) + ChangeFileExt(AName, FileExtension));
   FStartupUser := AStartupUser;
 end;
 
@@ -2478,9 +2562,9 @@ end;
 function TStartupLnkFile.GetBackupExt(): string;
 begin
   if FStartupUser then
-    Result := EXT_STARTUP_USER
+    Result := StartupUserBackupFileExtension
   else
-    Result := EXT_STARTUP_COMMON;
+    Result := StartupCommonBackupFileExtension;
 end;
 
 function TStartupLnkFile.GetBackupLnk(): string;
@@ -3461,7 +3545,7 @@ end;
 function TStartupListItem.GetWow64Key(): string;
 begin
   if ((FEnabled or CheckWin32Version(6, 2)) and Wow64) then
-    Result := KEY_STARTUP_RUN32
+    Result := TStartupItem.StartupRunKey32
   else
     Result := FLocation;
 end;
@@ -3537,18 +3621,6 @@ begin
     Reg.CloseKey();
     Reg.Free;
   end;  //of try
-end;
-
-function TStartupListItem.GetApprovedLocation(): string;
-begin
-  // Only since Windows 8!
-  if not CheckWin32Version(6, 2) then
-    Exit;
-
-  if Wow64 then
-    Result := KEY_STARTUP_RUN32_APPROVED
-  else
-    Result := KEY_STARTUP_RUN_APPROVED;
 end;
 
 function TStartupListItem.GetRootKey(): TRootKey;
@@ -3726,7 +3798,7 @@ begin
       Result := inherited Delete();
   end  //of begin
   else
-    Result := DeleteKey(HKEY_LOCAL_MACHINE, KEY_STARTUP_DISABLED, Name);
+    Result := DeleteKey(HKEY_LOCAL_MACHINE, DisabledKey, Name);
 end;
 
 function TStartupItem.Disable(): Boolean;
@@ -3741,7 +3813,7 @@ begin
     Reg.RootKey := HKEY_LOCAL_MACHINE;
 
     // Failed to create new key?
-    if not Reg.OpenKey(KEY_STARTUP_DISABLED + Name, True) then
+    if not Reg.OpenKey(DisabledKey + Name, True) then
       raise EStartupException.Create('Could not create key!');
 
     // Write values
@@ -3773,7 +3845,7 @@ begin
 
     // Update information
     FRootKey := rkHKLM;
-    FLocation := KEY_STARTUP_DISABLED + Name;
+    FLocation := DisabledKey + Name;
     FEnabled := False;
     Result := True;
 
@@ -3820,9 +3892,9 @@ begin
     begin
       // RunOnce item?
       if (ExtractFileName(NewKeyPath) = 'RunOnce') then
-        NewKeyPath := KEY_STARTUP_RUNONCE
+        NewKeyPath := StartupRunOnceKey
       else
-        NewKeyPath := KEY_STARTUP_RUN;
+        NewKeyPath := StartupRunKey;
 
       Reg.Access := KEY_WOW64_32KEY or KEY_READ or KEY_WRITE;
     end  //of begin
@@ -3843,8 +3915,8 @@ begin
     Reg.Access := Access64 or KEY_WRITE;
     Reg.RootKey := HKEY_LOCAL_MACHINE;
 
-    if not Reg.OpenKey(KEY_STARTUP_DISABLED, True) then
-      raise EStartupException.Create('Could not open Key '''+ KEY_STARTUP_DISABLED +'''!');
+    if not Reg.OpenKey(DisabledKey, True) then
+      raise EStartupException.Create('Could not open Key '''+ DisabledKey +'''!');
 
     // Do not abort if old key does not exist!
     if (Reg.KeyExists(Name) and not Reg.DeleteKey(Name)) then
@@ -3863,14 +3935,26 @@ begin
   end;  //of try
 end;
 
+function TStartupItem.GetApprovedLocation(): string;
+begin
+  // Only since Windows 8!
+  if not CheckWin32Version(6, 2) then
+    Exit;
+
+  if Wow64 then
+    Result := StartupApproved32Key
+  else
+    Result := StartupApprovedKey;
+end;
+
 function TStartupItem.GetWow64Key(): string;
 begin
   if ((FEnabled or CheckWin32Version(6, 2)) and Wow64) then
   begin
     if FRunOnce then
-      Result := KEY_STARTUP_RUNONCE32
+      Result := StartupRunOnceKey32
     else
-      Result := KEY_STARTUP_RUN32;
+      Result := StartupRunKey32;
   end  //of begin
   else
     Result := FLocation;
@@ -3920,7 +4004,7 @@ begin
     if not Reg.KeyExists(ANewName) then
       raise EStartupException.Create('Key was not renamed!');
 
-    FLocation := KEY_STARTUP_DISABLED + ANewName;
+    FLocation := DisabledKey + ANewName;
     FName := ANewName;
 
   finally
@@ -3985,15 +4069,15 @@ function TStartupUserItem.GetApprovedLocation(): string;
 begin
   // Only since Windows 8!
   if CheckWin32Version(6, 2) then
-    Result := KEY_STARTUP_USER_APPROVED;
+    Result := StartupApprovedKey;
 end;
 
 function TStartupUserItem.GetExportFilter(ALanguageFile: TLanguageFile): string;
 begin
   if StartupUser then
-    Result := ToString() +'|*'+ EXT_STARTUP_USER
+    Result := ToString() +'|*'+ TStartupLnkFile.StartupUserBackupFileExtension
   else
-    Result := ToString() +'|*'+ EXT_STARTUP_COMMON;
+    Result := ToString() +'|*'+ TStartupLnkFile.StartupCommonBackupFileExtension;
 end;
 
 procedure TStartupUserItem.ChangeFilePath(const ANewFileName: string);
@@ -4030,8 +4114,7 @@ begin
       Result := True;
   end  //of begin
   else
-    Result := DeleteKey(HKEY_LOCAL_MACHINE, KEY_STARTUP_USER_DISABLED,
-      AddCircumflex(FLnkFile.FileName));
+    Result := DeleteKey(HKEY_LOCAL_MACHINE, DisabledKey, AddCircumflex(FLnkFile.FileName));
 end;
 
 function TStartupUserItem.Disable(): Boolean;
@@ -4059,9 +4142,9 @@ begin
     Reg.RootKey := HKEY_LOCAL_MACHINE;
     KeyName := AddCircumflex(FLocation);
 
-    if not Reg.OpenKey(KEY_STARTUP_USER_DISABLED + KeyName, True) then
+    if not Reg.OpenKey(DisabledKey + KeyName, True) then
       raise EStartupException.Create('Could not create key'''+
-        KEY_STARTUP_USER_DISABLED + KeyName +'''!');
+        DisabledKey + KeyName +'''!');
 
     Reg.WriteString('path', FLocation);
     Reg.WriteString('item', ChangeFileExt(ExtractFileName(Name), ''));
@@ -4083,7 +4166,7 @@ begin
       raise EStartupException.Create('Could not delete .lnk file '''+ FLnkFile.FileName +'''!');
 
     // Update information
-    FLocation := KEY_STARTUP_USER_DISABLED + KeyName;
+    FLocation := DisabledKey + KeyName;
     FRootKey := rkHKLM;
     FEnabled := False;
     Result := True;
@@ -4111,7 +4194,7 @@ begin
     end;  //of if
 
   // Do not abort if old key could not be deleted
-  if not DeleteKey(HKEY_LOCAL_MACHINE, KEY_STARTUP_USER_DISABLED,
+  if not DeleteKey(HKEY_LOCAL_MACHINE, DisabledKey,
     AddCircumflex(FLnkFile.FileName), False) then
     raise EStartupException.Create('Could not delete key!');
 
@@ -4141,7 +4224,7 @@ var
 
 begin
   OldFileName := FLnkFile.FileName;
-  NewName := ChangeFileExt(ANewName, '.lnk');
+  NewName := ChangeFileExt(ANewName, TLnkFile.FileExtension);
   NewFileName := StringReplace(OldFileName, ExtractFileName(OldFileName),
     NewName, [rfReplaceAll, rfIgnoreCase]);
 
@@ -4164,7 +4247,7 @@ begin
 
     try
       Reg.RootKey := HKEY_LOCAL_MACHINE;
-      Reg.OpenKey(KEY_STARTUP_USER_DISABLED, True);
+      Reg.OpenKey(DisabledKey, True);
 
       OldKeyName := AddCircumflex(FLnkFile.FileName);
       NewKeyName := AddCircumflex(NewFileName);
@@ -4181,7 +4264,7 @@ begin
       if not Reg.KeyExists(NewKeyName) then
         raise EStartupException.Create('Key was not renamed!');
 
-      FLocation := KEY_STARTUP_USER_DISABLED + NewKeyName;
+      FLocation := DisabledKey + NewKeyName;
 
       // Update specific information
       Reg.CloseKey();
@@ -4203,9 +4286,9 @@ begin
   if CheckWin32Version(6) then
   begin
     if StartupUser then
-      Result := STARTUP_USER
+      Result := 'Startup User'
     else
-      Result := STARTUP_COMMON;
+      Result := 'Startup Common';
   end  //of begin
   else
     if StartupUser then
@@ -4222,31 +4305,31 @@ begin
     slHkcuRun, slHkcuRunOnce:
       begin
         Result.Key := HKEY_CURRENT_USER;
-        Result.Value := KEY_STARTUP_RUN_APPROVED;
+        Result.Value := TStartupItem.StartupApprovedKey;
       end;
 
     slHklmRun, slHklmRunOnce:
       begin
         Result.Key := HKEY_LOCAL_MACHINE;
-        Result.Value := KEY_STARTUP_RUN_APPROVED;
+        Result.Value := TStartupItem.StartupApprovedKey;
       end;
 
     slHklmRun32, slHklmRunOnce32:
       begin
         Result.Key := HKEY_LOCAL_MACHINE;
-        Result.Value := KEY_STARTUP_RUN32_APPROVED;
+        Result.Value := TStartupItem.StartupApproved32Key;
       end;
 
     slStartupUser:
       begin
         Result.Key := HKEY_CURRENT_USER;
-        Result.Value := KEY_STARTUP_USER_APPROVED;
+        Result.Value := TStartupUserItem.StartupApprovedKey;
       end;
 
     slCommonStartup:
       begin
         Result.Key := HKEY_LOCAL_MACHINE;
-        Result.Value := KEY_STARTUP_USER_APPROVED;
+        Result.Value := TStartupUserItem.StartupApprovedKey;
       end;
   end;  //of case
 end;
@@ -4257,25 +4340,25 @@ begin
     slHkcuRun:
       begin
         Result.Key := HKEY_CURRENT_USER;
-        Result.Value := KEY_STARTUP_RUN;
+        Result.Value := TStartupItem.StartupRunKey;
       end;
 
     slHkcuRunOnce:
       begin
         Result.Key := HKEY_CURRENT_USER;
-        Result.Value := KEY_STARTUP_RUNONCE;
+        Result.Value := TStartupItem.StartupRunOnceKey;
       end;
 
     slHklmRun, slHklmRun32:
       begin
         Result.Key := HKEY_LOCAL_MACHINE;
-        Result.Value := KEY_STARTUP_RUN;
+        Result.Value := TStartupItem.StartupRunKey;
       end;
 
     slHklmRunOnce, slHklmRunOnce32:
       begin
         Result.Key := HKEY_LOCAL_MACHINE;
-        Result.Value := KEY_STARTUP_RUNONCE;
+        Result.Value := TStartupItem.StartupRunOnceKey;
       end;
 
     slStartupUser:
@@ -4316,7 +4399,8 @@ end;
 function TStartupList.GetImportFilter(ALanguageFile: TLanguageFile): string;
 begin
   Result := Format(ALanguageFile.GetString(LID_FILTER_STARTUP_FILES),
-    [EXT_STARTUP_USER, EXT_STARTUP_USER, EXT_STARTUP_COMMON, EXT_STARTUP_COMMON]);
+    [TStartupLnkFile.StartupUserBackupFileExtension, TStartupLnkFile.StartupUserBackupFileExtension,
+    TStartupLnkFile.StartupCommonBackupFileExtension, TStartupLnkFile.StartupCommonBackupFileExtension]);
 end;
 
 function TStartupList.AddNewStartupUserItem(const AName: string;
@@ -4414,7 +4498,7 @@ begin
       // Try to add new startup item to Registry
       try
         Reg.RootKey := HKEY_CURRENT_USER;
-        Reg.OpenKey(KEY_STARTUP_RUN, True);
+        Reg.OpenKey(TStartupItem.StartupRunKey, True);
 
         // Escape space chars using quotes
         FullPath := '"'+ AFileName +'"';
@@ -4426,7 +4510,7 @@ begin
         Reg.WriteString(ACaption, FullPath);
 
         // Adds item to list
-        Result := (Add(TStartupItem.Create(ACaption, AFileName, KEY_STARTUP_RUN,
+        Result := (Add(TStartupItem.Create(ACaption, AFileName, TStartupItem.StartupRunKey,
           rkHKCU, True, False, False)) <> -1);
 
         // Windows 8?
@@ -4504,8 +4588,8 @@ begin
     // Windows 8?
     if Win8 then
     begin
-      RegFile.ExportKey(HKEY_CURRENT_USER, KEY_STARTUP_APPROVED, True);
-      RegFile.ExportKey(HKEY_LOCAL_MACHINE, KEY_STARTUP_APPROVED, True);
+      RegFile.ExportKey(HKEY_CURRENT_USER, TStartupListItem.StartupApprovedBaseKey, True);
+      RegFile.ExportKey(HKEY_LOCAL_MACHINE, TStartupListItem.StartupApprovedBaseKey, True);
     end;  //of begin
 
     // Save file
@@ -4527,9 +4611,11 @@ begin
   Ext := ExtractFileExt(AFileName);
 
   // Check invalid extension
-  if ((Ext <> EXT_STARTUP_COMMON) and (Ext <> EXT_STARTUP_USER)) then
+  if ((Ext <> TStartupLnkFile.StartupCommonBackupFileExtension) and
+    (Ext <> TStartupLnkFile.StartupUserBackupFileExtension)) then
     raise EAssertionFailed.Create('Invalid backup file extension! Must '+
-      'be '''+ EXT_STARTUP_COMMON +''' or '''+ EXT_STARTUP_USER +'''!');
+      'be '''+ TStartupLnkFile.StartupCommonBackupFileExtension +''' or '''+
+      TStartupLnkFile.StartupUserBackupFileExtension +'''!');
 
   // List locked?
   if not FLock.TryEnter() then
@@ -4540,7 +4626,7 @@ begin
 
   // Set the name of item
   Name := ExtractFileName(ChangeFileExt(AFileName, ''));
-  Name := ChangeFileExt(Name, '.lnk');
+  Name := ChangeFileExt(Name, TLnkFile.FileExtension);
 
   try
     // Extract path to .exe
@@ -4549,7 +4635,7 @@ begin
 
     // Create .lnk file and add it to list
     Result := AddNewStartupUserItem(Name, LnkFile.ExeFileName, LnkFile.Arguments,
-      (Ext = EXT_STARTUP_USER));
+      (Ext = TStartupLnkFile.StartupUserBackupFileExtension));
 
     // Refresh TListView
     if Result then
@@ -4565,12 +4651,10 @@ procedure TStartupList.LoadDisabled(AStartupUser: Boolean);
 var
   Reg: TRegistry;
   Items: TStringList;
-  KeyPath: string;
   i: Integer;
-  Wow64: Boolean;
   Item: TStartupListItem;
-  RunOnce, StartupUser: Boolean;
-  Location, Name, FileName, LnkFileName, ExeFileName, ExeArguments: string;
+  Wow64, RunOnce, StartupUser: Boolean;
+  Location, Name, FileName, LnkFileName, KeyPath, OriginKey: string;
 
 begin
   // Deprecated since Windows 8!
@@ -4579,14 +4663,15 @@ begin
 
   Items := TStringList.Create;
   Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ);
-  Reg.RootKey := HKEY_LOCAL_MACHINE;
-
-  if AStartupUser then
-    KeyPath := KEY_STARTUP_USER_DISABLED
-  else
-    KeyPath := KEY_STARTUP_DISABLED;
 
   try
+    Reg.RootKey := HKEY_LOCAL_MACHINE;
+
+    if AStartupUser then
+      KeyPath := TStartupUserItem.DisabledKey
+    else
+      KeyPath := TStartupItem.DisabledKey;
+
     Reg.OpenKey(KeyPath, False);
     Reg.GetKeyNames(Items);
 
@@ -4599,8 +4684,9 @@ begin
 
       if not AStartupUser then
       begin
-        Wow64 := (AnsiPos(AnsiUpperCase('Wow6432Node'), AnsiUpperCase(Reg.ReadString('key'))) > 0);
-        RunOnce := (ExtractFileName(Reg.ReadString('key')) = 'RunOnce');
+        OriginKey := Reg.ReadString('key');
+        Wow64 := OriginKey.Contains('Wow6432Node');
+        RunOnce := (ExtractFileName(OriginKey) = 'RunOnce');
         Name := Items[i];
 
         Item := TStartupItem.Create(Name, FileName, Location, rkHKLM, False,
@@ -4613,17 +4699,15 @@ begin
 
         // Windows >= Vista?
         if CheckWin32Version(6) then
-          StartupUser := not AnsiSameText(Reg.ReadString('backupExtension'), EXT_STARTUP_COMMON)
+          StartupUser := not AnsiSameText(Reg.ReadString('backupExtension'), TStartupLnkFile.StartupCommonBackupFileExtension)
         else
           StartupUser := AnsiSameText(Reg.ReadString('location'), STARTUP_USER_XP);
 
         Item := TStartupUserItem.Create(Name, FileName, Location, rkHKLM, False, nil);
 
         // Setup .lnk file
-        ExeFileName := Item.FileNameOnly;;
-        ExeArguments := Item.Arguments;
         TStartupUserItem(Item).LnkFile := TStartupLnkFile.Create(LnkFileName,
-          StartupUser, ExeFileName, ExeArguments);
+          StartupUser, Item.FileNameOnly, Item.Arguments);
       end;  //of if
 
       Item.Time := Item.GetTimestamp(Reg);
@@ -4704,7 +4788,7 @@ begin
   begin
     StartupUser := (AStartupLocation = slStartupUser);
 
-    if (FindFirst(AStartupLocation.GetLocation().Value +'*.lnk',
+    if (FindFirst(AStartupLocation.GetLocation().Value +'*'+ TLnkFile.FileExtension,
       faAnyFile - faDirectory, SearchResult) = 0) then
     try
       // .lnk file found
@@ -5312,13 +5396,13 @@ begin
 
     if ANewStatus then
     begin
-      OldKeyName := CM_SHELLNEW_DISABLED;
-      NewKeyName := CM_SHELLNEW;
+      OldKeyName := CanonicalNameDisabled;
+      NewKeyName := CanonicalName;
     end  //of begin
     else
     begin
-      OldKeyName := CM_SHELLNEW;
-      NewKeyName := CM_SHELLNEW_DISABLED;
+      OldKeyName := CanonicalName;
+      NewKeyName := CanonicalNameDisabled;
     end;  //of if
 
     // Old key does not exist?
@@ -5349,9 +5433,9 @@ end;
 function TShellNewItem.GetLocation(): string;
 begin
   if FEnabled then
-    Result := inherited GetLocation() +'\'+ CM_SHELLNEW
+    Result := inherited GetLocation() +'\'+ CanonicalName
   else
-    Result := inherited GetLocation() +'\'+ CM_SHELLNEW_DISABLED;
+    Result := inherited GetLocation() +'\'+ CanonicalNameDisabled;
 end;
 
 procedure TShellNewItem.ChangeFilePath(const ANewFileName: string);
@@ -5391,7 +5475,7 @@ end;
 
 function TShellNewItem.ToString(): string;
 begin
-  Result := CM_SHELLNEW;
+  Result := CanonicalName;
 end;
 
 
@@ -5591,10 +5675,10 @@ begin
     if (AShellItemType = stShellNew) then
     begin
       // "ShellNew" and "_ShellNew" in same key are possible: prefer "ShellNew"
-      if Reg.KeyExists(CM_SHELLNEW) then
+      if Reg.KeyExists(TShellNewItem.CanonicalName) then
         Enabled := True
       else
-        if Reg.KeyExists(CM_SHELLNEW_DISABLED) then
+        if Reg.KeyExists(TShellNewItem.CanonicalNameDisabled) then
           Enabled := False
         else
           Exit;
@@ -5783,7 +5867,7 @@ var
             LoadContextmenu(AKeyName, stShellEx, AWin64);
 
           // Load ShellNew context menu items
-          if Keys[i].Contains(CM_SHELLNEW) then
+          if Keys[i].Contains(TShellNewItem.CanonicalName) then
           begin
             Reg.OpenKey(AKeyName +'\'+ Keys[i], False);
             Reg.GetValueNames(Values);
