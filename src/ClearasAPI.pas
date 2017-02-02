@@ -377,7 +377,7 @@ type
     /// <returns>
     ///   The status as text.
     /// </returns>
-    function GetStatus(ALanguageFile: TLanguageFile): string;
+    function GetStatusText(ALanguageFile: TLanguageFile): string;
 
     /// <summary>
     ///   Opens the folder that contains the .exe file in Windows Explorer and
@@ -2832,7 +2832,7 @@ begin
   RevertWow64FsRedirection(OldValue);
 end;
 
-function TRootItem.GetStatus(ALanguageFile: TLanguageFile): string;
+function TRootItem.GetStatusText(ALanguageFile: TLanguageFile): string;
 begin
   if FEnabled then
     Result := ALanguageFile.GetString(LID_YES)

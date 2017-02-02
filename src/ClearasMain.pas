@@ -651,7 +651,7 @@ begin
     RootList.DisableItem();
 
     // Change item visual status
-    ListView.ItemFocused.Caption := RootList.Selected.GetStatus(FLang);
+    ListView.ItemFocused.Caption := RootList.Selected.GetStatusText(FLang);
 
     // Update TListView
     ListView.OnSelectItem(Self, ListView.ItemFocused, True);
@@ -696,7 +696,7 @@ begin
     RootList.EnableItem();
 
     // Change item visual status
-    ListView.ItemFocused.Caption := RootList.Selected.GetStatus(FLang);
+    ListView.ItemFocused.Caption := RootList.Selected.GetStatusText(FLang);
 
     // Update TListView
     ListView.OnSelectItem(Self, ListView.ItemFocused, True);
@@ -863,7 +863,7 @@ begin
       FContext[i].LocationRoot.ToLower().Contains(LowerCase(eContextSearch.Text)))) then
       with lwContext.Items.Add do
       begin
-        Caption := FContext[i].GetStatus(FLang);
+        Caption := FContext[i].GetStatusText(FLang);
         SubItems.AddObject(Text, FContext[i]);
         SubItems.Append(FContext[i].LocationRoot);
         SubItems.Append(FContext[i].ToString());
@@ -1099,7 +1099,7 @@ begin
     for i := 0 to FStartup.Count - 1 do
       with lwStartup.Items.Add do
       begin
-        Caption := FStartup[i].GetStatus(FLang);
+        Caption := FStartup[i].GetStatusText(FLang);
 
         if ((FStartup[i].Caption <> '') and mmShowCaptions.Checked) then
           Text := FStartup[i].Caption
@@ -1227,7 +1227,7 @@ begin
     if ((eServiceSearch.Text = '') or (Text.ToLower().Contains(LowerCase(eServiceSearch.Text)))) then
       with lwService.Items.Add do
       begin
-        Caption := FService[i].GetStatus(FLang);
+        Caption := FService[i].GetStatusText(FLang);
         SubItems.AddObject(Text, FService[i]);
         SubItems.Append(FService[i].FileName);
         SubItems.Append(FService[i].Start.ToString(FLang));
@@ -1321,7 +1321,7 @@ begin
     if ((eTaskSearch.Text = '') or (Text.ToLower().Contains(LowerCase(eTaskSearch.Text)))) then
       with lwTasks.Items.Add do
       begin
-        Caption := FTasks[i].GetStatus(FLang);
+        Caption := FTasks[i].GetStatusText(FLang);
         SubItems.AddObject(Text, FTasks[i]);
         SubItems.Append(FTasks[i].FileName);
         SubItems.Append(FTasks[i].Location);
