@@ -1777,9 +1777,25 @@ type
     function ToString(): string; override;
   end;
 
-  { Contextmenu enum }
+  /// <summary>
+  ///   Contextmenu item registry types.
+  /// </summary>
   TShellItemType = (
-    stShell, stShellEx, stShellNew
+
+    /// <summary>
+    ///   Contextmenu item under "Shell" registry key.
+    /// </summary>
+    stShell,
+
+    /// <summary>
+    ///   Contextmenu item under "ShellEx" registry key.
+    /// </summary>
+    stShellEx,
+
+    /// <summary>
+    ///   Contextmenu item under "ShellNew" registry key.
+    /// </summary>
+    stShellNew
   );
 
   /// <summary>
