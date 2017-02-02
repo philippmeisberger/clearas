@@ -970,10 +970,6 @@ type
   end;
 
 const
-  { Description types of startup user items for Windows XP}
-  STARTUP_COMMON_XP           = 'Common Startup' deprecated;
-  STARTUP_USER_XP             = 'Startup' deprecated;
-
   /// <summary>
   ///   Used in <see cref="TStartupItemStatus"/> to signal that a startup item
   ///   is enabled.
@@ -4280,20 +4276,12 @@ end;
 
 function TStartupUserItem.ToString(): string;
 begin
-  // Windows >= Vista?
-  if CheckWin32Version(6) then
-  begin
-    if StartupUser then
-      Result := 'Startup User'
-    else
-      Result := 'Startup Common';
-  end  //of begin
+  if StartupUser then
+    Result := 'Startup User'
   else
-    if StartupUser then
-      Result := STARTUP_USER_XP
-    else
-      Result := STARTUP_COMMON_XP;
+    Result := 'Startup Common';
 end;
+
 
 { TStartupLocationHelper }
 
@@ -4699,7 +4687,7 @@ begin
         if CheckWin32Version(6) then
           StartupUser := not AnsiSameText(Reg.ReadString('backupExtension'), TStartupLnkFile.StartupCommonBackupFileExtension)
         else
-          StartupUser := AnsiSameText(Reg.ReadString('location'), STARTUP_USER_XP);
+          StartupUser := AnsiSameText(Reg.ReadString('location'), 'Startup');
 
         Item := TStartupUserItem.Create(Name, FileName, Location, rkHKLM, False, nil);
 
