@@ -468,6 +468,9 @@ type
     /// <returns>
     ///   The deactivation timestamp.
     /// </returns>
+    /// <exception>
+    ///   <c>ERegistryException</c> when timestamp could not be written.
+    /// </exception>
     function WriteTimestamp(const AReg: TRegistry): TDateTime;
   public
     /// <summary>
@@ -664,6 +667,10 @@ type
     /// <summary>
     ///   Changes the file path of the current selected item.
     /// </summary>
+    /// <exception>
+    ///   <c>EListBlocked</c> if another operation is pending on the list.
+    ///   <c>EInvalidItem</c> if no item is selected.
+    /// </exception>
     procedure ChangeItemFilePath(const ANewFilePath: string); virtual;
 
     /// <summary>
@@ -672,6 +679,11 @@ type
     /// <param name="ANewStatus">
     ///   The new status.
     /// </param>
+    /// <exception>
+    ///   <c>EListBlocked</c> if another operation is pending on the list.
+    ///   <c>EInvalidItem</c> if no item is selected.
+    ///   <c>EWarning</c> if new status is equal to current.
+    /// </exception>
     procedure ChangeItemStatus(const ANewStatus: Boolean); virtual;
 
     /// <summary>
@@ -685,11 +697,20 @@ type
     /// <returns>
     ///   <c>>True</c> if item was successfully deleted or <c>False</c> otherwise.
     /// </returns>
+    /// <exception>
+    ///   <c>EListBlocked</c> if another operation is pending on the list.
+    ///   <c>EInvalidItem</c> if no item is selected.
+    /// </exception>
     function DeleteItem(): Boolean; virtual;
 
     /// <summary>
     ///   Disables the current selected item.
     /// </summary>
+    /// <exception>
+    ///   <c>EListBlocked</c> if another operation is pending on the list.
+    ///   <c>EInvalidItem</c> if no item is selected.
+    ///   <c>EWarning</c> if item is already disabled.
+    /// </exception>
     procedure DisableItem();
 
     /// <summary>
@@ -700,6 +721,11 @@ type
     /// <summary>
     ///   Enables the current selected item.
     /// </summary>
+    /// <exception>
+    ///   <c>EListBlocked</c> if another operation is pending on the list.
+    ///   <c>EInvalidItem</c> if no item is selected.
+    ///   <c>EWarning</c> if item is already enabled.
+    /// </exception>
     procedure EnableItem();
 
     /// <summary>
@@ -708,6 +734,10 @@ type
     /// <param name="AFileName">
     ///   The absolute filename to the file.
     /// </param>
+    /// <exception>
+    ///   <c>EListBlocked</c> if another operation is pending on the list.
+    ///   <c>EInvalidItem</c> if no item is selected.
+    /// </exception>
     procedure ExportItem(const AFileName: string); virtual;
 
     /// <summary>
@@ -790,6 +820,11 @@ type
     /// <param name="ANewName">
     ///   The new name.
     /// </param>
+    /// <exception>
+    ///   <c>EListBlocked</c> if another operation is pending on the list.
+    ///   <c>EInvalidItem</c> if no item is selected.
+    ///   <c>EWarning</c> if item with new name already exists.
+    /// </exception>
     procedure RenameItem(const ANewName: string); virtual;
 
     /// <summary>
