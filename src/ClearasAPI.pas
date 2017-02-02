@@ -1486,7 +1486,6 @@ type
     FDeleteBackup: Boolean;
     function AddNewStartupUserItem(const AName: string; const AFileName: TFileName;
       const AArguments: string = ''; AStartupUser: Boolean = True): Boolean;
-    function AddUserItem(ALnkFile: TStartupLnkFile; AStartupUser: Boolean): Integer;
     function DeleteBackupFile(): Boolean; deprecated 'Since Windows 8';
     function LoadStatus(const AName: string;
       AStartupLocation: TStartupLocation): TStartupItemStatus;
@@ -4052,7 +4051,7 @@ end;
 
 destructor TStartupUserItem.Destroy;
 begin
-  FLnkFile.Free;
+  FreeAndNil(FLnkFile);
   inherited Destroy;
 end;
 
@@ -4415,43 +4414,23 @@ function TStartupList.AddNewStartupUserItem(const AName: string;
 var
   i: Integer;
   LnkFile: TStartupLnkFile;
+  RootKey: TRootKey;
 
 begin
   Result := False;
 
   // File path already exists in another item?
   for i := 0 to Count - 1 do
+  begin
     if Items[i].FileName.Contains(AFileName) then
-      Exit(False);
+      Exit;
+  end;  //of for
 
   LnkFile := TStartupLnkFile.Create(AName, AStartupUser, AFileName, AArguments);
 
   // Link file created successfully?
   if not LnkFile.Save() then
     raise EStartupException.Create('Could not create .lnk file '''+ LnkFile.FileName +'''!');
-
-  // Add item to list
-  if (AddUserItem(LnkFile, AStartupUser) <> -1) then
-  begin
-    Result := True;
-
-    // Windows 8?
-    if CheckWin32Version(6, 2) then
-      // Write the StartupApproved value
-      Last.Enabled := True;
-  end;  //of begin
-end;
-
-function TStartupList.AddUserItem(ALnkFile: TStartupLnkFile;
-  AStartupUser: Boolean): Integer;
-var
-  Location, Name, FileName: string;
-  RootKey: TRootKey;
-
-begin
-  Location := ALnkFile.FileName;
-  Name := ExtractFileName(Location);
-  FileName := ALnkFile.FullPath;
 
   // Windows 8?
   if CheckWin32Version(6, 2) then
@@ -4464,8 +4443,17 @@ begin
   else
     RootKey := rkUnknown;
 
-  Result := Add(TStartupUserItem.Create(Name, FileName, Location, RootKey, True,
-    ALnkFile));
+  // Add item to list
+  if (Add(TStartupUserItem.Create(ExtractFileName(LnkFile.FileName),
+    LnkFile.FullPath, LnkFile.FileName, RootKey, True, LnkFile)) <> -1) then
+  begin
+    Result := True;
+
+    // Windows 8?
+    if CheckWin32Version(6, 2) then
+      // Write the StartupApproved value
+      Last.Enabled := True;
+  end;  //of begin
 end;
 
 function TStartupList.Add(const AFileName, AArguments, ACaption: string): Boolean;
