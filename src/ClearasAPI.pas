@@ -446,7 +446,7 @@ type
   strict private
     FWow64: Boolean;
   protected
-    function DeleteKey(AHKey: HKEY; AKeyPath, AKeyName: string;
+    function DeleteKey(AHKey: HKEY; const AKeyPath, AKeyName: string;
       AFailIfNotExists: Boolean = True): Boolean;
     function GetFullLocation(): string; override;
     function GetRootKey(): TRootKey; virtual; abstract;
@@ -2881,7 +2881,7 @@ begin
   FWow64 := AWow64;
 end;
 
-function TRegistryItem.DeleteKey(AHKey: HKEY; AKeyPath, AKeyName: string;
+function TRegistryItem.DeleteKey(AHKey: HKEY; const AKeyPath, AKeyName: string;
   AFailIfNotExists: Boolean = True): Boolean;
 var
   Reg: TRegistry;
@@ -2911,9 +2911,6 @@ begin
 end;
 
 procedure TRegistryItem.OpenInRegEdit(AWow64: Boolean);
-const
-  KEY_REGEDIT = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Regedit';
-
 var
   Reg: TRegistry;
   OldValue: Boolean;
@@ -2923,7 +2920,7 @@ begin
 
   try
     Reg.RootKey := HKEY_CURRENT_USER;
-    Reg.OpenKey(KEY_REGEDIT, True);
+    Reg.OpenKey('SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Regedit', True);
     Reg.WriteString('LastKey', 'Computer\'+ GetFullLocation());
 
     // Redirected 32-Bit item?
@@ -2947,17 +2944,13 @@ end;
 function TRegistryItem.WriteTimestamp(const AReg: TRegistry): TDateTime;
 var
   Timestamp: TSystemTime;
-  TimeNow: TDateTime;
 
 begin
-  TimeNow := Now();
-  Result := TimeNow;
-  DateTimeToSystemTime(TimeNow, Timestamp);
+  Assert(Assigned(AReg), 'Registry instance was not initialized!');
+  Result := Now();
+  DateTimeToSystemTime(Result, Timestamp);
 
   try
-    if not Assigned(AReg) then
-      raise ERegistryException.Create('Registry instance was not initialized!');
-
     with AReg do
     begin
       WriteInteger('YEAR', Timestamp.wYear);
