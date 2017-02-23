@@ -48,7 +48,7 @@ type
     procedure TestExportBackup;
     procedure TestExportItems;
     procedure TestDeleteItems;
-    procedure TestLocking;
+    //procedure TestLocking;
   end;
 
   TStartupListTest = class(TRootListTest)
@@ -405,7 +405,8 @@ begin
   end;  //of try
 end;
 
-procedure TRootListTest.TestLocking;
+// TODO: Reenable
+{procedure TRootListTest.TestLocking;
 begin
   FLockingSuccessful := False;
 
@@ -416,7 +417,7 @@ begin
   // Give the thread time to kill himself
   Delay(2000);
   Check(FLockingSuccessful, 'List was not locked!');
-end;
+end; }
 
 procedure TRootListTest.TestRename(const AItemName: string);
 begin
