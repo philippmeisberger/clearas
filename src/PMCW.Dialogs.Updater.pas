@@ -1115,7 +1115,7 @@ var
 
 begin
   Result := False;
-  ResourceStream := TResourceStream.Create(HInstance, 'ca', RT_RCDATA);
+  ResourceStream := TResourceStream.Create(HInstance, RESOURCE_CA, RT_RCDATA);
   FileName := IncludeTrailingPathDelimiter(GetEnvironmentVariable('TEMP')) +'CA.crt';
 
   try
