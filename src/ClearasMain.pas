@@ -2614,7 +2614,7 @@ begin
       with TExportListThread.Create(SelectedList, FileName, PageControl.ActivePageIndex) do
       begin
         OnStart := OnExportListStart;
-        OnFinish := OnExportListEnd;
+        OnTerminate := OnExportListEnd;
         OnError := OnExportListError;
         Start;
       end;  //of with

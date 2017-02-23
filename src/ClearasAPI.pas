@@ -902,7 +902,6 @@ type
     FOnStart: TNotifyEvent;
     FOnError: TErrorEvent;
     FErrorMessage: string;
-    FLock: TCriticalSection;
     procedure DoNotifyOnError();
     procedure DoNotifyOnStart();
   protected
@@ -916,10 +915,7 @@ type
     /// <param name="ASelectedList">
     ///   The list on which the operation should be performed.
     /// </param>
-    /// <param name="ALock">
-    ///   The mutex.
-    /// </param>
-    constructor Create(ASelectedList: TRootList<TRootItem>; ALock: TCriticalSection);
+    constructor Create(ASelectedList: TRootList<TRootItem>);
 
     /// <summary>
     ///   Occurs when something went wrong.
@@ -939,6 +935,7 @@ type
   private
     FWin64,
     FExpertMode: Boolean;
+    FLock: TCriticalSection;
     FOnChanged: TItemChangeEvent;
     procedure DoNotifyOnChange();
   protected
@@ -994,16 +991,13 @@ type
     /// <param name="ASelectedList">
     ///   The <c>TRootList</c> which should be exported.
     /// </param>
-    /// <param name="ALock">
-    ///   The mutex.
-    /// </param>
     /// <param name="AFileName">
     ///   The file.
     /// </param>
     /// <param name="APageControlIndex">
     ///   The index of the <c>TPageControl</c> on which the export was invoked.
     /// </param>
-    constructor Create(ASelectedList: TRootList<TRootItem>; ALock: TCriticalSection;
+    constructor Create(ASelectedList: TRootList<TRootItem>;
       const AFileName: string; APageControlIndex: Integer);
 
     /// <summary>
@@ -3401,13 +3395,11 @@ end;
 
 { TRootListThread }
 
-constructor TRootListThread.Create(ASelectedList: TRootList<TRootItem>;
-  ALock: TCriticalSection);
+constructor TRootListThread.Create(ASelectedList: TRootList<TRootItem>);
 begin
   inherited Create(True);
   FreeOnTerminate := True;
   FSelectedList := ASelectedList;
-  FLock := ALock;
 end;
 
 procedure TRootListThread.DoNotifyOnError();
@@ -3424,16 +3416,10 @@ end;
 
 procedure TRootListThread.Execute();
 begin
-  FLock.Acquire();
   Synchronize(DoNotifyOnStart);
 
   try
-    try
-      DoExecute();
-
-    finally
-      FLock.Release();
-    end;  //of try
+    DoExecute();
 
   except
     on E: Exception do
@@ -3450,7 +3436,10 @@ end;
 constructor TSearchThread.Create(ASelectedList: TRootList<TRootItem>;
   ALock: TCriticalSection; AExpertMode: Boolean = False);
 begin
-  inherited Create(ASelectedList, ALock);
+  inherited Create(ASelectedList);
+  FreeOnTerminate := True;
+  FSelectedList := ASelectedList;
+  FLock := ALock;
   FExpertMode := AExpertMode;
   FWin64 := (TOSVersion.Architecture = arIntelX64);
   FOnChanged := FSelectedList.OnChanged;
@@ -3458,6 +3447,8 @@ end;
 
 procedure TSearchThread.DoExecute();
 begin
+  FLock.Acquire();
+
   try
     Assert(Assigned(FSelectedList));
     FSelectedList.Clear();
@@ -3465,6 +3456,7 @@ begin
 
   finally
     Synchronize(DoNotifyOnChange);
+    FLock.Release();
   end;  //of try
 end;
 
@@ -3479,9 +3471,11 @@ end;
 { TExportListThread }
 
 constructor TExportListThread.Create(ASelectedList: TRootList<TRootItem>;
-  ALock: TCriticalSection; const AFileName: string; APageControlIndex: Integer);
+  const AFileName: string; APageControlIndex: Integer);
 begin
-  inherited Create(ASelectedList, ALock);
+  inherited Create(ASelectedList);
+  FreeOnTerminate := True;
+  FSelectedList := ASelectedList;
   FFileName := AFileName;
   FPageControlIndex := APageControlIndex;
 end;
@@ -4557,6 +4551,7 @@ var
   Win8: Boolean;
 
 begin
+  FLock.Acquire();
   Win8 := CheckWin32Version(6, 2);
 
   // Init Reg file
@@ -4586,6 +4581,7 @@ begin
 
   finally
     RegFile.Free;
+    FLock.Release();
   end;  //of try
 end;
 
@@ -5581,6 +5577,8 @@ var
   Item: TContextListItem;
 
 begin
+  FLock.Acquire;
+
   // Init Reg file
   RegFile := TRegistryFile.Create(ChangeFileExt(AFileName, '.reg'), True);
 
@@ -5596,6 +5594,7 @@ begin
 
   finally
     RegFile.Free;
+    FLock.Release();
   end;  //of try
 end;
 
@@ -6287,6 +6286,8 @@ var
   Item: TServiceListItem;
 
 begin
+  FLock.Acquire;
+
   // Init Reg file
   RegFile := TRegistryFile.Create(ChangeFileExt(AFileName, '.reg'), True);
 
@@ -6306,6 +6307,7 @@ begin
 
   finally
     RegFile.Free;
+    FLock.Release();
   end;  //of try
 end;
 
@@ -6658,6 +6660,7 @@ var
   OldValue: Boolean;
 
 begin
+  FLock.Acquire();
   OldValue := DisableWow64FsRedirection();
   ZipFile := TZipFile.Create;
 
@@ -6675,6 +6678,7 @@ begin
   finally
     ZipFile.Free;
     RevertWow64FsRedirection(OldValue);
+    FLock.Release();
   end;  //of try
 end;
 
