@@ -2863,15 +2863,22 @@ end;
 procedure TMain.mmAboutClick(Sender: TObject);
 var
   AboutDialog: TAboutDialog;
+  Description, Changelog: TResourceStream;
 
 begin
   AboutDialog := TAboutDialog.Create(Self);
+  Description := TResourceStream.Create(HInstance, RESOURCE_DESCRIPTION, RT_RCDATA);
+  Changelog := TResourceStream.Create(HInstance, RESOURCE_CHANGELOG, RT_RCDATA);
 
   try
     AboutDialog.Title := StripHotkey(mmAbout.Caption);
+    AboutDialog.Description.LoadFromStream(Description);
+    AboutDialog.Changelog.LoadFromStream(Changelog);
     AboutDialog.Execute();
 
   finally
+    Changelog.Free;
+    Description.Free;
     AboutDialog.Free;
   end;  //of begin
 end;
