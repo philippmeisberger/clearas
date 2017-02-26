@@ -266,9 +266,7 @@ begin
   with FStartup do
   begin
     OnChanged := OnStartupItemChanged;
-    OnSearchError := Self.OnSearchError;
-    OnSearchFinish := OnStartupSearchEnd;
-    OnSearchStart := OnStartupSearchStart;
+    OnRefresh := OnStartupSearchEnd;
   end;  //of with
 
   FContext := TContextList.Create;
@@ -278,9 +276,7 @@ begin
   begin
     Duplicates := True;
     OnChanged := OnContextItemChanged;
-    OnSearchError := Self.OnSearchError;
-    OnSearchFinish := OnContextSearchEnd;
-    OnSearchStart := OnContextSearchStart;
+    OnRefresh := OnContextSearchEnd;
   end;  //of with
 
   FService := TServiceList.Create;
@@ -289,9 +285,7 @@ begin
   with FService do
   begin
     OnChanged := OnServiceItemChanged;
-    OnSearchError := Self.OnSearchError;
-    OnSearchFinish := OnServiceSearchEnd;
-    OnSearchStart := OnServiceSearchStart;
+    OnRefresh := OnServiceSearchEnd;
   end;  //of with
 
   // Task feature only for Windows >= Vista
@@ -303,9 +297,7 @@ begin
     with FTasks do
     begin
       OnChanged := OnTaskItemChanged;
-      OnSearchError := Self.OnSearchError;
-      OnSearchFinish := OnTaskSearchEnd;
-      OnSearchStart := OnTaskSearchStart;
+      OnRefresh := OnTaskSearchEnd;
     end;  //of with
   end;  //of begin
 
@@ -790,25 +782,60 @@ end;
   Loads items and brings them into a TListView. }
 
 procedure TMain.LoadItems(ATotalRefresh: Boolean = True);
+var
+  SearchThread: TSearchThread;
+  SelectedList: TRootList<TRootItem>;
+
 begin
   try
+    SelectedList := GetSelectedList();
+
     // Make a total refresh or just use cached items
     if ATotalRefresh then
-    case PageControl.ActivePageIndex of
-      0: if Assigned(FStartup) then
-           FStartup.Load(cbRunOnce.Checked);
+    begin
+      SearchThread := TSearchThread.Create(SelectedList);
 
-      1: if Assigned(FContext) then
-           FContext.Load(cbContextExpert.Checked);
+      with SearchThread do
+      begin
+        OnError := OnSearchError;
 
-      2: if Assigned(FService) then
-           FService.Load(cbServiceExpert.Checked);
+        case PageControl.ActivePageIndex of
+          0:
+            begin
+              OnStart := OnStartupSearchStart;
+              OnTerminate := OnStartupSearchEnd;
+              ExpertMode := cbRunOnce.Checked;
+              Start();
+            end;
 
-      3: if Assigned(FTasks) then
-           FTasks.Load(cbTaskExpert.Checked);
-    end  //of case
+          1:
+            begin
+              OnStart := OnContextSearchStart;
+              OnTerminate := OnContextSearchEnd;
+              ExpertMode := cbContextExpert.Checked;
+              Start();
+            end;
+
+          2:
+            begin
+              OnStart := OnServiceSearchStart;
+              OnTerminate := OnServiceSearchEnd;
+              ExpertMode := cbServiceExpert.Checked;
+              Start();
+            end;
+
+          3:
+            begin
+              OnStart := OnTaskSearchStart;
+              OnTerminate := OnTaskSearchEnd;
+              ExpertMode := cbTaskExpert.Checked;
+              Start();
+            end;
+        end;
+      end;  //of with
+    end  //of begin
     else
-      GetSelectedList().DoNotifyOnFinished();
+      GetSelectedList().Refresh();
 
   except
     on E: EInvalidItem do
@@ -1648,7 +1675,7 @@ begin
 
     finally
       if (ItemsDeleted > 0) then
-        RootList.DoNotifyOnFinished();
+        RootList.Refresh();
     end;  //of try
 
   except
@@ -1696,7 +1723,7 @@ end;
 procedure TMain.WMTimer(var Message: TWMTimer);
 begin
   KillTimer(Handle, DELAY_TIMER);
-  GetSelectedList().OnSearchFinish(Self);
+  GetSelectedList().Refresh();
 end;
 
 { TMain.bDeleteItemClick
@@ -2907,7 +2934,7 @@ begin
              LoadItems()
            else
              if FStartup.IsInvalid then
-               FStartup.DoNotifyOnFinished();
+               FStartup.Refresh();
          end;  //of begin
 
          lwStartupSelectItem(Sender, lwStartup.ItemFocused, True);
@@ -2926,7 +2953,7 @@ begin
              LoadItems()
            else
              if FContext.IsInvalid then
-               FContext.DoNotifyOnFinished()
+               FContext.Refresh()
          end;  //of begin
 
          lwContextSelectItem(Sender, lwContext.ItemFocused, True);
@@ -2946,7 +2973,7 @@ begin
              LoadItems()
            else
              if FService.IsInvalid then
-               FService.DoNotifyOnFinished();
+               FService.Refresh();
          end;  //of begin
 
          lwServiceSelectItem(Sender, lwService.ItemFocused, True);
@@ -2965,7 +2992,7 @@ begin
              LoadItems()
            else
              if FTasks.IsInvalid then
-               FTasks.DoNotifyOnFinished();
+               FTasks.Refresh();
          end  //of begin
          else
          begin

@@ -48,7 +48,7 @@ type
     procedure TestExportBackup;
     procedure TestExportItems;
     procedure TestDeleteItems;
-    //procedure TestLocking;
+    procedure TestLocking;
   end;
 
   TStartupListTest = class(TRootListTest)
@@ -405,19 +405,27 @@ begin
   end;  //of try
 end;
 
-// TODO: Reenable
-{procedure TRootListTest.TestLocking;
+procedure TRootListTest.TestLocking;
+var
+  SearchThread: TSearchThread;
+
 begin
   FLockingSuccessful := False;
 
   // Start async loading
-  FRootList.OnSearchStart := TestLocking_SearchStart;
-  FRootList.Load(True);
+  SearchThread := TSearchThread.Create(FRootList);
+
+  with SearchThread do
+  begin
+    OnStart := TestLocking_SearchStart;
+    ExpertMode := True;
+    Start();
+  end;
 
   // Give the thread time to kill himself
   Delay(2000);
   Check(FLockingSuccessful, 'List was not locked!');
-end; }
+end;
 
 procedure TRootListTest.TestRename(const AItemName: string);
 begin

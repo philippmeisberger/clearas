@@ -638,9 +638,7 @@ type
     FItem: T;
     FDuplicates: Boolean;
     FOnChanged: TItemChangeEvent;
-    FOnSearchStart,
-    FOnSearchFinish: TNotifyEvent;
-    FOnSearchError: TErrorEvent;
+    FOnRefresh: TNotifyEvent;
     FEnabledItemsCount,
     FEraseableItemsCount: Integer;
   protected
@@ -712,11 +710,6 @@ type
     ///   <c>EWarning</c> if item is already disabled.
     /// </exception>
     procedure DisableItem();
-
-    /// <summary>
-    ///   Notifies that the list needs a visual update.
-    /// </summary>
-    procedure DoNotifyOnFinished();
 
     /// <summary>
     ///   Enables the current selected item.
@@ -801,18 +794,9 @@ type
     function IsLocked(): Boolean;
 
     /// <summary>
-    ///   Searches items and adds them to the list.
+    ///   Notifies that the list needs a visual update.
     /// </summary>
-    /// <param name="AExpertMode">
-    ///   If set to <c>True</c> use the expert search mode. Otherwise use the
-    ///   default search mode.
-    /// </param>
-    /// <remarks>
-    ///   Asynchronous: A thread is launched! The <see cref="OnSearchStart"/>
-    ///   event occurs when the search starts. At the end the
-    ///   <see cref="OnSearchFinish"/> event occurs.
-    /// </remarks>
-    procedure Load(AExpertMode: Boolean = False);
+    procedure Refresh();
 
     /// <summary>
     ///   Renames the current selected item.
@@ -837,10 +821,6 @@ type
     ///   If set to <c>True</c> search for 64-bit items. Otherwise search for
     ///   32-bit items.
     /// </param>
-    /// <remarks>
-    ///   Do not call this method directly because it can freeze the application!
-    ///   Use <c>Load()</c> to call this method from a thread.
-    /// </remarks>
     procedure Search(AExpertMode: Boolean = False; AWin64: Boolean = True); virtual; abstract;
 
     /// <summary>
@@ -870,19 +850,9 @@ type
     property OnChanged: TItemChangeEvent read FOnChanged write FOnChanged;
 
     /// <summary>
-    ///   Occurs when item search has failed.
+    ///   Occurs when the list needs a visual update.
     /// </summary>
-    property OnSearchError: TErrorEvent read FOnSearchError write FOnSearchError;
-
-    /// <summary>
-    ///   Occurs when item search has finished.
-    /// </summary>
-    property OnSearchFinish: TNotifyEvent read FOnSearchFinish write FOnSearchFinish;
-
-    /// <summary>
-    ///   Occurs when item search has started.
-    /// </summary>
-    property OnSearchStart: TNotifyEvent read FOnSearchStart write FOnSearchStart;
+    property OnRefresh: TNotifyEvent read FOnRefresh write FOnRefresh;
 
     /// <summary>
     ///   Gets or sets the current selected item.
@@ -902,6 +872,7 @@ type
     FOnStart: TNotifyEvent;
     FOnError: TErrorEvent;
     FErrorMessage: string;
+    FLock: TCriticalSection;
     procedure DoNotifyOnError();
     procedure DoNotifyOnStart();
   protected
@@ -935,7 +906,6 @@ type
   private
     FWin64,
     FExpertMode: Boolean;
-    FLock: TCriticalSection;
     FOnChanged: TItemChangeEvent;
     procedure DoNotifyOnChange();
   protected
@@ -947,15 +917,13 @@ type
     /// <param name="ASelectedList">
     ///   A <c>TRootList</c> to be filled.
     /// </param>
-    /// <param name="ALock">
-    ///   The mutex.
-    /// </param>
-    /// <param name="AExpertMode">
+    constructor Create(ASelectedList: TRootList<TRootItem>);
+
+    /// <summary>
     ///   If set to <c>True</c> use the expert search mode. Otherwise use the
     ///   default search mode.
-    /// </param>
-    constructor Create(ASelectedList: TRootList<TRootItem>; ALock: TCriticalSection;
-      AExpertMode: Boolean = False);
+    /// </summary>
+    property ExpertMode: Boolean read FExpertMode write FExpertMode;
 
     /// <summary>
     ///   Search for 64-bit items.
@@ -1587,10 +1555,6 @@ type
     ///   If set to <c>True</c> search for 64-bit items. Otherwise search for
     ///   32-bit items.
     /// </param>
-    /// <remarks>
-    ///   Do not call this method directly because it can freeze the application!
-    ///   Use <c>Load()</c> to call this method from a thread.
-    /// </remarks>
     procedure Search(AExpertMode: Boolean = False; AWin64: Boolean = True); override;
 
     /// <summary>
@@ -2002,10 +1966,6 @@ type
     ///   If set to <c>True</c> search for 64-bit items. Otherwise search for
     ///   32-bit items.
     /// </param>
-    /// <remarks>
-    ///   Do not call this method directly because it can freeze the application!
-    ///   Use <c>Load()</c> to call this method from a thread.
-    /// </remarks>
     procedure Search(AExpertMode: Boolean = False; AWin64: Boolean = True); overload; override;
   end;
 
@@ -2188,10 +2148,6 @@ type
     ///   If set to <c>True</c> search for 64-bit items. Otherwise search for
     ///   32-bit items.
     /// </param>
-    /// <remarks>
-    ///   Do not call this method directly because it can freeze the application!
-    ///   Use <c>Load()</c> to call this method from a thread.
-    /// </remarks>
     procedure Search(AExpertMode: Boolean = False; AWin64: Boolean = True); override;
 
     /// <summary>
@@ -2364,10 +2320,6 @@ type
     ///   If set to <c>True</c> search for 64-bit items. Otherwise search for
     ///   32-bit items.
     /// </param>
-    /// <remarks>
-    ///   Do not call this method directly because it can freeze the application!
-    ///   Use <c>Load()</c> to call this method from a thread.
-    /// </remarks>
     procedure Search(AExpertMode: Boolean = False; AWin64: Boolean = True); override;
 
     /// <summary>
@@ -3222,10 +3174,10 @@ begin
   ChangeItemStatus(False);
 end;
 
-procedure TRootList<T>.DoNotifyOnFinished();
+procedure TRootList<T>.Refresh();
 begin
-  if Assigned(FOnSearchFinish) then
-    FOnSearchFinish(Self);
+  if Assigned(FOnRefresh) then
+    FOnRefresh(Self);
 
   DoNotifyOnChanged(stAny);
   FInvalid := False;
@@ -3317,22 +3269,6 @@ begin
   Result := not Entered;
 end;
 
-procedure TRootList<T>.Load(AExpertMode: Boolean = False);
-var
-  SearchThread: TSearchThread;
-
-begin
-  SearchThread := TSearchThread.Create(TRootList<TRootItem>(Self), FLock, AExpertMode);
-
-  with SearchThread do
-  begin
-    OnError := OnSearchError;
-    OnTerminate := OnSearchFinish;
-    OnStart := OnSearchStart;
-    Start();
-  end;  // of with
-end;
-
 procedure TRootList<T>.Notify(const Item: T; Action: TCollectionNotification);
 begin
   inherited Notify(Item, Action);
@@ -3400,6 +3336,7 @@ begin
   inherited Create(True);
   FreeOnTerminate := True;
   FSelectedList := ASelectedList;
+  FLock := FSelectedList.FLock;
 end;
 
 procedure TRootListThread.DoNotifyOnError();
@@ -3416,10 +3353,16 @@ end;
 
 procedure TRootListThread.Execute();
 begin
+  FLock.Acquire();
   Synchronize(DoNotifyOnStart);
 
   try
-    DoExecute();
+    try
+      DoExecute();
+
+    finally
+      FLock.Release();
+    end;  //of try
 
   except
     on E: Exception do
@@ -3433,22 +3376,18 @@ end;
 
 { TSearchThread }
 
-constructor TSearchThread.Create(ASelectedList: TRootList<TRootItem>;
-  ALock: TCriticalSection; AExpertMode: Boolean = False);
+constructor TSearchThread.Create(ASelectedList: TRootList<TRootItem>);
 begin
   inherited Create(ASelectedList);
   FreeOnTerminate := True;
   FSelectedList := ASelectedList;
-  FLock := ALock;
-  FExpertMode := AExpertMode;
+  FExpertMode := False;
   FWin64 := (TOSVersion.Architecture = arIntelX64);
   FOnChanged := FSelectedList.OnChanged;
 end;
 
 procedure TSearchThread.DoExecute();
 begin
-  FLock.Acquire();
-
   try
     Assert(Assigned(FSelectedList));
     FSelectedList.Clear();
@@ -3456,7 +3395,6 @@ begin
 
   finally
     Synchronize(DoNotifyOnChange);
-    FLock.Release();
   end;  //of try
 end;
 
@@ -4521,7 +4459,7 @@ begin
 
     // Refresh TListView
     if Result then
-      DoNotifyOnFinished();
+      Refresh();
 
   finally
     FLock.Release();
@@ -4623,7 +4561,7 @@ begin
 
     // Refresh TListView
     if Result then
-      DoNotifyOnFinished();
+      Refresh();
 
   finally
     LnkFile.Free;
@@ -4735,25 +4673,6 @@ begin
   end;  //of try
 end;
 
-procedure TStartupList.Search(AExpertMode: Boolean = False; AWin64: Boolean = True);
-var
-  Location: TStartupLocation;
-
-begin
-  for Location := Low(TStartupLocation) to High(TStartupLocation) do
-  begin
-    // Include RunOnce in expert mode only
-    if ((Location in [slHkcuRunOnce, slHklmRunOnce, slHklmRunOnce32]) and not AExpertMode) then
-      Continue;
-
-    Load(Location);
-  end;  //of for
-
-  // Load disabled items from deprecated Registry keys only prior to Windows 7
-  LoadDisabled(False);
-  LoadDisabled(True);
-end;
-
 procedure TStartupList.Load(AStartupLocation: TStartupLocation);
 var
   SearchResult: TSearchRec;
@@ -4845,6 +4764,25 @@ begin
     Reg.Free;
     Items.Free;
   end;  //of try
+end;
+
+procedure TStartupList.Search(AExpertMode, AWin64: Boolean);
+var
+  Location: TStartupLocation;
+
+begin
+  for Location := Low(TStartupLocation) to High(TStartupLocation) do
+  begin
+    // Include RunOnce in expert mode only
+    if ((Location in [slHkcuRunOnce, slHklmRunOnce, slHklmRunOnce32]) and not AExpertMode) then
+      Continue;
+
+    Load(Location);
+  end;  //of for
+
+  // Load disabled items from deprecated Registry keys only prior to Windows 7
+  LoadDisabled(False);
+  LoadDisabled(True);
 end;
 
 
@@ -5558,7 +5496,7 @@ begin
         AExtended)) <> -1);
 
       // Refresh TListView
-      DoNotifyOnFinished();
+      Refresh();
 
     finally
       Reg.CloseKey();
@@ -6272,7 +6210,7 @@ begin
       ssAutomatic, FManager)) <> -1);
 
     // Refresh TListView
-    DoNotifyOnFinished();
+    Refresh();
 
   finally
     FLock.Release();
@@ -6768,7 +6706,7 @@ begin
 
     // Refresh TListView
     if Result then
-      DoNotifyOnFinished();
+      Refresh();
 
   finally
     FLock.Release();
