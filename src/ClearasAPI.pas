@@ -4489,7 +4489,6 @@ var
   Win8: Boolean;
 
 begin
-  FLock.Acquire();
   Win8 := CheckWin32Version(6, 2);
 
   // Init Reg file
@@ -4519,7 +4518,6 @@ begin
 
   finally
     RegFile.Free;
-    FLock.Release();
   end;  //of try
 end;
 
@@ -4766,7 +4764,7 @@ begin
   end;  //of try
 end;
 
-procedure TStartupList.Search(AExpertMode, AWin64: Boolean);
+procedure TStartupList.Search(AExpertMode: Boolean = False; AWin64: Boolean = True);
 var
   Location: TStartupLocation;
 
@@ -5515,8 +5513,6 @@ var
   Item: TContextListItem;
 
 begin
-  FLock.Acquire;
-
   // Init Reg file
   RegFile := TRegistryFile.Create(ChangeFileExt(AFileName, '.reg'), True);
 
@@ -5532,7 +5528,6 @@ begin
 
   finally
     RegFile.Free;
-    FLock.Release();
   end;  //of try
 end;
 
@@ -6224,8 +6219,6 @@ var
   Item: TServiceListItem;
 
 begin
-  FLock.Acquire;
-
   // Init Reg file
   RegFile := TRegistryFile.Create(ChangeFileExt(AFileName, '.reg'), True);
 
@@ -6245,7 +6238,6 @@ begin
 
   finally
     RegFile.Free;
-    FLock.Release();
   end;  //of try
 end;
 
@@ -6598,7 +6590,6 @@ var
   OldValue: Boolean;
 
 begin
-  FLock.Acquire();
   OldValue := DisableWow64FsRedirection();
   ZipFile := TZipFile.Create;
 
@@ -6616,7 +6607,6 @@ begin
   finally
     ZipFile.Free;
     RevertWow64FsRedirection(OldValue);
-    FLock.Release();
   end;  //of try
 end;
 
