@@ -1583,18 +1583,13 @@ begin
     else
       FileName := SelectedList.Selected.Name;
 
-    // Select file filter
-    if (PageControl.ActivePageIndex = 3) then
-      DefaultExt := '.zip'
-    else
-      DefaultExt := '.reg';
-
-    FileName := FileName + DefaultExt;
     Filter := SelectedList.Selected.GetExportFilter(FLang);
+    DefaultExt := SelectedList.Selected.GetBackupExtension();
+    FileName := FileName + DefaultExt;
 
     // Show save dialog
     if PromptForFileName(FileName, Filter, DefaultExt, StripHotkey(mmExport.Caption),
-      '%USERPROFILE%', True) then
+      '', True) then
     begin
       SelectedList.ExportItem(FileName);
       Result := True;
@@ -2623,14 +2618,8 @@ begin
     if SelectedList.IsLocked() then
       raise EListBlocked.Create('Another operation is pending. Please wait!');
 
-    // Select file filter
     Filter := SelectedList.GetExportFilter(FLang);
-
-    if (PageControl.ActivePageIndex = 3) then
-      DefaultExt := '.zip'
-    else
-      DefaultExt := '.reg';
-
+    DefaultExt := SelectedList.GetBackupExtension();
     FileName := PageControl.ActivePage.Caption + DefaultExt;
 
     // Show save dialog
@@ -2668,6 +2657,7 @@ var
 
 begin
   try
+    // Selected list does not support importing backups
     if not Supports(GetSelectedList(), IImportableList, ImportableList) then
       Exit;
 
@@ -2754,7 +2744,7 @@ begin
 
   except
     on E: Exception do
-      FLang.ShowException('Add Clearas to recycle bin context menu failed!', E.Message);
+      FLang.ShowException('Adding Clearas to recycle bin context menu failed!', E.Message);
   end;  //of try
 end;
 

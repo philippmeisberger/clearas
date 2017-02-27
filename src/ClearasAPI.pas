@@ -358,6 +358,14 @@ type
     function FileExists(): Boolean;
 
     /// <summary>
+    ///   Gets the file extension for backup files.
+    /// </summary>
+    /// <returns>
+    ///   The backup extension.
+    /// </returns>
+    function GetBackupExtension(): string; virtual; abstract;
+
+    /// <summary>
     ///   Gets the filter for file export.
     /// </summary>
     /// <param name="ALanguageFile">
@@ -392,7 +400,7 @@ type
     property Arguments: string read GetArguments;
 
     /// <summary>
-    ///   Gets or sets the display name.
+    ///   Gets the display name.
     /// </summary>
     property Caption: string read FCaption;
 
@@ -496,6 +504,14 @@ type
     /// </param>
     constructor Create(const AName, ACaption, AFileName, ALocation: string;
       AEnabled, AWow64: Boolean);
+
+    /// <summary>
+    ///   Gets the file extension for backup files.
+    /// </summary>
+    /// <returns>
+    ///   The backup extension.
+    /// </returns>
+    function GetBackupExtension(): string; override;
 
     /// <summary>
     ///   Gets the filter for file export.
@@ -740,6 +756,14 @@ type
     ///   The absolute filename to the file.
     /// </param>
     procedure ExportList(const AFileName: string); virtual; abstract;
+
+    /// <summary>
+    ///   Gets the file extension for backup files.
+    /// </summary>
+    /// <returns>
+    ///   The backup extension.
+    /// </returns>
+    function GetBackupExtension(): string; virtual;
 
     /// <summary>
     ///   Gets the filter for file export.
@@ -1348,6 +1372,14 @@ type
     ///   The absolute filename to the file.
     /// </param>
     procedure ExportItem(const AFileName: string); override;
+
+    /// <summary>
+    ///   Gets the file extension for backup files.
+    /// </summary>
+    /// <returns>
+    ///   The backup extension.
+    /// </returns>
+    function GetBackupExtension(): string; override;
 
     /// <summary>
     ///   Gets the filter for file export.
@@ -2219,6 +2251,14 @@ type
     procedure ExportItem(const AFileName: string); override;
 
     /// <summary>
+    ///   Gets the file extension for backup files.
+    /// </summary>
+    /// <returns>
+    ///   The backup extension.
+    /// </returns>
+    function GetBackupExtension(): string; override;
+
+    /// <summary>
     ///   Gets the filter for file export.
     /// </summary>
     /// <param name="ALanguageFile">
@@ -2276,6 +2316,14 @@ type
     ///   The absolute filename to the file.
     /// </param>
     procedure ExportList(const AFileName: string); override;
+
+    /// <summary>
+    ///   Gets the file extension for backup files.
+    /// </summary>
+    /// <returns>
+    ///   The backup extension.
+    /// </returns>
+    function GetBackupExtension(): string; override;
 
     /// <summary>
     ///   Gets the filter for file export.
@@ -2475,7 +2523,7 @@ begin
 end;
 
 
-{ TStartupUserLnkFile }
+{ TStartupLnkFile }
 
 constructor TStartupLnkFile.Create(const AFileName: TFileName);
 begin
@@ -2963,6 +3011,11 @@ begin
   OpenInRegEdit(FWow64);
 end;
 
+function TRegistryItem.GetBackupExtension(): string;
+begin
+  Result := '.reg';
+end;
+
 function TRegistryItem.GetExportFilter(ALanguageFile: TLanguageFile): string;
 begin
   Result := ALanguageFile.GetString(LID_FILTER_REGISTRY_FILE);
@@ -3203,6 +3256,11 @@ begin
   finally
     FLock.Release();
   end;  //of try
+end;
+
+function TRootList<T>.GetBackupExtension(): string;
+begin
+  Result := '.reg';
 end;
 
 function TRootList<T>.GetExportFilter(ALanguageFile: TLanguageFile): string;
@@ -4024,6 +4082,11 @@ begin
     Result := StartupApprovedKey;
 end;
 
+function TStartupUserItem.GetBackupExtension(): string;
+begin
+  Result := FLnkFile.GetBackupExt();
+end;
+
 function TStartupUserItem.GetExportFilter(ALanguageFile: TLanguageFile): string;
 begin
   if StartupUser then
@@ -4106,7 +4169,7 @@ begin
     // Special Registry entries only for Windows >= Vista
     if CheckWin32Version(6) then
     begin
-      Reg.WriteString('backupExtension', FLnkFile.GetBackupExt());
+      Reg.WriteString('backupExtension', GetBackupExtension());
       Reg.WriteString('location', ExtractFileDir(FLocation));
       FTime := WriteTimestamp(Reg);
     end  //of begin
@@ -4139,11 +4202,11 @@ begin
       raise EStartupException.Create('Could not restore backup .lnk file!');
   end  //of begin
   else
-    begin
-      // Failed to create new .lnk file?
-      if not FLnkFile.Save() then
-        raise EStartupException.Create('Could not create .lnk file!');
-    end;  //of if
+  begin
+    // Failed to create new .lnk file?
+    if not FLnkFile.Save() then
+      raise EStartupException.Create('Could not create .lnk file!');
+  end;  //of if
 
   // Do not abort if old key could not be deleted
   if not DeleteKey(HKEY_LOCAL_MACHINE, DisabledKey,
@@ -4659,7 +4722,7 @@ begin
 
   try
     Reg.RootKey := AStartupLocation.GetApprovedLocation().Key;
-    Reg.OpenKey(AStartupLocation.GetApprovedLocation.Value, False);
+    Reg.OpenKey(AStartupLocation.GetApprovedLocation().Value, False);
 
     // Approved value exists and is valid?
     if (Reg.ValueExists(AName) and (Reg.GetDataSize(AName) = SizeOf(TStartupItemStatus))) then
@@ -6497,6 +6560,11 @@ begin
   end;  //of try
 end;
 
+function TTaskListItem.GetBackupExtension(): string;
+begin
+  Result := '.zip';
+end;
+
 function TTaskListItem.GetExportFilter(ALanguageFile: TLanguageFile): string;
 begin
   Result := ALanguageFile.GetString(LID_FILTER_ZIP_FILES);
@@ -6608,6 +6676,11 @@ begin
     ZipFile.Free;
     RevertWow64FsRedirection(OldValue);
   end;  //of try
+end;
+
+function TTaskList.GetBackupExtension(): string;
+begin
+  Result := '.zip';
 end;
 
 function TTaskList.GetExportFilter(ALanguageFile: TLanguageFile): string;
