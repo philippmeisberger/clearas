@@ -179,9 +179,6 @@ type
     FTasks: TTaskList;
     FLang: TLanguageFile;
     FUpdateCheck: TUpdateCheck;
-    function DeleteItem(AConfirmMessageId: TLanguageId): Boolean;
-    function DisableItem(): Boolean;
-    function EnableItem(): Boolean;
     function GetSelectedItem(): TRootItem;
     function GetSelectedList(): TRootList<TRootItem>;
     function GetSelectedListView(): TListView;
@@ -390,156 +387,6 @@ begin
       Updater.Free;
     end;  //of try
   end;  //of begin
-end;
-
-{ private TMain.DeleteItem
-
-  Deletes the current selected item. }
-
-function TMain.DeleteItem(AConfirmMessageId: TLanguageId): Boolean;
-var
-  Answer: Integer;
-  ListView: TListView;
-  RootList: TRootList<TRootItem>;
-
-begin
-  Result := False;
-
-  try
-    ListView := GetSelectedListView();
-    RootList := GetSelectedList();
-
-    // Nothing selected?
-    if (not Assigned(ListView.ItemFocused) or not Assigned(RootList.Selected)) then
-      raise EInvalidItem.Create('No item selected!');
-
-    // Confirm deletion of item
-    if (FLang.ShowMessage(FLang.Format([AConfirmMessageId],
-      [ListView.ItemFocused.SubItems[0]]), FLang.GetString([LID_ITEM_DELETE_CONFIRM1,
-      LID_ITEM_DELETE_CONFIRM2]), mtCustom) = idYes) then
-    begin
-      // Ask user to export item
-      Answer := FLang.ShowMessage(FLang.GetString(LID_ITEM_DELETE_STORE), mtConfirmation);
-
-      // Abort if user clicks cancel!
-      if (((Answer = idYes) and ShowExportItemDialog()) or (Answer = idNo)) then
-        // Successfully deleted item physically?
-        if RootList.DeleteItem() then
-        begin
-          // Delete item from TListView
-          ListView.DeleteSelected();
-          ListView.ItemFocused := nil;
-          Result := True;
-        end  //of begin
-        else
-          raise Exception.Create('Unknown error!');
-    end;  //of begin
-
-  except
-    on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([LID_DELETE, LID_IMPOSSIBLE]),
-        FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
-
-    on E: EListBlocked do
-      FLang.ShowMessage(LID_OPERATION_PENDING1, LID_OPERATION_PENDING2, mtWarning);
-
-    on E: EWarning do
-      FLang.ShowMessage(FLang.GetString([LID_DELETE, LID_IMPOSSIBLE]), E.Message,
-        mtWarning);
-
-    on E: Exception do
-      FLang.ShowException(FLang.GetString([LID_DELETE, LID_IMPOSSIBLE]), E.Message);
-  end;  //of try
-end;
-
-{ private TMain.DisableItem
-
-  Disables the current selected item. }
-
-function TMain.DisableItem(): Boolean;
-var
-  ListView: TListView;
-  RootList: TRootList<TRootItem>;
-
-begin
-  Result := False;
-
-  try
-    ListView := GetSelectedListView();
-    RootList := GetSelectedList();
-
-    // Nothing selected?
-    if not Assigned(ListView.ItemFocused) then
-      raise EInvalidItem.Create('No item selected!');
-
-    RootList.DisableItem();
-
-    // Change item visual status
-    ListView.ItemFocused.Caption := RootList.Selected.GetStatusText(FLang);
-
-    // Update TListView
-    ListView.OnSelectItem(Self, ListView.ItemFocused, True);
-    Result := True;
-
-  except
-    on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([LID_DISABLE, LID_IMPOSSIBLE]),
-        FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
-
-    on E: EListBlocked do
-      FLang.ShowMessage(LID_OPERATION_PENDING1, LID_OPERATION_PENDING2, mtWarning);
-
-    on E: EWarning do
-      FLang.ShowMessage(FLang.GetString([LID_DISABLE, LID_IMPOSSIBLE]), E.Message, mtWarning);
-
-    on E: Exception do
-      FLang.ShowException(FLang.GetString([LID_DISABLE, LID_IMPOSSIBLE]), E.Message);
-  end;  //of try
-end;
-
-{ private TMain.EnableItem
-
-  Enables the current selected item. }
-
-function TMain.EnableItem(): Boolean;
-var
-  ListView: TListView;
-  RootList: TRootList<TRootItem>;
-
-begin
-  Result := False;
-
-  try
-    ListView := GetSelectedListView();
-    RootList := GetSelectedList();
-
-    // Nothing selected?
-    if not Assigned(ListView.ItemFocused) then
-      raise EInvalidItem.Create('No item selected!');
-
-    RootList.EnableItem();
-
-    // Change item visual status
-    ListView.ItemFocused.Caption := RootList.Selected.GetStatusText(FLang);
-
-    // Update TListView
-    ListView.OnSelectItem(Self, ListView.ItemFocused, True);
-    Result := True;
-
-  except
-    on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([LID_ENABLE, LID_IMPOSSIBLE]),
-        FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
-
-    on E: EListBlocked do
-      FLang.ShowMessage(LID_OPERATION_PENDING1, LID_OPERATION_PENDING2, mtWarning);
-
-    on E: EWarning do
-      FLang.ShowMessage(FLang.GetString([LID_ENABLE, LID_IMPOSSIBLE]), E.Message, mtWarning);
-
-    on E: Exception do
-      FLang.ShowException(FLang.GetString([LID_ENABLE, LID_IMPOSSIBLE]), E.Message);
-  end;  //of try
 end;
 
 { private TMain.GetSelectedItem
@@ -1555,13 +1402,68 @@ end;
   Event method that is called when user wants to delete an item. }
 
 procedure TMain.bDeleteItemClick(Sender: TObject);
+var
+  Answer: Integer;
+  ListView: TListView;
+  RootList: TRootList<TRootItem>;
+  ConfirmMessage: TLanguageId;
+
 begin
-  case PageControl.ActivePageIndex of
-    0: DeleteItem(LID_STARTUP_DELETE_CONFIRM);
-    1: DeleteItem(LID_CONTEXT_MENU_DELETE_CONFIRM);
-    2: DeleteItem(LID_SERVICE_DELETE_CONFIRM);
-    3: DeleteItem(LID_TASKS_DELETE_CONFIRM);
-  end;  //of case
+  try
+    ListView := GetSelectedListView();
+    RootList := GetSelectedList();
+
+    // Nothing selected?
+    if (not Assigned(ListView.ItemFocused) or not Assigned(RootList.Selected)) then
+      raise EInvalidItem.Create('No item selected!');
+
+    // Different message per tab
+    case PageControl.ActivePageIndex of
+      0:   ConfirmMessage := LID_STARTUP_DELETE_CONFIRM;
+      1:   ConfirmMessage := LID_CONTEXT_MENU_DELETE_CONFIRM;
+      2:   ConfirmMessage := LID_SERVICE_DELETE_CONFIRM;
+      3:   ConfirmMessage := LID_TASKS_DELETE_CONFIRM;
+      else ConfirmMessage := LID_STARTUP_DELETE_CONFIRM;
+    end;  //of case
+
+    // Confirm deletion of item
+    if (FLang.ShowMessage(FLang.Format([ConfirmMessage],
+      [ListView.ItemFocused.SubItems[0]]), FLang.GetString([LID_ITEM_DELETE_CONFIRM1,
+      LID_ITEM_DELETE_CONFIRM2]), mtCustom) = idYes) then
+    begin
+      // Ask user to export item
+      Answer := FLang.ShowMessage(FLang.GetString(LID_ITEM_DELETE_STORE), mtConfirmation);
+
+      // Abort if user clicks cancel!
+      if (((Answer = idYes) and ShowExportItemDialog()) or (Answer = idNo)) then
+      begin
+        // Successfully deleted item physically?
+        if RootList.DeleteItem() then
+        begin
+          // Delete item from TListView
+          ListView.DeleteSelected();
+          ListView.ItemFocused := nil;
+        end  //of begin
+        else
+          raise Exception.Create('Unknown error!');
+      end;  //of begin
+    end;  //of begin
+
+  except
+    on E: EInvalidItem do
+      FLang.ShowMessage(FLang.GetString([LID_DELETE, LID_IMPOSSIBLE]),
+        FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
+
+    on E: EListBlocked do
+      FLang.ShowMessage(LID_OPERATION_PENDING1, LID_OPERATION_PENDING2, mtWarning);
+
+    on E: EWarning do
+      FLang.ShowMessage(FLang.GetString([LID_DELETE, LID_IMPOSSIBLE]), E.Message,
+        mtWarning);
+
+    on E: Exception do
+      FLang.ShowException(FLang.GetString([LID_DELETE, LID_IMPOSSIBLE]), E.Message);
+  end;  //of try
 end;
 
 { TMain.bDisableItemClick
@@ -1569,9 +1471,45 @@ end;
   Event method that is called when user wants to disable an item. }
 
 procedure TMain.bDisableItemClick(Sender: TObject);
+var
+  ListView: TListView;
+  RootList: TRootList<TRootItem>;
+
 begin
-  if (DisableItem() and GetSelectedItem().Eraseable) then
-    FLang.ShowMessage(LID_FILE_DOES_NOT_EXIST, LID_ENTRY_CAN_DE_DELETED, mtWarning);
+  try
+    ListView := GetSelectedListView();
+    RootList := GetSelectedList();
+
+    // Nothing selected?
+    if not Assigned(ListView.ItemFocused) then
+      raise EInvalidItem.Create('No item selected!');
+
+    RootList.DisableItem();
+
+    // Change item visual status
+    ListView.ItemFocused.Caption := RootList.Selected.GetStatusText(FLang);
+
+    // Update TListView
+    ListView.OnSelectItem(Self, ListView.ItemFocused, True);
+
+    // Item is eraseable?
+    if GetSelectedItem().Eraseable then
+      FLang.ShowMessage(LID_FILE_DOES_NOT_EXIST, LID_ENTRY_CAN_DE_DELETED, mtWarning);
+
+  except
+    on E: EInvalidItem do
+      FLang.ShowMessage(FLang.GetString([LID_DISABLE, LID_IMPOSSIBLE]),
+        FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
+
+    on E: EListBlocked do
+      FLang.ShowMessage(LID_OPERATION_PENDING1, LID_OPERATION_PENDING2, mtWarning);
+
+    on E: EWarning do
+      FLang.ShowMessage(FLang.GetString([LID_DISABLE, LID_IMPOSSIBLE]), E.Message, mtWarning);
+
+    on E: Exception do
+      FLang.ShowException(FLang.GetString([LID_DISABLE, LID_IMPOSSIBLE]), E.Message);
+  end;  //of try
 end;
 
 { TMain.bEnableItemClick
@@ -1579,9 +1517,45 @@ end;
   Enables currently selected item. }
 
 procedure TMain.bEnableItemClick(Sender: TObject);
+var
+  ListView: TListView;
+  RootList: TRootList<TRootItem>;
+
 begin
-  if (EnableItem() and GetSelectedItem().Eraseable) then
-    FLang.ShowMessage(LID_FILE_DOES_NOT_EXIST, LID_ENTRY_CAN_DE_DELETED, mtWarning);
+  try
+    ListView := GetSelectedListView();
+    RootList := GetSelectedList();
+
+    // Nothing selected?
+    if not Assigned(ListView.ItemFocused) then
+      raise EInvalidItem.Create('No item selected!');
+
+    RootList.EnableItem();
+
+    // Change item visual status
+    ListView.ItemFocused.Caption := RootList.Selected.GetStatusText(FLang);
+
+    // Update TListView
+    ListView.OnSelectItem(Self, ListView.ItemFocused, True);
+
+    // Item is eraseable?
+    if GetSelectedItem().Eraseable then
+      FLang.ShowMessage(LID_FILE_DOES_NOT_EXIST, LID_ENTRY_CAN_DE_DELETED, mtWarning);
+
+  except
+    on E: EInvalidItem do
+      FLang.ShowMessage(FLang.GetString([LID_ENABLE, LID_IMPOSSIBLE]),
+        FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
+
+    on E: EListBlocked do
+      FLang.ShowMessage(LID_OPERATION_PENDING1, LID_OPERATION_PENDING2, mtWarning);
+
+    on E: EWarning do
+      FLang.ShowMessage(FLang.GetString([LID_ENABLE, LID_IMPOSSIBLE]), E.Message, mtWarning);
+
+    on E: Exception do
+      FLang.ShowException(FLang.GetString([LID_ENABLE, LID_IMPOSSIBLE]), E.Message);
+  end;  //of try
 end;
 
 { TMain.bExportItemClick
