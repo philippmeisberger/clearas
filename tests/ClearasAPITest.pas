@@ -1038,6 +1038,10 @@ end;
 
 procedure TTaskListTest.LoadItems();
 begin
+{$IFDEF DEBUG}
+  // Skip test in debug configuration because it needs admin access rights
+  Check(False, 'Test must be run with admin access rights!');
+{$ENDIF}
   TTaskList(FRootList).Search(False);
   CheckEquals(FEraseableTestItems.Count, FRootList.EraseableItemsCount, 'Count of eraseable items differs from expected');
 end;
