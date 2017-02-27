@@ -1183,7 +1183,7 @@ begin
     pmOpenRegedit.Caption := GetString(LID_OPEN_IN_REGEDIT);
     pmOpenExplorer.Caption := GetString(LID_OPEN_IN_EXPLORER);
     pmEdit.Caption := GetString(LID_PATH_EDIT);
-    pmExport.Caption := mmExport.Caption;
+    pmExport.Caption := bExportStartupItem.Caption;
     pmDelete.Caption := bDeleteStartupItem.Caption;
     pmRename.Caption := GetString(LID_RENAME);
     pmCopyLocation.Caption := GetString(LID_LOCATION_COPY);
@@ -1264,7 +1264,7 @@ begin
     FileName := FileName + DefaultExt;
 
     // Show save dialog
-    if PromptForFileName(FileName, Filter, DefaultExt, StripHotkey(mmExport.Caption),
+    if PromptForFileName(FileName, Filter, DefaultExt, StripHotkey(pmExport.Caption),
       '', True) then
     begin
       SelectedList.ExportItem(FileName);
