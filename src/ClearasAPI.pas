@@ -6050,7 +6050,7 @@ begin
     if CheckWin32Version(6) then
     begin
       if not Reg.OpenKey(KEY_SERVICE_DISABLED +'\'+ Name, False) then
-        EServiceException.Create('Disable key does not exist!');
+        raise EServiceException.Create('Disable key does not exist!');
     end  //of begin
     else
       Reg.OpenKey(KEY_SERVICE_DISABLED, True);
@@ -6334,7 +6334,6 @@ begin
     FreeMem(ServiceConfig, BytesNeeded);
   end;  //of try
 end;
-
 
 procedure TServiceList.Search(AExpertMode: Boolean = False; AWin64: Boolean = True);
 var
