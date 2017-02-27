@@ -469,8 +469,8 @@ begin
   Check(TStartupList(FRootList).ImportBackup('..\..\data\'+ GetItemName(slStartupUser) +  TStartupLnkFile.StartupUserBackupFileExtension), 'Startup User file already exists!');
   CheckFalse(TStartupList(FRootList).ImportBackup('..\..\data\'+ GetItemName(slStartupUser) + TStartupLnkFile.StartupUserBackupFileExtension), 'Startup User file already exists so it must not be possible to import it again!');
 {$IFNDEF DEBUG}
-  Check(TStartupList(FRootList).ImportBackup('..\..\data\'+ GetItemName(slCommonStartup) + EXT_STARTUP_COMMON), STARTUP_COMMON +' file already exists!');
-  CheckFalse(TStartupList(FRootList).ImportBackup('..\..\data\'+ GetItemName(slCommonStartup) + EXT_STARTUP_COMMON), STARTUP_COMMON +' file already exists so it must not be possible to import it again!');
+  Check(TStartupList(FRootList).ImportBackup('..\..\data\'+ GetItemName(slCommonStartup) + TStartupLnkFile.StartupCommonBackupFileExtension), 'Startup Common file already exists!');
+  CheckFalse(TStartupList(FRootList).ImportBackup('..\..\data\'+ GetItemName(slCommonStartup) + TStartupLnkFile.StartupCommonBackupFileExtension), 'Startup Common file already exists so it must not be possible to import it again!');
   CheckEquals(2, FRootList.Count, 'After importing 2 startup backup files there should be 2 items in the list');
   TestDelete(GetItemName(slCommonStartup));
 {$ELSE}
