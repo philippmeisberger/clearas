@@ -191,9 +191,9 @@ var
   SearchResult: TSearchRec;
 
 begin
-  Assert(AFileName <> '', 'FileName of exported file must not be empty!');
-  CheckEquals(0, FindFirst(AFileName +'.*', faAnyFile - faDirectory, SearchResult), 'Exported file "'+ AFileName +'" does not exist');
-  Check(DeleteFile(ExtractFilePath(AFileName) + SearchResult.Name), 'Exported file "'+ ExtractFileDir(AFileName) + SearchResult.Name +'"could not be deleted!');
+  CheckNotEquals('', AFileName, 'FileName of exported file must not be empty!');
+  CheckEquals(0, FindFirst(AFileName, faAnyFile - faDirectory, SearchResult), 'Exported file "'+ AFileName +'" does not exist');
+  Check(DeleteFile(ExtractFilePath(AFileName) + SearchResult.Name), 'Exported file "'+ ExtractFileDir(AFileName) + SearchResult.Name +'" could not be deleted!');
   FindClose(SearchResult);
 end;
 
@@ -362,8 +362,8 @@ end;
 procedure TRootListTest.TestExportBackup;
 begin
   LoadItems();
-  FRootList.ExportList(ClassName);
-  EnsureFileExportedAndDelete(ClassName);
+  FRootList.ExportList(ClassName + FRootList.GetBackupExtension());
+  EnsureFileExportedAndDelete(ClassName + FRootList.GetBackupExtension());
 end;
 
 procedure TRootListTest.TestExportItems;
@@ -380,17 +380,8 @@ end;
 procedure TRootListTest.TestExport(const AItemName: string);
 begin
   SelectItem(AItemName);
-
-  if not CheckWin32Version(6, 2) and (FRootList.Selected is TStartupUserItem) then
-  begin
-    FRootList.ExportItem(TStartupLnkFile.GetBackupDir() + FRootList.Selected.Name);
-    EnsureFileExportedAndDelete(TStartupLnkFile.GetBackupDir() + FRootList.Selected.Name)
-  end  //of begin
-  else
-  begin
-    FRootList.ExportItem(FRootList.Selected.Name);
-    EnsureFileExportedAndDelete(FRootList.Selected.Name);
-  end;  //of if
+  FRootList.ExportItem(FRootList.Selected.Name + FRootList.Selected.GetBackupExtension());
+  EnsureFileExportedAndDelete(FRootList.Selected.Name + FRootList.Selected.GetBackupExtension());
 end;
 
 procedure TRootListTest.TestLocking_SearchStart(Sender: TObject);
