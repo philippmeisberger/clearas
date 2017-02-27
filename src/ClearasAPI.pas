@@ -239,6 +239,9 @@ type
     /// <summary>
     ///   Gets extension of the backup file.
     /// </summary>
+    /// <returns>
+    ///   The backup extension.
+    /// </returns>
     function GetBackupExt(): string;
 
     /// <summary>
@@ -1485,18 +1488,11 @@ type
   /// </summary>
   TStartupList = class(TRootList<TStartupListItem>, IImportableList)
   private
-    FDeleteBackup: Boolean;
     function AddNewStartupUserItem(const AName: string; const AFileName: TFileName;
       const AArguments: string = ''; AStartupUser: Boolean = True): Boolean;
-    function DeleteBackupFile(): Boolean; deprecated 'Since Windows 8';
     function LoadStatus(const AName: string;
       AStartupLocation: TStartupLocation): TStartupItemStatus;
   public
-    /// <summary>
-    ///   Constructor for creating a <c>TStartupList</c> instance.
-    /// </summary>
-    constructor Create;
-
     /// <summary>
     ///   Adds an item to the list.
     /// </summary>
@@ -1513,22 +1509,6 @@ type
     ///   <c>True</c> if the item was successfully added or <c>False</c> otherwise.
     /// </returns>
     function Add(const AFileName, AArguments, ACaption: string): Boolean; overload;
-
-    /// <summary>
-    ///   Changes the item status of the current selected item.
-    /// </summary>
-    /// <param name="ANewStatus">
-    ///   The new status.
-    /// </param>
-    procedure ChangeItemStatus(const ANewStatus: Boolean); override;
-
-    /// <summary>
-    ///   Deletes the current selected item.
-    /// </summary>
-    /// <returns>
-    ///   <c>>True</c> if item was successfully deleted or <c>False</c> otherwise.
-    /// </returns>
-    function DeleteItem(): Boolean; override;
 
     /// <summary>
     ///   Exports the complete list as file.
@@ -1588,15 +1568,6 @@ type
     ///   32-bit items.
     /// </param>
     procedure Search(AExpertMode: Boolean = False; AWin64: Boolean = True); override;
-
-    /// <summary>
-    ///   Gets or sets the behaviour that startup user backup files should be
-    ///   automatically deleted after enabling or not.
-    /// </summary>
-    /// <remarks>
-    ///   DEPRECATED since Windows 8!
-    /// </remarks>
-    property AutoDeleteBackup: Boolean read FDeleteBackup write FDeleteBackup;
   end;
 
 const
@@ -4106,8 +4077,8 @@ begin
   FEraseable := not FileExists();
 
   // Rewrite backup
-  if (not FEnabled and FLnkFile.BackupExists()) then
-    FLnkFile.CreateBackup();
+  if not FEnabled then
+    ExportItem(FLnkFile.GetBackupLnk());
 end;
 
 function TStartupUserItem.Delete(): Boolean;
@@ -4129,7 +4100,13 @@ begin
       Result := True;
   end  //of begin
   else
+  begin
     Result := DeleteKey(HKEY_LOCAL_MACHINE, DisabledKey, AddCircumflex(FLnkFile.FileName));
+
+    // Delete backup file
+    if Result then
+      DeleteFile(FLnkFile.GetBackupLnk());
+  end;  //of if
 end;
 
 function TStartupUserItem.Disable(): Boolean;
@@ -4213,6 +4190,9 @@ begin
     AddCircumflex(FLnkFile.FileName), False) then
     raise EStartupException.Create('Could not delete key!');
 
+  // Delete backup file after enabling
+  DeleteFile(FLnkFile.GetBackupLnk());
+
   // Update information
   FLocation := FLnkFile.FileName;
   FRootKey := rkUnknown;
@@ -4222,13 +4202,9 @@ end;
 
 procedure TStartupUserItem.ExportItem(const AFileName: string);
 begin
-  if CheckWin32Version(6, 2) then
-    CopyFile(PChar(FLnkFile.FileName), PChar(AFileName), False)
-  else
-    if not FEnabled then
-      inherited ExportItem(AFileName)
-    else
-      FLnkFile.CreateBackup();
+  if not CopyFile(PChar(FLnkFile.FileName), PChar(ChangeFileExt(AFileName,
+    GetBackupExtension())), False) then
+    raise EStartupException.Create('Could not create backup file!');
 end;
 
 procedure TStartupUserItem.Rename(const ANewName: string);
@@ -4385,24 +4361,6 @@ end;
 
 { TStartupList }
 
-constructor TStartupList.Create;
-begin
-  inherited Create;
-  FDeleteBackup := True;
-end;
-
-function TStartupList.DeleteBackupFile(): Boolean;
-begin
-  Result := False;
-
-  // Deprecated since Windows 8!
-  if CheckWin32Version(6, 2) then
-    Exit;
-
-  if (FDeleteBackup and (Selected is TStartupUserItem)) then
-    Result := (Selected as TStartupUserItem).LnkFile.DeleteBackup();
-end;
-
 function TStartupList.GetImportFilter(ALanguageFile: TLanguageFile): string;
 begin
   Result := Format(ALanguageFile.GetString(LID_FILTER_STARTUP_FILES),
@@ -4527,21 +4485,6 @@ begin
   finally
     FLock.Release();
   end;  //of try
-end;
-
-procedure TStartupList.ChangeItemStatus(const ANewStatus: Boolean);
-begin
-  inherited ChangeItemStatus(ANewStatus);
-
-  // Only delete backup if item has been enabled!
-  if Selected.Enabled then
-    DeleteBackupFile();
-end;
-
-function TStartupList.DeleteItem(): Boolean;
-begin
-  DeleteBackupFile();
-  Result := inherited DeleteItem();
 end;
 
 procedure TStartupList.ExportList(const AFileName: string);

@@ -35,18 +35,15 @@ type
     mmEdit: TMenuItem;
     mmContext: TMenuItem;
     mmFile: TMenuItem;
-    mmExportList: TMenuItem;
+    mmExport: TMenuItem;
     N3: TMenuItem;
     mmClose: TMenuItem;
-    mmExport: TMenuItem;
     mmAdd: TMenuItem;
     N4: TMenuItem;
     mmDate: TMenuItem;
     mmImport: TMenuItem;
-    mmDelBackup: TMenuItem;
     mmDefault: TMenuItem;
     N7: TMenuItem;
-    N8: TMenuItem;
     N6: TMenuItem;
     mmLang: TMenuItem;
     PageControl: TPageControl;
@@ -128,7 +125,6 @@ type
     procedure bEnableItemClick(Sender: TObject);
     procedure bDeleteItemClick(Sender: TObject);
     procedure bDisableItemClick(Sender: TObject);
-    procedure bExportStartupItemClick(Sender: TObject);
     procedure bExportItemClick(Sender: TObject);
     procedure eSearchChange(Sender: TObject);
     procedure lwContextDblClick(Sender: TObject);
@@ -149,8 +145,6 @@ type
     procedure mmAddClick(Sender: TObject);
     procedure mmContextClick(Sender: TObject);
     procedure mmDateClick(Sender: TObject);
-    procedure mmDelBackupClick(Sender: TObject);
-    procedure mmExportListClick(Sender: TObject);
     procedure mmExportClick(Sender: TObject);
     procedure mmImportClick(Sender: TObject);
     procedure mmRefreshClick(Sender: TObject);
@@ -185,10 +179,7 @@ type
     FTasks: TTaskList;
     FLang: TLanguageFile;
     FUpdateCheck: TUpdateCheck;
-    function BackupLnkExists(): Boolean;
-    function CreateStartupUserBackup(): Boolean;
     function DeleteItem(AConfirmMessageId: TLanguageId): Boolean;
-    procedure DeleteStartupItem();
     function DisableItem(): Boolean;
     function EnableItem(): Boolean;
     function GetSelectedItem(): TRootItem;
@@ -347,9 +338,6 @@ begin
   // Update Clearas recycle bin context menu entry
   mmContext.Checked := UpdateContextPath();
 
-  // Backups are deprecated since Windows 8
-  mmDelBackup.Visible := not CheckWin32Version(6, 2);
-
   // Load items
   PageControlChange(Sender);
 end;
@@ -402,85 +390,6 @@ begin
       Updater.Free;
     end;  //of try
   end;  //of begin
-end;
-
-{ private TMain.BackupLnkExists
-
-  Checks if a backup .lnk of the current selected startup user item exists. }
-
-function TMain.BackupLnkExists(): Boolean;
-begin
-  if (Assigned(FStartup.Selected) and (FStartup.Selected is TStartupUserItem)) then
-    Result := (FStartup.Selected as TStartupUserItem).LnkFile.BackupExists()
-  else
-    Result := False;
-end;
-
-{ private TMain.CreateStartupUserBackup
-
-  Creates a special .lnk backup for currently selected startup user item. }
-
-function TMain.CreateStartupUserBackup(): Boolean;
-var
-  Filter, FileName: string;
-  StartupUserItem: TStartupUserItem;
-
-begin
-  Result := False;
-
-  try
-    // Nothing selected?
-    if (not Assigned(lwStartup.ItemFocused) or not Assigned(FStartup.Selected)) then
-      raise EInvalidItem.Create('No item selected!');
-
-    // Special .lnk file backup only for enabled startup user items!
-    if (FStartup.Selected is TStartupUserItem) then
-    begin
-      StartupUserItem := (FStartup.Selected as TStartupUserItem);
-
-      // Windows 8?
-      if CheckWin32Version(6, 2) then
-      begin
-        Filter := StartupUserItem.GetExportFilter(FLang);
-        FileName := StartupUserItem.Name + StartupUserItem.LnkFile.GetBackupExt();
-
-        // Show save dialog
-        if PromptForFileName(FileName, Filter, '', bExportStartupItem.Caption,
-          '%USERPROFILE%', True) then
-        begin
-          FStartup.ExportItem(FileName);
-          Result := True;
-        end;  //of begin
-      end  //of begin
-      else
-        if FStartup.Selected.Enabled then
-        begin
-          StartupUserItem.LnkFile.CreateBackup();
-          FLang.ShowMessage(FLang.Format(LID_BACKUP_CREATED, [StartupUserItem.LnkFile.GetBackupLnk()]));
-          bExportStartupItem.Enabled := False;
-          pmExport.Enabled := False;
-          Result := True;
-        end  //of if
-        else
-          // Default .reg file export
-          Result := ShowExportItemDialog();
-    end  //of begin
-    else
-      // Default .reg file export
-      Result := ShowExportItemDialog();
-
-  except
-    on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([LID_EXPORT, LID_IMPOSSIBLE]),
-        FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
-
-    on E: EStartupException do
-      FLang.ShowException(FLang.GetString([LID_EXPORT, LID_IMPOSSIBLE]),
-      FLang.GetString(LID_BACKUP_NOT_CREATED));
-
-    on E: Exception do
-      FLang.ShowException(FLang.GetString([LID_EXPORT, LID_IMPOSSIBLE]), E.Message);
-  end;  //of try
 end;
 
 { private TMain.DeleteItem
@@ -541,83 +450,6 @@ begin
     on E: Exception do
       FLang.ShowException(FLang.GetString([LID_DELETE, LID_IMPOSSIBLE]), E.Message);
   end;  //of try
-end;
-
-{ private TMain.DeleteStartupItem
-
-  Deletes currently selected startup item. }
-
-procedure TMain.DeleteStartupItem();
-var
-  DelBackup, BackupExists: Boolean;
-  Answer: Integer;
-
-begin
-  DelBackup := True;
-
-  try
-    // Nothing selected?
-    if (not Assigned(lwStartup.ItemFocused) or not Assigned(FStartup.Selected)) then
-      raise EInvalidItem.Create('No item selected!');
-
-    // Confirm deletion of item
-    if (FLang.ShowMessage(FLang.Format([LID_STARTUP_DELETE_CONFIRM],
-      [lwStartup.ItemFocused.SubItems[0]]), FLang.GetString([LID_ITEM_DELETE_CONFIRM1,
-      LID_ITEM_DELETE_CONFIRM2]), mtCustom) = idYes) then
-    begin
-      // Save the DeleteBackup flag
-      DelBackup := FStartup.AutoDeleteBackup;
-      BackupExists := BackupLnkExists();
-
-      // Skip export dialog for enabled startup user item with exising backup
-      if ((FStartup.Selected is TStartupUserItem) and FStartup.Selected.Enabled
-        and BackupExists) then
-        Answer := idCancel
-      else
-        Answer := FLang.ShowMessage(FLang.GetString(LID_ITEM_DELETE_STORE), mtConfirmation);
-
-      // Export item and only continue if this has succeeded
-      if (Answer = idYes) then
-        if CreateStartupUserBackup() then
-          FStartup.AutoDeleteBackup := False
-        else
-          Exit;
-
-      // Ask user to delete old existing backup
-      if ((Answer = idCancel) or ((FStartup.Selected is TStartupUserItem)
-        and not FStartup.Selected.Enabled and BackupExists)) then
-        FStartup.AutoDeleteBackup := (FLang.ShowMessage(FLang.GetString(LID_BACKUP_DELETE_CONFIRM),
-          mtConfirmation) = idYes);
-
-      // Successfully deleted item physically?
-      if FStartup.DeleteItem() then
-      begin
-        // Delete item from TListView
-        lwStartup.DeleteSelected();
-        lwStartup.ItemFocused := nil;
-      end  //of begin
-      else
-        raise Exception.Create('Unknown error!');
-    end;  //of begin
-
-  except
-    on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([LID_DELETE, LID_IMPOSSIBLE]),
-        FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
-
-    on E: EListBlocked do
-      FLang.ShowMessage(LID_OPERATION_PENDING1, LID_OPERATION_PENDING2, mtWarning);
-
-    on E: EWarning do
-      FLang.ShowMessage(FLang.GetString([LID_DELETE, LID_IMPOSSIBLE]), E.Message, mtWarning);
-
-    on E: Exception do
-      FLang.ShowException(FLang.GetString([LID_DELETE, LID_IMPOSSIBLE]), E.Message);
-  end;  //of try
-
-  // Restore the DeleteBackup flag
-  if (FStartup.AutoDeleteBackup <> DelBackup) then
-    FStartup.AutoDeleteBackup := DelBackup;
 end;
 
 { private TMain.DisableItem
@@ -1049,8 +881,7 @@ begin
       begin
         bEnableStartupItem.Enabled := False;
         bDisableStartupItem.Enabled := True;
-        bExportStartupItem.Enabled := not BackupLnkExists();
-        pmExport.Enabled := bExportStartupItem.Enabled;
+        pmExport.Enabled := True;
         pmChangeStatus.Caption := bDisableStartupItem.Caption;
 
         // Delete deactivation timestamp if necassary
@@ -1410,14 +1241,12 @@ begin
     end;  //of case
 
     mmImport.Caption := GetString(LID_BACKUP_IMPORT);
-    mmExport.Caption := GetString(LID_ITEM_EXPORT);
-    mmExportlist.Caption := GetString(LID_ITEMS_EXPORT);
+    mmExport.Caption := GetString(LID_ITEMS_EXPORT);
     mmClose.Caption := GetString(LID_QUIT);
 
     // Edit menu labels
     mmEdit.Caption := GetString(LID_EDIT);
     mmContext.Caption := GetString(LID_RECYCLEBIN_ENTRY);
-    mmDelBackup.Caption := GetString(LID_BACKUP_DELETE_ENABLED);
     mmDeleteEraseable.Caption := GetString(LID_DELETE_ERASEABLE);
 
     // View menu labels
@@ -1728,7 +1557,7 @@ end;
 procedure TMain.bDeleteItemClick(Sender: TObject);
 begin
   case PageControl.ActivePageIndex of
-    0: DeleteStartupItem();
+    0: DeleteItem(LID_STARTUP_DELETE_CONFIRM);
     1: DeleteItem(LID_CONTEXT_MENU_DELETE_CONFIRM);
     2: DeleteItem(LID_SERVICE_DELETE_CONFIRM);
     3: DeleteItem(LID_TASKS_DELETE_CONFIRM);
@@ -1753,15 +1582,6 @@ procedure TMain.bEnableItemClick(Sender: TObject);
 begin
   if (EnableItem() and GetSelectedItem().Eraseable) then
     FLang.ShowMessage(LID_FILE_DOES_NOT_EXIST, LID_ENTRY_CAN_DE_DELETED, mtWarning);
-end;
-
-{ TMain.bExportStartupItemClick
-
-  Event method that is called when user wants to export an startup item. }
-
-procedure TMain.bExportStartupItemClick(Sender: TObject);
-begin
-  CreateStartupUserBackup();
 end;
 
 { TMain.bExportItemClick
@@ -2174,6 +1994,7 @@ begin
     bEnableStartupItem.Enabled := not FStartup.Selected.Enabled;
     bDisableStartupItem.Enabled := not bEnableStartupItem.Enabled;
     bDeleteStartupItem.Enabled := True;
+    bExportStartupItem.Enabled := True;
 
     // Change text of "change status" button
     if bDisableStartupItem.Enabled then
@@ -2183,18 +2004,10 @@ begin
 
     // Selected item is enabled and startup user type?
     if ((FStartup.Selected is TStartupUserItem) and FStartup.Selected.Enabled) then
-    begin
       // Disable "open in RegEdit" because item is on file system!
-      pmOpenRegedit.Enabled := False;
-
-      // Disable "export" if backup already exists
-      bExportStartupItem.Enabled := not BackupLnkExists();
-    end  //of begin
+      pmOpenRegedit.Enabled := False
     else
-    begin
-      bExportStartupItem.Enabled := True;
       pmOpenRegedit.Enabled := True;
-    end;  //of if
 
     // Update popup menu
     pmOpenExplorer.Enabled := True;
@@ -2589,23 +2402,11 @@ begin
   ShowColumnDate(ListView, mmDate.Checked);
 end;
 
-{ TMain.mmExportClick
-
-  MainMenu entry to export a single item as .reg file. }
-
-procedure TMain.mmExportClick(Sender: TObject);
-begin
-  if (PageControl.ActivePageIndex = 0) then
-    bExportStartupItemClick(Sender)
-  else
-    bExportItemClick(Sender);
-end;
-
 { TMain.mmExportListClick
 
   MainMenu entry to export the complete list as .reg (backup) file. }
 
-procedure TMain.mmExportListClick(Sender: TObject);
+procedure TMain.mmExportClick(Sender: TObject);
 var
   SelectedList: TRootList<TRootItem>;
   FileName, Filter, DefaultExt: string;
@@ -2623,8 +2424,8 @@ begin
     FileName := PageControl.ActivePage.Caption + DefaultExt;
 
     // Show save dialog
-    if PromptForFileName(FileName, Filter, DefaultExt, StripHotkey(mmExportList.Caption),
-      '%USERPROFILE%', True) then
+    if PromptForFileName(FileName, Filter, DefaultExt, StripHotkey(mmExport.Caption),
+      '', True) then
     begin
       // Export list (threaded!)
       with TExportListThread.Create(SelectedList, FileName, PageControl.ActivePageIndex) do
@@ -2652,7 +2453,7 @@ end;
 
 procedure TMain.mmImportClick(Sender: TObject);
 var
-  BackupDir, Filter, FileName: string;
+  Filter, FileName: string;
   ImportableList: IImportableList;
 
 begin
@@ -2663,17 +2464,8 @@ begin
 
     Filter := ImportableList.GetImportFilter(FLang);
 
-    if ((PageControl.ActivePageIndex = 0) and not CheckWin32Version(6, 2)) then
-    begin
-      BackupDir := TStartupLnkFile.GetBackupDir();
-
-      // Create Backup directory if not exists
-      if not DirectoryExists(BackupDir) then
-        ForceDirectories(BackupDir);
-    end;  //of begin
-
     // Show select file dialog
-    if PromptForFileName(FileName, Filter, '', StripHotkey(mmImport.Caption), BackupDir) then
+    if PromptForFileName(FileName, Filter, '', StripHotkey(mmImport.Caption)) then
       if not ImportableList.ImportBackup(FileName) then
         raise EWarning.Create(FLang.GetString(LID_ENTRY_ALREADY_EXISTS));
 
@@ -2693,15 +2485,6 @@ begin
       FLang.ShowException(FLang.GetString([LID_BACKUP_IMPORT, LID_IMPOSSIBLE]),
         E.Message);
   end;  //of try
-end;
-
-{ TMain.mmDelBackupClick
-
-  MainMenu entry to set or resets the flag to delete backups automatically. }
-
-procedure TMain.mmDelBackupClick(Sender: TObject);
-begin
-  FStartup.AutoDeleteBackup := mmDelBackup.Checked;
 end;
 
 { TMain.mmContextClick

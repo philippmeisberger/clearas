@@ -155,7 +155,7 @@ object Main: TMain
         Caption = 'Export'
         Enabled = False
         TabOrder = 3
-        OnClick = bExportStartupItemClick
+        OnClick = bExportItemClick
       end
       object bEnableStartupItem: TButton
         Left = 428
@@ -778,20 +778,16 @@ object Main: TMain
         Caption = 'Add program'
         OnClick = mmAddClick
       end
-      object mmImport: TMenuItem
-        Caption = 'Import backup'
-        OnClick = mmImportClick
-      end
       object N4: TMenuItem
         Caption = '-'
       end
-      object mmExport: TMenuItem
-        Caption = 'Export item'
-        OnClick = mmExportClick
+      object mmImport: TMenuItem
+        Caption = 'Import'
+        OnClick = mmImportClick
       end
-      object mmExportList: TMenuItem
-        Caption = 'Export items'
-        OnClick = mmExportListClick
+      object mmExport: TMenuItem
+        Caption = 'Export'
+        OnClick = mmExportClick
       end
       object N3: TMenuItem
         Caption = '-'
@@ -813,15 +809,6 @@ object Main: TMain
       object mmDeleteEraseable: TMenuItem
         Caption = 'Delete invalid items'
         OnClick = mmDeleteEraseableClick
-      end
-      object N8: TMenuItem
-        Caption = '-'
-      end
-      object mmDelBackup: TMenuItem
-        AutoCheck = True
-        Caption = 'Delete backup after enabling'
-        Checked = True
-        OnClick = mmDelBackupClick
       end
     end
     object mmView: TMenuItem
