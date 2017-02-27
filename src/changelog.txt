@@ -10,6 +10,9 @@ Version 4.4  [??.??.17]
   - "Ungültige Einträge löschen" hinzugefügt
   - Für ungültige Autostarteinträge wird kein Symbol mehr angezeigt
   - Warnung für ungültige Einträge beim Deaktivieren hinzugefügt
+- "Startup User" und "Common Startup" Einträge werden bis Windows 7 genauso behandelt wie ab Windows 8
+  - Kein Export mehr als .reg sondern als .Startup bzw. .CommonStartup
+  - Menü-Eintrag "Backup beim Aktivieren löschen" entfernt
 - "In Explorer öffnen" verbessert
 - Potentielles Handle-Leak geschlossen
 - Memory-Leak beim Exportieren geschlossen
@@ -69,8 +72,8 @@ Version 4.2  [04.10.15]
 
 - Autostart-Feature: Unterstützung von Windows 8 und 10
   - Änderungen an "Startup User" und "Common Startup" Einträgen
-    - Kein Export mehr als .reg sondern als .Startup bzw. .CommonStartup
-    - Keine automatischen Backups ("Backup beim Aktivieren löschen" entfernt)
+    - Kein Export mehr als .reg sondern als .Startup bzw. .CommonStartup (ab Windows 8)
+    - Keine automatischen Backups ("Backup beim Aktivieren löschen" entfernt ab Windows 8)
 - "Beschreibung anzeigen" zum Menü "Ansicht" hinzugefügt
   - Zeigt entweder Beschreibung der .exe oder internen Namen von Elementen an
 - Änderungen am Popup Menü:

@@ -514,7 +514,7 @@ begin
       end;  //of with
     end  //of begin
     else
-      GetSelectedList().Refresh();
+      SelectedList.Refresh();
 
   except
     on E: EInvalidItem do
