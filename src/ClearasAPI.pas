@@ -536,7 +536,7 @@ type
     /// <returns>
     ///   The deactivation timestamp.
     /// </returns>
-    function GetTimestamp(AReg: TRegistry): TDateTime;
+    function GetTimestamp(const AReg: TRegistry): TDateTime;
 
     /// <summary>
     ///   Opens the item location in RegEdit.
@@ -2976,15 +2976,16 @@ begin
   Result := GetRootKey().ToString() +'\'+ GetLocation();
 end;
 
-function TRegistryItem.GetTimestamp(AReg: TRegistry): TDateTime;
+function TRegistryItem.GetTimestamp(const AReg: TRegistry): TDateTime;
 var
   Timestamp: TSystemTime;
 
 begin
+  Assert(Assigned(AReg), 'Registry instance was not initialized!');
   Result := 0;
 
   // Deactivation timestamp only available for disabled items
-  if (not Assigned(AReg) or FEnabled) then
+  if FEnabled then
     Exit;
 
   try
@@ -3024,8 +3025,8 @@ end;
 
 destructor TRootList<T>.Destroy;
 begin
-  FLock.Free;
   Clear();
+  FreeAndNil(FLock);
   inherited Destroy;
 end;
 
