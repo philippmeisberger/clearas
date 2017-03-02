@@ -687,7 +687,7 @@ type
     ///   <c>EListBlocked</c> if another operation is pending on the list.
     ///   <c>EInvalidItem</c> if no item is selected.
     /// </exception>
-    procedure ChangeItemFilePath(const ANewFilePath: string); virtual;
+    procedure ChangeItemFilePath(const ANewFilePath: string);
 
     /// <summary>
     ///   Changes the item status of the current selected item.
@@ -700,7 +700,7 @@ type
     ///   <c>EInvalidItem</c> if no item is selected.
     ///   <c>EWarning</c> if new status is equal to current.
     /// </exception>
-    procedure ChangeItemStatus(const ANewStatus: Boolean); virtual;
+    procedure ChangeItemStatus(const ANewStatus: Boolean);
 
     /// <summary>
     ///   Removes all items from the list.
@@ -717,7 +717,7 @@ type
     ///   <c>EListBlocked</c> if another operation is pending on the list.
     ///   <c>EInvalidItem</c> if no item is selected.
     /// </exception>
-    function DeleteItem(): Boolean; virtual;
+    function DeleteItem(): Boolean;
 
     /// <summary>
     ///   Disables the current selected item.
