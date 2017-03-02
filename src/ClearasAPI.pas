@@ -3486,13 +3486,7 @@ constructor TStartupListItem.Create(const AName, AFileName, ALocation: string;
 begin
   inherited Create(AName, AName, AFileName, ALocation, AEnabled, AWow64);
   FRootKey := ARootKey;
-
-  try
-    FCaption := GetFileDescription(FileNameOnly);
-
-  except
-    // It is not fatal if the caption could not be set! Name is used as fallback!
-  end;  //of try
+  FCaption := GetFileDescription(FileNameOnly);
 end;
 
 function TStartupListItem.GetTime(): TDateTime;
@@ -3533,24 +3527,25 @@ begin
       end;  //of if
 
     inherited ChangeStatus(ANewStatus);
-    Exit;
-  end;  //of begin
+  end  //of begin
+  else
+  begin
+    // Status is stored in 64 bit registry
+    Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
 
-  // Status is stored in 64 bit registry
-  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
+    try
+      Reg.RootKey := FRootKey.ToHKey();
+      Reg.OpenKey(GetApprovedLocation(), True);
+      ItemStatus.SetEnabled(ANewStatus);
+      Reg.WriteBinaryData(Name, ItemStatus, SizeOf(TStartupItemStatus));
+      FTime := ItemStatus.GetDeactivationTime();
+      inherited ChangeStatus(ANewStatus);
 
-  try
-    Reg.RootKey := FRootKey.ToHKey();
-    Reg.OpenKey(GetApprovedLocation(), True);
-    ItemStatus.SetEnabled(ANewStatus);
-    Reg.WriteBinaryData(Name, ItemStatus, SizeOf(TStartupItemStatus));
-    FTime := ItemStatus.GetDeactivationTime();
-    inherited ChangeStatus(ANewStatus);
-
-  finally
-    Reg.CloseKey();
-    Reg.Free;
-  end;  //of try
+    finally
+      Reg.CloseKey();
+      Reg.Free;
+    end;  //of try
+  end;  //of if
 end;
 
 function TStartupListItem.DeleteValue(const AKeyPath: string;
