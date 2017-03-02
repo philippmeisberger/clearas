@@ -5594,7 +5594,7 @@ begin
     if not Reg.OpenKey(Key, False) then
       Exit;
 
-    // Add ShellNew item?
+    // Search for ShellNew items
     if (AShellItemType = stShellNew) then
     begin
       // "ShellNew" and "_ShellNew" in same key are possible: prefer "ShellNew"
@@ -5606,142 +5606,150 @@ begin
         else
           Exit;
 
+      // ShellNew item inside a subkey?
       DelimiterPos := ALocationRoot.IndexOf('\');
 
-      // ShellNew item inside a subkey?
       if (DelimiterPos > 0) then
       begin
         Reg.CloseKey;
-        Reg.OpenKey(Copy(ALocationRoot, 1, DelimiterPos - 1), False);
+        Reg.OpenKey(ALocationRoot.Substring(0, DelimiterPos), False);
       end;  //of begin
 
       // Get associated key
       Key := Reg.ReadString('');
-      Reg.CloseKey;
 
-      // Open associated key failed?
-      if not Reg.OpenKey(Key, False) then
-        Exit;
+      if (Key <> '') then
+      begin
+        Reg.CloseKey;
 
-      // Get description of file extension
-      Caption := Reg.ReadString('');
+        // Open associated key failed?
+        if not Reg.OpenKey(Key, False) then
+          Exit;
 
-      // Caption can be empty!
-      // Fallback 1: associated key
-      if (Caption = '') then
-        Caption := ExtractFileName(Key);
+        // Get description of file extension
+        Caption := Reg.ReadString('');
+
+        // Caption can be empty!
+        // Fallback 1: associated key
+        if (Caption = '') then
+          Caption := ExtractFileName(Key);
+      end;  //of begin
 
       // Fallback 2: subkey
       if (Caption = '') then
         Caption := ExtractFileName(ALocationRoot);
 
-      // Add item to list
+      // Some types do not have a association: Use caption
+      if (Key = '') then
+        Key := Caption;
+
       Add(TShellNewItem.Create(Key, Caption, ALocationRoot, Enabled));
-      Exit;
-    end;  //of if
-
-    // Read out all keys
-    Reg.GetKeyNames(List);
-
-    for i := 0 to List.Count - 1 do
+    end  //of begin
+    else
     begin
-      Reg.CloseKey();
-      ItemName := List[i];
-      Reg.OpenKey(Key +'\'+ ItemName, False);
-      FileName := '';
+      // Read out all keys
+      Reg.GetKeyNames(List);
 
-      // Filter items with GUID in name
-      if (ItemName[1] = '{') then
-        Continue;
-
-      // Search for shell entries?
-      if (AShellItemType = stShell) then
+      for i := 0 to List.Count - 1 do
       begin
-        Caption := Reg.ReadString('');
+        Reg.CloseKey();
+        ItemName := List[i];
+        Reg.OpenKey(Key +'\'+ ItemName, False);
+        FileName := '';
 
-        // Filter unreadable Shell items
-        if ((Caption <> '') and (Caption[1] = '@')) then
+        // Filter items with GUID in name
+        if (ItemName[1] = '{') then
           Continue;
 
-        // Get status and caption of Shell item
-        Enabled := not Reg.ValueExists(CM_SHELL_DISABLED);
-        Extended := Reg.ValueExists('Extended');
-
-        // Cascading shell item?
-        if not Reg.OpenKey('command', False) then
+        // Search for shell entries?
+        if (AShellItemType = stShell) then
         begin
-          if ((not Reg.ValueExists('MUIVerb') or not Reg.ValueExists('SubCommands')) and
-            not Reg.KeyExists('ExtendedSubCommandsKey')) then
+          Caption := Reg.ReadString('');
+
+          // Filter unreadable Shell items
+          if ((Caption <> '') and (Caption[1] = '@')) then
             Continue;
 
-          Caption := Reg.ReadString('MUIVerb');
-          Add(TShellCascadingItem.Create(ItemName, Caption, ALocationRoot,
-            Enabled, Extended));
-          Continue;
-        end;  //of begin
+          // Get status and caption of Shell item
+          Enabled := not Reg.ValueExists(CM_SHELL_DISABLED);
+          Extended := Reg.ValueExists('Extended');
 
-        // Filter important Shell items
-        if Reg.ValueExists('DelegateExecute') then
-          Continue;
-
-        // Get file path of command
-        if not (Reg.GetDataType('') in [rdString, rdExpandString]) then
-          Continue;
-
-        FileName := Reg.ReadString('');
-        Add(TShellItem.Create(ItemName, Caption, FileName, ALocationRoot,
-          Enabled, Extended));
-      end  //of begin
-      else
-        if (AShellItemType = stShellEx) then
-        begin
-          GuID := Reg.ReadString('');
-
-          // Filter empty and unreadable ShellEx items
-          if ((GuID = '') or (GuID[1] = '@')) then
-            Continue;
-
-          // Get status and GUID of ShellEx item
-          Enabled := (GuID[1] = '{');
-
-          // Disabled ShellEx items got "-" before GUID!
-          if not Enabled then
-            GUID := Copy(GuID, 2, Length(GUID));
-
-          Reg.CloseKey();
-          Wow64 := False;
-
-          // Get file path of command (native hive)
-          if Reg.OpenKey(Format(CM_SHELLEX_FILE, [GuID]), False) then
+          // Cascading shell item?
+          if not Reg.OpenKey('command', False) then
           begin
-            if not (Reg.GetDataType('') in [rdString, rdExpandString]) then
+            if ((not Reg.ValueExists('MUIVerb') or not Reg.ValueExists('SubCommands')) and
+              not Reg.KeyExists('ExtendedSubCommandsKey')) then
               Continue;
 
-            FileName := Reg.ReadString('');
-          end  //of begin
-          else
-            if AWow64 then
+            Caption := Reg.ReadString('MUIVerb');
+            Add(TShellCascadingItem.Create(ItemName, Caption, ALocationRoot,
+              Enabled, Extended));
+            Continue;
+          end;  //of begin
+
+          // Filter important Shell items
+          if Reg.ValueExists('DelegateExecute') then
+            Continue;
+
+          // Get file path of command
+          if not (Reg.GetDataType('') in [rdString, rdExpandString]) then
+            Continue;
+
+          FileName := Reg.ReadString('');
+          Add(TShellItem.Create(ItemName, Caption, FileName, ALocationRoot,
+            Enabled, Extended));
+        end  //of begin
+        else
+          // Search for shell extensions
+          if (AShellItemType = stShellEx) then
+          begin
+            GuID := Reg.ReadString('');
+
+            // Filter empty and unreadable ShellEx items
+            if ((GuID = '') or (GuID[1] = '@')) then
+              Continue;
+
+            // Get status and GUID of ShellEx item
+            Enabled := (GuID[1] = '{');
+
+            // Disabled ShellEx items got "-" before GUID!
+            if not Enabled then
+              GUID := Copy(GuID, 2, Length(GUID));
+
+            Reg.CloseKey();
+            Wow64 := False;
+
+            // Get file path of command (native hive)
+            if Reg.OpenKey(Format(CM_SHELLEX_FILE, [GuID]), False) then
             begin
-              // Try 32 bit hive
-              Reg.Access := KEY_WOW64_32KEY or KEY_READ;
-              Wow64 := True;
+              if not (Reg.GetDataType('') in [rdString, rdExpandString]) then
+                Continue;
 
-              if Reg.OpenKey(Format(CM_SHELLEX_FILE, [GuID]), False) then
+              FileName := Reg.ReadString('');
+            end  //of begin
+            else
+              if AWow64 then
               begin
-                if not (Reg.GetDataType('') in [rdString, rdExpandString]) then
-                  Continue;
+                // Try 32 bit hive
+                Reg.Access := KEY_WOW64_32KEY or KEY_READ;
+                Wow64 := True;
 
-                FileName := Reg.ReadString('');
-              end;  //of begin
+                if Reg.OpenKey(Format(CM_SHELLEX_FILE, [GuID]), False) then
+                begin
+                  if not (Reg.GetDataType('') in [rdString, rdExpandString]) then
+                    Continue;
 
-              // Switch back to 64 bit hive
-              Reg.Access := KEY_WOW64_64KEY or KEY_READ;
-            end;  //of if
+                  FileName := Reg.ReadString('');
+                end;  //of begin
 
-          // Add item to list
-          Add(TShellExItem.Create(ItemName, '', FileName, ALocationRoot, Enabled, Wow64));
-        end;  //of begin
-    end;  //of for
+                // Switch back to 64 bit hive
+                Reg.Access := KEY_WOW64_64KEY or KEY_READ;
+              end;  //of if
+
+            Add(TShellExItem.Create(ItemName, '', FileName, ALocationRoot, Enabled, Wow64));
+          end;  //of begin
+      end;  //of for
+    end;  //of if
 
   finally
     List.Free;
@@ -6740,7 +6748,7 @@ procedure TTaskList.Search(AExpertMode: Boolean = False; AWin64: Boolean = True)
 
     // Show hidden?
     if AExpertMode then
-      Flags := LONG(TASK_ENUM_HIDDEN)
+      Flags := TASK_ENUM_HIDDEN
     else
       Flags := 0;
 
