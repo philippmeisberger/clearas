@@ -3607,7 +3607,7 @@ begin
     Reg.RootKey := FRootKey.ToHKey();
 
     if not Reg.OpenKey(AKeyPath, False) then
-      raise EStartupException.Create('Key does not exist!');
+      raise EStartupException.Create(Reg.LastErrorMsg);
 
     if not Reg.ValueExists(Name) then
       ChangeStatus(True);
@@ -3641,7 +3641,7 @@ begin
 
     // Invalid key?
     if not Reg.OpenKey(FLocation, False) then
-      raise EStartupException.Create('Key does not exist!');
+      raise EStartupException.Create(Reg.LastErrorMsg);
 
     if (FEnabled or CheckWin32Version(6, 2)) then
       ItemName := Name
@@ -3776,7 +3776,7 @@ begin
 
     // Failed to create new key?
     if not Reg.OpenKey(DisabledKey + Name, True) then
-      raise EStartupException.Create('Could not create key!');
+      raise EStartupException.Create('Could not create key: '+ Reg.LastErrorMsg);
 
     // Write values
     RootKey.FromHKey(RootKey.ToHKey());
@@ -3803,7 +3803,7 @@ begin
 
     // Delete old value, but do not fail if old value does not exist!
     if (Reg.ValueExists(Name) and not Reg.DeleteValue(Name)) then
-      raise EStartupException.Create('Could not delete value!');
+      raise EStartupException.Create('Could not delete value: '+ Reg.LastErrorMsg);
 
     // Update information
     FRootKey := rkHKLM;
@@ -3833,7 +3833,7 @@ begin
     Reg.RootKey := HKEY_LOCAL_MACHINE;
 
     if not Reg.OpenKey(FLocation, False) then
-      raise EStartupException.Create('Key does not exist!');
+      raise EStartupException.Create(Reg.LastErrorMsg);
 
     if (not Reg.ValueExists('hkey') or not Reg.ValueExists('key')) then
       raise EStartupException.Create('Missing destination Registry values '
@@ -3845,7 +3845,7 @@ begin
 
     if ((NewKeyPath = '') or (NewHKey = rkUnknown)) then
       raise EStartupException.Create('Invalid destination Registry values for '
-        +'hkey or key!');
+        +'''hkey'' or ''key''!');
 
     Reg.CloseKey;
 
@@ -3867,7 +3867,7 @@ begin
 
     // Failed to create new key?
     if not Reg.OpenKey(NewKeyPath, True) then
-      raise EStartupException.Create('Could not create startup key!');
+      raise EStartupException.Create('Could not create startup key: '+ Reg.LastErrorMsg);
 
     // Write startup entry
     Reg.WriteString(Name, FileName);
@@ -3878,11 +3878,11 @@ begin
     Reg.RootKey := HKEY_LOCAL_MACHINE;
 
     if not Reg.OpenKey(DisabledKey, True) then
-      raise EStartupException.Create('Could not open Key '''+ DisabledKey +'''!');
+      raise EStartupException.Create('Could not open Key '''+ DisabledKey +''': '+ Reg.LastErrorMsg);
 
     // Do not abort if old key does not exist!
     if (Reg.KeyExists(Name) and not Reg.DeleteKey(Name)) then
-      raise EStartupException.Create('Could not delete old key '''+ Name +'''!');
+      raise EStartupException.Create('Could not delete old key '''+ Name +''': '+ Reg.LastErrorMsg);
 
     // Update information
     FRootKey := NewHKey;
@@ -3946,7 +3946,7 @@ begin
     Reg.RootKey := FRootKey.ToHKey();
 
     if not Reg.OpenKey(FLocation, False) then
-      raise EStartupException.Create('Key does not exist!');
+      raise EStartupException.Create(Reg.LastErrorMsg);
 
     if (FRootKey <> rkHKLM) then
       raise EStartupException.Create('Wrong HKEY!');
@@ -3955,7 +3955,7 @@ begin
     Reg.CloseKey;
 
     if not Reg.OpenKey(ExtractFileDir(FLocation), False) then
-      raise EStartupException.Create('Key does not exist!');
+      raise EStartupException.Create(Reg.LastErrorMsg);
 
     if Reg.KeyExists(ANewName) then
       raise EStartupException.Create('Key already exists!');
@@ -4116,8 +4116,8 @@ begin
     KeyName := AddCircumflex(FLocation);
 
     if not Reg.OpenKey(DisabledKey + KeyName, True) then
-      raise EStartupException.Create('Could not create key'''+
-        DisabledKey + KeyName +'''!');
+      raise EStartupException.Create('Could not create key'''+ DisabledKey
+        + KeyName +''': '+ Reg.LastErrorMsg);
 
     Reg.WriteString('path', FLocation);
     Reg.WriteString('item', ChangeFileExt(ExtractFileName(Name), ''));
@@ -4828,7 +4828,7 @@ begin
 
     // Invalid key?
     if not Reg.OpenKey(GetLocation(), False) then
-      raise EContextMenuException.Create('Key does not exist!');
+      raise EContextMenuException.Create(Reg.LastErrorMsg);
 
     // Invalid data type?
     if (Reg.GetDataType(AValueName) <> rdString) then
@@ -4888,7 +4888,7 @@ begin
 
     // Invalid key?
     if not Reg.OpenKey(GetLocation(), False) then
-      raise EContextMenuException.Create('Key does not exist!');
+      raise EContextMenuException.Create(Reg.LastErrorMsg);
 
     if Reg.ValueExists('Icon') then
       Result := Reg.ReadString('Icon').DeQuotedString('"');
@@ -4911,7 +4911,7 @@ begin
 
     // Invalid key?
     if not Reg.OpenKey(GetLocation() +'\command', False) then
-      raise EContextMenuException.Create('Key does not exist!');
+      raise EContextMenuException.Create(Reg.LastErrorMsg);
 
     // Change path
     case Reg.GetDataType('') of
@@ -4941,7 +4941,7 @@ begin
 
     // Invalid key?
     if not Reg.OpenKey(GetLocation(), False) then
-      raise EContextMenuException.Create('Key does not exist!');
+      raise EContextMenuException.Create(Reg.LastErrorMsg);
 
     DestroyIconHandle();
 
@@ -4980,7 +4980,7 @@ begin
 
     // Key does not exist?
     if not Reg.OpenKey(GetLocation(), False) then
-      raise EContextMenuException.Create('Key does not exist!');
+      raise EContextMenuException.Create(Reg.LastErrorMsg);
 
     if ANewStatus then
     begin
@@ -5142,7 +5142,7 @@ begin
 
     // Key does not exist?
     if not Reg.OpenKey(GetLocation(), False) then
-      raise EContextMenuException.Create('Key does not exist!');
+      raise EContextMenuException.Create(Reg.LastErrorMsg);
 
     // Value does not exist?
     if not Reg.ValueExists('') then
@@ -5203,7 +5203,7 @@ begin
 
     // Invalid key?
     if not Reg.OpenKey(GetLocation(), False) then
-      raise EContextMenuException.Create('Key does not exist!');
+      raise EContextMenuException.Create(Reg.LastErrorMsg);
 
     // Read GUID and setup key of program
     ProgramKeyPath := Format(CM_SHELLEX_FILE, [Reg.ReadString('')]);
@@ -5211,7 +5211,7 @@ begin
 
     // Invalid program key?
     if not Reg.OpenKey(ProgramKeyPath, False) then
-      raise EContextMenuException.Create('Program key does not exist!');
+      raise EContextMenuException.Create(Reg.LastErrorMsg);
 
     // Change path
     case Reg.GetDataType('') of
@@ -5299,7 +5299,7 @@ begin
 
     // Key does not exist?
     if not Reg.OpenKey(FLocation, False) then
-      raise EContextMenuException.Create('Key '''+ FLocation +''' does not exist!');
+      raise EContextMenuException.Create(Reg.LastErrorMsg);
 
     if ANewStatus then
     begin
@@ -5433,7 +5433,8 @@ begin
       Reg.RootKey := HKEY_CLASSES_ROOT;
 
       if not Reg.OpenKey(LocationRoot, True) then
-        raise EContextMenuException.Create('Could not create key: '''+ LocationRoot +'''!');
+        raise EContextMenuException.Create('Could not create key: '''+ LocationRoot
+          +''': '+ Reg.LastErrorMsg);
 
       // Location is a file extension?
       if (LocationRoot[1] = '.') then
@@ -5457,7 +5458,8 @@ begin
 
       // Adds new context item to Registry
       if not Reg.OpenKey(KeyPath, True) then
-        raise EContextMenuException.Create('Could not open key: '''+ KeyPath +'''!');
+        raise EContextMenuException.Create('Could not open key: '''+ KeyPath
+          +''': '+ Reg.LastErrorMsg);
 
       // Set caption of item
       if (Trim(ACaption) <> '') then
@@ -5471,7 +5473,8 @@ begin
       KeyPath := KeyPath +'\command';
 
       if not Reg.OpenKey(KeyPath, True) then
-        raise EContextMenuException.Create('Could not create key: '''+ KeyPath +'''!');
+        raise EContextMenuException.Create('Could not create key: '''+ KeyPath +''': '
+          + Reg.LastErrorMsg);
 
       // Write command of item
       Reg.WriteString('', FullPath);
@@ -6001,7 +6004,7 @@ begin
     begin
       // Write disable key
       if not Reg.OpenKey(KEY_SERVICE_DISABLED +'\'+ Name, True) then
-        raise EServiceException.Create('Could not create disable key!');
+        raise EServiceException.Create('Could not create disable key: '+ Reg.LastErrorMsg);
 
       // Save deactivation timestamp
       FTime := WriteTimestamp(Reg);
@@ -6009,7 +6012,7 @@ begin
     else
       // Write disable key
       if not Reg.OpenKey(KEY_SERVICE_DISABLED, True) then
-        raise EServiceException.Create('Could not create disable key!');
+        raise EServiceException.Create('Could not create disable key: '+ Reg.LastErrorMsg);
 
     // Write last status
     Reg.WriteInteger(Name, Ord(Start));
@@ -6039,7 +6042,7 @@ begin
     if CheckWin32Version(6) then
     begin
       if not Reg.OpenKey(KEY_SERVICE_DISABLED +'\'+ Name, False) then
-        raise EServiceException.Create('Disable key does not exist!');
+        raise EServiceException.Create(Reg.LastErrorMsg);
     end  //of begin
     else
       Reg.OpenKey(KEY_SERVICE_DISABLED, True);
