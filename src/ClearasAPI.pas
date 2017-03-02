@@ -2506,7 +2506,7 @@ end;
 
 function TStartupLnkFile.BackupExists(): Boolean;
 begin
-  // Not possible on Windows 8!
+  // Deprecated since Windows 8!
   if CheckWin32Version(6, 2) then
     Exit(False);
 
@@ -2559,7 +2559,7 @@ end;
 
 class function TStartupLnkFile.GetStartUpDir(AStartupUser: Boolean): string;
 begin
-  // Windows Vista?
+  // Windows Vista or later?
   if CheckWin32Version(6) then
   begin
     if AStartupUser then
@@ -4057,9 +4057,9 @@ begin
   FFileName := ANewFileName;
   FEraseable := not FileExists();
 
-  // Rewrite backup
+  // Rewrite backup prior to Windows 7
   if not FEnabled then
-    ExportItem(FLnkFile.GetBackupLnk());
+    FLnkFile.CreateBackup();
 end;
 
 function TStartupUserItem.Delete(): Boolean;
@@ -4084,9 +4084,9 @@ begin
   begin
     Result := DeleteKey(HKEY_LOCAL_MACHINE, DisabledKey, AddCircumflex(FLnkFile.FileName));
 
-    // Delete backup file
+    // Delete backup file prior to Windows 7
     if Result then
-      DeleteFile(FLnkFile.GetBackupLnk());
+      FLnkFile.DeleteBackup();
   end;  //of if
 end;
 
@@ -4171,8 +4171,8 @@ begin
     AddCircumflex(FLnkFile.FileName), False) then
     raise EStartupException.Create('Could not delete key!');
 
-  // Delete backup file after enabling
-  DeleteFile(FLnkFile.GetBackupLnk());
+  // Delete backup file after enabling prior to Windows 7
+  FLnkFile.DeleteBackup();
 
   // Update information
   FLocation := FLnkFile.FileName;
