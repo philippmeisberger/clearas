@@ -2534,7 +2534,7 @@ end;
 
 class function TStartupLnkFile.GetBackupDir(): string;
 begin
-  Result := GetFolderPath(CSIDL_WINDOWS);
+  Result := GetKnownFolderPath(FOLDERID_Windows);
 
   if (Result <> '') then
     Result := Result +'pss\';
@@ -2559,19 +2559,10 @@ end;
 
 class function TStartupLnkFile.GetStartUpDir(AStartupUser: Boolean): string;
 begin
-  // Windows Vista or later?
-  if CheckWin32Version(6) then
-  begin
-    if AStartupUser then
-      Result := GetKnownFolderPath(FOLDERID_Startup)
-    else
-      Result := GetKnownFolderPath(FOLDERID_CommonStartup);
-  end  //of begin
+  if AStartupUser then
+    Result := GetKnownFolderPath(FOLDERID_Startup)
   else
-    if AStartupUser then
-      Result := GetFolderPath(CSIDL_STARTUP)
-    else
-      Result := GetFolderPath(CSIDL_COMMON_STARTUP);
+    Result := GetKnownFolderPath(FOLDERID_CommonStartup);
 end;
 
 

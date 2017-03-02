@@ -247,7 +247,7 @@ begin
   FUpdateCheck.CheckForUpdate(False);
 {$ENDIF}
 
-  // Init Clearas instances
+  // Init lists
   FStartup := TStartupList.Create;
 
   // Link search events
@@ -276,18 +276,14 @@ begin
     OnRefresh := OnServiceSearchEnd;
   end;  //of with
 
-  // Task feature only for Windows >= Vista
-  if CheckWin32Version(6) then
-  begin
-    FTasks := TTaskList.Create;
+  FTasks := TTaskList.Create;
 
-    // Link search events
-    with FTasks do
-    begin
-      OnChanged := OnTaskItemChanged;
-      OnRefresh := OnTaskSearchEnd;
-    end;  //of with
-  end;  //of begin
+  // Link search events
+  with FTasks do
+  begin
+    OnChanged := OnTaskItemChanged;
+    OnRefresh := OnTaskSearchEnd;
+  end;  //of with
 
   // Set title
   Caption := Application.Title + PLATFORM_ARCH;
@@ -2722,15 +2718,6 @@ begin
          mmImport.Enabled := True;
          mmDate.Enabled := False;
          mmShowCaptions.Enabled := False;
-
-         // Tasks feature does not support Windows XP!
-         if not CheckWin32Version(6) then
-         begin
-           mmImport.Enabled := False;
-           eTaskSearch.Enabled := False;
-           FLang.ShowMessage('Scheduled tasks feature requires at least Windows Vista!', mtWarning);
-           Exit;
-         end;
 
          // Load task items dynamically
          if (Assigned(FTasks) and (FTasks.Count = 0)) then
