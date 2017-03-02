@@ -14,7 +14,7 @@ unit Winapi.Taskschd;
 interface
 
 uses
-  Windows, ActiveX;
+  Winapi.Windows, Winapi.ActiveX;
 
 {$HPPEMIT '#include <taskschd.h>'}
 
