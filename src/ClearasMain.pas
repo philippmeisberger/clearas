@@ -590,7 +590,6 @@ begin
 
   // Sort!
   lwContext.AlphaSort();
-  FContext.IsInvalid := False;
 end;
 
 { private TMain.OnContextItemChanged
@@ -841,7 +840,6 @@ begin
 
   // Sort!
   lwStartup.AlphaSort();
-  FStartup.IsInvalid := False;
 end;
 
 { private TMain.OnServiceItemChanged
@@ -956,7 +954,6 @@ begin
 
   // Sort!
   lwService.AlphaSort();
-  FService.IsInvalid := False;
 end;
 
 { private TMain.OnSearchError
@@ -1048,7 +1045,6 @@ begin
 
   // Sort!
   lwTasks.AlphaSort();
-  FTasks.IsInvalid := False;
 end;
 
 { private TMain.OnTaskSearchStart
@@ -1191,21 +1187,18 @@ begin
     pmDeleteIcon.Caption := GetString(LID_CONTEXT_MENU_ICON_DELETE);
   end;  //of with
 
-  // Invalidate all lists
+  // Refresh list captions
   if Assigned(FStartup) then
-    FStartup.Invalidate();
+    FStartup.Refresh();
 
   if Assigned(FContext) then
-    FContext.Invalidate();
+    FContext.Refresh();
 
   if Assigned(FService) then
-    FService.Invalidate();
+    FService.Refresh();
 
   if Assigned(FTasks) then
-    FTasks.Invalidate();
-
-  // Update captions of current selected list
-  PageControlChange(Self);
+    FTasks.Refresh();
 end;
 
 { private TMain.ShowColumnDate
@@ -2520,11 +2513,10 @@ end;
 
 procedure TMain.mmShowCaptionsClick(Sender: TObject);
 begin
-  FStartup.Invalidate();
-  FContext.Invalidate();
-  FService.Invalidate();
-  FTasks.Invalidate();
-  LoadItems();
+  FStartup.Refresh();
+  FContext.Refresh();
+  FService.Refresh();
+  FTasks.Refresh();
 end;
 
 { TMain.mmStandardClick
@@ -2682,14 +2674,8 @@ begin
          ShowColumnDate(lwStartup, (mmDate.Enabled and mmDate.Checked));
 
          // Load startup items dynamically
-         if Assigned(FStartup) then
-         begin
-           if (FStartup.Count = 0) then
-             LoadItems()
-           else
-             if FStartup.IsInvalid then
-               FStartup.Refresh();
-         end;  //of begin
+         if (Assigned(FStartup) and (FStartup.Count = 0)) then
+           LoadItems();
 
          lwStartupSelectItem(Sender, lwStartup.ItemFocused, True);
        end;
@@ -2701,14 +2687,8 @@ begin
          mmShowCaptions.Enabled := True;
 
          // Load context menu items dynamically
-         if Assigned(FContext) then
-         begin
-           if (FContext.Count = 0) then
-             LoadItems()
-           else
-             if FContext.IsInvalid then
-               FContext.Refresh()
-         end;  //of begin
+         if (Assigned(FContext) and (FContext.Count = 0)) then
+           LoadItems();
 
          lwContextSelectItem(Sender, lwContext.ItemFocused, True);
        end;
@@ -2721,14 +2701,8 @@ begin
          ShowColumnDate(lwService, mmDate.Checked);
 
          // Load service items dynamically
-         if Assigned(FService) then
-         begin
-           if (FService.Count = 0) then
-             LoadItems()
-           else
-             if FService.IsInvalid then
-               FService.Refresh();
-         end;  //of begin
+         if (Assigned(FService) and (FService.Count = 0)) then
+           LoadItems();
 
          lwServiceSelectItem(Sender, lwService.ItemFocused, True);
        end;
@@ -2739,21 +2713,18 @@ begin
          mmDate.Enabled := False;
          mmShowCaptions.Enabled := False;
 
-         // Load task items dynamically
-         if Assigned(FTasks) then
-         begin
-           if (FTasks.Count = 0) then
-             LoadItems()
-           else
-             if FTasks.IsInvalid then
-               FTasks.Refresh();
-         end  //of begin
-         else
+         // Tasks feature does not support Windows XP!
+         if not CheckWin32Version(6) then
          begin
            mmImport.Enabled := False;
            eTaskSearch.Enabled := False;
            FLang.ShowMessage('Scheduled tasks feature requires at least Windows Vista!', mtWarning);
-         end;  //of if
+           Exit;
+         end;
+
+         // Load task items dynamically
+         if (Assigned(FTasks) and (FTasks.Count = 0)) then
+           LoadItems();
 
          lwTasksSelectItem(Sender, lwTasks.ItemFocused, True);
        end;

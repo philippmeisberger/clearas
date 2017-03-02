@@ -661,7 +661,6 @@ type
     FEnabledItemsCount,
     FEraseableItemsCount: Integer;
   protected
-    FInvalid: Boolean;
     FLock: TCriticalSection;
     procedure DoNotifyOnChanged(ANewStatus: TItemStatus);
     procedure Notify(const Item: T; Action: TCollectionNotification); override;
@@ -808,11 +807,6 @@ type
     function IndexOf(const ANameOrCaption: string; AEnabled: Boolean): Integer; overload;
 
     /// <summary>
-    ///   Signals that list needs a visual update.
-    /// </summary>
-    procedure Invalidate();
-
-    /// <summary>
     ///   Checks if the list is currently locked.
     /// </summary>
     /// <returns>
@@ -864,12 +858,6 @@ type
     ///   Gets the count of eraseable marked items.
     /// </summary>
     property EraseableItemsCount: Integer read FEraseableItemsCount;
-
-    /// <summary>
-    ///   Gets or sets the list visual state. If set to <c>True</c> and the list
-    ///   is selected on UI the content is refreshed visually.
-    /// </summary>
-    property IsInvalid: Boolean read FInvalid write FInvalid;
 
     /// <summary>
     ///   Occurs when an item has changed.
@@ -3039,7 +3027,6 @@ begin
   inherited Create;
   FEnabledItemsCount := 0;
   FEraseableItemsCount := 0;
-  FInvalid := True;
   FDuplicates := False;
   FLock := TCriticalSection.Create;
 end;
@@ -3204,7 +3191,6 @@ begin
     FOnRefresh(Self);
 
   DoNotifyOnChanged(stAny);
-  FInvalid := False;
 end;
 
 procedure TRootList<T>.EnableItem();
@@ -3278,11 +3264,6 @@ begin
       Break;
     end;  //of begin
   end;  //of for
-end;
-
-procedure TRootList<T>.Invalidate();
-begin
-  FInvalid := True;
 end;
 
 function TRootList<T>.IsLocked(): Boolean;
