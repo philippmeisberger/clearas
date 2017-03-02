@@ -4025,7 +4025,7 @@ end;
 
 function TStartupUserItem.AddCircumflex(const AName: string): string;
 begin
-  Result := StringReplace(AName, '\', '^', [rfReplaceAll]);
+  Result := AName.Replace('\', '^');
 end;
 
 function TStartupUserItem.GetFullLocation(): string;
@@ -4620,7 +4620,7 @@ begin
       end  //of begin
       else
       begin
-        Name := ExtractFileName(StringReplace(Location, '^', '\', [rfReplaceAll]));
+        Name := ExtractFileName(Location.Replace('^', '\'));
         LnkFileName := ExtractFileName(Reg.ReadString('path'));
 
         // Windows >= Vista?
@@ -5175,7 +5175,7 @@ begin
     // Item disabled?
     if (ANewStatus and (OldValue[1] <> '{')) then
     begin
-      NewValue := Copy(OldValue, 2, Length(OldValue));
+      NewValue := OldValue.Substring(1);
       Reg.WriteString('', NewValue);
     end  //of begin
     else
@@ -5464,7 +5464,7 @@ begin
         if (FileType = '') then
         begin
           // Add new file association
-          FileType := Copy(LocationRoot, 2, Length(LocationRoot)) +'file';
+          FileType := LocationRoot.Substring(1) +'file';
           Reg.WriteString('', FileType);
         end;  //of begin
       end  //of begin
@@ -5714,7 +5714,7 @@ begin
 
             // Disabled ShellEx items got "-" before GUID!
             if not Enabled then
-              GUID := Copy(GuID, 2, Length(GUID));
+              GUID := GuID.Substring(1);
 
             Reg.CloseKey();
             Wow64 := False;
@@ -6428,9 +6428,8 @@ end;
 
 function TTaskListItem.GetZipLocation(): string;
 begin
-  Result := IncludeTrailingPathDelimiter(Location);
-  Result := Copy(Result, 2, Length(Location));
-  Result := StringReplace(Result + Name, '\', '/', [rfReplaceAll]);
+  Result := IncludeTrailingPathDelimiter(Location).Substring(1) + Name;
+  Result := Result.Replace('\', '/');
 end;
 
 function TTaskListItem.GetFullLocation(): string;
@@ -6500,6 +6499,8 @@ begin
 
   try
     ZipFile.Open(ChangeFileExt(AFileName, '.zip'), zmWrite);
+
+    // For validation purposes: "Clearas" is the comment
     ZipFile.Comment := 'Clearas';
     ZipFile.Add(LocationFull, ZipLocation, zcDeflate);
     ZipFile.Close();
@@ -6686,7 +6687,7 @@ begin
         TaskFolder := nil;
         FileName := ZipFile.FileName[i];
         ZipFile.Extract(FileName, ExtractDir);
-        FileName := StringReplace(FileName, '/', '\', [rfReplaceAll]);
+        FileName := FileName.Replace('/', '\');
         OleCheck(FTaskService.GetFolder(PChar('\'+ ExtractFileDir(FileName)), TaskFolder));
 
         // Task exists?
