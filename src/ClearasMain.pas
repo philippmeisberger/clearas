@@ -1121,6 +1121,11 @@ begin
     lwStartup.Columns[0].Caption := GetString(LID_ENABLED);
     lwStartup.Columns[2].Caption := StripHotkey(mmFile.Caption);
     lwStartup.Columns[3].Caption := GetString(LID_KEY);
+
+    // Date column visible?
+    if (lwStartup.Columns.Count > 4) then
+      lwStartup.Columns[4].Caption := GetString(LID_DATE_OF_DEACTIVATION);
+
     lCopy1.Hint := GetString(LID_TO_WEBSITE);
 
     // "Context menu" tab TButton labels
@@ -1154,6 +1159,11 @@ begin
     lwService.Columns[0].Caption := lwStartup.Columns[0].Caption;
     lwService.Columns[2].Caption := lwStartup.Columns[2].Caption;
     lwService.Columns[3].Caption := GetString(LID_SERVICE_START);
+
+    // Date column visible?
+    if (lwService.Columns.Count > 4) then
+      lwService.Columns[4].Caption := GetString(LID_DATE_OF_DEACTIVATION);
+
     lCopy3.Hint := lCopy1.Hint;
     eServiceSearch.TextHint := eContextSearch.TextHint;
 

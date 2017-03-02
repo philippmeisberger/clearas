@@ -19,6 +19,7 @@ Version 4.4  [??.??.17]
 - Memory-Leak beim Importieren einer Aufgabe geschlossen
 - Bug fix in 64-Bit Version: Dateipfad von 32-Bit Kontextmenüeinträgen konnte nicht gefunden werden
 - Bug fix: ShellNew-Einträge konnten leeren Namen haben
+- Bug fix: Spalte "Deaktivierungsdatum" hatte nach Wechsel der Sprache nicht richtige Beschriftung
 - Updater v3.1
   - Abhängigkeit zur "Indy"-Komponenten Bibliothek entfernt
   - Programmdatei bis zu 1 MB kleiner
