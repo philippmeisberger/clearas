@@ -18,6 +18,8 @@ const
   LID_SERVICE_DELETE_CONFIRM            = LID_LAST + 18;
   LID_SERVICE_START                     = LID_LAST + 19;
   LID_SERVICES                          = LID_LAST + 20;
+  LID_AUTOMATICALLY                     = LID_LAST + 21;
+  LID_MANUALLY                          = LID_LAST + 22;
   LID_SEARCH                            = LID_LAST + 23;
   LID_OPEN_IN_REGEDIT                   = LID_LAST + 26;
   LID_HIDE                              = LID_LAST + 28;

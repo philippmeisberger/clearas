@@ -5849,8 +5849,8 @@ end;
 function TServiceStartHelper.ToString(ALangFile: TLanguageFile): string;
 begin
   case Self of
-    ssAutomatic: Result := ALangFile.GetString(61);
-    ssManual:    Result := ALangFile.GetString(62);
+    ssAutomatic: Result := ALangFile.GetString(LID_AUTOMATICALLY);
+    ssManual:    Result := ALangFile.GetString(LID_MANUALLY);
     else         Result := 'Service';
   end;  //of case
 end;
