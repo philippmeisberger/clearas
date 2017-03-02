@@ -2,7 +2,7 @@
 {                                                                         }
 { PM Code Works Registry Unit v1.0                                        }
 {                                                                         }
-{ Copyright (c) 2011-2016 Philipp Meisberger (PM Code Works)              }
+{ Copyright (c) 2011-2017 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
 { *********************************************************************** }
 
@@ -11,7 +11,7 @@ unit PMCW.Registry;
 interface
 
 uses
-  SysUtils, Classes, Windows, Registry;
+  Winapi.Windows, System.SysUtils, System.Classes, System.Win.Registry;
 
 type
   /// <summary>
@@ -267,7 +267,7 @@ type
   /// <summary>
   ///   Notifies about registry changes in a specified key.
   /// </summary>
-  TRegistryChangeNotification = class(TObject)
+  TRegistryChangeNotifier = class(TObject)
   private
     FListener: TRegistryChangeNotificationThread;
     FCustomRegistry: TRegistry;
@@ -659,32 +659,32 @@ end;
 
 { TRegistryChangeNotification }
 
-constructor TRegistryChangeNotification.Create;
+constructor TRegistryChangeNotifier.Create;
 begin
   inherited Create;
   FFilter := [nfChangeName, nfChangeAttributes, nfChangeLastSet, nfChangeSecurity];
   FRootKey := HKEY_CURRENT_USER;
 end;
 
-constructor TRegistryChangeNotification.Create(ARegistry: TRegistry);
+constructor TRegistryChangeNotifier.Create(ARegistry: TRegistry);
 begin
   Create;
   FCustomRegistry := ARegistry;
 end;
 
-destructor TRegistryChangeNotification.Destroy;
+destructor TRegistryChangeNotifier.Destroy;
 begin
   Enabled := False;
   CheckSynchronize();
   inherited Destroy;
 end;
 
-function TRegistryChangeNotification.GetEnabled(): Boolean;
+function TRegistryChangeNotifier.GetEnabled(): Boolean;
 begin
   Result := Assigned(FListener);
 end;
 
-function TRegistryChangeNotification.GetKey(): string;
+function TRegistryChangeNotifier.GetKey(): string;
 begin
   if Enabled then
     Result := FListener.Key
@@ -692,7 +692,7 @@ begin
     Result := FKey;
 end;
 
-function TRegistryChangeNotification.GetRootKey(): HKEY;
+function TRegistryChangeNotifier.GetRootKey(): HKEY;
 begin
   if Enabled then
     Result := FListener.RootKey
@@ -700,7 +700,7 @@ begin
     Result := FRootKey;
 end;
 
-procedure TRegistryChangeNotification.SetEnabled(const AEnabled: Boolean);
+procedure TRegistryChangeNotifier.SetEnabled(const AEnabled: Boolean);
 begin
   if (not AEnabled and Assigned(FListener)) then
   begin
@@ -727,7 +727,7 @@ begin
     end;  //of begin
 end;
 
-procedure TRegistryChangeNotification.SetFilter(
+procedure TRegistryChangeNotifier.SetFilter(
   const AFilter: TRegistryChangeNotificationFilters);
 begin
   if (FFilter <> AFilter) then
@@ -739,7 +739,7 @@ begin
   end;  //of begin
 end;
 
-procedure TRegistryChangeNotification.SetKey(const AKey: string);
+procedure TRegistryChangeNotifier.SetKey(const AKey: string);
 begin
   if (FKey <> AKey) then
   begin
@@ -750,7 +750,7 @@ begin
   end;  //of begin
 end;
 
-procedure TRegistryChangeNotification.SetRecursive(const ARecursive: Boolean);
+procedure TRegistryChangeNotifier.SetRecursive(const ARecursive: Boolean);
 begin
   if (FRecursive <> ARecursive) then
   begin
@@ -761,7 +761,7 @@ begin
   end;  //of begin
 end;
 
-procedure TRegistryChangeNotification.SetRootKey(const ARootKey: HKEY);
+procedure TRegistryChangeNotifier.SetRootKey(const ARootKey: HKEY);
 begin
   if (FRootKey <> ARootKey) then
   begin
@@ -772,7 +772,7 @@ begin
   end;  //of begin
 end;
 
-procedure TRegistryChangeNotification.SetWow64Redirection(
+procedure TRegistryChangeNotifier.SetWow64Redirection(
   const AWow64Redirection: TRegistryWow64Redirection);
 begin
   if (FWow64Redirection <> AWow64Redirection) then
