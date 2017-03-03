@@ -563,11 +563,6 @@ type
   TItemStatus = (
 
     /// <summary>
-    ///   Item has changed in any way and needs a full visual update.
-    /// </summary>
-    stAny,
-
-    /// <summary>
     ///   Item has been enabled.
     /// </summary>
     stEnabled,
@@ -921,8 +916,6 @@ type
   private
     FWin64,
     FExpertMode: Boolean;
-    FOnChanged: TItemChangeEvent;
-    procedure DoNotifyOnChange();
   protected
     procedure DoExecute(); override;
   public
@@ -3181,8 +3174,6 @@ procedure TRootList<T>.Refresh();
 begin
   if Assigned(FOnRefresh) then
     FOnRefresh(Self);
-
-  DoNotifyOnChanged(stAny);
 end;
 
 procedure TRootList<T>.EnableItem();
@@ -3385,26 +3376,14 @@ begin
   FSelectedList := ASelectedList;
   FExpertMode := False;
   FWin64 := (TOSVersion.Architecture = arIntelX64);
-  FOnChanged := FSelectedList.OnChanged;
+  OnTerminate := FSelectedList.OnRefresh;
 end;
 
 procedure TSearchThread.DoExecute();
 begin
-  try
-    Assert(Assigned(FSelectedList));
-    FSelectedList.Clear();
-    FSelectedList.Search(FExpertMode, FWin64);
-
-  finally
-    Synchronize(DoNotifyOnChange);
-  end;  //of try
-end;
-
-procedure TSearchThread.DoNotifyOnChange();
-begin
-  // Notify that GUI counter needs to be updated
-  if Assigned(FOnChanged) then
-    FOnChanged(Self, stAny);
+  Assert(Assigned(FSelectedList));
+  FSelectedList.Clear();
+  FSelectedList.Search(FExpertMode, FWin64);
 end;
 
 

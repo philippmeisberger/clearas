@@ -586,6 +586,9 @@ begin
 
   // Sort!
   lwContext.AlphaSort();
+
+  // Refresh counter
+  OnContextItemChanged(Sender, stDeleted);
 end;
 
 { private TMain.OnContextItemChanged
@@ -614,7 +617,7 @@ begin
         pmChangeStatus.Caption := bEnableContextItem.Caption;
       end;
 
-    stAny, stDeleted:
+    stDeleted:
       begin
         bEnableContextItem.Enabled := False;
         bDisableContextItem.Enabled := False;
@@ -742,7 +745,7 @@ begin
           lwStartup.ItemFocused.SubItems[3] := DateTimeToStr(FStartup.Selected.Time);
       end;
 
-    stAny, stDeleted:
+    stDeleted:
       begin
         bEnableStartupItem.Enabled := False;
         bDisableStartupItem.Enabled := False;
@@ -836,6 +839,9 @@ begin
 
   // Sort!
   lwStartup.AlphaSort();
+
+  // Refresh counter
+  OnStartupItemChanged(Sender, stDeleted);
 end;
 
 { private TMain.OnServiceItemChanged
@@ -872,7 +878,7 @@ begin
           lwService.ItemFocused.SubItems[3] := DateTimeToStr(FService.Selected.Time);
       end;
 
-    stAny, stDeleted:
+    stDeleted:
       begin
         bEnableServiceItem.Enabled := False;
         bDisableServiceItem.Enabled := False;
@@ -950,6 +956,9 @@ begin
 
   // Sort!
   lwService.AlphaSort();
+
+  // Refresh counter
+  OnServiceItemChanged(Sender, stDeleted);
 end;
 
 { private TMain.OnSearchError
@@ -987,7 +996,7 @@ begin
         pmChangeStatus.Caption := bEnableTaskItem.Caption;
       end;
 
-    stAny, stDeleted:
+    stDeleted:
       begin
         bEnableTaskItem.Enabled := False;
         bDisableTaskitem.Enabled := False;
@@ -1041,6 +1050,9 @@ begin
 
   // Sort!
   lwTasks.AlphaSort();
+
+  // Refresh counter
+  OnTaskItemChanged(Sender, stDeleted);
 end;
 
 { private TMain.OnTaskSearchStart
