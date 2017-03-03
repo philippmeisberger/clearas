@@ -20,7 +20,7 @@ Version 4.4  [??.??.17]
 - Bug fix in 64-Bit Version: Dateipfad von 32-Bit Kontextmenüeinträgen konnte nicht gefunden werden
 - Bug fix: ShellNew-Einträge konnten leeren Namen haben
 - Bug fix: Spalte "Deaktivierungsdatum" hatte nach Wechsel der Sprache nicht richtige Beschriftung
-- Keine Kompatibilität mehr mit Windows 2000 und XP
+- Unterstützung für Windows 2000 und XP entfernt
 - Updater v3.1
   - Abhängigkeit zur "Indy"-Komponenten Bibliothek entfernt
   - Programmdatei bis zu 1 MB kleiner

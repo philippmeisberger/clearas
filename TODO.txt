@@ -1,4 +1,6 @@
 Ideas:
+- Add items to listview async
+  - Allow editing at same time
 - Export eraseable items before deleting
 - Visual grouping
 - Add "Execute" to popup menu

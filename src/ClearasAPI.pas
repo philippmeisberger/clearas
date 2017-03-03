@@ -4656,7 +4656,7 @@ var
   RootKey: TRootKey;
   Item: TStartupListItem;
   Status: TStartupItemStatus;
-  Location, Name, FileName: string;
+  Name: string;
 
 begin
   if (AStartupLocation in [slStartupUser, slCommonStartup]) then
@@ -4668,11 +4668,11 @@ begin
     try
       // .lnk file found
       repeat
-        LnkFile := TStartupLnkFile.Create(SearchResult.Name, StartupUser);
-        Location := LnkFile.FileName;
-        Name := ExtractFileName(Location);
+        Name := SearchResult.Name;
         Status := LoadStatus(Name, AStartupLocation);
-        FileName := LnkFile.FullPath;
+
+        // TODO: EOleSysError can be raised if .lnk is invalid
+        LnkFile := TStartupLnkFile.Create(Name, StartupUser);
 
         // Windows 8?
         if CheckWin32Version(6, 2) then
@@ -4685,8 +4685,8 @@ begin
         else
           RootKey := rkUnknown;
 
-        Item := TStartupUserItem.Create(Name, FileName, Location, RootKey,
-          Status.GetEnabled(), LnkFile);
+        Item := TStartupUserItem.Create(Name, LnkFile.FullPath, LnkFile.FileName,
+          RootKey, Status.GetEnabled(), LnkFile);
         Item.Time := Status.GetDeactivationTime();
         Add(Item);
       until FindNext(SearchResult) <> 0;
@@ -4694,48 +4694,46 @@ begin
     finally
       FindClose(SearchResult);
     end;  //of try
-
-    Exit;
-  end;   //of begin
-
-  Wow64 := (AStartupLocation in [slHklmRunOnce32, slHklmRun32]);
-
-  // WOW64 only present on 64 bit Windows!
-  if (Wow64 and (TOSVersion.Architecture <> arIntelX64)) then
-    Exit;
-
-  Items := TStringList.Create;
-  RunOnce := (AStartupLocation in [slHkcuRunOnce, slHklmRunOnce, slHklmRunOnce32]);
-
-  // Allow WOW64 redirection?
-  if Wow64 then
-    Reg := TRegistry.Create(KEY_WOW64_32KEY or KEY_READ)
+  end   //of begin
   else
-    Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ);
+  begin
+    Wow64 := (AStartupLocation in [slHklmRunOnce32, slHklmRun32]);
 
-  try
-    Reg.RootKey := AStartupLocation.GetLocation().Key;
-    Reg.OpenKey(AStartupLocation.GetLocation().Value, False);
-    Reg.GetValueNames(Items);
-    RootKey.FromHKey(Reg.RootKey);
+    // WOW64 only present on 64 bit Windows!
+    if (Wow64 and (TOSVersion.Architecture <> arIntelX64)) then
+      Exit;
 
-    for i := 0 to Items.Count - 1 do
-    begin
-      Name := Items[i];
-      Status := LoadStatus(Name, AStartupLocation);
-      Location := Reg.CurrentPath;
-      FileName := Reg.ReadString(Items[i]);
-      Item := TStartupItem.Create(Name, FileName, Location, RootKey, Status.GetEnabled(),
-        Wow64, RunOnce);
-      Item.Time := Status.GetDeactivationTime();
-      Add(Item);
-    end;  //of for
+    Items := TStringList.Create;
+    RunOnce := (AStartupLocation in [slHkcuRunOnce, slHklmRunOnce, slHklmRunOnce32]);
 
-  finally
-    Reg.CloseKey();
-    Reg.Free;
-    Items.Free;
-  end;  //of try
+    // Allow WOW64 redirection?
+    if Wow64 then
+      Reg := TRegistry.Create(KEY_WOW64_32KEY or KEY_READ)
+    else
+      Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ);
+
+    try
+      Reg.RootKey := AStartupLocation.GetLocation().Key;
+      Reg.OpenKey(AStartupLocation.GetLocation().Value, False);
+      Reg.GetValueNames(Items);
+      RootKey.FromHKey(Reg.RootKey);
+
+      for i := 0 to Items.Count - 1 do
+      begin
+        Name := Items[i];
+        Status := LoadStatus(Name, AStartupLocation);
+        Item := TStartupItem.Create(Name, Reg.ReadString(Name), Reg.CurrentPath,
+          RootKey, Status.GetEnabled(), Wow64, RunOnce);
+        Item.Time := Status.GetDeactivationTime();
+        Add(Item);
+      end;  //of for
+
+    finally
+      Reg.CloseKey();
+      Reg.Free;
+      Items.Free;
+    end;  //of try
+  end;  //of if
 end;
 
 procedure TStartupList.Search(AExpertMode: Boolean = False; AWin64: Boolean = True);
