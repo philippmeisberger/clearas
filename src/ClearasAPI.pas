@@ -460,6 +460,13 @@ type
     function DeleteKey(AHKey: HKEY; const AKeyPath, AKeyName: string;
       AFailIfNotExists: Boolean = True): Boolean;
     function GetFullLocation(): string; override;
+
+    /// <summary>
+    ///   Gets the root Registry key.
+    /// </summary>
+    /// <returns>
+    ///    The root Registry key.
+    /// </returns>
     function GetRootKey(): TRootKey; virtual; abstract;
 
     /// <summary>
@@ -546,9 +553,6 @@ type
     /// <summary>
     ///   Gets the root Registry key.
     /// </summary>
-    /// <returns>
-    ///    The root Registry key.
-    /// </returns>
     property RootKey: TRootKey read GetRootKey;
 
     /// <summary>
@@ -1309,7 +1313,7 @@ type
       /// <remarks>
       ///   Only since Windows 8!
       /// </remarks>
-      StartupApprovedKey  = TStartupListItem.StartupApprovedBaseKey +'StartupFolder';
+      StartupApprovedKey = TStartupListItem.StartupApprovedBaseKey +'StartupFolder';
 
     /// <summary>
     ///   Constructor for creating a <c>TStartupUserItem</c> instance.
@@ -1489,6 +1493,9 @@ type
     /// <returns>
     ///   <c>True</c> if the item was successfully added or <c>False</c> otherwise.
     /// </returns>
+    /// <exception>
+    ///   <c>EListBlocked</c> if another operation is pending on the list.
+    /// </exception>
     function Add(const AFileName, AArguments, ACaption: string): Boolean; overload;
 
     /// <summary>
@@ -1519,6 +1526,9 @@ type
     /// <returns>
     ///   <c>True</c> if the import was successful or <c>False</c> otherwise.
     /// </returns>
+    /// <exception>
+    ///   <c>EListBlocked</c> if another operation is pending on the list.
+    /// </exception>
     function ImportBackup(const AFileName: TFileName): Boolean;
 
     /// <summary>
@@ -1886,6 +1896,9 @@ type
     /// <returns>
     ///   <c>True</c> if the item was successfully added or <c>False</c> otherwise.
     /// </returns>
+    /// <exception>
+    ///   <c>EListBlocked</c> if another operation is pending on the list.
+    /// </exception>
     function Add(const AFileName, AArguments, ALocationRoot, ACaption: string;
       AExtended: Boolean = False): Boolean; overload;
 
@@ -2094,6 +2107,9 @@ type
     /// <returns>
     ///   <c>True</c> if the item was successfully added or <c>False</c> otherwise.
     /// </returns>
+    /// <exception>
+    ///   <c>EListBlocked</c> if another operation is pending on the list.
+    /// </exception>
     function Add(const AFileName, AArguments, ACaption: string): Boolean; overload;
 
     /// <summary>
@@ -2308,6 +2324,9 @@ type
     /// <returns>
     ///   <c>True</c> if the import was successful or <c>False</c> otherwise.
     /// </returns>
+    /// <exception>
+    ///   <c>EListBlocked</c> if another operation is pending on the list.
+    /// </exception>
     function ImportBackup(const AFileName: TFileName): Boolean;
 
     /// <summary>
@@ -4007,10 +4026,7 @@ end;
 
 function TStartupUserItem.GetExportFilter(ALanguageFile: TLanguageFile): string;
 begin
-  if StartupUser then
-    Result := ToString() +'|*'+ TStartupLnkFile.StartupUserBackupFileExtension
-  else
-    Result := ToString() +'|*'+ TStartupLnkFile.StartupCommonBackupFileExtension;
+  Result := ToString() +'|*'+ GetBackupExtension();
 end;
 
 procedure TStartupUserItem.ChangeFilePath(const ANewFileName: string);
@@ -4082,7 +4098,7 @@ begin
     KeyName := AddCircumflex(FLocation);
 
     if not Reg.OpenKey(DisabledKey + KeyName, True) then
-      raise EStartupException.Create('Could not create key'''+ DisabledKey
+      raise EStartupException.Create('Could not create key '''+ DisabledKey
         + KeyName +''': '+ Reg.LastErrorMsg);
 
     Reg.WriteString('path', FLocation);
@@ -4408,6 +4424,7 @@ begin
         if (AArguments <> '') then
           FullPath := FullPath +' '+ AArguments;
 
+        // TODO: Existing item can be overwritten
         Reg.WriteString(ACaption, FullPath);
 
         // Adds item to list
@@ -5232,7 +5249,7 @@ end;
 
 procedure TShellExItem.Rename(const ANewName: string);
 begin
-  raise EAbstractError.Create('It is impossible to rename a '+ ToString() +'item!');
+  raise EAbstractError.Create('It is impossible to rename a '+ ToString() +' item!');
 end;
 
 function TShellExItem.ToString(): string;
@@ -5341,7 +5358,7 @@ end;
 
 procedure TShellNewItem.Rename(const ANewName: string);
 begin
-  raise EAbstractError.Create('It is impossible to rename a '+ ToString() +'item!');
+  raise EAbstractError.Create('It is impossible to rename a '+ ToString() +' item!');
 end;
 
 function TShellNewItem.ToString(): string;
@@ -5397,7 +5414,7 @@ begin
       Reg.RootKey := HKEY_CLASSES_ROOT;
 
       if not Reg.OpenKey(LocationRoot, True) then
-        raise EContextMenuException.Create('Could not create key: '''+ LocationRoot
+        raise EContextMenuException.Create('Could not create key '''+ LocationRoot
           +''': '+ Reg.LastErrorMsg);
 
       // Location is a file extension?
@@ -5422,7 +5439,7 @@ begin
 
       // Adds new context item to Registry
       if not Reg.OpenKey(KeyPath, True) then
-        raise EContextMenuException.Create('Could not open key: '''+ KeyPath
+        raise EContextMenuException.Create('Could not open key '''+ KeyPath
           +''': '+ Reg.LastErrorMsg);
 
       // Set caption of item
@@ -5437,7 +5454,7 @@ begin
       KeyPath := KeyPath +'\command';
 
       if not Reg.OpenKey(KeyPath, True) then
-        raise EContextMenuException.Create('Could not create key: '''+ KeyPath +''': '
+        raise EContextMenuException.Create('Could not create key '''+ KeyPath +''': '
           + Reg.LastErrorMsg);
 
       // Write command of item
