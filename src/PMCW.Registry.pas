@@ -94,18 +94,18 @@ type
   TRegistryWow64Redirection = (
 
     /// <summary>
-    ///   64 bit applications access 64 bit registry hive and 32 bit applications
-    ///   access 32 bit registry hive.
+    ///   No redirection: 64 bit applications access 64 bit registry hive and
+    ///   32 bit applications access 32 bit registry hive.
     /// </summary>
     rrNative,
 
     /// <summary>
-    ///   32 and 64 bit applications access 32 bit registry hive.
+    ///   Redirect registry access to 32 bit hive.
     /// </summary>
     rr32Bit,
 
     /// <summary>
-    ///   32 and 64 bit applications access 64 bit registry hive.
+    ///   Redirect registry access to 64 bit hive.
     /// </summary>
     rr64Bit
   );
@@ -342,39 +342,7 @@ type
     property Wow64Redirection: TRegistryWow64Redirection read FWow64Redirection write SetWow64Redirection;
   end;
 
-/// <summary>
-///   Gets an access rights mask to disable or revert the WOW64 registry
-///   redirection on 64-bit Windows.
-/// </summary>
-/// <param name="AAccessRight">
-///   The access right to use, e.g. <c>KEY_READ</c>.
-/// </param>
-/// <param name="A64Bit">
-///    If set to <c>True</c> use the 64-bit registry. Otherwise use the 32-bit.
-/// </param>
-/// <returns>
-///    The access mask.
-/// </returns>
-function Wow64RegistryRedirection(AAccessRight: LongWord; A64Bit: Boolean = True): LongWord;
-
 implementation
-
-function Wow64RegistryRedirection(AAccessRight: LongWord;
-  A64Bit: Boolean = True): LongWord;
-begin
-  Result := AAccessRight;
-
-{$IFDEF WIN64}
-   if not A64Bit then
-     // Enable redirection to 32 Bit registry hive
-     Result := Result or KEY_WOW64_32KEY;
-{$ELSE}
-  if (A64Bit and (TOSVersion.Architecture = arIntelX64)) then
-    // Enable redirection to 64 Bit registry hive
-    Result := Result or KEY_WOW64_64KEY;
-{$ENDIF}
-end;
-
 
 { TRootKeyHelper }
 
