@@ -4348,8 +4348,6 @@ var
   RootKey: TRootKey;
 
 begin
-  Result := False;
-
   // File path already exists in another item?
   for i := 0 to Count - 1 do
   begin
