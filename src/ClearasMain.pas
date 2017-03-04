@@ -2271,7 +2271,7 @@ begin
 
   // Show open dialog
   if not PromptForFileName(FileName, FLang.GetString(LID_FILTER_EXE_BAT_FILES),
-    '', StripHotKey(mmAdd.Caption), '%ProgramFiles%') then
+    '', StripHotKey(mmAdd.Caption)) then
     Exit;
 
   try
@@ -2289,9 +2289,7 @@ begin
     if not InputQuery(StripHotKey(mmAdd.Caption), FLang.GetString(LID_RENAME_PROMPT), Name) then
       Exit;
 
-    // Name must not be empty!
-    if (Name = '') then
-      raise EAssertionFailed.Create('Name must not be empty!');
+    Assert(Name <> '', 'Name must not be empty!');
 
     // Append optional parameters
     if not InputQuery(StripHotKey(mmAdd.Caption), FLang.GetString(LID_PARAMETERS_PROMPT), Args) then
@@ -2300,9 +2298,8 @@ begin
     // Add startup item?
     case PageControl.ActivePageIndex of
       0: begin
-           // Startup item already exists?
            if not FStartup.Add(FileName, Args, Name) then
-             raise EWarning.Create(FLang.Format(LID_APPLICATION_EXISTS, [FileName]));
+             raise Exception.Create('Item was not added!');
          end;
 
       1: begin
@@ -2318,9 +2315,8 @@ begin
                FLang.GetString(LID_HIDE), Extended, False) then
                Exit;
 
-             // Contextmenu item already exists?
              if not FContext.Add(FileName, Args, Location, Name, Extended) then
-               raise EWarning.Create(FLang.Format(LID_ENTRY_ALREADY_EXISTS, [FileName]));
+               raise Exception.Create('Item was not added!');
 
              // User choice exists for selected file extension?
              if FContext.Last.UserChoiceExists(Location) then
@@ -2336,9 +2332,8 @@ begin
          end;  //of if
 
       2: begin
-           // Service item already exists?
            if not FService.Add(FileName, Args, Name) then
-             raise EWarning.Create(FLang.Format(LID_APPLICATION_EXISTS, [FileName]));
+             raise Exception.Create('Item was not added!');
          end;
     end;  //of case
 
@@ -2346,9 +2341,9 @@ begin
     on E: EListBlocked do
       FLang.ShowMessage(LID_OPERATION_PENDING1, LID_OPERATION_PENDING2, mtWarning);
 
-    on E: EWarning do
+    on E: EAlreadyExists do
       FLang.ShowMessage(StripHotKey(mmAdd.Caption) + FLang.GetString(LID_IMPOSSIBLE),
-        E.Message, mtWarning);
+        FLang.GetString(LID_ENTRY_ALREADY_EXISTS), mtWarning);
 
     on E: EAssertionFailed do
       FLang.ShowMessage(StripHotKey(mmAdd.Caption) + FLang.GetString(LID_IMPOSSIBLE),

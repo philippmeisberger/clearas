@@ -276,6 +276,11 @@ type
   EWarning = class(EAbort);
 
   /// <summary>
+  ///   Raised when trying to add an item that is already present.
+  /// </summary>
+  EAlreadyExists = class(EAbort);
+
+  /// <summary>
   ///   A <c>TRootItem</c> represents an basic list item that can be added to a
   ///   <c>TRootList</c>.
   /// </summary>
@@ -991,13 +996,13 @@ const
   ///   Used in <see cref="TStartupItemStatus"/> to signal that a startup item
   ///   is enabled.
   /// </summary>
-  ST_ENABLED                  = $2;
+  ST_ENABLED  = $2;
 
   /// <summary>
   ///   Used in <see cref="TStartupItemStatus"/> to signal that a startup item
   ///   is disabled.
   /// </summary>
-  ST_DISABLED                 = $3;
+  ST_DISABLED = $3;
 
 type
   /// <summary>
@@ -1495,6 +1500,7 @@ type
     /// </returns>
     /// <exception>
     ///   <c>EListBlocked</c> if another operation is pending on the list.
+    ///   <c>EAlreadyExists</c> if item already exists.
     /// </exception>
     function Add(const AFileName, AArguments, ACaption: string): Boolean; overload;
 
@@ -1898,6 +1904,7 @@ type
     /// </returns>
     /// <exception>
     ///   <c>EListBlocked</c> if another operation is pending on the list.
+    ///   <c>EAlreadyExists</c> if item already exists.
     /// </exception>
     function Add(const AFileName, AArguments, ALocationRoot, ACaption: string;
       AExtended: Boolean = False): Boolean; overload;
@@ -2109,6 +2116,7 @@ type
     /// </returns>
     /// <exception>
     ///   <c>EListBlocked</c> if another operation is pending on the list.
+    ///   <c>EAlreadyExists</c> if item already exists.
     /// </exception>
     function Add(const AFileName, AArguments, ACaption: string): Boolean; overload;
 
@@ -4385,6 +4393,8 @@ var
   Reg: TRegistry;
 
 begin
+  Result := False;
+  Assert(ACaption <> '', 'Caption must not be empty!');
   Name := ExtractFileName(AFileName);
   Ext := ExtractFileExt(Name);
 
@@ -4399,14 +4409,7 @@ begin
   try
     // Add new startup user item?
     if (Ext = '.exe') then
-    begin
-      if (ACaption <> '') then
-        Name := ACaption
-      else
-        Name := ChangeFileExt(Name, '');
-
-      Result := AddNewStartupUserItem(Name, AFileName, AArguments);
-    end  //of begin
+      Result := AddNewStartupUserItem(ACaption, AFileName, AArguments)
     else
     begin
       // No WOW64 redirection on HKCU!
@@ -4424,7 +4427,10 @@ begin
         if (AArguments <> '') then
           FullPath := FullPath +' '+ AArguments;
 
-        // TODO: Existing item can be overwritten
+        // Item already exists?
+        if Reg.ValueExists(ACaption) then
+          raise EAlreadyExists.Create('Item already exists!');
+
         Reg.WriteString(ACaption, FullPath);
 
         // Adds item to list
@@ -4442,12 +4448,11 @@ begin
       end;  //of try
     end;  //of begin
 
-    // Refresh TListView
-    if Result then
-      Refresh();
-
   finally
     FLock.Release();
+
+    if Result then
+      Refresh();
   end;  //of try
 end;
 
@@ -4527,13 +4532,12 @@ begin
     Result := AddNewStartupUserItem(Name, LnkFile.ExeFileName, LnkFile.Arguments,
       (Ext = TStartupLnkFile.StartupUserBackupFileExtension));
 
-    // Refresh TListView
-    if Result then
-      Refresh();
-
   finally
     LnkFile.Free;
     FLock.Release();
+
+    if Result then
+      Refresh();
   end;  //of try
 end;
 
@@ -5398,7 +5402,7 @@ begin
 
     // File path already exists in another item?
     if (IndexOf(Name, LocationRoot) <> -1) then
-      Exit;
+      raise EAlreadyExists.Create('Item already exists!');
 
     // Escape space char using quotes
     FullPath := '"'+ AFileName +'"';
@@ -5464,9 +5468,6 @@ begin
       Result := (Add(TShellItem.Create(Name, ACaption, FullPath, FileType, True,
         AExtended)) <> -1);
 
-      // Refresh TListView
-      Refresh();
-
     finally
       Reg.CloseKey();
       Reg.Free;
@@ -5474,6 +5475,9 @@ begin
 
   finally
     FLock.Release();
+
+    if Result then
+      Refresh();
   end;  //of try
 end;
 
@@ -6172,7 +6176,7 @@ begin
 
       // Service already exists?
       if (LastError = ERROR_SERVICE_EXISTS) then
-        Exit;
+        raise EAlreadyExists.Create('Item already exists!');
 
       raise EServiceException.Create('Could not create new service: '+ SysErrorMessage(LastError));
     end;  //of begin
@@ -6183,11 +6187,11 @@ begin
     Result := (Add(TServiceListItem.Create(Name, ACaption, FullPath, True,
       ssAutomatic, FManager)) <> -1);
 
-    // Refresh TListView
-    Refresh();
-
   finally
     FLock.Release();
+
+    if Result then
+      Refresh();
   end;  //of try
 end;
 
@@ -6683,13 +6687,12 @@ begin
       XmlTask.Free;
     end;  //of try
 
-    // Refresh TListView
-    if Result then
-      Refresh();
-
   finally
     FLock.Release();
     RevertWow64FsRedirection(OldValue);
+
+    if Result then
+      Refresh();
   end;  //of try
 end;
 
