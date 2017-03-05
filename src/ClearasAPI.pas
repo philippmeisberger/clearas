@@ -4224,7 +4224,7 @@ begin
   for i := 0 to Count - 1 do
   begin
     if Items[i].FileName.Contains(AFileName) then
-      Exit;
+      raise EAlreadyExists.Create('Item already exists!');
   end;  //of for
 
   // Prepare .lnk file
