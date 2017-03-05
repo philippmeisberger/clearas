@@ -58,6 +58,7 @@ type
     procedure DeleteTestItem(ALocation: TStartupLocation);
     function GetItemName(ALocation: TStartupLocation;
       AEraseable: Boolean = False): string;
+    procedure ImportDuplicate;
   protected
     procedure LoadItems(); override;
   public
@@ -464,13 +465,17 @@ begin
   end;  //of for
 end;
 
+procedure TStartupListTest.ImportDuplicate;
+begin
+  TStartupList(FRootList).ImportBackup('..\..\data\'+ GetItemName(slStartupUser) + TStartupUserItem.FileExtensionStartupUser);
+end;
+
 procedure TStartupListTest.TestImportBackup;
 begin
-  Check(TStartupList(FRootList).ImportBackup('..\..\data\'+ GetItemName(slStartupUser) +  TStartupLnkFile.StartupUserBackupFileExtension), 'Startup User file already exists!');
-  CheckFalse(TStartupList(FRootList).ImportBackup('..\..\data\'+ GetItemName(slStartupUser) + TStartupLnkFile.StartupUserBackupFileExtension), 'Startup User file already exists so it must not be possible to import it again!');
+  Check(TStartupList(FRootList).ImportBackup('..\..\data\'+ GetItemName(slStartupUser) +  TStartupUserItem.FileExtensionStartupUser), 'Startup User file already exists!');
+  CheckException(ImportDuplicate, EAlreadyExists, 'Startup User file already exists so it must not be possible to import it again!');
 {$IFNDEF DEBUG}
-  Check(TStartupList(FRootList).ImportBackup('..\..\data\'+ GetItemName(slCommonStartup) + TStartupLnkFile.StartupCommonBackupFileExtension), 'Startup Common file already exists!');
-  CheckFalse(TStartupList(FRootList).ImportBackup('..\..\data\'+ GetItemName(slCommonStartup) + TStartupLnkFile.StartupCommonBackupFileExtension), 'Startup Common file already exists so it must not be possible to import it again!');
+  Check(TStartupList(FRootList).ImportBackup('..\..\data\'+ GetItemName(slCommonStartup) + TStartupUserItem.FileExtensionStartupCommon), 'Startup Common file already exists!');
   CheckEquals(2, FRootList.Count, 'After importing 2 startup backup files there should be 2 items in the list');
   TestDelete(GetItemName(slCommonStartup));
 {$ELSE}
@@ -495,8 +500,8 @@ procedure TStartupListTest.AddTestItemEnabled(ALocation: TStartupLocation;
   AEraseable: Boolean = False);
 var
   Reg: TRegistry;
-  LnkFile: TStartupLnkFile;
-  ItemName, ExeFileName: string;
+  LnkFile: TLnkFile;
+  ItemName, ExeName: string;
 
 begin
 {$IFDEF DEBUG}
@@ -513,16 +518,22 @@ begin
     else
       ItemName := ItemName +' (eraseable)';
 
-    ExeFileName := cTestExeEraseable
+    ExeName := cTestExeEraseable
   end  //of begin
   else
-    ExeFileName := cTestExe;
+    ExeName := cTestExe;
 
   if (ALocation in [slStartupUser, slCommonStartup]) then
   begin
-    LnkFile := TStartupLnkFile.Create(ItemName, (ALocation = slStartupUser), ExeFileName, '-s');
+    LnkFile := TLnkFile.Create(ALocation.GetLocation().Value + ItemName);
 
     try
+      with LnkFile do
+      begin
+        ExeFileName := ExeName;
+        Arguments := '-s';
+      end;  //of with
+
       CheckTrue(LnkFile.Save(), 'Could not save .lnk file!');
 
     finally
@@ -543,7 +554,7 @@ begin
     try
       Reg.RootKey := ALocation.GetLocation().Key;
       Reg.OpenKey(ALocation.GetLocation().Value, False);
-      Reg.WriteString(ItemName, ExeFileName);
+      Reg.WriteString(ItemName, ExeName);
       CheckEqualsString('', Reg.LastErrorMsg, Reg.LastErrorMsg);
 
     finally
@@ -576,14 +587,20 @@ end;
 procedure TStartupListTest.DeleteTestItem(ALocation: TStartupLocation);
 var
   Reg: TRegistry;
-  LnkFile: TStartupLnkFile;
+  LnkFile: TLnkFile;
 
 begin
   if (ALocation in [slStartupUser, slCommonStartup]) then
   begin
-    LnkFile := TStartupLnkFile.Create(GetItemName(ALocation), (ALocation = slStartupUser), cTestExe, '-s');
+    LnkFile := TLnkFile.Create(ALocation.GetLocation().Value + GetItemName(ALocation));
 
     try
+      with LnkFile do
+      begin
+        ExeFileName := cTestExe;
+        Arguments := '-s';
+      end;  //of with
+
       if LnkFile.Exists() then
         CheckTrue(LnkFile.Delete(), 'Could not delete .lnk file!');
 
@@ -655,8 +672,8 @@ begin
     slHklmRun32:     Result := GetName('HKLM32', AEraseable);
     slHklmRunOnce:   Result := GetName('HKLM RunOnce', AEraseable);
     slHklmRunOnce32: Result := GetName('HKLM RunOnce32', AEraseable);
-    slStartupUser:   Result := GetName('Startup User', AEraseable) +'.lnk';
-    slCommonStartup: Result := GetName('Startup Common', AEraseable) +'.lnk';
+    slStartupUser:   Result := GetName('Startup User', AEraseable) + TLnkFile.FileExtension;
+    slCommonStartup: Result := GetName('Startup Common', AEraseable) + TLnkFile.FileExtension;
   end;  //of case
 end;
 
