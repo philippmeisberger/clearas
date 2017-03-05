@@ -138,128 +138,6 @@ type
   end;
 
   /// <summary>
-  ///   A <c>TStartupUserLnkFile</c> represents a startup link file.
-  /// </summary>
-  TStartupLnkFile = class(TLnkFile)
-  private
-    FStartupUser: Boolean;
-  public
-    const
-      /// <summary>
-      ///   Startup user item backup file extension.
-      /// </summary>
-      StartupUserBackupFileExtension   = '.Startup';
-
-      /// <summary>
-      ///   Startup common item backup file extension.
-      /// </summary>
-      StartupCommonBackupFileExtension = '.CommonStartup';
-
-    /// <summary>
-    ///   Constructor for creating a <c>TStartupLnkFile</c> instance.
-    /// </summary>
-    /// <param name="AFileName">
-    ///   The filename of the .lnk file.
-    /// </param>
-    constructor Create(const AFileName: TFileName); reintroduce; overload;
-
-    /// <summary>
-    ///   Constructor for creating a <c>TStartupLnkFile</c> instance.
-    /// </summary>
-    /// <param name="AName">
-    ///   The name of the .lnk file.
-    /// </param>
-    /// <param name="AStartupUser">
-    ///   If set to <c>True</c> the startup location for the current user is
-    ///   used. Otherwise the startup location for all users is used.
-    /// </param>
-    constructor Create(const AName: string; AStartupUser: Boolean); overload;
-
-    /// <summary>
-    ///   Constructor for creating a <c>TStartupLnkFile</c> instance.
-    /// </summary>
-    /// <param name="AName">
-    ///   The name of the .lnk file.
-    /// </param>
-    /// <param name="AStartupUser">
-    ///   If set to <c>True</c> the startup location for the current user is
-    ///   used. Otherwise the startup location for all users is used.
-    /// </param>
-    /// <param name="AExeFileName">
-    ///   The absolute .exe filename.
-    /// </param>
-    /// <param name="AArguments">
-    ///   Optional arguments passed to the .exe.
-    /// </param>
-    constructor Create(const AName: string; AStartupUser: Boolean;
-      const AExeFileName: TFileName; const AArguments: string = ''); overload;
-
-    /// <summary>
-    ///   Checks if the backup .lnk file in <c>C:\Windows\pss\</c> exists.
-    /// </summary>
-    /// <returns>
-    ///   <c>True</c> if the backup exists or <c>False</c> otherwise.
-    /// </returns>
-    function BackupExists(): Boolean; deprecated 'Since Windows 8';
-
-    /// <summary>
-    ///   Creates a backup .lnk file in <c>C:\Windows\pss\</c>.
-    /// </summary>
-    procedure CreateBackup(); deprecated 'Since Windows 8';
-
-    /// <summary>
-    ///   Deletes the backup .lnk file in <c>C:\Windows\pss\</c>.
-    /// </summary>
-    /// <returns>
-    ///   <c>True</c> if the backup was successfully deleted or <c>False</c>
-    ///   otherwise.
-    /// </returns>
-    function DeleteBackup(): Boolean; deprecated 'Since Windows 8';
-
-    /// <summary>
-    ///   Gets the path to the backup directory.
-    /// </summary>
-    /// <returns>
-    ///   The backup directory.
-    /// </returns>
-    class function GetBackupDir(): string; static; deprecated 'Since Windows 8';
-
-    /// <summary>
-    ///   Gets the filesystem startup location.
-    /// </summary>
-    /// <param name="AStartupUser">
-    ///   If set to <c>True</c> the startup location for the current user is
-    ///   returned. Otherwise the startup location for all users is returned.
-    /// </param>
-    /// <returns>
-    ///   The startup directory.
-    /// </returns>
-    class function GetStartUpDir(AStartupUser: Boolean): string; static;
-
-    /// <summary>
-    ///   Gets extension of the backup file.
-    /// </summary>
-    /// <returns>
-    ///   The backup extension.
-    /// </returns>
-    function GetBackupExt(): string;
-
-    /// <summary>
-    ///   Gets the path to the backup .lnk file in <c>C:\Windows\pss\</c>.
-    /// </summary>
-    /// <remarks>
-    ///   Deprecated since Windows 8!
-    /// </remarks>
-    function GetBackupLnk(): string; deprecated 'Since Windows 8';
-
-    /// <summary>
-    ///   The .lnk file is located in the startup folder of the current user
-    ///   or located in startup folder of all users.
-    /// </summary>
-    property StartupUser: Boolean read FStartupUser;
-  end;
-
-  /// <summary>
   ///   Raised when no item is selected.
   /// </summary>
   EInvalidItem = class(EAccessViolation);
@@ -1292,9 +1170,14 @@ type
   /// </summary>
   TStartupUserItem = class(TStartupListItem)
   private
-    FLnkFile: TStartupLnkFile;
+    FLnkFile: TLnkFile;
+    FStartupUser: Boolean;
     function AddCircumflex(const AName: string): string;
-    function GetStartupUser: Boolean;
+    function BackupExists(): Boolean; deprecated 'Since Windows 8';
+    procedure CreateBackup(); deprecated 'Since Windows 8';
+    function DeleteBackup(): Boolean; deprecated 'Since Windows 8';
+    function GetBackupDir(): string; deprecated 'Since Windows 8';
+    function GetBackupLnk(): string; deprecated 'Since Windows 8';
   protected
     procedure ChangeFilePath(const ANewFileName: string); override;
     function Disable(): Boolean; override;
@@ -1311,6 +1194,16 @@ type
       ///   DEPRECATED since Windows 8!
       /// </remarks>
       DisabledKey = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\startupfolder\' deprecated;
+
+      /// <summary>
+      ///   Startup user item backup file extension.
+      /// </summary>
+      FileExtensionStartupUser = '.Startup';
+
+      /// <summary>
+      ///   Startup common item backup file extension.
+      /// </summary>
+      FileExtensionStartupCommon = '.CommonStartup';
 
       /// <summary>
       ///   Registry status key.
@@ -1332,17 +1225,17 @@ type
     /// <param name="ALocation">
     ///   The location where the item can be found.
     /// </param>
-    /// <param name="ARootKey">
-    ///   The root Registry key.
-    /// </param>
     /// <param name="AEnabled">
     ///   The status.
+    /// </param>
+    /// <param name="AStartupUser">
+    ///   Item is located in autostart of current user or in common autostart.
     /// </param>
     /// <param name="ALnkFile">
     ///   The corresponding .lnk file.
     /// </param>
     constructor Create(const AName, AFileName, ALocation: string;
-      ARootKey: TRootKey; AEnabled: Boolean; ALnkFile: TStartupLnkFile);
+      AEnabled, AStartupUser: Boolean; ALnkFile: TLnkFile);
 
     /// <summary>
     ///   Destructor for destroying a <c>TStartupUserItem</c> instance.
@@ -1394,16 +1287,16 @@ type
     function ToString(): string; override;
 
     /// <summary>
+    ///   Gets or sets the .lnk file.
+    /// </summary>
+    property LnkFile: TLnkFile read FLnkFile write FLnkFile;
+
+    /// <summary>
     ///   If <c>True</c> the item is located in the startup folder of the
     ///   current user. Otherwise the item is located in startup folder of all
     ///   users.
     /// </summary>
-    property StartupUser: Boolean read GetStartupUser;
-
-    /// <summary>
-    ///   Gets or sets the .lnk file.
-    /// </summary>
-    property LnkFile: TStartupLnkFile read FLnkFile write FLnkFile;
+    property StartupUser: Boolean read FStartupUser;
   end;
 
   /// <summary>
@@ -2499,90 +2392,6 @@ begin
   finally
     CoUninitialize();
   end;  //of try
-end;
-
-
-{ TStartupLnkFile }
-
-constructor TStartupLnkFile.Create(const AFileName: TFileName);
-begin
-  inherited Create(AFileName);
-  FStartupUser := not (ExtractFileExt(AFileName) = StartupCommonBackupFileExtension);
-end;
-
-constructor TStartupLnkFile.Create(const AName: string; AStartupUser: Boolean);
-begin
-  inherited Create(GetStartUpDir(AStartupUser) + ChangeFileExt(AName, FileExtension));
-  FStartupUser := AStartupUser;
-end;
-
-constructor TStartupLnkFile.Create(const AName: string; AStartupUser: Boolean;
-  const AExeFileName: TFileName; const AArguments: string = '');
-begin
-  Create(AName, AStartupUser);
-  FExeFileName := AExeFileName;
-  FArguments := AArguments;
-end;
-
-function TStartupLnkFile.BackupExists(): Boolean;
-begin
-  // Deprecated since Windows 8!
-  if CheckWin32Version(6, 2) then
-    Exit(False);
-
-  Result := FileExists(GetBackupLnk());
-end;
-
-procedure TStartupLnkFile.CreateBackup();
-begin
-  // Deprecated since Windows 8!
-  if CheckWin32Version(6, 2) then
-    Exit;
-
-  if not CopyFile(PChar(FFileName), PChar(GetBackupLnk()), False) then
-    raise EStartupException.Create('Backup could not be created!');
-end;
-
-function TStartupLnkFile.DeleteBackup(): Boolean;
-begin
-  // Deprecated since Windows 8!
-  if CheckWin32Version(6, 2) then
-    Exit(False);
-
-  Result := DeleteFile(GetBackupLnk());
-end;
-
-class function TStartupLnkFile.GetBackupDir(): string;
-begin
-  Result := GetKnownFolderPath(FOLDERID_Windows);
-
-  if (Result <> '') then
-    Result := Result +'pss\';
-end;
-
-function TStartupLnkFile.GetBackupExt(): string;
-begin
-  if FStartupUser then
-    Result := StartupUserBackupFileExtension
-  else
-    Result := StartupCommonBackupFileExtension;
-end;
-
-function TStartupLnkFile.GetBackupLnk(): string;
-begin
-  // Not possible on Windows 8!
-  if CheckWin32Version(6, 2) then
-    Exit;
-
-  Result := TStartupLnkFile.GetBackupDir() + ExtractFileName(FFileName) + GetBackupExt();
-end;
-
-class function TStartupLnkFile.GetStartUpDir(AStartupUser: Boolean): string;
-begin
-  if AStartupUser then
-    Result := GetKnownFolderPath(FOLDERID_Startup)
-  else
-    Result := GetKnownFolderPath(FOLDERID_CommonStartup);
 end;
 
 
@@ -3985,9 +3794,22 @@ end;
 { TStartupUserItem }
 
 constructor TStartupUserItem.Create(const AName, AFileName, ALocation: string;
-  ARootKey: TRootKey; AEnabled: Boolean; ALnkFile: TStartupLnkFile);
+  AEnabled, AStartupUser: Boolean; ALnkFile: TLnkFile);
+const
+  cCurrentUser: array[Boolean] of TRootKey = (rkHKLM, rkHKCU);
+
+var
+  RootKey: TRootKey;
+
 begin
-  inherited Create(AName, AFileName, ALocation, ARootKey, AEnabled, False);
+  // Windows 8?
+  if CheckWin32Version(6, 2) then
+    RootKey := cCurrentUser[AStartupUser]
+  else
+    RootKey := rkUnknown;
+
+  inherited Create(AName, AFileName, ALocation, RootKey, AEnabled, False);
+  FStartupUser := AStartupUser;
   FLnkFile := ALnkFile;
 end;
 
@@ -4000,6 +3822,25 @@ end;
 function TStartupUserItem.AddCircumflex(const AName: string): string;
 begin
   Result := AName.Replace('\', '^');
+end;
+
+function TStartupUserItem.BackupExists(): Boolean;
+begin
+  // Deprecated since Windows 8!
+  if CheckWin32Version(6, 2) then
+    Exit(False);
+
+  Result := System.SysUtils.FileExists(GetBackupLnk());
+end;
+
+procedure TStartupUserItem.CreateBackup();
+begin
+  // Deprecated since Windows 8!
+  if CheckWin32Version(6, 2) then
+    Exit;
+
+  if not CopyFile(PChar(FFileName), PChar(GetBackupLnk()), False) then
+    raise EStartupException.Create('Backup could not be created!');
 end;
 
 function TStartupUserItem.GetFullLocation(): string;
@@ -4015,11 +3856,6 @@ begin
       Result := inherited GetFullLocation();
 end;
 
-function TStartupUserItem.GetStartupUser(): Boolean;
-begin
-  Result := FLnkFile.StartupUser;
-end;
-
 function TStartupUserItem.GetApprovedLocation(): string;
 begin
   // Only since Windows 8!
@@ -4027,9 +3863,29 @@ begin
     Result := StartupApprovedKey;
 end;
 
+function TStartupUserItem.GetBackupDir(): string;
+begin
+  Result := GetKnownFolderPath(FOLDERID_Windows);
+
+  if (Result <> '') then
+    Result := Result +'pss\';
+end;
+
 function TStartupUserItem.GetBackupExtension(): string;
 begin
-  Result := FLnkFile.GetBackupExt();
+  if FStartupUser then
+    Result := FileExtensionStartupUser
+  else
+    Result := FileExtensionStartupCommon;
+end;
+
+function TStartupUserItem.GetBackupLnk(): string;
+begin
+  // Not possible on Windows 8!
+  if CheckWin32Version(6, 2) then
+    Exit;
+
+  Result := GetBackupDir() + ExtractFileName(FFileName) + GetBackupExtension();
 end;
 
 function TStartupUserItem.GetExportFilter(ALanguageFile: TLanguageFile): string;
@@ -4049,7 +3905,7 @@ begin
 
   // Rewrite backup prior to Windows 7
   if not FEnabled then
-    FLnkFile.CreateBackup();
+    CreateBackup();
 end;
 
 function TStartupUserItem.Delete(): Boolean;
@@ -4076,8 +3932,17 @@ begin
 
     // Delete backup file prior to Windows 7
     if Result then
-      FLnkFile.DeleteBackup();
+      DeleteBackup();
   end;  //of if
+end;
+
+function TStartupUserItem.DeleteBackup(): Boolean;
+begin
+  // Deprecated since Windows 8!
+  if CheckWin32Version(6, 2) then
+    Exit(False);
+
+  Result := DeleteFile(GetBackupLnk());
 end;
 
 function TStartupUserItem.Disable(): Boolean;
@@ -4089,15 +3954,15 @@ begin
   Result := False;
 
   // Create backup directory if not exist
-  if not DirectoryExists(TStartupLnkFile.GetBackupDir()) then
-    ForceDirectories(TStartupLnkFile.GetBackupDir());
+  if not DirectoryExists(GetBackupDir()) then
+    ForceDirectories(GetBackupDir());
 
   // .lnk does not exist
   if not FLnkFile.Exists() then
     raise EStartupException.Create('Lnk file '''+ FLnkFile.FileName +''' does not exist!');
 
   // Create backup by copying original .lnk
-  FLnkFile.CreateBackup();
+  CreateBackup();
 
   Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_WRITE);
 
@@ -4112,7 +3977,7 @@ begin
     Reg.WriteString('path', FLocation);
     Reg.WriteString('item', ChangeFileExt(ExtractFileName(Name), ''));
     Reg.WriteString('command', FileName);
-    Reg.WriteString('backup', FLnkFile.GetBackupLnk());
+    Reg.WriteString('backup', GetBackupLnk());
 
     // Special Registry entries only for Windows >= Vista
     if CheckWin32Version(6) then
@@ -4143,10 +4008,10 @@ end;
 function TStartupUserItem.Enable(): Boolean;
 begin
   // Backup file exists?
-  if FLnkFile.BackupExists() then
+  if BackupExists() then
   begin
     // Failed to restore backup file?
-    if not CopyFile(PChar(FLnkFile.GetBackupLnk()), PChar(FLnkFile.FileName), True) then
+    if not CopyFile(PChar(GetBackupLnk()), PChar(FLnkFile.FileName), True) then
       raise EStartupException.Create('Could not restore backup .lnk file!');
   end  //of begin
   else
@@ -4162,7 +4027,7 @@ begin
     raise EStartupException.Create('Could not delete key!');
 
   // Delete backup file after enabling prior to Windows 7
-  FLnkFile.DeleteBackup();
+  DeleteBackup();
 
   // Update information
   FLocation := FLnkFile.FileName;
@@ -4318,13 +4183,13 @@ begin
     slStartupUser:
       begin
         Result.Key := 0;
-        Result.Value := TStartupLnkFile.GetStartUpDir(True);
+        Result.Value := GetKnownFolderPath(FOLDERID_Startup);
       end;
 
     slCommonStartup:
       begin
         Result.Key := 0;
-        Result.Value := TStartupLnkFile.GetStartUpDir(False);
+        Result.Value := GetKnownFolderPath(FOLDERID_CommonStartup);
       end;
   end;  //of case
 end;
@@ -4335,19 +4200,26 @@ end;
 function TStartupList.GetImportFilter(ALanguageFile: TLanguageFile): string;
 begin
   Result := Format(ALanguageFile.GetString(LID_FILTER_STARTUP_FILES),
-    [TStartupLnkFile.StartupUserBackupFileExtension, TStartupLnkFile.StartupUserBackupFileExtension,
-    TStartupLnkFile.StartupCommonBackupFileExtension, TStartupLnkFile.StartupCommonBackupFileExtension]);
+    [TStartupUserItem.FileExtensionStartupUser, TStartupUserItem.FileExtensionStartupUser,
+    TStartupUserItem.FileExtensionStartupCommon, TStartupUserItem.FileExtensionStartupCommon]);
 end;
 
 function TStartupList.AddNewStartupUserItem(const AName: string;
   const AFileName: TFileName; const AArguments: string = '';
   AStartupUser: Boolean = True): Boolean;
+const
+  cStartupUserLocation: array[Boolean] of TStartupLocation = (
+    slCommonStartup,
+    slStartupUser
+  );
+
 var
   i: Integer;
-  LnkFile: TStartupLnkFile;
-  RootKey: TRootKey;
+  LnkFile: TLnkFile;
 
 begin
+  Result := False;
+
   // File path already exists in another item?
   for i := 0 to Count - 1 do
   begin
@@ -4355,34 +4227,28 @@ begin
       Exit;
   end;  //of for
 
-  LnkFile := TStartupLnkFile.Create(AName, AStartupUser, AFileName, AArguments);
+  // Prepare .lnk file
+  LnkFile := TLnkFile.Create(cStartupUserLocation[AStartupUser].GetLocation().Value
+    + ChangeFileExt(AName, TLnkFile.FileExtension));
+
+  with LnkFile do
+  begin
+    ExeFileName := AFileName;
+    Arguments := AArguments;
+  end;  //of with
 
   // Link file created successfully?
   if not LnkFile.Save() then
     raise EStartupException.Create('Could not create .lnk file '''+ LnkFile.FileName +'''!');
 
-  // Windows 8?
-  if CheckWin32Version(6, 2) then
-  begin
-    if AStartupUser then
-      RootKey := rkHKCU
-    else
-      RootKey := rkHKLM;
-  end  //of begin
-  else
-    RootKey := rkUnknown;
-
   // Add item to list
-  if (Add(TStartupUserItem.Create(ExtractFileName(LnkFile.FileName),
-    LnkFile.FullPath, LnkFile.FileName, RootKey, True, LnkFile)) <> -1) then
-  begin
-    Result := True;
+  Result := (Add(TStartupUserItem.Create(ExtractFileName(LnkFile.FileName),
+    LnkFile.FullPath, LnkFile.FileName, True, AStartupUser, LnkFile)) <> -1);
 
-    // Windows 8?
-    if CheckWin32Version(6, 2) then
-      // Write the StartupApproved value
-      Last.Enabled := True;
-  end;  //of begin
+  // Windows 8?
+  if (Result and CheckWin32Version(6, 2)) then
+    // Write the StartupApproved value
+    Last.Enabled := True;
 end;
 
 function TStartupList.Add(const AFileName, AArguments, ACaption: string): Boolean;
@@ -4504,31 +4370,27 @@ begin
   Ext := ExtractFileExt(AFileName);
 
   // Check invalid extension
-  if ((Ext <> TStartupLnkFile.StartupCommonBackupFileExtension) and
-    (Ext <> TStartupLnkFile.StartupUserBackupFileExtension)) then
+  if ((Ext <> TStartupUserItem.FileExtensionStartupCommon) and
+    (Ext <> TStartupUserItem.FileExtensionStartupUser)) then
     raise EAssertionFailed.Create('Invalid backup file extension! Must '+
-      'be '''+ TStartupLnkFile.StartupCommonBackupFileExtension +''' or '''+
-      TStartupLnkFile.StartupUserBackupFileExtension +'''!');
+      'be '''+ TStartupUserItem.FileExtensionStartupCommon +''' or '''+
+      TStartupUserItem.FileExtensionStartupUser +'''!');
 
   // List locked?
   if not FLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
 
   // Init new .lnk file
-  LnkFile := TStartupLnkFile.Create(AFileName);
+  LnkFile := TLnkFile.Create(AFileName);
 
   // Set the name of item
   Name := ExtractFileName(ChangeFileExt(AFileName, ''));
   Name := ChangeFileExt(Name, TLnkFile.FileExtension);
 
   try
-    // Extract path to .exe
-    if (LnkFile.ExeFileName = '') then
-      raise EStartupException.Create('Could not read backup file!');
-
     // Create .lnk file and add it to list
     Result := AddNewStartupUserItem(Name, LnkFile.ExeFileName, LnkFile.Arguments,
-      (Ext = TStartupLnkFile.StartupUserBackupFileExtension));
+      (Ext = TStartupUserItem.FileExtensionStartupUser));
 
   finally
     LnkFile.Free;
@@ -4591,15 +4453,20 @@ begin
 
         // Windows >= Vista?
         if CheckWin32Version(6) then
-          StartupUser := not AnsiSameText(Reg.ReadString('backupExtension'), TStartupLnkFile.StartupCommonBackupFileExtension)
+          StartupUser := not AnsiSameText(Reg.ReadString('backupExtension'), TStartupUserItem.FileExtensionStartupCommon)
         else
           StartupUser := AnsiSameText(Reg.ReadString('location'), 'Startup');
 
-        Item := TStartupUserItem.Create(Name, FileName, Location, rkHKLM, False, nil);
+        Item := TStartupUserItem.Create(Name, FileName, Location, False, StartupUser, nil);
 
         // Setup .lnk file
-        TStartupUserItem(Item).LnkFile := TStartupLnkFile.Create(LnkFileName,
-          StartupUser, Item.FileNameOnly, Item.Arguments);
+        TStartupUserItem(Item).LnkFile := TLnkFile.Create(LnkFileName);
+
+        with TStartupUserItem(Item).LnkFile do
+        begin
+          ExeFileName := Item.FileNameOnly;
+          Arguments := Item.Arguments;
+        end;  //of with
       end;  //of if
 
       Item.Time := Item.GetTimestamp(Reg);
@@ -4646,7 +4513,7 @@ end;
 procedure TStartupList.Load(AStartupLocation: TStartupLocation);
 var
   SearchResult: TSearchRec;
-  LnkFile: TStartupLnkFile;
+  LnkFile: TLnkFile;
   Reg: TRegistry;
   Items: TStringList;
   i: Integer;
@@ -4670,21 +4537,10 @@ begin
         Status := LoadStatus(Name, AStartupLocation);
 
         // TODO: EOleSysError can be raised if .lnk is invalid
-        LnkFile := TStartupLnkFile.Create(Name, StartupUser);
-
-        // Windows 8?
-        if CheckWin32Version(6, 2) then
-        begin
-          if StartupUser then
-            RootKey := rkHKCU
-          else
-            RootKey := rkHKLM;
-        end  //of begin
-        else
-          RootKey := rkUnknown;
+        LnkFile := TLnkFile.Create(AStartupLocation.GetLocation().Value + Name);
 
         Item := TStartupUserItem.Create(Name, LnkFile.FullPath, LnkFile.FileName,
-          RootKey, Status.GetEnabled(), LnkFile);
+          Status.GetEnabled(), StartupUser, LnkFile);
         Item.Time := Status.GetDeactivationTime();
         Add(Item);
       until FindNext(SearchResult) <> 0;
