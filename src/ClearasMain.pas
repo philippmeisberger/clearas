@@ -1648,12 +1648,7 @@ begin
     bEnableContextItem.Click
   else
     if bDisableContextItem.Enabled then
-      bDisableContextItem.Click
-    else
-      if bDeleteContextItem.Enabled then
-        bDeleteContextItem.Click
-      else
-        FLang.ShowMessage(FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
+      bDisableContextItem.Click;
 end;
 
 { TMain.lwContextSelectItem
@@ -1712,12 +1707,7 @@ begin
     bEnableServiceItem.Click
   else
     if bDisableServiceItem.Enabled then
-      bDisableServiceItem.Click
-    else
-      if bDeleteServiceItem.Enabled then
-        bDeleteServiceItem.Click
-      else
-        FLang.ShowMessage(FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
+      bDisableServiceItem.Click;
 end;
 
 { TMain.lwServiceSelectItem
@@ -1775,12 +1765,7 @@ begin
     bEnableTaskItem.Click
   else
     if bDisableTaskitem.Enabled then
-      bDisableTaskitem.Click
-    else
-      if bDeleteTaskItem.Enabled then
-        bDeleteTaskItem.Click
-      else
-        FLang.ShowMessage(FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
+      bDisableTaskitem.Click;
 end;
 
 { TMain.lwTasksSelectItem
@@ -1924,12 +1909,7 @@ begin
     bEnableStartupItem.Click
   else
     if bDisableStartupItem.Enabled then
-      bDisableStartupItem.Click
-    else
-      if bDeleteStartupItem.Enabled then
-        bDeleteStartupItem.Click
-      else
-        FLang.ShowMessage(FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
+      bDisableStartupItem.Click;
 end;
 
 { TMain.ListViewKeyPress
@@ -2690,6 +2670,7 @@ begin
          if (Assigned(FStartup) and (FStartup.Count = 0)) then
            LoadItems();
 
+         // Update popup menu items state
          lwStartupSelectItem(Sender, lwStartup.ItemFocused, True);
        end;
 
@@ -2703,6 +2684,7 @@ begin
          if (Assigned(FContext) and (FContext.Count = 0)) then
            LoadItems();
 
+         // Update popup menu items state
          lwContextSelectItem(Sender, lwContext.ItemFocused, True);
        end;
 
@@ -2717,6 +2699,7 @@ begin
          if (Assigned(FService) and (FService.Count = 0)) then
            LoadItems();
 
+         // Update popup menu items state
          lwServiceSelectItem(Sender, lwService.ItemFocused, True);
        end;
 
@@ -2730,6 +2713,7 @@ begin
          if (Assigned(FTasks) and (FTasks.Count = 0)) then
            LoadItems();
 
+         // Update popup menu items state
          lwTasksSelectItem(Sender, lwTasks.ItemFocused, True);
        end;
   end;  //of case
