@@ -2571,16 +2571,11 @@ begin
 
   FInvalid := (ExtractFileExt(Path) = '');
 
+  // File in system search path?
   if (not FInvalid and IsRelativePath(Path)) then
   begin
-    // File in system search path?
-    Result := FileSearch(Path, GetKnownFolderPath(FOLDERID_Windows) + PathSep +
-      GetKnownFolderPath(FOLDERID_System) + PathSep + GetKnownFolderPath(FOLDERID_SystemX86));
-
-    FInvalid := (Result = '');
-
-    if not FInvalid then
-      Exit;
+    Path := FileSearch(Path, GetEnvironmentVariable('Path'));
+    FInvalid := (Path = '');
   end;  //of begin
 
   Result := Path;
