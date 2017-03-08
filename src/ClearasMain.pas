@@ -2287,7 +2287,7 @@ begin
 
            try
              // Init location ComboBox
-             List.CommaText := CM_LOCATIONS_DEFAULT +', .txt, .zip';
+             List.CommaText := TContextList.DefaultLocations +', .txt, .zip';
 
              // Show dialog for location selection
              if not InputCombo(FLang.GetString(LID_CONTEXT_MENU_ADD),

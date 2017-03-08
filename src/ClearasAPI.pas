@@ -1550,12 +1550,6 @@ const
   { Context menu Registry subkeys + values}
   KEY_USERCHOICE              = 'Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\%s\UserChoice';
   KEY_COMMAND_STORE           = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\CommandStore\shell';
-  CM_SHELL                    = 'Shell';
-  CM_SHELL_DISABLED           = 'LegacyDisable';
-  CM_SHELLEX                  = 'ShellEx';
-  CM_SHELLEX_HANDLERS         = CM_SHELLEX +'\ContextMenuHandlers';
-  CM_SHELLEX_FILE             = 'CLSID\%s\InProcServer32';
-  CM_LOCATIONS_DEFAULT        = 'Directory, Folder, *, Drive';
 
 type
   /// <summary>
@@ -1625,6 +1619,17 @@ type
     procedure Rename(const AValueName, ANewCaption: string); reintroduce; overload;
     procedure Rename(const ANewName: string); overload; override;
   public
+    const
+      /// <summary>
+      ///   The registry sub key.
+      /// </summary>
+      CanonicalName         = 'Shell';
+
+      /// <summary>
+      ///   The registry value that exists when item is disabled.
+      /// </summary>
+      CanonicalNameDisabled = 'LegacyDisabled';
+
     /// <summary>
     ///   Changes the icon of a contextmenu item.
     /// </summary>
@@ -1638,7 +1643,7 @@ type
     function ChangeIcon(const ANewIconFileName: string): Boolean;
 
     /// <summary>
-    ///   Deletes the icon of a contextmenu. }
+    ///   Deletes the icon of a contextmenu.
     /// </summary>
     /// <returns>
     ///   <c>True</c> if the icon was successfully deleted or <c>False</c>
@@ -1670,17 +1675,23 @@ type
   end;
 
   /// <summary>
-  ///   A <c>TShellItem</c> represents a shell cascading context menu item that
-  ///   can be added to a <see cref="TContextList"/>. Those items contain a
-  ///   set of shell context menu items.
+  ///   A <c>TShellCascadingItem</c> represents a cascading context menu item
+  ///   that can be added to a <see cref="TContextList"/>. Those items contain
+  ///   a set of context menu items.
   /// </summary>
   TShellCascadingItem = class(TShellItem)
   private
-    procedure GetSubCommands(var ASubCommands: TStrings);
+    procedure GetSubCommands(ASubCommands: TStrings);
   protected
     procedure ChangeFilePath(const ANewFileName: string); override;
     procedure Rename(const ANewName: string); override;
   public
+    const
+      /// <summary>
+      ///   Name of registry value that contains comma-separated list of subcommands.
+      /// </summary>
+      SubCommands = 'SubCommands';
+
     /// <summary>
     ///   Constructor for creating a <c>TShellCascadingItem</c> instance.
     /// </summary>
@@ -1742,6 +1753,23 @@ type
     function GetLocation(): string; override;
     procedure Rename(const ANewName: string); override;
   public
+    const
+      /// <summary>
+      ///   The registry sub key.
+      /// </summary>
+      CanonicalName    = 'ShellEx';
+
+      /// <summary>
+      ///   The regitry sub key where shell extensions are located.
+      /// </summary>
+      HandlersKey      = CanonicalName +'\ContextMenuHandlers';
+
+      /// <summary>
+      ///   The format string of the registry key where command string of the
+      ///   context menu item is located.
+      /// </summary>
+      CommandStringKey = 'CLSID\%s\InProcServer32';
+
     /// <summary>
     ///   Exports the item as file.
     /// </summary>
@@ -4742,7 +4770,7 @@ end;
 
 function TShellItem.GetLocation(): string;
 begin
-  Result := inherited GetLocation() +'\'+ CM_SHELL +'\'+ Name;
+  Result := inherited GetLocation() +'\'+ CanonicalName +'\'+ Name;
 end;
 
 procedure TShellItem.Rename(const AValueName, ANewCaption: string);
@@ -4914,11 +4942,11 @@ begin
     if ANewStatus then
     begin
       // Delete disable value, but do not fail if value does not exist!
-      if (Reg.ValueExists(CM_SHELL_DISABLED) and not Reg.DeleteValue(CM_SHELL_DISABLED)) then
-        raise EStartupException.Create('Could not delete value '''+ CM_SHELL_DISABLED +'''!');
+      if (Reg.ValueExists(CanonicalNameDisabled) and not Reg.DeleteValue(CanonicalNameDisabled)) then
+        raise EStartupException.Create('Could not delete value '''+ CanonicalNameDisabled +'''!');
     end  //of begin
     else
-      Reg.WriteString(CM_SHELL_DISABLED, '');
+      Reg.WriteString(CanonicalNameDisabled, '');
 
     // Update status
     inherited ChangeStatus(ANewStatus);
@@ -4956,7 +4984,7 @@ end;
 
 function TShellItem.ToString(): string;
 begin
-  Result := CM_SHELL;
+  Result := CanonicalName;
 end;
 
 
@@ -4969,10 +4997,7 @@ begin
   FErasable := False;
 end;
 
-procedure TShellCascadingItem.GetSubCommands(var ASubCommands: TStrings);
-const
-  CM_SUBCOMMANDS = 'SubCommands';
-
+procedure TShellCascadingItem.GetSubCommands(ASubCommands: TStrings);
 var
   Reg: TRegistry;
 
@@ -4982,11 +5007,11 @@ begin
   try
     Reg.RootKey := HKEY_CLASSES_ROOT;
 
-    if (not Reg.OpenKey(GetLocation(), False) or not Reg.ValueExists(CM_SUBCOMMANDS)) then
+    if (not Reg.OpenKey(GetLocation(), False) or not Reg.ValueExists(SubCommands)) then
       Exit;
 
     ASubCommands.Delimiter := ';';
-    ASubCommands.DelimitedText := Reg.ReadString(CM_SUBCOMMANDS);
+    ASubCommands.DelimitedText := Reg.ReadString(SubCommands);
 
   finally
     Reg.Free;
@@ -5002,7 +5027,7 @@ end;
 function TShellCascadingItem.Delete(): Boolean;
 var
   i: Integer;
-  Commands: TStrings;
+  Commands: TStringList;
 
 begin
   Commands := TStringList.Create;
@@ -5024,7 +5049,7 @@ procedure TShellCascadingItem.ExportItem(const AFileName: string);
 var
   RegFile: TRegistryFile;
   i: Integer;
-  Commands: TStrings;
+  Commands: TStringList;
 
 begin
   RegFile := TRegistryFile.Create(ChangeFileExt(AFileName, '.reg'), True);
@@ -5113,7 +5138,7 @@ end;
 
 function TShellExItem.GetLocation(): string;
 begin
-  Result := inherited GetLocation() +'\'+ CM_SHELLEX_HANDLERS +'\'+ Name;
+  Result := inherited GetLocation() +'\'+ HandlersKey +'\'+ Name;
 end;
 
 procedure TShellExItem.ChangeFilePath(const ANewFileName: string);
@@ -5135,7 +5160,7 @@ begin
       raise EContextMenuException.Create(Reg.LastErrorMsg);
 
     // Read GUID and setup key of program
-    ProgramKeyPath := Format(CM_SHELLEX_FILE, [Reg.ReadString('')]);
+    ProgramKeyPath := Format(CommandStringKey, [Reg.ReadString('')]);
     Reg.CloseKey;
 
     // Invalid program key?
@@ -5202,7 +5227,7 @@ end;
 
 function TShellExItem.ToString(): string;
 begin
-  Result := CM_SHELLEX;
+  Result := CanonicalName;
 end;
 
 
@@ -5383,7 +5408,7 @@ begin
         FileType := LocationRoot;
 
       Reg.CloseKey();
-      KeyPath := FileType +'\'+ CM_SHELL +'\'+ Name;
+      KeyPath := FileType +'\'+ TShellItem.CanonicalName +'\'+ Name;
 
       // Adds new context item to Registry
       if not Reg.OpenKey(KeyPath, True) then
@@ -5495,8 +5520,8 @@ begin
   List := TStringList.Create;
 
   case AShellItemType of
-    stShell:    Key := ALocationRoot +'\'+ CM_SHELL;
-    stShellEx:  Key := ALocationRoot +'\'+ CM_SHELLEX_HANDLERS;
+    stShell:    Key := ALocationRoot +'\'+ TShellItem.CanonicalName;
+    stShellEx:  Key := ALocationRoot +'\'+ TShellExItem.HandlersKey;
     stShellNew: Key := ALocationRoot;
   end;  //of case
 
@@ -5584,13 +5609,13 @@ begin
             Continue;
 
           // Get status and caption of Shell item
-          Enabled := not Reg.ValueExists(CM_SHELL_DISABLED);
+          Enabled := not Reg.ValueExists(TShellItem.CanonicalNameDisabled);
           Extended := Reg.ValueExists('Extended');
 
           // Cascading shell item?
           if not Reg.OpenKey('command', False) then
           begin
-            if ((not Reg.ValueExists('MUIVerb') or not Reg.ValueExists('SubCommands')) and
+            if ((not Reg.ValueExists('MUIVerb') or not Reg.ValueExists(TShellCascadingItem.SubCommands)) and
               not Reg.KeyExists('ExtendedSubCommandsKey')) then
               Continue;
 
@@ -5633,7 +5658,7 @@ begin
             Wow64 := False;
 
             // Get file path of command (native hive)
-            if Reg.OpenKey(Format(CM_SHELLEX_FILE, [GuID]), False) then
+            if Reg.OpenKey(Format(TShellExItem.CommandStringKey, [GuID]), False) then
             begin
               if not (Reg.GetDataType('') in [rdString, rdExpandString]) then
                 Continue;
@@ -5647,7 +5672,7 @@ begin
                 Reg.Access := KEY_WOW64_32KEY or KEY_READ;
                 Wow64 := True;
 
-                if Reg.OpenKey(Format(CM_SHELLEX_FILE, [GuID]), False) then
+                if Reg.OpenKey(Format(TShellExItem.CommandStringKey, [GuID]), False) then
                 begin
                   if not (Reg.GetDataType('') in [rdString, rdExpandString]) then
                     Continue;
@@ -5703,11 +5728,11 @@ var
         for i := 0 to Keys.Count - 1 do
         begin
           // Load Shell context menu items
-          if AnsiSameText(Keys[i], CM_SHELL) then
+          if AnsiSameText(Keys[i], TShellItem.CanonicalName) then
             LoadContextmenu(AKeyName, stShell, AWin64);
 
           // Load ShellEx context menu items
-          if AnsiSameText(Keys[i], CM_SHELLEX) then
+          if AnsiSameText(Keys[i], TShellExItem.CanonicalName) then
             LoadContextmenu(AKeyName, stShellEx, AWin64);
 
           // Load ShellNew context menu items
@@ -5758,7 +5783,7 @@ begin
       Reg.CloseKey();
     end  //of begin
     else
-      Locations.CommaText := CM_LOCATIONS_DEFAULT;
+      Locations.CommaText := DefaultLocations;
 
     for i := 0 to Locations.Count - 1 do
     begin
