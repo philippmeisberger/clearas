@@ -179,16 +179,102 @@ type
     FLocation: string;
     FCaption: string;
     FIcon: HICON;
+
+    /// <summary>
+    ///   Changes the file path.
+    /// </summary>
+    /// <param name="ANewFileName">
+    ///   The new file name.
+    /// </param>
     procedure ChangeFilePath(const ANewFileName: string); virtual;
+
+    /// <summary>
+    ///   Changes the status.
+    /// </summary>
+    /// <param name="ANewStatus">
+    ///   The new status.
+    /// </param>
     procedure ChangeStatus(const ANewStatus: Boolean); virtual;
-    function ExtractArguments(const APath: string): string;
-    function ExtractPathToFile(const APath: string): string;
+
+    /// <summary>
+    ///   Extracts the arguments from a file name.
+    /// </summary>
+    /// <param name="AFileName">
+    ///   The file name.
+    /// </param>
+    /// <returns>
+    ///   The arguments.
+    /// </returns>
+    function ExtractArguments(const AFileName: string): string;
+
+    /// <summary>
+    ///   Extracts the path to a file (without arguments).
+    /// </summary>
+    /// <param name="AFileName">
+    ///   The file name.
+    /// </param>
+    /// <returns>
+    ///   The path.
+    /// </returns>
+    function ExtractPathToFile(const AFileName: string): string;
+
+    /// <summary>
+    ///   Frees the cached icon handle.
+    /// </summary>
     procedure DestroyIconHandle();
+
+    /// <summary>
+    ///   Gets the complete store location.
+    /// </summary>
+    /// <returns>
+    ///   The file name.
+    /// </returns>
     function GetFullLocation(): string; virtual; abstract;
+
+    /// <summary>
+    ///   Reads the file description from a file.
+    /// </summary>
+    /// <param name="AFileName">
+    ///   The file name.
+    /// </param>
+    /// <returns>
+    ///   The file description.
+    /// </returns>
     function GetFileDescription(const AFileName: TFileName): string;
+
+    /// <summary>
+    ///   Gets the handle to the <see cref="FileName"/>.
+    /// </summary>
+    /// <returns>
+    ///   The handle to the icon.
+    /// </returns>
     function GetIcon(): HICON; overload; virtual;
+
+    /// <summary>
+    ///   Gets the handle to a .exe file.
+    /// </summary>
+    /// <param name="AExeFileName">
+    ///   The .exe file.
+    /// </param>
+    /// <returns>
+    ///   The handle to the icon.
+    /// </returns>
     function GetIcon(const AExeFileName: TFileName): HICON; overload; virtual;
+
+    /// <summary>
+    ///   Gets the store location. Usually a Registry key.
+    /// </summary>
+    /// <returns>
+    ///   The store location.
+    /// </returns>
     function GetLocation(): string; virtual;
+
+    /// <summary>
+    ///   Renames the item.
+    /// </summary>
+    /// <param name="ANewName">
+    ///   The new name.
+    /// </param>
     procedure Rename(const ANewName: string); virtual;
   public
     /// <summary>
@@ -2523,23 +2609,23 @@ begin
   end;  //of begin
 end;
 
-function TRootItem.ExtractArguments(const APath: string): string;
+function TRootItem.ExtractArguments(const AFileName: string): string;
 var
   ExtWithArguments: string;
   Ext, SpaceDelimiter: Integer;
 
 begin
-  if (APath = '') then
+  if (AFileName = '') then
     Exit;
 
   // Cut path from extension until end
   // Note: Garbage in worst case if a folder name contains a '.'!
-  Ext := APath.IndexOf('.');
+  Ext := AFileName.IndexOf('.');
 
   if (Ext >= 0) then
-    ExtWithArguments := APath.SubString(Ext)
+    ExtWithArguments := AFileName.SubString(Ext)
   else
-    ExtWithArguments := ExtractFileExt(APath);
+    ExtWithArguments := ExtractFileExt(AFileName);
 
   // Find space delimter between extension and arguments
   SpaceDelimiter := ExtWithArguments.IndexOf(' ');
@@ -2552,19 +2638,19 @@ begin
   Result := ExtWithArguments.Substring(SpaceDelimiter).Trim;
 end;
 
-function TRootItem.ExtractPathToFile(const APath: string): string;
+function TRootItem.ExtractPathToFile(const AFileName: string): string;
 var
   Parts: TArray<string>;
   i: Integer;
   Line, ExtWithArguments: string;
 
 begin
-  if (Length(APath) = 0) then
+  if (Length(AFileName) = 0) then
     Exit;
 
-  if (APath[1] = '"') then
+  if AFileName.StartsWith('"') then
   begin
-    Parts := APath.Split(['"']);
+    Parts := AFileName.Split(['"']);
 
     for i := Low(Parts) to High(Parts) do
     begin
@@ -2579,14 +2665,14 @@ begin
   end  //of begin
   else
   begin
-    if (APath.CountChar('.') = 1) then
-      i := APath.LastDelimiter(PathDelim +'.')
+    if (AFileName.CountChar('.') = 1) then
+      i := AFileName.LastDelimiter(PathDelim +'.')
     else
-      i := APath.LastDelimiter(PathDelim);
+      i := AFileName.LastDelimiter(PathDelim);
 
-    ExtWithArguments := APath.SubString(i + 1);
+    ExtWithArguments := AFileName.SubString(i + 1);
     Parts := ExtWithArguments.Split([' ']);
-    Result := APath.Substring(0, APath.IndexOf(ExtWithArguments) + Length(Parts[0]));
+    Result := AFileName.Substring(0, AFileName.IndexOf(ExtWithArguments) + Length(Parts[0]));
   end;  //of if
 end;
 
