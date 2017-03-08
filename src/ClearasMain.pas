@@ -1670,12 +1670,22 @@ begin
     bDeleteContextItem.Enabled := True;
     bExportContextItem.Enabled := True;
 
-    // Show popup menu
+    // Allow popup menu
     PopupMenu.AutoPopup := True;
   end  //of begin
   else
-    // Nothing selected: Hide popup menu!
+  begin
+    // Nothing selected
+    lwContext.ItemFocused := nil;
+    FContext.Selected := nil;
+    bEnableContextItem.Enabled := False;
+    bDisableContextItem.Enabled := False;
+    bDeleteContextItem.Enabled := False;
+    bExportContextItem.Enabled := False;
+
+    // Disallow popup menu
     PopupMenu.AutoPopup := False;
+  end;
 end;
 
 { TMain.lwServiceDblClick
@@ -1709,12 +1719,22 @@ begin
     bDeleteServiceItem.Enabled := True;
     bExportServiceItem.Enabled := True;
 
-    // Show popup menu
+    // Allow popup menu
     PopupMenu.AutoPopup := True;
   end  //of begin
   else
-    // Nothing selected: Hide popup menu!
+  begin
+    // Nothing selected
+    lwService.ItemFocused := nil;
+    FService.Selected := nil;
+    bEnableServiceItem.Enabled := False;
+    bDisableServiceItem.Enabled := False;
+    bDeleteServiceItem.Enabled := False;
+    bExportServiceItem.Enabled := False;
+
+    // Disallow popup menu
     PopupMenu.AutoPopup := False;
+  end;  //of if
 end;
 
 { TMain.lwTasksDblClick
@@ -1748,12 +1768,22 @@ begin
     bDeleteTaskItem.Enabled := True;
     bExportTaskItem.Enabled := True;
 
-    // Show popup menu
+    // Allow popup menu
     PopupMenu.AutoPopup := True;
   end  //of begin
   else
-    // Nothing selected: Hide popup menu!
+  begin
+    // Nothing selected
+    lwTasks.ItemFocused := nil;
+    FTasks.Selected := nil;
+    bEnableTaskItem.Enabled := False;
+    bDisableTaskitem.Enabled := False;
+    bDeleteTaskItem.Enabled := False;
+    bExportTaskItem.Enabled := False;
+
+    // Disallow popup menu
     PopupMenu.AutoPopup := False;
+  end;  //of if
 end;
 
 { TMain.ListViewColumnClick
@@ -1904,12 +1934,22 @@ begin
     bDeleteStartupItem.Enabled := True;
     bExportStartupItem.Enabled := True;
 
-    // Show popup menu
+    // Allow popup menu
     PopupMenu.AutoPopup := True;
   end  //of begin
   else
-    // Nothing selected: Hide popup menu!
+  begin
+    // Nothing selected
+    lwStartup.ItemFocused := nil;
+    FStartup.Selected := nil;
+    bEnableStartupItem.Enabled := False;
+    bDisableStartupItem.Enabled := False;
+    bDeleteStartupItem.Enabled := False;
+    bExportStartupItem.Enabled := False;
+
+    // Disallow popup menu
     PopupMenu.AutoPopup := False;
+  end;  //of if
 end;
 
 { TMain.pmChangeStatusClick
