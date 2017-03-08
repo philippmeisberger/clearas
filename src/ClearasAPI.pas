@@ -3589,7 +3589,7 @@ var
   RegFile: TRegistryFile;
 
 begin
-  RegFile := TRegistryFile.Create(ChangeFileExt(AFileName, '.reg'), True);
+  RegFile := TRegistryFile.Create(ChangeFileExt(AFileName, GetBackupExtension()), True);
 
   try
     if (FEnabled or CheckWin32Version(6, 2)) then
@@ -4444,7 +4444,7 @@ begin
   Win8 := CheckWin32Version(6, 2);
 
   // Init Reg file
-  RegFile := TRegistryFile.Create(ChangeFileExt(AFileName, '.reg'), True);
+  RegFile := TRegistryFile.Create(ChangeFileExt(AFileName, GetBackupExtension()), True);
 
   try
     for i := 0 to Count - 1 do
@@ -4962,7 +4962,7 @@ var
   RegFile: TRegistryFile;
 
 begin
-  RegFile := TRegistryFile.Create(ChangeFileExt(AFileName, '.reg'), True);
+  RegFile := TRegistryFile.Create(ChangeFileExt(AFileName, GetBackupExtension()), True);
 
   try
     RegFile.ExportReg(HKEY_CLASSES_ROOT, GetLocation(), True);
@@ -5047,7 +5047,7 @@ var
   Commands: TStringList;
 
 begin
-  RegFile := TRegistryFile.Create(ChangeFileExt(AFileName, '.reg'), True);
+  RegFile := TRegistryFile.Create(ChangeFileExt(AFileName, GetBackupExtension()), True);
   Commands := TStringList.Create;
 
   try
@@ -5179,7 +5179,7 @@ var
   Key: string;
 
 begin
-  RegFile := TRegistryFile.Create(ChangeFileExt(AFileName, '.reg'), True);
+  RegFile := TRegistryFile.Create(ChangeFileExt(AFileName, GetBackupExtension()), True);
 
   if Wow64 then
     Reg := TRegistry.Create(KEY_WOW64_32KEY or KEY_READ)
@@ -5308,7 +5308,7 @@ var
   RegFile: TRegistryFile;
 
 begin
-  RegFile := TRegistryFile.Create(ChangeFileExt(AFileName, '.reg'), True);
+  RegFile := TRegistryFile.Create(ChangeFileExt(AFileName, GetBackupExtension()), True);
 
   try
     RegFile.ExportReg(HKEY_CLASSES_ROOT, GetLocation(), True);
@@ -5447,7 +5447,7 @@ var
 
 begin
   // Init Reg file
-  RegFile := TRegistryFile.Create(ChangeFileExt(AFileName, '.reg'), True);
+  RegFile := TRegistryFile.Create(ChangeFileExt(AFileName, GetBackupExtension()), True);
 
   try
     for i := 0 to Count - 1 do
@@ -6030,7 +6030,7 @@ var
   RegFile: TRegistryFile;
 
 begin
-  RegFile := TRegistryFile.Create(ChangeFileExt(AFileName, '.reg'), True);
+  RegFile := TRegistryFile.Create(ChangeFileExt(AFileName, GetBackupExtension()), True);
 
   try
     RegFile.ExportReg(HKEY_LOCAL_MACHINE, GetLocation(), True);
@@ -6161,7 +6161,7 @@ var
 
 begin
   // Init Reg file
-  RegFile := TRegistryFile.Create(ChangeFileExt(AFileName, '.reg'), True);
+  RegFile := TRegistryFile.Create(ChangeFileExt(AFileName, GetBackupExtension()), True);
 
   try
     // Export enabled services
@@ -6425,7 +6425,7 @@ begin
   ZipFile := TZipFile.Create;
 
   try
-    ZipFile.Open(ChangeFileExt(AFileName, '.zip'), zmWrite);
+    ZipFile.Open(ChangeFileExt(AFileName, GetBackupExtension()), zmWrite);
 
     // For validation purposes: "Clearas" is the comment
     ZipFile.Comment := 'Clearas';
@@ -6540,7 +6540,7 @@ begin
   ZipFile := TZipFile.Create;
 
   try
-    ZipFile.Open(ChangeFileExt(AFileName, '.zip'), zmWrite);
+    ZipFile.Open(ChangeFileExt(AFileName, GetBackupExtension()), zmWrite);
 
     // For validation purposes: "Clearas" is the comment
     ZipFile.Comment := 'Clearas';
@@ -6585,8 +6585,8 @@ begin
   Result := False;
 
   // Check invalid extension
-  if (ExtractFileExt(AFileName) <> '.zip') then
-    raise EAssertionFailed.Create('Invalid backup file extension! Must be ''.zip''!');
+  if (ExtractFileExt(AFileName) <> GetBackupExtension()) then
+    raise EAssertionFailed.Create('Invalid backup file extension! Must be '''+ GetBackupExtension() +'''!');
 
   // List locked?
   if not FLock.TryEnter() then
