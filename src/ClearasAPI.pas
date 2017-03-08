@@ -1628,7 +1628,7 @@ type
       /// <summary>
       ///   The registry value that exists when item is disabled.
       /// </summary>
-      CanonicalNameDisabled = 'LegacyDisabled';
+      CanonicalNameDisabled = 'LegacyDisable';
 
     /// <summary>
     ///   Changes the icon of a contextmenu item.
