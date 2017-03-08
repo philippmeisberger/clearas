@@ -172,6 +172,7 @@ type
     procedure pmDeleteIconClick(Sender: TObject);
     procedure mmShowCaptionsClick(Sender: TObject);
     procedure mmDeleteErasableClick(Sender: TObject);
+    procedure PopupMenuPopup(Sender: TObject);
   private
     FStartup: TStartupList;
     FContext: TContextList;
@@ -1669,26 +1670,6 @@ begin
     bDeleteContextItem.Enabled := True;
     bExportContextItem.Enabled := True;
 
-    // Change text of "change status" button
-    if bDisableContextItem.Enabled then
-      pmChangeStatus.Caption := bDisableContextItem.Caption
-    else
-      pmChangeStatus.Caption := bEnableContextItem.Caption;
-
-    // Update popup menu
-    pmChangeStatus.Enabled := True;
-    pmDelete.Enabled := True;
-    pmOpenRegedit.Enabled := True;
-    pmOpenExplorer.Enabled := not (FContext.Selected is TShellNewItem) and not
-      (FContext.Selected is TShellCascadingItem);
-    pmExport.Enabled := True;
-    pmRename.Enabled := (FContext.Selected is TShellItem);
-    pmChangeIcon.Visible := pmRename.Enabled;
-    pmDeleteIcon.Visible := (pmRename.Enabled and (FContext.Selected.Icon <> 0));
-
-    // Enable "edit path" only if file path is present
-    pmEdit.Enabled := (FContext.Selected.FileName <> '');
-
     // Show popup menu
     PopupMenu.AutoPopup := True;
   end  //of begin
@@ -1728,25 +1709,6 @@ begin
     bDeleteServiceItem.Enabled := True;
     bExportServiceItem.Enabled := True;
 
-    // Change text of "change status" button
-    if bDisableServiceItem.Enabled then
-      pmChangeStatus.Caption := bDisableServiceItem.Caption
-    else
-      pmChangeStatus.Caption := bEnableServiceItem.Caption;
-
-    // Update popup menu
-    pmChangeStatus.Enabled := True;
-    pmDelete.Enabled := True;
-    pmOpenRegedit.Enabled := True;
-    pmOpenExplorer.Enabled := True;
-    pmExport.Enabled := True;
-    pmRename.Enabled := True;
-    pmDeleteIcon.Visible := False;
-    pmChangeIcon.Visible := False;
-
-    // Enable "edit path" only if file path is present
-    pmEdit.Enabled := (FService.Selected.FileName <> '');
-
     // Show popup menu
     PopupMenu.AutoPopup := True;
   end  //of begin
@@ -1785,25 +1747,6 @@ begin
     bDisableTaskitem.Enabled := not bEnableTaskItem.Enabled;
     bDeleteTaskItem.Enabled := True;
     bExportTaskItem.Enabled := True;
-
-    // Change text of "change status" button
-    if bDisableTaskitem.Enabled then
-      pmChangeStatus.Caption := bDisableTaskitem.Caption
-    else
-      pmChangeStatus.Caption := bEnableTaskItem.Caption;
-
-    // Update popup menu
-    pmChangeStatus.Enabled := True;
-    pmDelete.Enabled := True;
-    pmOpenRegedit.Enabled := False;
-    pmOpenExplorer.Enabled := True;
-    pmExport.Enabled := True;
-    pmRename.Enabled := True;
-    pmDeleteIcon.Visible := False;
-    pmChangeIcon.Visible := False;
-
-    // Enable "edit path" only if file path is present
-    pmEdit.Enabled := (FTasks.Selected.FileName <> '');
 
     // Show popup menu
     PopupMenu.AutoPopup := True;
@@ -1960,29 +1903,6 @@ begin
     bDisableStartupItem.Enabled := not bEnableStartupItem.Enabled;
     bDeleteStartupItem.Enabled := True;
     bExportStartupItem.Enabled := True;
-
-    // Change text of "change status" button
-    if bDisableStartupItem.Enabled then
-      pmChangeStatus.Caption := bDisableStartupItem.Caption
-    else
-      pmChangeStatus.Caption := bEnableStartupItem.Caption;
-
-    // Selected item is enabled and startup user type?
-    if ((FStartup.Selected is TStartupUserItem) and FStartup.Selected.Enabled) then
-      // Disable "open in RegEdit" because item is on file system!
-      pmOpenRegedit.Enabled := False
-    else
-      pmOpenRegedit.Enabled := True;
-
-    // Update popup menu
-    pmOpenExplorer.Enabled := True;
-    pmExport.Enabled := bExportStartupItem.Enabled;
-    pmDelete.Enabled := True;
-    pmRename.Enabled := True;
-    pmChangeStatus.Enabled := True;
-    pmEdit.Enabled := True;
-    pmDeleteIcon.Visible := False;
-    pmChangeIcon.Visible := False;
 
     // Show popup menu
     PopupMenu.AutoPopup := True;
@@ -2166,6 +2086,61 @@ begin
     on E: Exception do
       FLang.ShowException(FLang.GetString([LID_RENAME, LID_IMPOSSIBLE]), E.Message);
   end;  //of try
+end;
+
+procedure TMain.PopupMenuPopup(Sender: TObject);
+begin
+  // Change text
+  if GetSelectedItem().Enabled then
+    pmChangeStatus.Caption := bDisableStartupItem.Caption
+  else
+    pmChangeStatus.Caption := bEnableStartupItem.Caption;
+
+  // Update popup menu items
+  case PageControl.ActivePageIndex of
+    0:
+      begin
+        // Startup user items are located in filesystem not in registry!
+        pmOpenRegedit.Enabled := not ((FStartup.Selected is TStartupUserItem) and
+          FStartup.Selected.Enabled);
+        pmOpenExplorer.Enabled := True;
+        pmRename.Enabled := True;
+        pmDeleteIcon.Visible := False;
+        pmChangeIcon.Visible := False;
+        pmEdit.Enabled := True;
+      end;
+
+    1:
+      begin
+        pmOpenRegedit.Enabled := True;
+        pmOpenExplorer.Enabled := not (FContext.Selected is TShellNewItem) and not
+          (FContext.Selected is TShellCascadingItem);
+        pmRename.Enabled := (FContext.Selected is TShellItem);
+        pmChangeIcon.Visible := pmRename.Enabled;
+        pmDeleteIcon.Visible := (pmRename.Enabled and (FContext.Selected.Icon <> 0));
+        pmEdit.Enabled := (FContext.Selected.FileName <> '');
+      end;
+
+    2:
+      begin
+        pmOpenRegedit.Enabled := True;
+        pmOpenExplorer.Enabled := True;
+        pmRename.Enabled := True;
+        pmDeleteIcon.Visible := False;
+        pmChangeIcon.Visible := False;
+        pmEdit.Enabled := (FService.Selected.FileName <> '');
+      end;
+
+    3:
+      begin
+        pmOpenRegedit.Enabled := False;
+        pmOpenExplorer.Enabled := True;
+        pmRename.Enabled := True;
+        pmDeleteIcon.Visible := False;
+        pmChangeIcon.Visible := False;
+        pmEdit.Enabled := (FTasks.Selected.FileName <> '');
+      end;
+  end;  //of case
 end;
 
 { TMain.pmCopyLocationClick
@@ -2665,13 +2640,6 @@ begin
          mmDate.Enabled := True;
          mmShowCaptions.Enabled := True;
          ShowColumnDate(lwStartup, (mmDate.Enabled and mmDate.Checked));
-
-         // Load startup items dynamically
-         if (Assigned(FStartup) and (FStartup.Count = 0)) then
-           LoadItems();
-
-         // Update popup menu items state
-         lwStartupSelectItem(Sender, lwStartup.ItemFocused, True);
        end;
 
     1: begin
@@ -2679,13 +2647,6 @@ begin
          mmImport.Enabled := False;
          mmDate.Enabled := False;
          mmShowCaptions.Enabled := True;
-
-         // Load context menu items dynamically
-         if (Assigned(FContext) and (FContext.Count = 0)) then
-           LoadItems();
-
-         // Update popup menu items state
-         lwContextSelectItem(Sender, lwContext.ItemFocused, True);
        end;
 
     2: begin
@@ -2694,13 +2655,6 @@ begin
          mmDate.Enabled := True;
          mmShowCaptions.Enabled := True;
          ShowColumnDate(lwService, mmDate.Checked);
-
-         // Load service items dynamically
-         if (Assigned(FService) and (FService.Count = 0)) then
-           LoadItems();
-
-         // Update popup menu items state
-         lwServiceSelectItem(Sender, lwService.ItemFocused, True);
        end;
 
     3: begin
@@ -2708,15 +2662,15 @@ begin
          mmImport.Enabled := True;
          mmDate.Enabled := False;
          mmShowCaptions.Enabled := False;
-
-         // Load task items dynamically
-         if (Assigned(FTasks) and (FTasks.Count = 0)) then
-           LoadItems();
-
-         // Update popup menu items state
-         lwTasksSelectItem(Sender, lwTasks.ItemFocused, True);
        end;
   end;  //of case
+
+  // Load items dynamically
+  if (GetSelectedList().Count = 0) then
+    LoadItems();
+
+  // Only allow popup menu if item is focused
+  PopupMenu.AutoPopup := Assigned(GetSelectedListView().ItemFocused);
 end;
 
 { TMain.bCloseStartupClick

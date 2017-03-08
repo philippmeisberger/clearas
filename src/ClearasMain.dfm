@@ -714,6 +714,7 @@ object Main: TMain
   end
   object PopupMenu: TPopupMenu
     AutoPopup = False
+    OnPopup = PopupMenuPopup
     Left = 336
     object pmChangeStatus: TMenuItem
       Caption = 'deaktivieren'
