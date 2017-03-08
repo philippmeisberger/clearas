@@ -2220,7 +2220,7 @@ type
     ///   A <c>ITaskService</c> object.
     /// </param>
     constructor Create(const AName, AFileName, ALocation: string; AEnabled: Boolean;
-      ATask: IRegisteredTask; ATaskService: ITaskService);
+      const ATask: IRegisteredTask; const ATaskService: ITaskService);
 
     /// <summary>
     ///   Deletes the item.
@@ -2286,7 +2286,7 @@ type
   TTaskList = class(TRootList<TTaskListItem>, IImportableList)
   private
     FTaskService: ITaskService;
-    function AddTaskItem(ATask: IRegisteredTask): Integer;
+    function AddTaskItem(const ATask: IRegisteredTask): Integer;
   public
     /// <summary>
     ///   Constructor for creating a <c>TTaskList</c> instance.
@@ -6334,7 +6334,7 @@ end;
 { TTaskListItem }
 
 constructor TTaskListItem.Create(const AName, AFileName, ALocation: string;
-  AEnabled: Boolean; ATask: IRegisteredTask; ATaskService: ITaskService);
+  AEnabled: Boolean; const ATask: IRegisteredTask; const ATaskService: ITaskService);
 begin
   inherited Create(AName, '', AFileName, ALocation, AEnabled);
   FTask := ATask;
@@ -6494,7 +6494,7 @@ begin
   inherited Destroy;
 end;
 
-function TTaskList.AddTaskItem(ATask: IRegisteredTask): Integer;
+function TTaskList.AddTaskItem(const ATask: IRegisteredTask): Integer;
 var
   Item: TTaskListItem;
   Action: IAction;
@@ -6503,29 +6503,43 @@ var
   ActionItem: OleVariant;
   Fetched: DWORD;
   FileName: string;
+  Enabled, Erasable: Boolean;
 
 begin
-  // Try to find executable command in task
-  Actions := (ATask.Definition.Actions._NewEnum as IEnumVariant);
+  Enabled := False;
+  Erasable := False;
 
-  if (Actions.Next(1, ActionItem, Fetched) = S_OK) then
-  begin
-    Action := (IDispatch(ActionItem) as IAction);
+  // Try to read task definition
+  try
+    Actions := (ATask.Definition.Actions._NewEnum as IEnumVariant);
 
-    // Task has an executable?
-    if (Action.ActionType = TASK_ACTION_EXEC) then
+    if (Actions.Next(1, ActionItem, Fetched) = S_OK) then
     begin
-      ExecAction := (Action as IExecAction);
-      FileName := ExecAction.Path;
+      Action := (IDispatch(ActionItem) as IAction);
 
-      // Append arguments?
-      if (ExecAction.Arguments <> '') then
-        FileName := FileName +' '+ ExecAction.Arguments;
-    end;  //of begin
-  end;  //of while
+      // Task has an executable?
+      if (Action.ActionType = TASK_ACTION_EXEC) then
+      begin
+        ExecAction := (Action as IExecAction);
+        FileName := ExecAction.Path;
+
+        // Append arguments?
+        if (ExecAction.Arguments <> '') then
+          FileName := FileName +' '+ ExecAction.Arguments;
+      end;  //of begin
+    end;  //of while
+
+    Enabled := ATask.Enabled;
+
+  except
+    // Mark task as erasable if something went wrong
+    on EOleSysError do
+      Erasable := True;
+  end;  //of try
 
   Item := TTaskListItem.Create(ATask.Name, FileName, ExtractFileDir(ATask.Path),
-    ATask.Enabled, ATask, FTaskService);
+    Enabled, ATask, FTaskService);
+  Item.FErasable := Erasable;
   Result := Add(Item);
 end;
 
@@ -6685,15 +6699,10 @@ procedure TTaskList.Search(AExpertMode: Boolean = False; AWin64: Boolean = True)
 
     // Add tasks to list
     while (Tasks.Next(1, TaskItem, Fetched) = S_OK) do
-      try
-        Task := (IDispatch(TaskItem) as IRegisteredTask);
-        AddTaskItem(Task);
-
-      except
-        // Task currupted: Skip it!
-        // TODO: Mark as erasable
-        Continue;
-      end;  //of try
+    begin
+      Task := (IDispatch(TaskItem) as IRegisteredTask);
+      AddTaskItem(Task);
+    end;  //of while
 
     // Include subfolders?
     if AExpertMode then

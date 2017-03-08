@@ -705,6 +705,7 @@ object Main: TMain
         ViewStyle = vsReport
         OnColumnClick = ListViewColumnClick
         OnCompare = ListViewCompare
+        OnCustomDrawItem = ListViewCustomDrawItem
         OnDblClick = lwTasksDblClick
         OnKeyPress = ListViewKeyPress
         OnSelectItem = lwTasksSelectItem
