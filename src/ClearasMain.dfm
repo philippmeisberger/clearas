@@ -806,9 +806,9 @@ object Main: TMain
       object N11: TMenuItem
         Caption = '-'
       end
-      object mmDeleteEraseable: TMenuItem
+      object mmDeleteErasable: TMenuItem
         Caption = 'Delete invalid items'
-        OnClick = mmDeleteEraseableClick
+        OnClick = mmDeleteErasableClick
       end
     end
     object mmView: TMenuItem

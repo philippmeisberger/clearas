@@ -117,7 +117,7 @@ type
     lCopy3: TLabel;
     lCopy4: TLabel;
     N11: TMenuItem;
-    mmDeleteEraseable: TMenuItem;
+    mmDeleteErasable: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -171,7 +171,7 @@ type
     procedure pmChangeIconClick(Sender: TObject);
     procedure pmDeleteIconClick(Sender: TObject);
     procedure mmShowCaptionsClick(Sender: TObject);
-    procedure mmDeleteEraseableClick(Sender: TObject);
+    procedure mmDeleteErasableClick(Sender: TObject);
   private
     FStartup: TStartupList;
     FContext: TContextList;
@@ -1098,7 +1098,7 @@ begin
     // Edit menu labels
     mmEdit.Caption := GetString(LID_EDIT);
     mmContext.Caption := GetString(LID_RECYCLEBIN_ENTRY);
-    mmDeleteEraseable.Caption := GetString(LID_DELETE_ERASEABLE);
+    mmDeleteErasable.Caption := GetString(LID_DELETE_ERASABLE);
 
     // View menu labels
     mmView.Caption := GetString(LID_VIEW);
@@ -1292,11 +1292,11 @@ begin
   end;  //of try
 end;
 
-{ public TMain.mmDeleteEraseableClick
+{ public TMain.mmDeleteErasableClick
 
-  Deletes eraseable marked items. }
+  Deletes erasable marked items. }
 
-procedure TMain.mmDeleteEraseableClick(Sender: TObject);
+procedure TMain.mmDeleteErasableClick(Sender: TObject);
 var
   i, Answer, ItemsDeleted: Integer;
   RootList: TRootList<TRootItem>;
@@ -1307,10 +1307,10 @@ begin
     RootList := GetSelectedList();
     ListView := GetSelectedListView();
 
-    // No eraseable items?
-    if (RootList.EraseableItemsCount = 0) then
+    // No erasable items?
+    if (RootList.ErasableItemsCount = 0) then
     begin
-      FLang.ShowMessage(FLang[LID_DELETE_ERASEABLE_NO_ITEMS]);
+      FLang.ShowMessage(FLang[LID_DELETE_ERASABLE_NO_ITEMS]);
       Exit;
     end;  //of begin
 
@@ -1325,12 +1325,12 @@ begin
       begin
         RootList.Selected := TRootItem(ListView.Items[i].SubItems.Objects[0]);
 
-        if not RootList.Selected.Eraseable then
+        if not RootList.Selected.Erasable then
           Continue;
 
-        // Confirm deletion of every eraseable item except "yes to all" was clicked
+        // Confirm deletion of every erasable item except "yes to all" was clicked
         if (Answer <> mrYesToAll) then
-          Answer := TaskMessageDlg(FLang.Format([LID_DELETE_ERASEABLE_CONFIRM],
+          Answer := TaskMessageDlg(FLang.Format([LID_DELETE_ERASABLE_CONFIRM],
             [ListView.Items[i].SubItems[0]]), FLang.GetString([LID_ITEM_DELETE_CONFIRM1,
             LID_ITEM_DELETE_CONFIRM2]), mtConfirmation, mbYesNoCancel + [mbYesToAll], 0);
 
@@ -1346,14 +1346,14 @@ begin
               if RootList.DeleteItem() then
                 Inc(ItemsDeleted);
 
-              // All eraseable items deleted?
-              if (RootList.EraseableItemsCount = 0) then
+              // All eraseble items deleted?
+              if (RootList.ErasableItemsCount = 0) then
                 Break;
             end;
         end;  //of case
       end;  //of for
 
-      FLang.ShowMessage(FLang.Format(LID_DELETE_ERASEABLE_SUCCESS, [ItemsDeleted]));
+      FLang.ShowMessage(FLang.Format(LID_DELETE_ERASABLE_SUCCESS, [ItemsDeleted]));
 
     finally
       if (ItemsDeleted > 0) then
@@ -1362,14 +1362,14 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([LID_DELETE_ERASEABLE, LID_IMPOSSIBLE]),
+      FLang.ShowMessage(FLang.GetString([LID_DELETE_ERASABLE, LID_IMPOSSIBLE]),
         FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
 
     on E: EListBlocked do
       FLang.ShowMessage(LID_OPERATION_PENDING1, LID_OPERATION_PENDING2, mtWarning);
 
     on E: Exception do
-      FLang.ShowException(FLang.GetString([LID_DELETE_ERASEABLE, LID_IMPOSSIBLE]), E.Message);
+      FLang.ShowException(FLang.GetString([LID_DELETE_ERASABLE, LID_IMPOSSIBLE]), E.Message);
   end;  //of try
 end;
 
@@ -1503,8 +1503,8 @@ begin
     // Update TListView
     ListView.OnSelectItem(Self, ListView.ItemFocused, True);
 
-    // Item is eraseable?
-    if GetSelectedItem().Eraseable then
+    // Item is erasable?
+    if GetSelectedItem().Erasable then
       FLang.ShowMessage(LID_FILE_DOES_NOT_EXIST, LID_ENTRY_CAN_DE_DELETED, mtWarning);
 
   except
@@ -1549,8 +1549,8 @@ begin
     // Update TListView
     ListView.OnSelectItem(Self, ListView.ItemFocused, True);
 
-    // Item is eraseable?
-    if GetSelectedItem().Eraseable then
+    // Item is erasable?
+    if GetSelectedItem().Erasable then
       FLang.ShowMessage(LID_FILE_DOES_NOT_EXIST, LID_ENTRY_CAN_DE_DELETED, mtWarning);
 
   except
@@ -1626,13 +1626,13 @@ end;
 
 { TMain.CustomDrawItem
 
-  Custom drawing of eraseable items. }
+  Custom drawing of erasable items. }
 
 procedure TMain.ListViewCustomDrawItem(Sender: TCustomListView;
   Item: TListItem; State: TCustomDrawState; var DefaultDraw: Boolean);
 begin
-  // Mark eraseable items
-  if TRootItem(Item.SubItems.Objects[0]).Eraseable then
+  // Mark erasable items
+  if TRootItem(Item.SubItems.Objects[0]).Erasable then
     Sender.Canvas.Font.Color := clGray
   else
     Sender.Canvas.Font.Color := clBlack;

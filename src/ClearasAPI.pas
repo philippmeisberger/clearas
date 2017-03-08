@@ -169,10 +169,10 @@ type
   private
     function GetArguments(): string;
     function GetFileNameOnly(): string;
-    function GetEraseable(): Boolean;
+    function GetErasable(): Boolean;
   protected
     FEnabled,
-    FEraseable,
+    FErasable,
     FInvalid: Boolean;
     FFileName: string;
     FName: string;
@@ -384,7 +384,7 @@ type
     /// <summary>
     ///   Determines if the item is invalid and can be deleted.
     /// </summary>
-    property Eraseable: Boolean read GetEraseable;
+    property Erasable: Boolean read GetErasable;
 
     /// <summary>
     ///   Gets or sets the filename including arguments.
@@ -627,7 +627,7 @@ type
     FOnChanged: TItemChangeEvent;
     FOnRefresh: TNotifyEvent;
     FEnabledItemsCount,
-    FEraseableItemsCount: Integer;
+    FErasableItemsCount: Integer;
   protected
     FLock: TCriticalSection;
     procedure DoNotifyOnChanged(ANewStatus: TItemStatus);
@@ -823,9 +823,9 @@ type
     property EnabledItemsCount: Integer read FEnabledItemsCount;
 
     /// <summary>
-    ///   Gets the count of eraseable marked items.
+    ///   Gets the count of erasable marked items.
     /// </summary>
-    property EraseableItemsCount: Integer read FEraseableItemsCount;
+    property ErasableItemsCount: Integer read FErasableItemsCount;
 
     /// <summary>
     ///   Occurs when an item has changed.
@@ -1858,6 +1858,12 @@ type
     procedure Search(AExpertMode: Boolean; AWin64: Boolean;
       const ARoot: string = ''); reintroduce; overload;
   public
+    const
+      /// <summary>
+      ///   A comma separated list that contains the default context menu locations.
+      /// </summary>
+      DefaultLocations = 'Directory, Folder, *, Drive';
+
     /// <summary>
     ///   Adds an item to the list.
     /// </summary>
@@ -2493,7 +2499,7 @@ begin
   FLocation := ALocation;
   FEnabled := AEnabled;
   FIcon := 0;
-  FEraseable := not FileExists();
+  FErasable := not FileExists();
 end;
 
 function TRootItem.GetArguments(): string;
@@ -2501,9 +2507,9 @@ begin
   Result := ExtractArguments(FFileName).DeQuotedString('"');
 end;
 
-function TRootItem.GetEraseable(): Boolean;
+function TRootItem.GetErasable(): Boolean;
 begin
-  Result := not FInvalid and FEraseable;
+  Result := not FInvalid and FErasable;
 end;
 
 function TRootItem.GetFileNameOnly(): string;
@@ -2591,7 +2597,7 @@ end;
 procedure TRootItem.ChangeFilePath(const ANewFileName: string);
 begin
   FFileName := ANewFileName;
-  FEraseable := not FileExists();
+  FErasable := not FileExists();
 end;
 
 destructor TRootItem.Destroy;
@@ -2933,7 +2939,7 @@ constructor TRootList<T>.Create;
 begin
   inherited Create;
   FEnabledItemsCount := 0;
-  FEraseableItemsCount := 0;
+  FErasableItemsCount := 0;
   FDuplicates := False;
   FLock := TCriticalSection.Create;
 end;
@@ -2975,13 +2981,13 @@ procedure TRootList<T>.Clear();
 begin
   inherited Clear;
   FEnabledItemsCount := 0;
-  FEraseableItemsCount := 0;
+  FErasableItemsCount := 0;
   FItem := nil;
 end;
 
 procedure TRootList<T>.ChangeItemFilePath(const ANewFilePath: string);
 var
-  ItemEraseable: Boolean;
+  ItemErasable: Boolean;
 
 begin
   // List locked?
@@ -2994,15 +3000,15 @@ begin
       raise EInvalidItem.Create('No item selected!');
 
     // Change item file path
-    ItemEraseable := FItem.Eraseable;
+    ItemErasable := FItem.Erasable;
     FItem.ChangeFilePath(ANewFilePath);
 
-    // Update eraseable count
-    if (ItemEraseable and not FItem.Eraseable) then
-      Dec(FEraseableItemsCount)
+    // Update erasable count
+    if (ItemErasable and not FItem.Erasable) then
+      Dec(FErasableItemsCount)
     else
-      if (not ItemEraseable and FItem.Eraseable) then
-        Inc(FEraseableItemsCount);
+      if (not ItemErasable and FItem.Erasable) then
+        Inc(FErasableItemsCount);
 
     DoNotifyOnChanged(stPathChanged);
 
@@ -3194,8 +3200,8 @@ begin
         if Item.Enabled then
           Inc(FEnabledItemsCount);
 
-        if Item.Eraseable then
-          Inc(FEraseableItemsCount);
+        if Item.Erasable then
+          Inc(FErasableItemsCount);
       end;
 
     cnRemoved:
@@ -3205,9 +3211,9 @@ begin
           // Update active counter
           Dec(FEnabledItemsCount);
 
-        // Update eraseable count
-        if Item.Eraseable then
-          Dec(FEraseableItemsCount);
+        // Update erasable count
+        if Item.Erasable then
+          Dec(FErasableItemsCount);
 
         FItem := nil;
       end;
@@ -3987,7 +3993,7 @@ begin
   FLnkFile.ExeFileName := ExtractPathToFile(ANewFileName);
   FLnkFile.Arguments := ExtractArguments(ANewFileName).DeQuotedString('"');
   FFileName := ANewFileName;
-  FEraseable := not FileExists();
+  FErasable := not FileExists();
 
   // Rewrite backup prior to Windows 7
   if not FEnabled then
@@ -4960,7 +4966,7 @@ constructor TShellCascadingItem.Create(const AName, ACaption, ALocation: string;
   AEnabled, AExtended: Boolean);
 begin
   inherited Create(AName, ACaption, '', ALocation, AEnabled, AExtended);
-  FEraseable := False;
+  FErasable := False;
 end;
 
 procedure TShellCascadingItem.GetSubCommands(var ASubCommands: TStrings);
@@ -5206,7 +5212,7 @@ constructor TShellNewItem.Create(const AName, ACaption, ALocation: string;
   AEnabled: Boolean);
 begin
   inherited Create(AName, ACaption, '', ALocation, AEnabled, False);
-  FEraseable := False;
+  FErasable := False;
 end;
 
 procedure TShellNewItem.ChangeStatus(const ANewStatus: Boolean);
@@ -6319,7 +6325,7 @@ begin
   inherited Create(AName, '', AFileName, ALocation, AEnabled);
   FTask := ATask;
   FTaskService := ATaskService;
-  FEraseable := False;
+  FErasable := False;
 end;
 
 procedure TTaskListItem.ChangeStatus(const ANewStatus: Boolean);
@@ -6671,6 +6677,7 @@ procedure TTaskList.Search(AExpertMode: Boolean = False; AWin64: Boolean = True)
 
       except
         // Task currupted: Skip it!
+        // TODO: Mark as erasable
         Continue;
       end;  //of try
 
