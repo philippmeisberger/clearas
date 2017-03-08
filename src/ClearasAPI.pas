@@ -1690,7 +1690,7 @@ type
       /// <summary>
       ///   Name of registry value that contains comma-separated list of subcommands.
       /// </summary>
-      SubCommands = 'SubCommands';
+      SubCommandsValueName = 'SubCommands';
 
     /// <summary>
     ///   Constructor for creating a <c>TShellCascadingItem</c> instance.
@@ -5002,11 +5002,11 @@ begin
   try
     Reg.RootKey := HKEY_CLASSES_ROOT;
 
-    if (not Reg.OpenKey(GetLocation(), False) or not Reg.ValueExists(SubCommands)) then
+    if (not Reg.OpenKey(GetLocation(), False) or not Reg.ValueExists(SubCommandsValueName)) then
       Exit;
 
     ASubCommands.Delimiter := ';';
-    ASubCommands.DelimitedText := Reg.ReadString(SubCommands);
+    ASubCommands.DelimitedText := Reg.ReadString(SubCommandsValueName);
 
   finally
     Reg.Free;
@@ -5604,7 +5604,7 @@ begin
           // Cascading shell item?
           if not Reg.OpenKey('command', False) then
           begin
-            if ((not Reg.ValueExists('MUIVerb') or not Reg.ValueExists(TShellCascadingItem.SubCommands)) and
+            if ((not Reg.ValueExists('MUIVerb') or not Reg.ValueExists(TShellCascadingItem.SubCommandsValueName)) and
               not Reg.KeyExists('ExtendedSubCommandsKey')) then
               Continue;
 
