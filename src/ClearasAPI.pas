@@ -717,7 +717,7 @@ type
     ///   <c>EListBlocked</c> if another operation is pending on the list.
     ///   <c>EInvalidItem</c> if no item is selected.
     /// </exception>
-    procedure ExportItem(const AFileName: string); virtual;
+    procedure ExportItem(const AFileName: string);
 
     /// <summary>
     ///   Exports the complete list as file.
@@ -798,7 +798,7 @@ type
     ///   <c>EInvalidItem</c> if no item is selected.
     ///   <c>EWarning</c> if item with new name already exists.
     /// </exception>
-    procedure RenameItem(const ANewName: string); virtual;
+    procedure RenameItem(const ANewName: string);
 
     /// <summary>
     ///   Searches for items and adds them to the list.
