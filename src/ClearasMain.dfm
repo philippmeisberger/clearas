@@ -735,7 +735,7 @@ object Main: TMain
     end
     object pmExport: TMenuItem
       Caption = 'Export'
-      OnClick = mmExportClick
+      OnClick = bExportItemClick
     end
     object pmDelete: TMenuItem
       Caption = 'Delete'
@@ -777,7 +777,7 @@ object Main: TMain
     object mmFile: TMenuItem
       Caption = 'File'
       object mmAdd: TMenuItem
-        Caption = 'Add program'
+        Caption = 'Add ...'
         OnClick = mmAddClick
       end
       object N4: TMenuItem

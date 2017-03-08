@@ -1257,6 +1257,10 @@ begin
   try
     SelectedList := GetSelectedList();
 
+    // No item selected?
+    if not Assigned(SelectedList.Selected) then
+      raise EInvalidItem.Create('No item selected!');
+
     // Set a default file name
     if (PageControl.ActivePageIndex = 1) then
     begin
@@ -1319,7 +1323,7 @@ begin
       raise EListBlocked.Create('Another operation is pending. Please wait!');
 
     ItemsDeleted := 0;
-    Answer := 0;
+    Answer := mrNone;
 
     try
       for i := 0 to ListView.Items.Count - 1 do
@@ -1501,11 +1505,8 @@ begin
     // Change item visual status
     ListView.ItemFocused.Caption := RootList.Selected.GetStatusText(FLang);
 
-    // Update TListView
-    ListView.OnSelectItem(Self, ListView.ItemFocused, True);
-
     // Item is erasable?
-    if GetSelectedItem().Erasable then
+    if RootList.Selected.Erasable then
       FLang.ShowMessage(LID_FILE_DOES_NOT_EXIST, LID_ENTRY_CAN_DE_DELETED, mtWarning);
 
   except
@@ -1547,11 +1548,8 @@ begin
     // Change item visual status
     ListView.ItemFocused.Caption := RootList.Selected.GetStatusText(FLang);
 
-    // Update TListView
-    ListView.OnSelectItem(Self, ListView.ItemFocused, True);
-
     // Item is erasable?
-    if GetSelectedItem().Erasable then
+    if RootList.Selected.Erasable then
       FLang.ShowMessage(LID_FILE_DOES_NOT_EXIST, LID_ENTRY_CAN_DE_DELETED, mtWarning);
 
   except
@@ -1576,18 +1574,7 @@ end;
 
 procedure TMain.bExportItemClick(Sender: TObject);
 begin
-  try
-    // Nothing selected?
-    if not Assigned(GetSelectedList().Selected) then
-      Abort;
-
-    ShowExportItemDialog();
-
-  except
-    on E: Exception do
-      FLang.ShowMessage(FLang.GetString([LID_EXPORT, LID_IMPOSSIBLE]),
-        FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
-  end;  //of try
+  ShowExportItemDialog();
 end;
 
 { TMain.eSearchChange
