@@ -20,7 +20,9 @@ type
     cNewTestFileName = cNewTestExe +' '+ cNewTestArgument;
   strict private
     FLockingSuccessful: Boolean;
+    FErrorMessage: string;
     procedure TestLocking_SearchStart(Sender: TObject);
+    procedure TestLocking_SearchError(Sender: TObject; const AErrorMessage: string);
     procedure EnsureFileExportedAndDelete(const AFileName: string);
   protected
     FRootList: TRootList<TRootItem>;
@@ -385,6 +387,12 @@ begin
   EnsureFileExportedAndDelete(FRootList.Selected.Name + FRootList.Selected.GetBackupExtension());
 end;
 
+procedure TRootListTest.TestLocking_SearchError(Sender: TObject;
+  const AErrorMessage: string);
+begin
+  FErrorMessage := AErrorMessage;
+end;
+
 procedure TRootListTest.TestLocking_SearchStart(Sender: TObject);
 begin
   try
@@ -409,13 +417,18 @@ begin
 
   with SearchThread do
   begin
+    FreeOnTerminate := False;
     OnStart := TestLocking_SearchStart;
-    ExpertMode := True;
+    OnError := TestLocking_SearchError;
     Start();
   end;
 
-  // Give the thread time to kill himself
-  Delay(2000);
+  // Wait for the thread
+  SearchThread.WaitFor();
+  FreeAndNil(SearchThread);
+  CheckSynchronize();
+
+  CheckEqualsString('', FErrorMessage, FErrorMessage);
   Check(FLockingSuccessful, 'List was not locked!');
 end;
 
