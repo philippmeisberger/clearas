@@ -1,4 +1,8 @@
 Ideas:
+- Remove "Recycle bin context menu item"
+- Two execution modes
+  - Admin: Read and edit all items (like now)
+  - User: Read and edit only items owned by user
 - Add items to listview async
   - Allow editing at same time
 - Export erasable items before deleting
