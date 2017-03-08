@@ -1623,12 +1623,12 @@ type
       /// <summary>
       ///   The registry sub key.
       /// </summary>
-      CanonicalName         = 'Shell';
+      CanonicalName    = 'Shell';
 
       /// <summary>
       ///   The registry value that exists when item is disabled.
       /// </summary>
-      CanonicalNameDisabled = 'LegacyDisable';
+      DisableValueName = 'LegacyDisable';
 
     /// <summary>
     ///   Changes the icon of a contextmenu item.
@@ -4937,11 +4937,11 @@ begin
     if ANewStatus then
     begin
       // Delete disable value, but do not fail if value does not exist!
-      if (Reg.ValueExists(CanonicalNameDisabled) and not Reg.DeleteValue(CanonicalNameDisabled)) then
-        raise EStartupException.Create('Could not delete value '''+ CanonicalNameDisabled +'''!');
+      if (Reg.ValueExists(DisableValueName) and not Reg.DeleteValue(DisableValueName)) then
+        raise EStartupException.Create('Could not delete value '''+ DisableValueName +'''!');
     end  //of begin
     else
-      Reg.WriteString(CanonicalNameDisabled, '');
+      Reg.WriteString(DisableValueName, '');
 
     // Update status
     inherited ChangeStatus(ANewStatus);
@@ -5598,7 +5598,7 @@ begin
             Continue;
 
           // Get status and caption of Shell item
-          Enabled := not Reg.ValueExists(TShellItem.CanonicalNameDisabled);
+          Enabled := not Reg.ValueExists(TShellItem.DisableValueName);
           Extended := Reg.ValueExists('Extended');
 
           // Cascading shell item?
