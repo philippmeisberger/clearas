@@ -2566,7 +2566,7 @@ begin
   Path := Path.DeQuotedString('"');
 
   // Path has to be expanded?
-  if ((Path <> '') and (Path[1] = '%')) then
+  if Path.StartsWith('%') then
     ExpandEnvironmentVar(Path);
 
   FInvalid := (ExtractFileExt(Path) = '');
@@ -5086,7 +5086,7 @@ end;
 procedure TShellExItem.ChangeStatus(const ANewStatus: Boolean);
 var
   Reg: TRegistry;
-  OldValue, NewValue: string;
+  OldValue: string;
 
 begin
   Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
@@ -5108,18 +5108,12 @@ begin
       raise EContextMenuException.Create('Value must not be empty!');
 
     // Item disabled?
-    if (ANewStatus and (OldValue[1] <> '{')) then
-    begin
-      NewValue := OldValue.Substring(1);
-      Reg.WriteString('', NewValue);
-    end  //of begin
+    if (ANewStatus and not OldValue.StartsWith('{')) then
+      Reg.WriteString('', OldValue.Substring(1))
     else
       // Item enabled?
-      if (OldValue[1] = '{') then
-      begin
-        NewValue := '-'+ OldValue;
-        Reg.WriteString('', NewValue);
-      end;  //of if
+      if OldValue.StartsWith('{') then
+        Reg.WriteString('', OldValue.Insert(0, '-'));
 
     // Update status
     inherited ChangeStatus(ANewStatus);
@@ -5391,7 +5385,7 @@ begin
           +''': '+ Reg.LastErrorMsg);
 
       // Location is a file extension?
-      if (LocationRoot[1] = '.') then
+      if LocationRoot.StartsWith('.') then
       begin
         // Read default associated file type
         FileType := Reg.ReadString('');
@@ -5596,7 +5590,7 @@ begin
         FileName := '';
 
         // Filter items with GUID in name
-        if (ItemName[1] = '{') then
+        if ItemName.StartsWith('{') then
           Continue;
 
         // Search for shell entries?
@@ -5605,7 +5599,7 @@ begin
           Caption := Reg.ReadString('');
 
           // Filter unreadable Shell items
-          if ((Caption <> '') and (Caption[1] = '@')) then
+          if Caption.StartsWith('@') then
             Continue;
 
           // Get status and caption of Shell item
@@ -5644,11 +5638,11 @@ begin
             GuID := Reg.ReadString('');
 
             // Filter empty and unreadable ShellEx items
-            if ((GuID = '') or (GuID[1] = '@')) then
+            if ((GuID = '') or GuID.StartsWith('@')) then
               Continue;
 
             // Get status and GUID of ShellEx item
-            Enabled := (GuID[1] = '{');
+            Enabled := GuID.StartsWith('{');
 
             // Disabled ShellEx items got "-" before GUID!
             if not Enabled then
@@ -5753,7 +5747,7 @@ var
           end;  //of begin
 
           // File extension: Search in subkey for ShellNew items
-          if (AKeyName[1] = '.') then
+          if AKeyName.StartsWith('.') then
             SearchSubkey(AKeyName +'\'+ Keys[i]);
         end;  //of for
       end;  //of begin
