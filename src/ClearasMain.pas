@@ -2116,9 +2116,20 @@ begin
 end;
 
 procedure TMain.PopupMenuPopup(Sender: TObject);
+var
+  SelectedItem: TRootItem;
+
 begin
+  // OnPopup also occurs when hotkeys are pressed
+  if not PopupMenu.AutoPopup then
+    Exit;
+
+  // Since this point cannot be reached when no item is selected EInvalidItem is
+  // assumed not to be raised
+  SelectedItem := GetSelectedItem();
+
   // Change text
-  if GetSelectedItem().Enabled then
+  if SelectedItem.Enabled then
     pmChangeStatus.Caption := bDisableStartupItem.Caption
   else
     pmChangeStatus.Caption := bEnableStartupItem.Caption;
@@ -2128,8 +2139,8 @@ begin
     0:
       begin
         // Startup user items are located in filesystem not in registry!
-        pmOpenRegedit.Enabled := not ((FStartup.Selected is TStartupUserItem) and
-          FStartup.Selected.Enabled);
+        pmOpenRegedit.Enabled := not ((SelectedItem is TStartupUserItem) and
+          SelectedItem.Enabled);
         pmOpenExplorer.Enabled := True;
         pmRename.Enabled := True;
         pmDeleteIcon.Visible := False;
@@ -2140,12 +2151,18 @@ begin
     1:
       begin
         pmOpenRegedit.Enabled := True;
-        pmOpenExplorer.Enabled := not (FContext.Selected is TShellNewItem) and not
-          (FContext.Selected is TShellCascadingItem);
-        pmRename.Enabled := (FContext.Selected is TShellItem);
+
+        // ShellNew and cascading Shell items cannot be opened in Explorer
+        pmOpenExplorer.Enabled := not (SelectedItem is TShellNewItem) and not
+          (SelectedItem is TShellCascadingItem);
+
+        // Only Shell contextmenu items can be renamed
+        pmRename.Enabled := (SelectedItem is TShellItem);
+
+        // Only icon of Shell contextmenu items can be changed
         pmChangeIcon.Visible := pmRename.Enabled;
-        pmDeleteIcon.Visible := (pmRename.Enabled and (FContext.Selected.Icon <> 0));
-        pmEdit.Enabled := (FContext.Selected.FileName <> '');
+        pmDeleteIcon.Visible := (pmRename.Enabled and (SelectedItem.Icon <> 0));
+        pmEdit.Enabled := (SelectedItem.FileName <> '');
       end;
 
     2:
@@ -2155,7 +2172,7 @@ begin
         pmRename.Enabled := True;
         pmDeleteIcon.Visible := False;
         pmChangeIcon.Visible := False;
-        pmEdit.Enabled := (FService.Selected.FileName <> '');
+        pmEdit.Enabled := (SelectedItem.FileName <> '');
       end;
 
     3:
@@ -2165,7 +2182,7 @@ begin
         pmRename.Enabled := True;
         pmDeleteIcon.Visible := False;
         pmChangeIcon.Visible := False;
-        pmEdit.Enabled := (FTasks.Selected.FileName <> '');
+        pmEdit.Enabled := (SelectedItem.FileName <> '');
       end;
   end;  //of case
 end;

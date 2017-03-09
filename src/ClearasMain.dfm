@@ -717,7 +717,7 @@ object Main: TMain
     OnPopup = PopupMenuPopup
     Left = 336
     object pmChangeStatus: TMenuItem
-      Caption = 'deaktivieren'
+      Caption = 'disable'
       Default = True
       OnClick = pmChangeStatusClick
     end
@@ -730,7 +730,7 @@ object Main: TMain
       OnClick = pmCopyLocationClick
     end
     object pmEdit: TMenuItem
-      Caption = 'Pfad bearbeiten'
+      Caption = 'Edit path'
       OnClick = pmEditClick
     end
     object pmExport: TMenuItem
@@ -825,7 +825,6 @@ object Main: TMain
       end
       object mmDefault: TMenuItem
         Caption = 'Default column width'
-        ShortCut = 117
         OnClick = mmDefaultClick
       end
       object mmShowCaptions: TMenuItem
