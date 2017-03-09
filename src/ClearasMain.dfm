@@ -740,7 +740,7 @@ object Main: TMain
     object pmDelete: TMenuItem
       Caption = 'Delete'
       ShortCut = 46
-      OnClick = pmDeleteClick
+      OnClick = bDeleteItemClick
     end
     object pmRename: TMenuItem
       Caption = 'Rename'

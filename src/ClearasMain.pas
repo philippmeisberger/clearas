@@ -156,7 +156,6 @@ type
     procedure PageControlChange(Sender: TObject);
     procedure pmChangeStatusClick(Sender: TObject);
     procedure pmCopyLocationClick(Sender: TObject);
-    procedure pmDeleteClick(Sender: TObject);
     procedure pmEditClick(Sender: TObject);
     procedure pmOpenRegeditClick(Sender: TObject);
     procedure pmOpenExplorerClick(Sender: TObject);
@@ -1958,11 +1957,12 @@ var
 
 begin
   try
-    // Only icon of shell item can be changed!
+    // Only icon of shell item can be changed
     if not (FContext.Selected is TShellItem) then
       Exit;
 
-    if PromptForFileName(FileName, 'Application *.exe|*.exe|Icon *.ico|*.ico') then
+    if PromptForFileName(FileName, 'Application *.exe|*.exe|Icon *.ico|*.ico',
+      '', StripHotkey(pmChangeIcon.Caption)) then
     begin
       if not (FContext.Selected as TShellItem).ChangeIcon('"'+ FileName +'"') then
         raise Exception.Create('Unknown error!');
@@ -1981,20 +1981,6 @@ begin
   end;  //of try
 end;
 
-{ TMain.pmDeleteClick
-
-  Popup menu entry to delete the current selected item. }
-
-procedure TMain.pmDeleteClick(Sender: TObject);
-begin
-  case PageControl.ActivePageIndex of
-    0: bDeleteStartupItem.Click();
-    1: bDeleteContextItem.Click();
-    2: bDeleteServiceItem.Click();
-    3: bDeleteTaskItem.Click();
-  end;  //of case
-end;
-
 { TMain.pmDeleteIconClick
 
   Popup menu entry to delete the icon of the current selected shell item. }
@@ -2002,6 +1988,7 @@ end;
 procedure TMain.pmDeleteIconClick(Sender: TObject);
 begin
   try
+    // Only icon of shell item can be deleted
     if not (FContext.Selected is TShellItem) then
       Exit;
 
@@ -2445,8 +2432,10 @@ begin
 
     // Show select file dialog
     if PromptForFileName(FileName, Filter, '', StripHotkey(mmImport.Caption)) then
+    begin
       if not ImportableList.ImportBackup(FileName) then
         raise EWarning.Create(FLang.GetString(LID_ENTRY_ALREADY_EXISTS));
+    end;  //of begin
 
   except
     on E: EInvalidItem do
