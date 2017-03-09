@@ -507,7 +507,7 @@ end;
 
 function TRegistryChangeNotificationThread.GetRootKey(): HKEY;
 begin
-  Result := FRegistry.CurrentKey;
+  Result := FRegistry.RootKey;
 end;
 
 procedure TRegistryChangeNotificationThread.NotifyOnChange();
