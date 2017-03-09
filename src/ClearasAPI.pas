@@ -531,34 +531,34 @@ type
   end;
 
   /// <summary>
-  ///   The possible basically item changes that needs a visual update.
+  ///   The possible item changes.
   /// </summary>
-  TItemStatus = (
+  TItemChange = (
 
     /// <summary>
     ///   Item has been enabled.
     /// </summary>
-    stEnabled,
+    icEnabled,
 
     /// <summary>
     ///   Item has been disabled.
     /// </summary>
-    stDisabled,
+    icDisabled,
 
     /// <summary>
     ///   Item has been deleted.
     /// </summary>
-    stDeleted,
+    icDeleted,
 
     /// <summary>
     ///   Path has changed.
     /// </summary>
-    stPathChanged,
+    icPathChanged,
 
     /// <summary>
     ///   Name has changed.
     /// </summary>
-    stRenamed
+    icRenamed
   );
 
   /// <summary>
@@ -567,10 +567,10 @@ type
   /// <param name="Sender">
   ///   The sender.
   /// </param>
-  /// <param name="ANewStatus">
+  /// <param name="AItemChange">
   ///   The new item status.
   /// </param>
-  TItemChangeEvent = procedure(Sender: TObject; ANewStatus: TItemStatus) of object;
+  TItemChangeEvent = procedure(Sender: TObject; AItemChange: TItemChange) of object;
 
   /// <summary>
   ///   Occurs when something has failed.
@@ -630,7 +630,7 @@ type
     FErasableItemsCount: Integer;
   protected
     FLock: TCriticalSection;
-    procedure DoNotifyOnChanged(ANewStatus: TItemStatus);
+    procedure DoNotifyOnChanged(AItemChange: TItemChange);
     procedure Notify(const Item: T; Action: TCollectionNotification); override;
 
     { IInterface }
@@ -2974,10 +2974,10 @@ begin
   inherited Destroy;
 end;
 
-procedure TRootList<T>.DoNotifyOnChanged(ANewStatus: TItemStatus);
+procedure TRootList<T>.DoNotifyOnChanged(AItemChange: TItemChange);
 begin
   if Assigned(FOnChanged) then
-    FOnChanged(Self, ANewStatus);
+    FOnChanged(Self, AItemChange);
 end;
 
 function TRootList<T>.QueryInterface(const IID: TGUID; out Obj): HResult;
@@ -3033,7 +3033,7 @@ begin
       if (not ItemErasable and FItem.Erasable) then
         Inc(FErasableItemsCount);
 
-    DoNotifyOnChanged(stPathChanged);
+    DoNotifyOnChanged(icPathChanged);
 
   finally
     FLock.Release();
@@ -3042,7 +3042,7 @@ end;
 
 procedure TRootList<T>.ChangeItemStatus(const ANewStatus: Boolean);
 var
-  NewStatus: TItemStatus;
+  NewStatus: TItemChange;
 
 begin
   // List locked?
@@ -3061,8 +3061,8 @@ begin
       // Enable item
       FItem.ChangeStatus(ANewStatus);
       Inc(FEnabledItemsCount);
-      DoNotifyOnChanged(stEnabled);
-    end
+      DoNotifyOnChanged(icEnabled);
+    end  //of begin
     else
     begin
       if not FItem.Enabled then
@@ -3076,8 +3076,8 @@ begin
         Dec(FEnabledItemsCount);
 
       // Notify disable
-      DoNotifyOnChanged(stDisabled);
-    end;
+      DoNotifyOnChanged(icDisabled);
+    end;  //of if
 
   finally
     FLock.Release();
@@ -3107,7 +3107,7 @@ begin
       Remove(FItem);
 
       // Notify delete
-      DoNotifyOnChanged(stDeleted);
+      DoNotifyOnChanged(icDeleted);
     end;  //of begin
 
   finally
@@ -3265,7 +3265,7 @@ begin
     end;  //of begin
 
     FItem.Name := ANewName;
-    DoNotifyOnChanged(stRenamed);
+    DoNotifyOnChanged(icRenamed);
 
   finally
     FLock.Release();

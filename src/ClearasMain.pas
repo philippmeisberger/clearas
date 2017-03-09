@@ -186,20 +186,20 @@ type
     procedure LoadItems(ATotalRefresh: Boolean = True);
     procedure OnContextSearchStart(Sender: TObject);
     procedure OnContextSearchEnd(Sender: TObject);
-    procedure OnContextItemChanged(Sender: TObject; ANewStatus: TItemStatus);
+    procedure OnContextItemChanged(Sender: TObject; AItemChange: TItemChange);
     procedure OnExportListStart(Sender: TObject);
     procedure OnExportListEnd(Sender: TObject);
     procedure OnExportListError(Sender: TObject; const AErrorMessage: string);
     procedure OnSearchError(Sender: TObject; const AErrorMessage: string);
     procedure OnStartupSearchStart(Sender: TObject);
     procedure OnStartupSearchEnd(Sender: TObject);
-    procedure OnStartupItemChanged(Sender: TObject; ANewStatus: TItemStatus);
+    procedure OnStartupItemChanged(Sender: TObject; AItemChange: TItemChange);
     procedure OnServiceSearchStart(Sender: TObject);
     procedure OnServiceSearchEnd(Sender: TObject);
-    procedure OnServiceItemChanged(Sender: TObject; ANewStatus: TItemStatus);
+    procedure OnServiceItemChanged(Sender: TObject; AItemChange: TItemChange);
     procedure OnTaskSearchStart(Sender: TObject);
     procedure OnTaskSearchEnd(Sender: TObject);
-    procedure OnTaskItemChanged(Sender: TObject; ANewStatus: TItemStatus);
+    procedure OnTaskItemChanged(Sender: TObject; AItemChange: TItemChange);
     function ShowExportItemDialog(): Boolean;
     procedure ShowColumnDate(AListView: TListView; AShow: Boolean = True);
     function UpdateContextPath(): Boolean;
@@ -589,36 +589,36 @@ begin
   lwContext.AlphaSort();
 
   // Refresh counter
-  OnContextItemChanged(Sender, stDeleted);
+  OnContextItemChanged(Sender, icDeleted);
 end;
 
 { private TMain.OnContextItemChanged
 
   Event method that is called when item status has been changed. }
 
-procedure TMain.OnContextItemChanged(Sender: TObject; ANewStatus: TItemStatus);
+procedure TMain.OnContextItemChanged(Sender: TObject; AItemChange: TItemChange);
 begin
   // Refresh counter label
   lwContext.Columns[1].Caption := FLang.Format(LID_CONTEXT_MENU_COUNTER,
     [FContext.EnabledItemsCount, FContext.Count]);
 
   // Change button states
-  case ANewStatus of
-    stEnabled:
+  case AItemChange of
+    icEnabled:
       begin
         bEnableContextItem.Enabled := False;
         bDisableContextItem.Enabled := True;
         pmChangeStatus.Caption := bDisableContextItem.Caption;
       end;
 
-    stDisabled:
+    icDisabled:
       begin
         bEnableContextItem.Enabled := True;
         bDisableContextItem.Enabled := False;
         pmChangeStatus.Caption := bEnableContextItem.Caption;
       end;
 
-    stDeleted:
+    icDeleted:
       begin
         bEnableContextItem.Enabled := False;
         bDisableContextItem.Enabled := False;
@@ -711,7 +711,7 @@ end;
 
   Event method that is called when item status has been changed. }
 
-procedure TMain.OnStartupItemChanged(Sender: TObject; ANewStatus: TItemStatus);
+procedure TMain.OnStartupItemChanged(Sender: TObject; AItemChange: TItemChange);
 var
   Icon: TIcon;
 
@@ -722,8 +722,8 @@ begin
       [FStartup.EnabledItemsCount, FStartup.Count]);
 
   // Change button states
-  case ANewStatus of
-    stEnabled:
+  case AItemChange of
+    icEnabled:
       begin
         bEnableStartupItem.Enabled := False;
         bDisableStartupItem.Enabled := True;
@@ -735,7 +735,7 @@ begin
           lwStartup.ItemFocused.SubItems[3] := '';
       end;
 
-    stDisabled:
+    icDisabled:
       begin
         bEnableStartupItem.Enabled := True;
         bDisableStartupItem.Enabled := False;
@@ -746,7 +746,7 @@ begin
           lwStartup.ItemFocused.SubItems[3] := DateTimeToStr(FStartup.Selected.Time);
       end;
 
-    stDeleted:
+    icDeleted:
       begin
         bEnableStartupItem.Enabled := False;
         bDisableStartupItem.Enabled := False;
@@ -754,7 +754,7 @@ begin
         bExportStartupItem.Enabled := False;
       end;
 
-    stPathChanged:
+    icPathChanged:
       begin
         Icon := TIcon.Create;
 
@@ -842,22 +842,22 @@ begin
   lwStartup.AlphaSort();
 
   // Refresh counter
-  OnStartupItemChanged(Sender, stDeleted);
+  OnStartupItemChanged(Sender, icDeleted);
 end;
 
 { private TMain.OnServiceItemChanged
 
   Event method that is called when item status has been changed. }
 
-procedure TMain.OnServiceItemChanged(Sender: TObject; ANewStatus: TItemStatus);
+procedure TMain.OnServiceItemChanged(Sender: TObject; AItemChange: TItemChange);
 begin
   // Refresh counter label
   lwService.Columns[1].Caption := FLang.Format(LID_SERVICE_COUNTER,
     [FService.EnabledItemsCount, FService.Count]);
 
   // Change button states
-  case ANewStatus of
-    stEnabled:
+  case AItemChange of
+    icEnabled:
       begin
         bEnableServiceItem.Enabled := False;
         bDisableServiceItem.Enabled := True;
@@ -868,7 +868,7 @@ begin
           lwService.ItemFocused.SubItems[3] := '';
       end;
 
-    stDisabled:
+    icDisabled:
       begin
         bEnableServiceItem.Enabled := True;
         bDisableServiceItem.Enabled := False;
@@ -879,7 +879,7 @@ begin
           lwService.ItemFocused.SubItems[3] := DateTimeToStr(FService.Selected.Time);
       end;
 
-    stDeleted:
+    icDeleted:
       begin
         bEnableServiceItem.Enabled := False;
         bDisableServiceItem.Enabled := False;
@@ -959,7 +959,7 @@ begin
   lwService.AlphaSort();
 
   // Refresh counter
-  OnServiceItemChanged(Sender, stDeleted);
+  OnServiceItemChanged(Sender, icDeleted);
 end;
 
 { private TMain.OnSearchError
@@ -975,29 +975,29 @@ end;
 
   Event method that is called when item status has been changed. }
 
-procedure TMain.OnTaskItemChanged(Sender: TObject; ANewStatus: TItemStatus);
+procedure TMain.OnTaskItemChanged(Sender: TObject; AItemChange: TItemChange);
 begin
   // Refresh counter label
   lwTasks.Columns[1].Caption := FLang.Format(LID_TASKS_COUNTER, [FTasks.EnabledItemsCount,
     FTasks.Count]);
 
   // Change button states
-  case ANewStatus of
-    stEnabled:
+  case AItemChange of
+    icEnabled:
       begin
         bEnableTaskItem.Enabled := False;
         bDisableTaskitem.Enabled := True;
         pmChangeStatus.Caption := bDisableTaskitem.Caption;
       end;
 
-    stDisabled:
+    icDisabled:
       begin
         bEnableTaskItem.Enabled := True;
         bDisableTaskitem.Enabled := False;
         pmChangeStatus.Caption := bEnableTaskItem.Caption;
       end;
 
-    stDeleted:
+    icDeleted:
       begin
         bEnableTaskItem.Enabled := False;
         bDisableTaskitem.Enabled := False;
@@ -1053,7 +1053,7 @@ begin
   lwTasks.AlphaSort();
 
   // Refresh counter
-  OnTaskItemChanged(Sender, stDeleted);
+  OnTaskItemChanged(Sender, icDeleted);
 end;
 
 { private TMain.OnTaskSearchStart
