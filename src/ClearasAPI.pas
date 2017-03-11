@@ -1558,14 +1558,14 @@ type
   EContextMenuException = class(Exception);
 
   /// <summary>
-  ///   A <c>TContextListItem</c> represents a basic context menu item that can
-  ///   be added to a <see cref="TContextList"/>. All context menu items are
+  ///   A <c>TContextMenuListItem</c> represents a basic context menu item that can
+  ///   be added to a <see cref="TContextMenuList"/>. All context menu items are
   ///   in the Registry.
   /// </summary>
   /// <remarks>
   ///   This class is intended to be only ancenstor for items.
   /// </remarks>
-  TContextListItem = class(TRegistryItem)
+  TContextMenuListItem = class(TRegistryItem)
   protected
     function GetRootKey(): TRootKey; override;
     procedure Rename(const ANewName: string); override;
@@ -1603,10 +1603,11 @@ type
   end;
 
   /// <summary>
-  ///   A <c>TShellItem</c> represents a shell context menu item that can be
-  ///   added to a <see cref="TContextList"/>. Those items are in plain-text.
+  ///   A <c>TContextMenuShellItem</c> represents a shell context menu item that
+  ///   can be added to a <see cref="TContextMenuList"/>. Those items are in
+  ///   plain-text.
   /// </summary>
-  TShellItem = class(TContextListItem)
+  TContextMenuShellItem = class(TContextMenuListItem)
   private
     FExtended: Boolean;
   protected
@@ -1675,11 +1676,11 @@ type
   end;
 
   /// <summary>
-  ///   A <c>TShellCascadingItem</c> represents a cascading context menu item
-  ///   that can be added to a <see cref="TContextList"/>. Those items contain
-  ///   a set of context menu items.
+  ///   A <c>TContextMenuShellCascadingItem</c> represents a cascading context
+  ///   menu item that can be added to a <see cref="TContextMenuList"/>. Those
+  ///   items contain a set of context menu items.
   /// </summary>
-  TShellCascadingItem = class(TShellItem)
+  TContextMenuShellCascadingItem = class(TContextMenuShellItem)
   private
     procedure GetSubCommands(ASubCommands: TStrings);
   protected
@@ -1693,7 +1694,7 @@ type
       SubCommandsValueName = 'SubCommands';
 
     /// <summary>
-    ///   Constructor for creating a <c>TShellCascadingItem</c> instance.
+    ///   Constructor for creating a <c>TContextMenuShellCascadingItem</c> instance.
     /// </summary>
     /// <param name="AName">
     ///   The internal name.
@@ -1741,11 +1742,11 @@ type
   end;
 
   /// <summary>
-  ///   A <c>TShellItem</c> represents a shell extension context menu item that
-  ///   can be added to a <see cref="TContextList"/>. Those items are identified
-  ///   by a GUID.
+  ///   A <c>TContextMenuShellExItem</c> represents a shell extension context
+  ///   menu item that can be added to a <see cref="TContextMenuList"/>. Those
+  ///   items are identified by a GUID.
   /// </summary>
-  TShellExItem = class(TContextListItem)
+  TContextMenuShellExItem = class(TContextMenuListItem)
   protected
     function GetIcon(): HICON; override;
     procedure ChangeFilePath(const ANewFileName: string); override;
@@ -1788,11 +1789,11 @@ type
   end;
 
   /// <summary>
-  ///   A <c>TShellNewItem</c> represents a shell new context menu item that
-  ///   can be added to a <see cref="TContextList"/>. Those items are shown
-  ///   in the background context menu "new".
+  ///   A <c>TContextMenuShellNewItem</c> represents a shell new context menu
+  ///   item that can be added to a <see cref="TContextMenuList"/>. Those items
+  ///   are shown in the background context menu "new".
   /// </summary>
-  TShellNewItem = class(TContextListItem)
+  TContextMenuShellNewItem = class(TContextMenuListItem)
   protected
     function GetIcon(): HICON; override;
     procedure ChangeFilePath(const ANewFileName: string); override;
@@ -1812,7 +1813,7 @@ type
       CanonicalNameDisabled = '_'+ CanonicalName;
 
     /// <summary>
-    ///   Constructor for creating a <c>TShellNewItem</c> instance.
+    ///   Constructor for creating a <c>TContextMenuShellNewItem</c> instance.
     /// </summary>
     /// <param name="AName">
     ///   The internal name.
@@ -1857,31 +1858,31 @@ type
   /// <summary>
   ///   Contextmenu item registry types.
   /// </summary>
-  TShellItemType = (
+  TContextMenuItemType = (
 
     /// <summary>
     ///   Contextmenu item under "Shell" registry key.
     /// </summary>
-    stShell,
+    itShell,
 
     /// <summary>
     ///   Contextmenu item under "ShellEx" registry key.
     /// </summary>
-    stShellEx,
+    itShellEx,
 
     /// <summary>
     ///   Contextmenu item under "ShellNew" registry key.
     /// </summary>
-    stShellNew
+    itShellNew
   );
 
   /// <summary>
-  ///   A <c>TContextList</c> is the list that contains a set of
-  ///   <see cref="TContextListItem"/>s. The list is thread-safe and supports
+  ///   A <c>TContextMenuList</c> is the list that contains a set of
+  ///   <see cref="TContextMenuListItem"/>s. The list is thread-safe and supports
   ///   locking. You can use the <see cref="IsLocked"/> method to see if the
   ///   list is locked.
   /// </summary>
-  TContextList = class(TRootList<TContextListItem>)
+  TContextMenuList = class(TRootList<TContextMenuListItem>)
   private
     procedure Search(AExpertMode: Boolean; AWin64: Boolean;
       const ARoot: string = ''); reintroduce; overload;
@@ -1963,7 +1964,7 @@ type
     /// <param name="ALocationRoot">
     ///   The root location e.g. <c>Drives</c>.
     /// </param>
-    /// <param name="AShellItemType">
+    /// <param name="AContextMenuItemType">
     ///   Specifies the item type to search for.
     /// </param>
     /// <param name="AWow64">
@@ -1971,7 +1972,7 @@ type
     ///   native items.
     /// </param>
     procedure LoadContextmenu(const ALocationRoot: string;
-      AShellItemType: TShellItemType; AWow64: Boolean); overload;
+      AContextMenuItemType: TContextMenuItemType; AWow64: Boolean); overload;
 
     /// <summary>
     ///   Searches for items and adds them to the list.
@@ -4723,20 +4724,20 @@ begin
 end;
 
 
-{ TContextListItem }
+{ TContextMenuListItem}
 
-function TContextListItem.GetRootKey(): TRootKey;
+function TContextMenuListItem.GetRootKey(): TRootKey;
 begin
   Result := rkHKCR;
 end;
 
-procedure TContextListItem.Rename(const ANewName: string);
+procedure TContextMenuListItem.Rename(const ANewName: string);
 begin
   // Important: It is only possible to rename the caption of context items!
   FCaption := ANewName;
 end;
 
-function TContextListItem.Delete(): Boolean;
+function TContextMenuListItem.Delete(): Boolean;
 begin
   if not DeleteKey(HKEY_CLASSES_ROOT, ExtractFileDir(GetLocation()), Name) then
     raise EContextMenuException.Create('Could not delete key!');
@@ -4744,13 +4745,13 @@ begin
   Result := True;
 end;
 
-function TContextListItem.DeleteUserChoice(const AFileExtension: string): Boolean;
+function TContextMenuListItem.DeleteUserChoice(const AFileExtension: string): Boolean;
 begin
   Result := (RegDeleteKey(HKEY_CURRENT_USER, PChar(Format(KEY_USERCHOICE,
     [AFileExtension]))) = ERROR_SUCCESS);
 end;
 
-function TContextListItem.UserChoiceExists(const AFileExtension: string): Boolean;
+function TContextMenuListItem.UserChoiceExists(const AFileExtension: string): Boolean;
 var
   UserChoice: string;
 
@@ -4761,14 +4762,14 @@ begin
 end;
 
 
-{ TShellItem }
+{ TContextMenuShellExItem }
 
-function TShellItem.GetLocation(): string;
+function TContextMenuShellItem.GetLocation(): string;
 begin
   Result := inherited GetLocation() +'\'+ CanonicalName +'\'+ Name;
 end;
 
-procedure TShellItem.Rename(const AValueName, ANewCaption: string);
+procedure TContextMenuShellItem.Rename(const AValueName, ANewCaption: string);
 var
   Reg: TRegistry;
 
@@ -4795,7 +4796,7 @@ begin
   end;  //of try
 end;
 
-function TShellItem.GetIcon(const AFileName: TFileName): HICON;
+function TContextMenuShellItem.GetIcon(const AFileName: TFileName): HICON;
 var
   Icon: TIcon;
 
@@ -4822,12 +4823,12 @@ begin
   end;  //of try
 end;
 
-function TShellItem.GetIcon(): HICON;
+function TContextMenuShellItem.GetIcon(): HICON;
 begin
   Result := GetIcon(GetIconFileName());
 end;
 
-function TShellItem.GetIconFileName(): string;
+function TContextMenuShellItem.GetIconFileName(): string;
 var
   Reg: TRegistry;
 
@@ -4851,7 +4852,7 @@ begin
   end;  //of try
 end;
 
-procedure TShellItem.ChangeFilePath(const ANewFileName: string);
+procedure TContextMenuShellItem.ChangeFilePath(const ANewFileName: string);
 var
   Reg: TRegistry;
 
@@ -4880,7 +4881,7 @@ begin
   end;  //of try
 end;
 
-function TShellItem.ChangeIcon(const ANewIconFileName: string): Boolean;
+function TContextMenuShellItem.ChangeIcon(const ANewIconFileName: string): Boolean;
 var
   Reg: TRegistry;
 
@@ -4920,7 +4921,7 @@ begin
   end;  //of try
 end;
 
-procedure TShellItem.ChangeStatus(const ANewStatus: Boolean);
+procedure TContextMenuShellItem.ChangeStatus(const ANewStatus: Boolean);
 var
   Reg: TRegistry;
 
@@ -4952,12 +4953,12 @@ begin
   end;  //of try
 end;
 
-function TShellItem.DeleteIcon: Boolean;
+function TContextMenuShellItem.DeleteIcon: Boolean;
 begin
   Result := ChangeIcon('');
 end;
 
-procedure TShellItem.ExportItem(const AFileName: string);
+procedure TContextMenuShellItem.ExportItem(const AFileName: string);
 var
   RegFile: TRegistryFile;
 
@@ -4972,27 +4973,27 @@ begin
   end;  //of try
 end;
 
-procedure TShellItem.Rename(const ANewName: string);
+procedure TContextMenuShellItem.Rename(const ANewName: string);
 begin
   Rename('', ANewName);
 end;
 
-function TShellItem.ToString(): string;
+function TContextMenuShellItem.ToString(): string;
 begin
   Result := CanonicalName;
 end;
 
 
-{ TShellCascadingItem }
+{ TContextMenuShellCascadingItem }
 
-constructor TShellCascadingItem.Create(const AName, ACaption, ALocation: string;
+constructor TContextMenuShellCascadingItem.Create(const AName, ACaption, ALocation: string;
   AEnabled, AExtended: Boolean);
 begin
   inherited Create(AName, ACaption, '', ALocation, AEnabled, AExtended);
   FErasable := False;
 end;
 
-procedure TShellCascadingItem.GetSubCommands(ASubCommands: TStrings);
+procedure TContextMenuShellCascadingItem.GetSubCommands(ASubCommands: TStrings);
 var
   Reg: TRegistry;
 
@@ -5013,13 +5014,13 @@ begin
   end;  //of try
 end;
 
-procedure TShellCascadingItem.ChangeFilePath(const ANewFileName: string);
+procedure TContextMenuShellCascadingItem.ChangeFilePath(const ANewFileName: string);
 begin
   raise EAbstractError.Create('It is impossible to change the filename of a '
     + ToString() +' item!');
 end;
 
-function TShellCascadingItem.Delete(): Boolean;
+function TContextMenuShellCascadingItem.Delete(): Boolean;
 var
   i: Integer;
   Commands: TStringList;
@@ -5040,7 +5041,7 @@ begin
   end;  //of try
 end;
 
-procedure TShellCascadingItem.ExportItem(const AFileName: string);
+procedure TContextMenuShellCascadingItem.ExportItem(const AFileName: string);
 var
   RegFile: TRegistryFile;
   i: Integer;
@@ -5065,20 +5066,20 @@ begin
   end;  //of try
 end;
 
-procedure TShellCascadingItem.Rename(const ANewName: string);
+procedure TContextMenuShellCascadingItem.Rename(const ANewName: string);
 begin
   Rename('MUIVerb', ANewName);
 end;
 
-function TShellCascadingItem.ToString(): string;
+function TContextMenuShellCascadingItem.ToString(): string;
 begin
   Result := inherited ToString() +' Cascading';
 end;
 
 
-{ TShellExItem }
+{ TContextMenuShellExItem }
 
-procedure TShellExItem.ChangeStatus(const ANewStatus: Boolean);
+procedure TContextMenuShellExItem.ChangeStatus(const ANewStatus: Boolean);
 var
   Reg: TRegistry;
   OldValue: string;
@@ -5119,18 +5120,18 @@ begin
   end;  //of try
 end;
 
-function TShellExItem.GetIcon(): HICON;
+function TContextMenuShellExItem.GetIcon(): HICON;
 begin
   // Impossible!
   Result := 0;
 end;
 
-function TShellExItem.GetLocation(): string;
+function TContextMenuShellExItem.GetLocation(): string;
 begin
   Result := inherited GetLocation() +'\'+ HandlersKey +'\'+ Name;
 end;
 
-procedure TShellExItem.ChangeFilePath(const ANewFileName: string);
+procedure TContextMenuShellExItem.ChangeFilePath(const ANewFileName: string);
 var
   Reg: TRegistry;
   ProgramKeyPath: string;
@@ -5172,7 +5173,7 @@ begin
   end;  //of try
 end;
 
-procedure TShellExItem.ExportItem(const AFileName: string);
+procedure TContextMenuShellExItem.ExportItem(const AFileName: string);
 var
   RegFile: TRegistryFile;
   Reg: TRegistry;
@@ -5209,27 +5210,27 @@ begin
   end;  //of try
 end;
 
-procedure TShellExItem.Rename(const ANewName: string);
+procedure TContextMenuShellExItem.Rename(const ANewName: string);
 begin
   raise EAbstractError.Create('It is impossible to rename a '+ ToString() +' item!');
 end;
 
-function TShellExItem.ToString(): string;
+function TContextMenuShellExItem.ToString(): string;
 begin
   Result := CanonicalName;
 end;
 
 
-{ TShellNewItem }
+{ TContextMenuShellNewItem }
 
-constructor TShellNewItem.Create(const AName, ACaption, ALocation: string;
+constructor TContextMenuShellNewItem.Create(const AName, ACaption, ALocation: string;
   AEnabled: Boolean);
 begin
   inherited Create(AName, ACaption, '', ALocation, AEnabled, False);
   FErasable := False;
 end;
 
-procedure TShellNewItem.ChangeStatus(const ANewStatus: Boolean);
+procedure TContextMenuShellNewItem.ChangeStatus(const ANewStatus: Boolean);
 var
   Reg: TRegistry;
   OldKeyName, NewKeyName: string;
@@ -5275,12 +5276,12 @@ begin
   end;  //of try
 end;
 
-function TShellNewItem.GetIcon(): HICON;
+function TContextMenuShellNewItem.GetIcon(): HICON;
 begin
   Result := 0;
 end;
 
-function TShellNewItem.GetLocation(): string;
+function TContextMenuShellNewItem.GetLocation(): string;
 begin
   if FEnabled then
     Result := inherited GetLocation() +'\'+ CanonicalName
@@ -5288,13 +5289,13 @@ begin
     Result := inherited GetLocation() +'\'+ CanonicalNameDisabled;
 end;
 
-procedure TShellNewItem.ChangeFilePath(const ANewFileName: string);
+procedure TContextMenuShellNewItem.ChangeFilePath(const ANewFileName: string);
 begin
   raise EAbstractError.Create('It is impossible to change the filename of a '
     + ToString() +' item!');
 end;
 
-function TShellNewItem.Delete(): Boolean;
+function TContextMenuShellNewItem.Delete(): Boolean;
 begin
   if not DeleteKey(HKEY_CLASSES_ROOT, ExtractFileDir(GetLocation()),
     ExtractFileName(GetLocation())) then
@@ -5303,7 +5304,7 @@ begin
   Result := True;
 end;
 
-procedure TShellNewItem.ExportItem(const AFileName: string);
+procedure TContextMenuShellNewItem.ExportItem(const AFileName: string);
 var
   RegFile: TRegistryFile;
 
@@ -5318,20 +5319,20 @@ begin
   end;  //of try
 end;
 
-procedure TShellNewItem.Rename(const ANewName: string);
+procedure TContextMenuShellNewItem.Rename(const ANewName: string);
 begin
   raise EAbstractError.Create('It is impossible to rename a '+ ToString() +' item!');
 end;
 
-function TShellNewItem.ToString(): string;
+function TContextMenuShellNewItem.ToString(): string;
 begin
   Result := CanonicalName;
 end;
 
 
-{ TContextList }
+{ TContextMenuList }
 
-function TContextList.Add(const AFileName, AArguments, ALocationRoot,
+function TContextMenuList.Add(const AFileName, AArguments, ALocationRoot,
   ACaption: string; AExtended: Boolean = False): Boolean;
 var
   Name, Ext, FullPath, LocationRoot, FileType, KeyPath: string;
@@ -5397,7 +5398,7 @@ begin
         FileType := LocationRoot;
 
       Reg.CloseKey();
-      KeyPath := FileType +'\'+ TShellItem.CanonicalName +'\'+ Name;
+      KeyPath := FileType +'\'+ TContextMenuShellItem.CanonicalName +'\'+ Name;
 
       // Adds new context item to Registry
       if not Reg.OpenKey(KeyPath, True) then
@@ -5423,7 +5424,7 @@ begin
       Reg.WriteString('', FullPath);
 
       // Adds item to list
-      Result := (Add(TShellItem.Create(Name, ACaption, FullPath, FileType, True,
+      Result := (Add(TContextMenuShellItem.Create(Name, ACaption, FullPath, FileType, True,
         AExtended)) <> -1);
 
     finally
@@ -5439,11 +5440,11 @@ begin
   end;  //of try
 end;
 
-procedure TContextList.ExportList(const AFileName: string);
+procedure TContextMenuList.ExportList(const AFileName: string);
 var
   i: Integer;
   RegFile: TRegistryFile;
-  Item: TContextListItem;
+  Item: TContextMenuListItem;
 
 begin
   // Init Reg file
@@ -5452,7 +5453,7 @@ begin
   try
     for i := 0 to Count - 1 do
     begin
-      Item := TContextListItem(Items[i]);
+      Item := TContextMenuListItem(Items[i]);
       RegFile.ExportKey(HKEY_CLASSES_ROOT, Item.Location, True);
     end;  //of for
 
@@ -5464,10 +5465,10 @@ begin
   end;  //of try
 end;
 
-function TContextList.IndexOf(const AName, ALocationRoot: string): Integer;
+function TContextMenuList.IndexOf(const AName, ALocationRoot: string): Integer;
 var
   i: Integer;
-  Item: TContextListItem;
+  Item: TContextMenuListItem;
 
 begin
   Result := -1;
@@ -5485,18 +5486,18 @@ begin
   end;  //of for
 end;
 
-procedure TContextList.LoadContextmenu(const ALocationRoot: string;
+procedure TContextMenuList.LoadContextmenu(const ALocationRoot: string;
   AWow64: Boolean);
 var
-  ContextMenuItem: TShellItemType;
+  ContextMenuItem: TContextMenuItemType;
 
 begin
-  for ContextMenuItem := Low(TShellItemType) to High(TShellItemType) do
+  for ContextMenuItem := Low(TContextMenuItemType) to High(TContextMenuItemType) do
     LoadContextmenu(ALocationRoot, ContextMenuItem, AWow64);
 end;
 
-procedure TContextList.LoadContextmenu(const ALocationRoot: string;
-  AShellItemType: TShellItemType; AWow64: Boolean);
+procedure TContextMenuList.LoadContextmenu(const ALocationRoot: string;
+  AContextMenuItemType: TContextMenuItemType; AWow64: Boolean);
 var
   Reg: TRegistry;
   i, DelimiterPos: Integer;
@@ -5508,10 +5509,10 @@ begin
   Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ);
   List := TStringList.Create;
 
-  case AShellItemType of
-    stShell:    Key := ALocationRoot +'\'+ TShellItem.CanonicalName;
-    stShellEx:  Key := ALocationRoot +'\'+ TShellExItem.HandlersKey;
-    stShellNew: Key := ALocationRoot;
+  case AContextMenuItemType of
+    itShell:    Key := ALocationRoot +'\'+ TContextMenuShellItem.CanonicalName;
+    itShellEx:  Key := ALocationRoot +'\'+ TContextMenuShellExItem.HandlersKey;
+    itShellNew: Key := ALocationRoot;
   end;  //of case
 
   try
@@ -5522,13 +5523,13 @@ begin
       Exit;
 
     // Search for ShellNew items
-    if (AShellItemType = stShellNew) then
+    if (AContextMenuItemType = itShellNew) then
     begin
       // "ShellNew" and "_ShellNew" in same key are possible: prefer "ShellNew"
-      if Reg.KeyExists(TShellNewItem.CanonicalName) then
+      if Reg.KeyExists(TContextMenuShellNewItem.CanonicalName) then
         Enabled := True
       else
-        if Reg.KeyExists(TShellNewItem.CanonicalNameDisabled) then
+        if Reg.KeyExists(TContextMenuShellNewItem.CanonicalNameDisabled) then
           Enabled := False
         else
           Exit;
@@ -5570,7 +5571,7 @@ begin
       if (Key = '') then
         Key := Caption;
 
-      Add(TShellNewItem.Create(Key, Caption, ALocationRoot, Enabled));
+      Add(TContextMenuShellNewItem.Create(Key, Caption, ALocationRoot, Enabled));
     end  //of begin
     else
     begin
@@ -5589,7 +5590,7 @@ begin
           Continue;
 
         // Search for shell entries?
-        if (AShellItemType = stShell) then
+        if (AContextMenuItemType = itShell) then
         begin
           Caption := Reg.ReadString('');
 
@@ -5598,18 +5599,18 @@ begin
             Continue;
 
           // Get status and caption of Shell item
-          Enabled := not Reg.ValueExists(TShellItem.DisableValueName);
+          Enabled := not Reg.ValueExists(TContextMenuShellItem.DisableValueName);
           Extended := Reg.ValueExists('Extended');
 
           // Cascading shell item?
           if not Reg.OpenKey('command', False) then
           begin
-            if ((not Reg.ValueExists('MUIVerb') or not Reg.ValueExists(TShellCascadingItem.SubCommandsValueName)) and
+            if ((not Reg.ValueExists('MUIVerb') or not Reg.ValueExists(TContextMenuShellCascadingItem.SubCommandsValueName)) and
               not Reg.KeyExists('ExtendedSubCommandsKey')) then
               Continue;
 
             Caption := Reg.ReadString('MUIVerb');
-            Add(TShellCascadingItem.Create(ItemName, Caption, ALocationRoot,
+            Add(TContextMenuShellCascadingItem.Create(ItemName, Caption, ALocationRoot,
               Enabled, Extended));
             Continue;
           end;  //of begin
@@ -5623,12 +5624,12 @@ begin
             Continue;
 
           FileName := Reg.ReadString('');
-          Add(TShellItem.Create(ItemName, Caption, FileName, ALocationRoot,
+          Add(TContextMenuShellItem.Create(ItemName, Caption, FileName, ALocationRoot,
             Enabled, Extended));
         end  //of begin
         else
           // Search for shell extensions
-          if (AShellItemType = stShellEx) then
+          if (AContextMenuItemType = itShellEx) then
           begin
             GuID := Reg.ReadString('');
 
@@ -5647,7 +5648,7 @@ begin
             Wow64 := False;
 
             // Get file path of command (native hive)
-            if Reg.OpenKey(Format(TShellExItem.CommandStringKey, [GuID]), False) then
+            if Reg.OpenKey(Format(TContextMenuShellExItem.CommandStringKey, [GuID]), False) then
             begin
               if not (Reg.GetDataType('') in [rdString, rdExpandString]) then
                 Continue;
@@ -5661,7 +5662,7 @@ begin
                 Reg.Access := KEY_WOW64_32KEY or KEY_READ;
                 Wow64 := True;
 
-                if Reg.OpenKey(Format(TShellExItem.CommandStringKey, [GuID]), False) then
+                if Reg.OpenKey(Format(TContextMenuShellExItem.CommandStringKey, [GuID]), False) then
                 begin
                   if not (Reg.GetDataType('') in [rdString, rdExpandString]) then
                     Continue;
@@ -5673,7 +5674,7 @@ begin
                 Reg.Access := KEY_WOW64_64KEY or KEY_READ;
               end;  //of if
 
-            Add(TShellExItem.Create(ItemName, '', FileName, ALocationRoot, Enabled, Wow64));
+            Add(TContextMenuShellExItem.Create(ItemName, '', FileName, ALocationRoot, Enabled, Wow64));
           end;  //of begin
       end;  //of for
     end;  //of if
@@ -5685,12 +5686,12 @@ begin
   end;  //of try
 end;
 
-procedure TContextList.Search(AExpertMode: Boolean = False; AWin64: Boolean = True);
+procedure TContextMenuList.Search(AExpertMode: Boolean = False; AWin64: Boolean = True);
 begin
   Search(AExpertMode, AWin64, '');
 end;
 
-procedure TContextList.Search(AExpertMode: Boolean; AWin64: Boolean;
+procedure TContextMenuList.Search(AExpertMode: Boolean; AWin64: Boolean;
   const ARoot: string = '');
 var
   Reg: TRegistry;
@@ -5717,15 +5718,15 @@ var
         for i := 0 to Keys.Count - 1 do
         begin
           // Load Shell context menu items
-          if AnsiSameText(Keys[i], TShellItem.CanonicalName) then
-            LoadContextmenu(AKeyName, stShell, AWin64);
+          if AnsiSameText(Keys[i], TContextMenuShellItem.CanonicalName) then
+            LoadContextmenu(AKeyName, itShell, AWin64);
 
           // Load ShellEx context menu items
-          if AnsiSameText(Keys[i], TShellExItem.CanonicalName) then
-            LoadContextmenu(AKeyName, stShellEx, AWin64);
+          if AnsiSameText(Keys[i], TContextMenuShellExItem.CanonicalName) then
+            LoadContextmenu(AKeyName, itShellEx, AWin64);
 
           // Load ShellNew context menu items
-          if Keys[i].Contains(TShellNewItem.CanonicalName) then
+          if Keys[i].Contains(TContextMenuShellNewItem.CanonicalName) then
           begin
             Reg.OpenKey(AKeyName +'\'+ Keys[i], False);
             Reg.GetValueNames(Values);
@@ -5734,7 +5735,7 @@ var
             // Only valid ShellNew item when there are values inside
             if (Values.Count > 0) then
             begin
-              LoadContextmenu(AKeyName, stShellNew, AWin64);
+              LoadContextmenu(AKeyName, itShellNew, AWin64);
 
               // "ShellNew" and "_ShellNew" in same key are possible: Take only one
               Exit;

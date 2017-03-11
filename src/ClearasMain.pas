@@ -174,7 +174,7 @@ type
     procedure PopupMenuPopup(Sender: TObject);
   private
     FStartup: TStartupList;
-    FContext: TContextList;
+    FContext: TContextMenuList;
     FService: TServiceList;
     FTasks: TTaskList;
     FLang: TLanguageFile;
@@ -257,7 +257,7 @@ begin
     OnRefresh := OnStartupSearchEnd;
   end;  //of with
 
-  FContext := TContextList.Create;
+  FContext := TContextMenuList.Create;
 
   // Link search events
   with FContext do
@@ -1266,8 +1266,8 @@ begin
       if (FContext.Selected.LocationRoot = '*') then
         FileName := FContext.Selected.Name
       else
-        if (FContext.Selected is TShellNewItem) then
-          FileName := FContext.Selected.Name +'_'+ TShellNewItem.CanonicalName
+        if (FContext.Selected is TContextMenuShellNewItem) then
+          FileName := FContext.Selected.Name +'_'+ TContextMenuShellNewItem.CanonicalName
         else
           FileName := FContext.Selected.Name +'_'+ FContext.Selected.LocationRoot;
     end  //of begin
@@ -1648,7 +1648,7 @@ begin
   // Item selected?
   if (Selected and Assigned(Item)) then
   begin
-    FContext.Selected := TContextListItem(Item.SubItems.Objects[0]);
+    FContext.Selected := TContextMenuListItem(Item.SubItems.Objects[0]);
 
     // Change button states
     bEnableContextItem.Enabled := not FContext.Selected.Enabled;
@@ -1958,13 +1958,13 @@ var
 begin
   try
     // Only icon of shell item can be changed
-    if not (FContext.Selected is TShellItem) then
+    if not (FContext.Selected is TContextMenuShellItem) then
       Exit;
 
     if PromptForFileName(FileName, 'Application *.exe|*.exe|Icon *.ico|*.ico',
       '', StripHotkey(pmChangeIcon.Caption)) then
     begin
-      if not (FContext.Selected as TShellItem).ChangeIcon('"'+ FileName +'"') then
+      if not (FContext.Selected as TContextMenuShellItem).ChangeIcon('"'+ FileName +'"') then
         raise Exception.Create('Unknown error!');
 
       pmDeleteIcon.Visible := True;
@@ -1989,14 +1989,14 @@ procedure TMain.pmDeleteIconClick(Sender: TObject);
 begin
   try
     // Only icon of shell item can be deleted
-    if not (FContext.Selected is TShellItem) then
+    if not (FContext.Selected is TContextMenuShellItem) then
       Exit;
 
     // Show confimation
     if (FLang.ShowMessage(FLang.GetString(LID_CONTEXT_MENU_ICON_DELETE_CONFIRM),
       mtConfirmation) = ID_YES) then
     begin
-      if not (FContext.Selected as TShellItem).DeleteIcon() then
+      if not (FContext.Selected as TContextMenuShellItem).DeleteIcon() then
         raise Exception.Create('Unknown error!');
 
       pmDeleteIcon.Visible := False;
@@ -2140,11 +2140,11 @@ begin
         pmOpenRegedit.Enabled := True;
 
         // ShellNew and cascading Shell items cannot be opened in Explorer
-        pmOpenExplorer.Enabled := not (SelectedItem is TShellNewItem) and not
-          (SelectedItem is TShellCascadingItem);
+        pmOpenExplorer.Enabled := not (SelectedItem is TContextMenuShellNewItem) and not
+          (SelectedItem is TContextMenuShellCascadingItem);
 
         // Only Shell contextmenu items can be renamed
-        pmRename.Enabled := (SelectedItem is TShellItem);
+        pmRename.Enabled := (SelectedItem is TContextMenuShellItem);
 
         // Only icon of Shell contextmenu items can be changed
         pmChangeIcon.Visible := pmRename.Enabled;
@@ -2293,7 +2293,7 @@ begin
 
            try
              // Init location ComboBox
-             List.CommaText := TContextList.DefaultLocations +', .txt, .zip';
+             List.CommaText := TContextMenuList.DefaultLocations +', .txt, .zip';
 
              // Show dialog for location selection
              if not InputCombo(FLang.GetString(LID_CONTEXT_MENU_ADD),
