@@ -15,11 +15,9 @@ interface
 uses
 {$IFDEF MSWINDOWS}
   Windows,
-{$ELSE}
-  Resource,
 {$ENDIF}
-  SysUtils, Classes, Graphics, Controls, Forms, StdCtrls, ExtCtrls, ComCtrls,
-  Dialogs, PMCW.FileSystem;
+  SysUtils, Classes, Controls, Forms, StdCtrls, ExtCtrls, ComCtrls, Dialogs,
+  PMCW.FileSystem;
 
 const
   /// <summary>
