@@ -913,17 +913,6 @@ type
   end;
 
   /// <summary>
-  ///   The list export event.
-  /// </summary>
-  /// <param name="Sender">
-  ///   The sender.
-  /// </param>
-  /// <param name="APageControlIndex">
-  ///   The index of the <c>TPageControl</c> on which the export was invoked.
-  /// </param>
-  TExportListEvent = procedure(Sender: TObject; APageControlIndex: Integer) of object;
-
-  /// <summary>
   ///   Exports a <see cref="TRootList"/> as file.
   /// </summary>
   TExportListThread = class(TRootListThread)
@@ -1547,9 +1536,15 @@ type
   end;
 
 const
-  { Context menu Registry subkeys + values}
-  KEY_USERCHOICE              = 'Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\%s\UserChoice';
-  KEY_COMMAND_STORE           = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\CommandStore\shell';
+  /// <summary>
+  ///   Registry key that contains user custom file associations.
+  /// </summary>
+  KEY_USERCHOICE    = 'Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\%s\UserChoice';
+
+  /// <summary>
+  ///   Registry key that contains <see cref="TContextMenuShellCascadingItem"/>s.
+  /// </summary>
+  KEY_COMMAND_STORE = 'SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\CommandStore\shell';
 
 type
   /// <summary>
@@ -1988,9 +1983,15 @@ type
   end;
 
 const
-  { Service Registry keys }
-  KEY_SERVICE_DISABLED        = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\services';
-  KEY_SERVICE_ENABLED         = 'SYSTEM\CurrentControlSet\services\';
+  /// <summary>
+  ///   Registry key of disabled <see cref="TServiceListItem"/>s.
+  /// </summary>
+  KEY_SERVICE_DISABLED = 'SOFTWARE\Microsoft\Shared Tools\MSConfig\services';
+
+  /// <summary>
+  ///   Registry key of enabled <see cref="TServiceListItem"/>s.
+  /// </summary>
+  KEY_SERVICE_ENABLED  = 'SYSTEM\CurrentControlSet\services\';
 
 type
   /// <summary>
