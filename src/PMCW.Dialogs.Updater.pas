@@ -433,28 +433,12 @@ type
     procedure AddListener(AListener: IUpdateListener);
 
     /// <summary>
-    ///   Checks if the certificate exists in Windows certificate store.
-    /// </summary>
-    /// <returns>
-    ///   <c>True</c> if certificate exists or <c>False</c> otherwise.
-    /// </returns>
-    function CertificateExists(): Boolean;
-
-    /// <summary>
     ///   Executes the update progress.
     /// </summary>
     /// <returns>
     ///   <c>True</c> if downloading was sucessful or <c>False</c> otherwise.
     /// </returns>
     function Execute(ParentHwnd: HWND): Boolean; override;
-
-    /// <summary>
-    ///   Installs the certificate for SSL updates and code signing verification.
-    /// </summary>
-    /// <returns>
-    ///   <c>True</c> if installing was sucessful or <c>False</c> otherwise.
-    /// </returns>
-    function InstallCertificate(): Boolean;
 
     /// <summary>
     ///   Launches the downloaded setup.
@@ -468,14 +452,6 @@ type
     ///   A listener which implements the <see cref="IUpdateListener"/> interface.
     /// </param>
     procedure RemoveListener(AListener: IUpdateListener);
-
-    /// <summary>
-    ///   Shows a dialog where user has the choice to install the certificate.
-    /// </summary>
-    /// <returns>
-    ///   <c>True</c> if installation was sucessful or <c>False</c> otherwise.
-    /// </returns>
-    function ShowInstallCertificateDialog(): Boolean;
 
     /// <summary>
     ///   Download the file into this directory.
@@ -1030,28 +1006,6 @@ begin
   FListeners.Add(AListener);
 end;
 
-function TUpdateDialog.CertificateExists(): Boolean;
-const
-  KEY_CERTIFICATE_STORE = 'Software\Microsoft\SystemCertificates\ROOT\Certificates\';
-
-var
-  Reg: TRegistry;
-
-begin
-  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ);
-
-  try
-    // Check user root certificate store
-    Reg.RootKey := HKEY_CURRENT_USER;
-    Result := (Reg.OpenKeyReadOnly(KEY_CERTIFICATE_STORE) and Reg.KeyExists(
-      CERTIFICATE_FINGERPRINT_SHA1));
-
-  finally
-    Reg.CloseKey;
-    Reg.Free;
-  end;  //of try
-end;
-
 function TUpdateDialog.Execute(ParentHwnd: HWND): Boolean;
 var
   Url: string;
@@ -1070,15 +1024,37 @@ begin
 
   // Certificate not installed?
   if not CertificateExists() then
-    UseTls := ShowInstallCertificateDialog();
+  begin
+    // Ask user to install the certificate
+    if (TaskMessageDlg(FLanguageFile.GetString(LID_UPDATE_SECURE),
+      FLanguageFile.GetString([LID_UPDATE_SECURE_DESCRIPTION1,
+      LID_UPDATE_SECURE_DESCRIPTION2, NEW_LINE, LID_CERTIFICATE_INSTALL_CONFIRM]),
+      mtConfirmation, mbYesNo, 0, mbYes) = idYes) then
+    begin
+      try
+        InstallCertificate();
 
-  DirectorySelected := True;
+      except
+        on E: EOSError do
+        begin
+          MessageDlg(E.Message, mtError, [mbOK], 0);
+          UseTls := False;
+        end;
+      end;  //of try
+    end  //of begin
+    else
+      UseTls := False;
+  end;  //of begin
+
+  DirectorySelected := (FDownloadDirectory <> '');
 
   // Download folder not set yet?
-  if (FDownloadDirectory = '') then
+  if not DirectorySelected then
+  begin
     // Show select directory dialog
     DirectorySelected := SelectDirectory(FLanguageFile.GetString(LID_UPDATE_SELECT_DIR),
       '', FDownloadDirectory);
+  end;  //of begin
 
   if DirectorySelected then
   begin
@@ -1109,58 +1085,6 @@ begin
     Reset();
 
   Result := (FForm.ShowModal() = mrOk);
-end;
-
-function TUpdateDialog.InstallCertificate(): Boolean;
-var
-  ResourceStream: TResourceStream;
-  FileName: string;
-
-begin
-  Result := False;
-  ResourceStream := TResourceStream.Create(HInstance, RESOURCE_CA, RT_RCDATA);
-  FileName := IncludeTrailingPathDelimiter(GetEnvironmentVariable('TEMP')) +'CA.crt';
-
-  try
-    // Extract certificate from resource
-    ResourceStream.SaveToFile(FileName);
-
-    // Install certificate
-    // TODO: Better use Windows API
-    Result := ExecuteProgram('certutil.exe', '-user -addstore ROOT "'+ FileName +'"', SW_HIDE);
-
-    if not Result then
-    begin
-      TaskMessageDlg(FLanguageFile.GetString([LID_CERTIFICATE_INSTALL,
-        LID_IMPOSSIBLE]), FLanguageFile.GetString(LID_CERTIFICATE_NO_CERTUTIL),
-        mtError, [mbOK], 0);
-    end;  //of begin
-
-  finally
-    ResourceStream.Free;
-  end;  //of try
-end;
-
-function TUpdateDialog.ShowInstallCertificateDialog(): Boolean;
-var
-  Answer: Integer;
-
-begin
-  Result := False;
-
-  // Ask user to install the certificate
-  Answer := TaskMessageDlg(FLanguageFile.GetString(LID_UPDATE_SECURE),
-    FLanguageFile.GetString([LID_UPDATE_SECURE_DESCRIPTION1,
-    LID_UPDATE_SECURE_DESCRIPTION2, NEW_LINE, LID_CERTIFICATE_INSTALL_CONFIRM]),
-    mtConfirmation, mbYesNoCancel, 0, mbYes);
-
-  case Answer of
-    IDYES:
-      Result := InstallCertificate();
-
-    IDCANCEL:
-      Abort;
-  end;  //of case
 end;
 
 procedure TUpdateDialog.LaunchSetup();

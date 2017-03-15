@@ -15,7 +15,8 @@ uses
   Vcl.ComCtrls, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Dialogs, Vcl.Menus, Vcl.Graphics,
   Vcl.ClipBrd, Registry, System.ImageList, Winapi.CommCtrl, System.UITypes,
   ClearasAPI, PMCW.Dialogs.About, PMCW.Utils, PMCW.LanguageFile, PMCW.FileSystem,
-  PMCW.Dialogs.Updater, ClearasDialogs, Vcl.ImgList, Winapi.Messages, PMCW.Registry;
+  PMCW.Dialogs.Updater, ClearasDialogs, Vcl.ImgList, Winapi.Messages, PMCW.Registry,
+  PMCW.CA;
 
 type
   { TMain }
@@ -2657,25 +2658,15 @@ end;
   MainMenu entry that allows to install the PM Code Works certificate. }
 
 procedure TMain.mmInstallCertificateClick(Sender: TObject);
-var
-  Updater: TUpdateDialog;
-
 begin
-  Updater := TUpdateDialog.Create(Self, FLang);
-
-  try
-    // Certificate already installed?
-    if Updater.CertificateExists() then
-    begin
-      MessageDlg(FLang.GetString(LID_CERTIFICATE_ALREADY_INSTALLED),
-        mtInformation, [mbOK], 0);
-    end  //of begin
-    else
-      Updater.InstallCertificate();
-
-  finally
-    Updater.Free;
-  end;  //of try
+  // Certificate already installed?
+  if CertificateExists() then
+  begin
+    MessageDlg(FLang.GetString(LID_CERTIFICATE_ALREADY_INSTALLED),
+      mtInformation, [mbOK], 0);
+  end  //of begin
+  else
+    InstallCertificate();
 end;
 
 { TMain.mmUpdateClick
