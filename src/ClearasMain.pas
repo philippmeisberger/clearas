@@ -20,7 +20,7 @@ uses
 
 type
   { TMain }
-  TMain = class(TForm, IChangeLanguageListener, IUpdateListener)
+  TMain = class(TForm, IChangeLanguageListener)
     PopupMenu: TPopupMenu;
     pmChangeStatus: TMenuItem;
     N1: TMenuItem;
@@ -203,13 +203,12 @@ type
     function ShowExportItemDialog(): Boolean;
     procedure ShowColumnDate(AListView: TListView; AShow: Boolean = True);
     function UpdateContextPath(): Boolean;
+    procedure OnUpdate(Sender: TObject; const ANewBuild: Cardinal);
     const
       DELAY_TIMER = 1;
     procedure WMTimer(var Message: TWMTimer); message WM_TIMER;
     { IChangeLanguageListener }
     procedure LanguageChanged();
-    { IUpdateListener }
-    procedure OnUpdate(const ANewBuild: Cardinal);
   end;
 
 var
@@ -246,12 +245,15 @@ begin
   end;  //of with
 
   // Init update notificator
-  FUpdateCheck := TUpdateCheck.Create(Self, 'Clearas', FLang);
+  FUpdateCheck := TUpdateCheck.Create('Clearas', FLang);
 
-{$IFNDEF DEBUG}
-  // Check for update on startup
-  FUpdateCheck.CheckForUpdate(False);
-{$ENDIF}
+  with FUpdateCheck do
+  begin
+    OnUpdate := Self.OnUpdate;
+  {$IFNDEF DEBUG}
+    FUpdateCheck.CheckForUpdate();
+  {$ENDIF}
+  end;  //of with
 
   // Init lists
   FStartup := TStartupList.Create;
@@ -345,7 +347,7 @@ end;
 
   Event that is called by TUpdateCheck when an update is available. }
 
-procedure TMain.OnUpdate(const ANewBuild: Cardinal);
+procedure TMain.OnUpdate(Sender: TObject; const ANewBuild: Cardinal);
 var
   Updater: TUpdateDialog;
 
@@ -357,9 +359,11 @@ begin
     FLang[LID_UPDATE_CONFIRM_DOWNLOAD], mtConfirmation, mbYesNo, 0, mbYes) = idYes) then
   begin
     // init TUpdate instance
-    Updater := TUpdateDialog.Create(Self, FLang);
+    Updater := TUpdateDialog.Create(Self);
 
     try
+      Updater.LanguageFile := FLang;
+
       // Set updater options
       with Updater do
       begin
@@ -2675,7 +2679,8 @@ end;
 
 procedure TMain.mmUpdateClick(Sender: TObject);
 begin
-  FUpdateCheck.CheckForUpdate(True);
+  FUpdateCheck.NotifyNoUpdate := True;
+  FUpdateCheck.CheckForUpdate();
 end;
 
 { TMain.mmReportClick
