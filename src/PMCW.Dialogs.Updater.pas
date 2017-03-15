@@ -651,10 +651,7 @@ end;
 procedure TUpdateCheck.OnNoUpdateAvailable(Sender: TObject);
 begin
   if FNotifyNoUpdate then
-  begin
-    TaskMessageDlg('', FLanguageFile.Strings[LID_UPDATE_NOT_AVAILABLE],
-      mtInformation, [mbOK], 0);
-  end;  //of begin
+    MessageDlg(FLanguageFile.Strings[LID_UPDATE_NOT_AVAILABLE], mtInformation, [mbOK], 0);
 end;
 
 procedure TUpdateCheck.OnUpdateAvailable(Sender: TThread; const ANewBuild: Cardinal);
@@ -976,7 +973,7 @@ begin
   FTaskBar.ProgressState := TTaskBarProgressState.Error;
   FProgressBar.State := TProgressBarState.pbsError;
   Reset();
-  TaskMessageDlg('', FLanguageFile.GetString(LID_UPDATE_CANCELED), mtInformation, [mbOK], 0);
+  MessageDlg(FLanguageFile.GetString(LID_UPDATE_CANCELED), mtInformation, [mbOK], 0);
   FForm.ModalResult := mrCancel;
 end;
 

@@ -519,8 +519,10 @@ begin
 
   except
     on E: EInvalidItem do
+    begin
       TaskMessageDlg(FLang.GetString([LID_REFRESH, LID_IMPOSSIBLE]),
         FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
+    end;
   end;  //of try
 end;
 
@@ -1321,7 +1323,7 @@ begin
     // No erasable items?
     if (RootList.ErasableItemsCount = 0) then
     begin
-      TaskMessageDlg('', FLang[LID_DELETE_ERASABLE_NO_ITEMS], mtInformation, [mbOK], 0);
+      MessageDlg(FLang[LID_DELETE_ERASABLE_NO_ITEMS], mtInformation, [mbOK], 0);
       Exit;
     end;  //of begin
 
@@ -1364,7 +1366,7 @@ begin
         end;  //of case
       end;  //of for
 
-      TaskMessageDlg('', FLang.Format(LID_DELETE_ERASABLE_SUCCESS, [ItemsDeleted]),
+      MessageDlg(FLang.Format(LID_DELETE_ERASABLE_SUCCESS, [ItemsDeleted]),
         mtInformation, [mbOK], 0);
 
     finally
@@ -1381,7 +1383,7 @@ begin
 
     on E: EListBlocked do
     begin
-      TaskMessageDlg('', FLang.GetString([LID_OPERATION_PENDING1, LID_OPERATION_PENDING2]),
+      MessageDlg(FLang.GetString([LID_OPERATION_PENDING1, LID_OPERATION_PENDING2]),
         mtWarning, [mbOK], 0);
     end;
 
@@ -1460,7 +1462,7 @@ begin
       mtWarning, mbYesNo, 0, mbNo) = idYes) then
     begin
       // Ask user to export item
-      Answer := TaskMessageDlg('', FLang.GetString(LID_ITEM_DELETE_STORE),
+      Answer := MessageDlg(FLang.GetString(LID_ITEM_DELETE_STORE),
         mtConfirmation, mbYesNo, 0, mbYes);
 
       // Abort if user clicks cancel!
@@ -1487,7 +1489,7 @@ begin
 
     on E: EListBlocked do
     begin
-      TaskMessageDlg('', FLang.GetString([LID_OPERATION_PENDING1, LID_OPERATION_PENDING2]),
+      MessageDlg(FLang.GetString([LID_OPERATION_PENDING1, LID_OPERATION_PENDING2]),
         mtWarning, [mbOK], 0);
     end;
 
@@ -1528,7 +1530,7 @@ begin
     // Item is erasable?
     if RootList.Selected.Erasable then
     begin
-      TaskMessageDlg('', FLang.GetString([LID_FILE_DOES_NOT_EXIST, LID_ENTRY_CAN_DE_DELETED]),
+      MessageDlg(FLang.GetString([LID_FILE_DOES_NOT_EXIST, LID_ENTRY_CAN_DE_DELETED]),
         mtWarning, [mbOK], 0);
     end;  //of begin
 
@@ -1541,7 +1543,7 @@ begin
 
     on E: EListBlocked do
     begin
-      TaskMessageDlg('', FLang.GetString([LID_OPERATION_PENDING1, LID_OPERATION_PENDING2]),
+      MessageDlg(FLang.GetString([LID_OPERATION_PENDING1, LID_OPERATION_PENDING2]),
         mtWarning, [mbOK], 0);
     end;
 
@@ -1582,7 +1584,7 @@ begin
     // Item is erasable?
     if RootList.Selected.Erasable then
     begin
-      TaskMessageDlg('', FLang.GetString([LID_FILE_DOES_NOT_EXIST, LID_ENTRY_CAN_DE_DELETED]),
+      MessageDlg(FLang.GetString([LID_FILE_DOES_NOT_EXIST, LID_ENTRY_CAN_DE_DELETED]),
         mtWarning, [mbOK], 0);
     end;  //of begin
 
@@ -1595,7 +1597,7 @@ begin
 
     on E: EListBlocked do
     begin
-      TaskMessageDlg('', FLang.GetString([LID_OPERATION_PENDING1, LID_OPERATION_PENDING2]),
+      MessageDlg(FLang.GetString([LID_OPERATION_PENDING1, LID_OPERATION_PENDING2]),
         mtWarning, [mbOK], 0);
     end;
 
@@ -2040,7 +2042,7 @@ begin
       Exit;
 
     // Show confimation
-    if (TaskMessageDlg('', FLang.GetString(LID_CONTEXT_MENU_ICON_DELETE_CONFIRM),
+    if (MessageDlg(FLang.GetString(LID_CONTEXT_MENU_ICON_DELETE_CONFIRM),
       mtConfirmation, mbYesNo, 0) = idYes) then
     begin
       if not (FContext.Selected as TContextMenuShellItem).DeleteIcon() then
@@ -2076,8 +2078,8 @@ begin
   except
     on E: EWarning do
     begin
-      TaskMessageDlg('', FLang.GetString([LID_FILE_DOES_NOT_EXIST,
-        LID_ENTRY_CAN_DE_DELETED]), mtWarning, [mbOK], 0);
+      MessageDlg(FLang.GetString([LID_FILE_DOES_NOT_EXIST, LID_ENTRY_CAN_DE_DELETED]),
+        mtWarning, [mbOK], 0);
     end;
 
     on E: EInvalidItem do
@@ -2152,7 +2154,7 @@ begin
 
     on E: EListBlocked do
     begin
-      TaskMessageDlg('', FLang.GetString([LID_OPERATION_PENDING1, LID_OPERATION_PENDING2]),
+      MessageDlg(FLang.GetString([LID_OPERATION_PENDING1, LID_OPERATION_PENDING2]),
         mtWarning, [mbOK], 0);
     end;
 
@@ -2301,7 +2303,7 @@ begin
 
     on E: EListBlocked do
     begin
-      TaskMessageDlg('', FLang.GetString([LID_OPERATION_PENDING1, LID_OPERATION_PENDING2]),
+      MessageDlg(FLang.GetString([LID_OPERATION_PENDING1, LID_OPERATION_PENDING2]),
         mtWarning, [mbOK], 0);
     end;
 
@@ -2380,7 +2382,7 @@ begin
              if FContext.Last.UserChoiceExists(Location) then
              begin
                // Delete user choice?
-               if (TaskMessageDlg('', FLang.Format(LID_CONTEXT_MENU_USER_CHOICE_WARNING1,
+               if (MessageDlg(FLang.Format(LID_CONTEXT_MENU_USER_CHOICE_WARNING1,
                  [LID_CONTEXT_MENU_USER_CHOICE_WARNING2, LID_CONTEXT_MENU_USER_CHOICE_RESET]),
                  mtConfirmation, mbYesNo, 0) = idYes) then
                  FContext.Last.DeleteUserChoice(Location);
@@ -2400,7 +2402,7 @@ begin
   except
     on E: EListBlocked do
     begin
-      TaskMessageDlg('', FLang.GetString([LID_OPERATION_PENDING1, LID_OPERATION_PENDING2]),
+      MessageDlg(FLang.GetString([LID_OPERATION_PENDING1, LID_OPERATION_PENDING2]),
         mtWarning, [mbOK], 0);
     end;
 
@@ -2495,7 +2497,7 @@ begin
 
     on E: EListBlocked do
     begin
-      TaskMessageDlg('', FLang.GetString([LID_OPERATION_PENDING1, LID_OPERATION_PENDING2]),
+      MessageDlg(FLang.GetString([LID_OPERATION_PENDING1, LID_OPERATION_PENDING2]),
         mtWarning, [mbOK], 0);
     end;
   end;  //of try
@@ -2534,7 +2536,7 @@ begin
 
     on E: EListBlocked do
     begin
-      TaskMessageDlg('', FLang.GetString([LID_OPERATION_PENDING1, LID_OPERATION_PENDING2]),
+      MessageDlg(FLang.GetString([LID_OPERATION_PENDING1, LID_OPERATION_PENDING2]),
         mtWarning, [mbOK], 0);
     end;
 
@@ -2665,7 +2667,7 @@ begin
     // Certificate already installed?
     if Updater.CertificateExists() then
     begin
-      TaskMessageDlg('', FLang.GetString(LID_CERTIFICATE_ALREADY_INSTALLED),
+      MessageDlg(FLang.GetString(LID_CERTIFICATE_ALREADY_INSTALLED),
         mtInformation, [mbOK], 0);
     end  //of begin
     else
