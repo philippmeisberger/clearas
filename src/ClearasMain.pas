@@ -206,7 +206,7 @@ type
       DELAY_TIMER = 1;
     procedure WMTimer(var Message: TWMTimer); message WM_TIMER;
     { IChangeLanguageListener }
-    procedure SetLanguage(ANewLanguage: TLocale);
+    procedure LanguageChanged();
     { IUpdateListener }
     procedure OnUpdate(const ANewBuild: Cardinal);
   end;
@@ -236,8 +236,13 @@ var
 
 begin
   // Setup languages
-  FLang := TLanguageFile.Create(Self);
-  FLang.BuildLanguageMenu(MainMenu, mmLang);
+  FLang := TLanguageFile.Create;
+
+  with FLang do
+  begin
+    AddListener(Self);
+    BuildLanguageMenu(mmLang);
+  end;  //of with
 
   // Init update notificator
   FUpdateCheck := TUpdateCheck.Create(Self, 'Clearas', FLang);
@@ -1078,7 +1083,7 @@ end;
 
   Updates all component captions with new language text. }
 
-procedure TMain.SetLanguage(ANewLanguage: TLocale);
+procedure TMain.LanguageChanged();
 begin
   with FLang do
   begin

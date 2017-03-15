@@ -1,6 +1,6 @@
 ﻿{ *********************************************************************** }
 {                                                                         }
-{ PM Code Works Cross Plattform Language Handler Unit v2.1.3              }
+{ PM Code Works Language Resource Unit v2.2                               }
 {                                                                         }
 { Copyright (c) 2011-2017 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
@@ -13,20 +13,22 @@ unit PMCW.LanguageFile;
 interface
 
 uses
-  Classes, SysUtils, Forms, Dialogs, Menus,
+  Classes, SysUtils, Menus, Dialogs,
 {$IFDEF MSWINDOWS}
-{$WARN SYMBOL_PLATFORM OFF}
-  Winapi.Windows, Winapi.CommCtrl, System.Generics.Collections, Winapi.ShellAPI,
-  System.UITypes, System.NetEncoding;
+  Winapi.Windows, Winapi.ShellAPI, System.NetEncoding, System.UITypes, Vcl.Forms;
 {$ELSE}
   IniFiles;
 {$ENDIF}
 
 const
-  { Flag indicating line feed }
+  /// <summary>
+  ///   Flag indicating line feed.
+  /// </summary>
   NEW_LINE                          = 1023;
 
-  { The absolute start index of the first language. }
+  /// <summary>
+  ///   The absolute start index of the first language.
+  /// </summary>
   FIRST_LANGUAGE_START_INDEX        = 100;
 
   { General language IDs }
@@ -75,7 +77,9 @@ const
   LID_CERTIFICATE_ALREADY_INSTALLED = 27;
   LID_CERTIFICATE_NO_CERTUTIL       = 28;
 
-  { End mark of the predefined range }
+  /// <summary>
+  ///   End mark of the predefined range.
+  /// </summary>
   LID_LAST                          = 40;
 
 type
@@ -84,28 +88,27 @@ type
   /// </summary>
   ELanguageException = class(Exception);
 
-{$IFDEF MSWINDOWS}
-  /// <summary>
-  ///   Possible icons in the balloon tip inside a <c>TEdit</c>.
-  /// </summary>
-  TBalloonIcon = (
-    biNone, biInfo, biWarning, biError, biInfoLarge, biWarningLarge, biErrorLarge
-  );
-
-  /// <summary>
-  ///   The language code.
-  /// </summary>
-  TLocale = Word;
-{$ELSE}
-  /// <summary>
-  ///   The language code.
-  /// </summary>
-  TLocale = string;
-{$ENDIF}
   /// <summary>
   ///   The identifier of a translation string.
   /// </summary>
   TLanguageId = Word;
+
+  /// <summary>
+  ///   The language code.
+  /// </summary>
+  TLocale = {$IFDEF MSWINDOWS}TLanguageId{$ELSE}string{$ENDIF};
+
+{$IFDEF MSWINDOWS}
+  TLocaleHelper = record helper for TLocale
+    /// <summary>
+    ///   Gets the name of the locale.
+    /// </summary>
+    /// <returns>
+    ///   The name.
+    /// </returns>
+    function DisplayName(): string;
+  end;
+{$ENDIF}
 
   /// <summary>
   ///   Receive notfication when user changes the language of the current
@@ -115,12 +118,9 @@ type
   IChangeLanguageListener = interface
   ['{FF4AAD19-49DC-403B-8EA0-3E24D984B603}']
     /// <summary>
-    ///   Sets the current UI language to the specified locale.
+    ///   Translates the UI to the requested language.
     /// </summary>
-    /// <param name="ANewLanguage">
-    ///   The new language that should be applied.
-    /// </param>
-    procedure SetLanguage(ANewLanguage: TLocale);
+    procedure LanguageChanged();
   end;
 
   /// <summary>
@@ -131,33 +131,41 @@ type
   /// </summary>
   TLanguageFile = class(TObject)
   private
-    FMenu: TMenuItem;
     FListeners: TInterfaceList;
     FLocale,
     FLangId: TLocale;
+    FLanguages: TStringList;
   {$IFDEF LINUX}
     FIni: TIniFile;
-    FLanguages: TStringList;
-  {$ELSE}
-    FInterval: Word;
-    FLanguages: TDictionary<TLanguageId, TLanguageId>;
-    procedure OnHyperlinkClicked(Sender: TObject);
   {$ENDIF}
-    procedure OnSelectLanguage(Sender: TObject);
+    procedure SetLocale(const ALocale: TLocale);
+    procedure LanguageSelected(Sender: TObject);
+    procedure HyperlinkClicked(Sender: TObject);
+  protected
+    /// <summary>
+    ///   Loads available languages from language resource.
+    /// </summary>
+  {$IFDEF MSWINDOWS}
+    /// <param name="AInterval">
+    ///   Optional: The application defined interval between languages.
+    /// </param>
+  {$ENDIF}
+    procedure Load({$IFDEF MSWINDOWS}const AInterval: Word = 200{$ENDIF});
   public
     /// <summary>
     ///   Constructor for creating a <c>TLanguageFile</c> instance.
     /// </summary>
-    constructor Create({$IFDEF LINUX}AIniFile: string = ''{$ENDIF}); reintroduce; overload;
-
-    /// <summary>
-    ///   Constructor for creating a <c>TLanguageFile</c> instance.
-    /// </summary>
-    /// <param name="AOwner">
-    ///   The owner that implements the <see cref="IChangeLanguageListener"/>
-    ///   interface.
+  {$IFDEF LINUX}
+    /// <param name="AIniFile">
+    ///   The absolute filename of the language file.
     /// </param>
-    constructor Create(AListener: IChangeLanguageListener{$IFDEF LINUX}; AIniFile: string = ''{$ENDIF}); reintroduce; overload;
+  {$ELSE}
+    /// <param name="AInterval">
+    ///   Optional: The application defined interval between languages.
+    /// </param>
+  {$ENDIF}
+    constructor Create({$IFDEF LINUX}const AIniFile: string = ''{$ELSE}
+      const AInterval: Word = 200{$ENDIF});
 
     /// <summary>
     ///   Destructor for destroying a <c>TLanguageFile</c> instance.
@@ -170,26 +178,18 @@ type
     /// <param name="AListener">
     ///   A listener which implements the <see cref="IChangeLanguageListener"/> interface.
     /// </param>
+    /// <remarks>
+    ///   Listener gets notified after registering.
+    /// </remarks>
     procedure AddListener(AListener: IChangeLanguageListener);
 
     /// <summary>
     ///   Builds a select language menu based on available languages.
     /// </summary>
     /// <param name="AMainMenu">
-    ///   The application main menu to build the language menu in.
+    ///   The menu item to create the submenu.
     /// </param>
-    /// <param name="ARootMenuItem">
-    ///   The language selection submenu root item.
-    /// </param>
-    procedure BuildLanguageMenu(AMainMenu: TMainMenu; ARootMenuItem: TMenuItem);
-
-    /// <summary>
-    ///   Changes the language.
-    /// </summary>
-    /// <param name="ALocale">
-    ///   The locale to which the language should be changed.
-    /// </param>
-    procedure ChangeLanguage(ALocale: TLocale);
+    procedure BuildLanguageMenu(AMenuItem: TMenuItem);
 
     /// <summary>
     ///   Embeds data into a single string by replacing a special flag starting
@@ -204,7 +204,7 @@ type
     /// <returns>
     ///   The formatted string.
     /// </returns>
-    function Format(AIndex: TLanguageId; const AArgs: array of
+    function Format(const AIndex: TLanguageId; const AArgs: array of
       {$IFDEF FPC}const{$ELSE}TVarRec{$ENDIF}): string; overload;
 
     /// <summary>
@@ -220,64 +220,9 @@ type
     /// <returns>
     ///   The formatted string.
     /// </returns>
-    function Format(AIndices: array of TLanguageId; const AArgs: array of
+    function Format(const AIndices: array of TLanguageId; const AArgs: array of
       {$IFDEF FPC}const{$ELSE}TVarRec{$ENDIF}): string; overload;
-  {$IFDEF MSWINDOWS}
-    /// <summary>
-    ///   Shows a balloon tip inside an edit field with more comfortable usage.
-    /// </summary>
-    /// <param name="AEditHandle">
-    ///   The handle to an <c>TEdit</c>.
-    /// </param>
-    /// <param name="ATitle">
-    ///   The title to display.
-    /// </param>
-    /// <param name="AText">
-    ///   The text to display.
-    /// </param>
-    /// <param name="AIcon">
-    ///   A <see cref="TBalloonIcon"/> icon to use. Default is <c>biInfo</c>.
-    /// </param>
-    /// <returns>
-    ///   <c>True</c> if balloon tip was shown successful or <c>False</c>
-    ///   otherwise.
-    /// </returns>
-    function EditBalloonTip(AEditHandle: THandle; const ATitle, AText: WideString;
-      AIcon: TBalloonIcon = biInfo): Boolean; overload;
 
-    /// <summary>
-    ///   Shows a balloon tip inside an edit field with more comfortable usage.
-    /// </summary>
-    /// <param name="AEditHandle">
-    ///   The handle to an <c>TEdit</c>.
-    /// </param>
-    /// <param name="ATitle">
-    ///   The language ID of a title to display.
-    /// </param>
-    /// <param name="AText">
-    ///   The language ID of a text to display.
-    /// </param>
-    /// <param name="AIcon">
-    ///   A <see cref="TBalloonIcon"/> icon to use. Default is <c>biInfo</c>.
-    /// </param>
-    /// <returns>
-    ///   <c>True</c> if balloon tip was shown successful or <c>False</c>
-    ///   otherwise.
-    /// </returns>
-    function EditBalloonTip(AEditHandle: THandle; ATitle, AText: TLanguageId;
-      AIcon: TBalloonIcon = biInfo): Boolean; overload;
-
-    /// <summary>
-    ///   Gets the name of a language ID.
-    /// </summary>
-    /// <param name="ALanguage">
-    ///   The language ID.
-    /// </param>
-    /// <returns>
-    ///   The name.
-    /// </returns>
-    function GetLanguageName(ALanguage: TLanguageId): string;
-  {$ENDIF}
     /// <summary>
     ///   Loads a single string from a StringTable resource based language file.
     /// </summary>
@@ -298,20 +243,7 @@ type
     /// <returns>
     ///   The string.
     /// </returns>
-    function GetString(AIndices: array of TLanguageId): string; overload;
-  {$IFDEF LINUX}
-    /// <summary>
-    ///   Gets a the current used system language.
-    /// </summary>
-    /// <returns>
-    ///   The language.
-    /// </returns>
-    function GetUserDefaultUILanguage(): string;
-  {$ENDIF}
-    /// <summary>
-    ///   Loads available languages from language file.
-    /// </summary>
-    procedure Load();
+    function GetString(const AIndices: array of TLanguageId): string; overload;
 
     /// <summary>
     ///   Removes a listener from the notification list.
@@ -322,165 +254,69 @@ type
     procedure RemoveListener(AListener: IChangeLanguageListener);
 
     /// <summary>
-    ///   Shows a message with text and specific look.
-    /// </summary>
-    /// <param name="AText">
-    ///   The text to display.
-    /// </param>
-    /// <param name="AMessageType">
-    ///   A <c>TMsgDlgType</c> to use.
-    /// </param>
-    /// <returns>
-    ///   Which button the user has clicked.
-    /// </returns>
-    function ShowMessage(const AText: string;
-      AMessageType: TMsgDlgType = mtInformation): Integer; overload;
-
-    /// <summary>
-    ///   Shows a message with text and specific look.
-    /// </summary>
-    /// <param name="ATitle">
-    ///   The title to display.
-    /// </param>
-    /// <param name="AText">
-    ///   The text to display.
-    /// </param>
-    /// <param name="AMessageType">
-    ///   A <c>TMsgDlgType</c> to use.
-    /// </param>
-    /// <returns>
-    ///   Which button the user has clicked.
-    /// </returns>
-    function ShowMessage(const ATitle, AText: string;
-      AMessageType: TMsgDlgType = mtInformation): Integer; overload;
-
-    /// <summary>
-    ///   Shows a message with text and specific look.
-    /// </summary>
-    /// <param name="ATitle">
-    ///   The language ID of a title to display.
-    /// </param>
-    /// <param name="AText">
-    ///   The language ID of a text to display.
-    /// </param>
-    /// <param name="AMessageType">
-    ///   A <c>TMsgDlgType</c> to use.
-    /// </param>
-    /// <returns>
-    ///   Which button the user has clicked.
-    /// </returns>
-    function ShowMessage(ATitle, AText: TLanguageId;
-      AMessageType: TMsgDlgType = mtInformation): Integer; overload;
-
-    /// <summary>
-    ///   Shows a message with multiple string text and specific look.
-    /// </summary>
-    /// <param name="ATitle">
-    ///   The language ID of a title to display.
-    /// </param>
-    /// <param name="AIndices">
-    ///   An array containing multiple language IDs.
-    /// </param>
-    /// <param name="AMessageType">
-    ///   A <c>TMsgDlgType</c> to use.
-    /// </param>
-    /// <returns>
-    ///   Which button the user has clicked.
-    /// </returns>
-    function ShowMessage(ATitle: TLanguageId; AIndices: array of TLanguageId;
-      AMessageType: TMsgDlgType = mtInformation): Integer; overload;
-
-    /// <summary>
-    ///   Shows a message with multiple formatted string text and specific look.
-    /// </summary>
-    /// <param name="ATitle">
-    ///   The language ID of a title to display.
-    /// </param>
-    /// <param name="AIndices">
-    ///   An array containing multiple language IDs.
-    /// </param>
-    /// <param name="AArgs">
-    ///   Arguments passed to <see cref="Format"/>.
-    /// </param>
-    /// <param name="AMessageType">
-    ///   A <c>TMsgDlgType</c> to use.
-    /// </param>
-    /// <returns>
-    ///   Which button the user has clicked.
-    /// </returns>
-    function ShowMessage(ATitle: TLanguageId; AIndices: array of TLanguageId;
-      AArgs: array of const; AMessageType: TMsgDlgType = mtInformation): Integer; overload;
-
-    /// <summary>
     ///   Shows an exception message with additional information.
     /// </summary>
-    /// <param name="AText">
+    /// <param name="AMessage">
     ///   Text containing an error message.
     /// </param>
-    /// <param name="AInformation">
+    /// <param name="ATechnicalDetails">
     ///   Technical error details.
     /// </param>
-    /// <param name="AOptions">
-    ///   Additional <c>TTaskDialogFlags</c> to use.
-    /// </param>
-    procedure ShowException(const AText, AInformation: string{$IFDEF MSWINDOWS};
-      AOptions: TTaskDialogFlags = []{$ENDIF});
+    procedure ShowException(const AMessage, ATechnicalDetails: string);
 
     /// <summary>
-    ///   The current used language.
+    ///   Gets or sets the current used locale for UI translation.
     /// </summary>
-    property Id: TLocale read FLangId;
-  {$IFDEF MSWINDOWS}
-    /// <summary>
-    ///   An application defined interval between languages.
-    /// </summary>
-    property Interval: Word read FInterval write FInterval default 200;
-  {$ENDIF}
-
-    /// <summary>
-    ///   The current locale.
-    /// </summary>
-    property Locale: TLocale read FLocale write ChangeLanguage;
+    property Locale: TLocale read FLocale write SetLocale;
 
     /// <summary>
     ///   Loads a single string from a StringTable resource based language file.
     /// </summary>
-    property Strings[Index: TLanguageId]: string read GetString; default;
+    property Strings[AIndex: TLanguageId]: string read GetString; default;
   end;
 
 implementation
 
 {$IFDEF MSWINDOWS}
 {$R lang.res}
+
+{ TLocaleHelper }
+
+function TLocaleHelper.DisplayName(): string;
+var
+  CopiedChars: DWORD;
+
+begin
+  SetLength(Result, 80);
+  CopiedChars := VerLanguageName(MAKELANGID(Self, SUBLANG_DEFAULT), PChar(Result),
+    Length(Result));
+  SetLength(Result, CopiedChars);
+end;
+{$ELSE}
+function GetUserDefaultUILanguage(): string;
+begin
+  Result := Copy(SysUtils.GetEnvironmentVariable('LANG'), 1, 5);
+end;
 {$ENDIF}
 
 { TLanguageFile }
 
-constructor TLanguageFile.Create({$IFDEF LINUX}AIniFile: string = ''{$ENDIF});
+constructor TLanguageFile.Create({$IFDEF LINUX}const AIniFile: string = ''{$ELSE}
+  const AInterval: Word = 200{$ENDIF});
 begin
   inherited Create;
   FListeners := TInterfaceList.Create;
-{$IFDEF MSWINDOWS}
-  FLanguages := TDictionary<TLanguageId, TLanguageId>.Create;
-  FInterval := 200;
-  FLangId := 0;
-{$ELSE}
   FLanguages := TStringList.Create;
   FLanguages.Duplicates := dupIgnore;
-
+{$IFDEF MSWINDOWS}
+  FLangId := 0;
+{$ELSE}
   if (AIniFile = '') then
-    AIniFile := ExtractFilePath(ParamStr(0)) +'lang';
-
-  FIni := TIniFile.Create(AIniFile);
+    FIni := TIniFile.Create(ExtractFilePath(ParamStr(0)) +'lang')
+  else
+    FIni := TIniFile.Create(AIniFile);
 {$ENDIF}
-  FLocale := GetUserDefaultUILanguage();
-end;
-
-constructor TLanguageFile.Create(AListener: IChangeLanguageListener{$IFDEF LINUX};
-  AIniFile: string = ''{$ENDIF});
-begin
-  Create({$IFDEF LINUX}AIniFile{$ENDIF});
-  AddListener(AListener);
+  Load({$IFDEF MSWINDOWS}AInterval{$ENDIF});
 end;
 
 destructor TLanguageFile.Destroy;
@@ -493,168 +329,66 @@ begin
   inherited Destroy;
 end;
 
-{$IFDEF MSWINDOWS}
-procedure TLanguageFile.OnHyperlinkClicked(Sender: TObject);
-begin
-  // Try to send the report by mail client
-  if (Sender is TTaskDialog) and (ShellExecute(0, 'open',
-    PChar((Sender as TTaskDialog).URL), nil, nil, SW_SHOWNORMAL) <= 32) then
-    // No mail client installed: Send it by report bug formular on website
-    ShellExecute(0, 'open', 'http://www.pm-codeworks.de/kontakt.html', nil, nil, SW_SHOWNORMAL);
-end;
-{$ENDIF}
-
-procedure TLanguageFile.OnSelectLanguage(Sender: TObject);
+procedure TLanguageFile.LanguageSelected(Sender: TObject);
 begin
 {$IFDEF MSWINDOWS}
-  ChangeLanguage((Sender as TMenuItem).Tag);
+  SetLocale((Sender as TMenuItem).Tag);
 {$ELSE}
-  ChangeLanguage((Sender as TMenuItem).Hint);
+  SetLocale((Sender as TMenuItem).Hint);
 {$ENDIF}
 end;
 
 procedure TLanguageFile.AddListener(AListener: IChangeLanguageListener);
 begin
   if Assigned(AListener) then
+  begin
     FListeners.Add(AListener);
+    AListener.LanguageChanged();
+  end;  //of begin
 end;
 
-procedure TLanguageFile.BuildLanguageMenu(AMainMenu: TMainMenu; ARootMenuItem: TMenuItem);
+procedure TLanguageFile.BuildLanguageMenu(AMenuItem: TMenuItem);
 var
   MenuItem: TMenuItem;
-{$IFDEF MSWINDOWS}
-  Language: TLanguageId;
-{$ELSE}
   i: Integer;
+{$IFDEF MSWINDOWS}
+  Locale: TLocale;
 {$ENDIF}
 
 begin
-  if (FLangId = {$IFDEF MSWINDOWS}0{$ELSE}''{$ENDIF}) then
-    Load();
-
-  FMenu := ARootMenuItem;
-
   // Create submenu
-{$IFDEF MSWINDOWS}
-  for Language in FLanguages.Keys do
-{$ELSE}
   for i := 0 to FLanguages.Count - 1 do
-{$ENDIF}
   begin
-    MenuItem := TMenuItem.Create(AMainMenu);
+    MenuItem := TMenuItem.Create(AMenuItem.Owner);
 
     with MenuItem do
     begin
       RadioItem := True;
+      AutoCheck := True;
     {$IFDEF MSWINDOWS}
-      Tag := Language;
-      Caption := GetLanguageName(Language);
-      Checked := (FLocale = Language);
+      Locale := StrToInt(FLanguages.Names[i]);
+      Tag := Locale;
+      Caption := Locale.DisplayName();
+      Checked := (FLocale = Tag);
     {$ELSE}
-      Hint := FLanguages.Names[i];
       Caption := FLanguages.ValueFromIndex[i];
+      Hint := FLanguages.Names[i];
       Checked := (FLocale = Hint);
     {$ENDIF}
-      OnClick := OnSelectLanguage;
+      OnClick := LanguageSelected;
     end;  //of with
 
-    ARootMenuItem.Add(MenuItem);
+    AMenuItem.Add(MenuItem);
   end;  //of for
-
-  // Try to select current user language
-  ChangeLanguage(FLocale);
 end;
 
-procedure TLanguageFile.ChangeLanguage(ALocale: TLocale);
-var
-  LocaleId: TLocale;
-  i: Integer;
-  Listener: IChangeLanguageListener;
-
-begin
-  LocaleId := ALocale;
-
-  // Load default language
-{$IFDEF MSWINDOWS}
-  if not FLanguages.ContainsKey(LocaleId) then
-  begin
-    LocaleId := MAKELANGID(LANG_ENGLISH, SUBLANG_DEFAULT);
-
-    // Language file contains no default language?
-    if not FLanguages.ContainsKey(LocaleId) then
-      raise ELanguageException.Create('No default language found in language file!');
-  end;  //of begin
-
-  FLangId := FLanguages[LocaleId];
-{$ELSE}
-  if (FLanguages.Values[LocaleId] = '') then
-  begin
-    LocaleId := 'en_US';
-
-    // Language file contains no default language?
-    if (FLanguages.Values[LocaleId] = '') then
-      raise ELanguageException.Create('No default language found in language file!');
-  end;  //of begin
-
-  FLangId := FLanguages.Values[LocaleId];
-{$ENDIF}
-  FLocale := LocaleId;
-
-  if Assigned(FMenu) then
-  begin
-    // Select language visual
-    for i := 0 to FMenu.Count - 1 do
-    {$IFDEF MSWINDOWS}
-      if (FMenu[i].Tag = LocaleId) then
-    {$ELSE}
-      if (FMenu[i].Hint = LocaleId) then
-    {$ENDIF}
-      begin
-        FMenu[i].Checked := True;
-        Break;
-      end;  //of begin
-  end;  //of begin
-
-  // Notify all listeners
-  for i := 0 to FListeners.Count - 1 do
-    if Supports(FListeners[i], IChangeLanguageListener, Listener) then
-      Listener.SetLanguage(ALocale);
-end;
-
-{$IFDEF MSWINDOWS}
-function TLanguageFile.EditBalloonTip(AEditHandle: THandle; const ATitle,
-  AText: WideString; AIcon: TBalloonIcon = biInfo): Boolean;
-var
-  BalloonTip: TEditBalloonTip;
-
-begin
-  ZeroMemory(@BalloonTip, SizeOf(TEditBalloonTip));
-
-  with BalloonTip do
-  begin
-    cbStruct := SizeOf(BalloonTip);
-    pszTitle := PChar(ATitle);
-    pszText := PChar(AText);
-    ttiIcon := Ord(AIcon);
-  end;  //of with
-
-  Result := Edit_ShowBalloonTip(AEditHandle, BalloonTip);
-end;
-
-function TLanguageFile.EditBalloonTip(AEditHandle: THandle; ATitle, AText: TLanguageId;
-  AIcon: TBalloonIcon): Boolean;
-begin
-  Result := EditBalloonTip(AEditHandle, GetString(ATitle), GetString(AText), AIcon);
-end;
-{$ENDIF}
-
-function TLanguageFile.Format(AIndex: TLanguageId; const AArgs: array of
+function TLanguageFile.Format(const AIndex: TLanguageId; const AArgs: array of
   {$IFDEF FPC}const{$ELSE}TVarRec{$ENDIF}): string;
 begin
   Result := SysUtils.Format(GetString(AIndex), AArgs);
 end;
 
-function TLanguageFile.Format(AIndices: array of TLanguageId;
+function TLanguageFile.Format(const AIndices: array of TLanguageId;
   const AArgs: array of {$IFDEF FPC}const{$ELSE}TVarRec{$ENDIF}): string;
 var
   i: Integer;
@@ -664,25 +398,18 @@ begin
   Text := '';
 
   for i := 0 to Length(AIndices) -1 do
+  begin
     if (AIndices[i] = NEW_LINE) then
       Text := Text + sLineBreak
     else
       Text := Text + Format(AIndices[i], AArgs);
+  end;  //of for
 
   Result := Text;
 end;
 
-{$IFDEF MSWINDOWS}
-function TLanguageFile.GetLanguageName(ALanguage: TLanguageId): string;
-var
-  Buffer: array[0..MAX_PATH-1] of Char;
-
-begin
-  VerLanguageName(MAKELANGID(ALanguage, SUBLANG_DEFAULT), @Buffer[0], Length(Buffer));
-  Result := Buffer;
-end;
-
 function TLanguageFile.GetString(AIndex: TLanguageId): string;
+{$IFDEF MSWINDOWS}
 var
   Buffer: array[0..79] of Char;
   Error: DWORD;
@@ -699,15 +426,13 @@ begin
   end;  //of begin
 
   Result := Buffer;
-end;
 {$ELSE}
-function TLanguageFile.GetString(AIndex: TLanguageId): string;
 begin
   Result := FIni.ReadString(FLangId, IntToStr(AIndex + FIRST_LANGUAGE_START_INDEX), '');
-end;
 {$ENDIF}
+end;
 
-function TLanguageFile.GetString(AIndices: array of TLanguageId): string;
+function TLanguageFile.GetString(const AIndices: array of TLanguageId): string;
 var
   i: Integer;
   Text: string;
@@ -716,61 +441,66 @@ begin
   Text := '';
 
   for i := 0 to Length(AIndices) - 1 do
+  begin
     if (AIndices[i] = NEW_LINE) then
       Text := Text + sLineBreak
     else
       Text := Text + GetString(AIndices[i]);
+  end;  //of for
 
   Result := Text;
 end;
 
-{$IFDEF LINUX}
-function TLanguageFile.GetUserDefaultUILanguage(): string;
-begin
-  Result := Copy(SysUtils.GetEnvironmentVariable('LANG'), 1, 5);
-end;
-{$ENDIF}
-
-procedure TLanguageFile.Load();
+procedure TLanguageFile.Load({$IFDEF MSWINDOWS}const AInterval: Word = 200{$ENDIF});
 {$IFDEF MSWINDOWS}
 var
   Language: TLanguageId;
   Buffer: array[0..4] of Char;
 
 begin
+  FLanguages.CommaText := '';
   Language := FIRST_LANGUAGE_START_INDEX;
 
+  // Load available languages
   while (LoadString(HInstance, Language, Buffer, SizeOf(Buffer)) <> 0) do
   begin
-    FLanguages.Add(StrToInt(Buffer), Language);
-    Inc(Language, FInterval);
+    FLanguages.CommaText := FLanguages.CommaText + Buffer +'='+ IntToStr(Language) +',';
+    Inc(Language, AInterval);
   end;  //of while
 
-  // Set language ID
-  FLangId := FLanguages[FLocale];
+  // Remove last separator
+  FLanguages.CommaText := FLanguages.CommaText.Remove(Length(FLanguages.CommaText) - 1);
+
+  // Try to set user prefered language
+  SetLocale(GetUserDefaultUILanguage());
 {$ELSE}
 var
   Languages: TStrings;
   i: Integer;
 
 begin
+  FLanguages.CommaText := '';
   Languages := TStringList.Create;
 
   try
     FIni.ReadSections(Languages);
 
+    // Load available languages
     for i := 0 to Languages.Count - 1 do
+    begin
       FLanguages.CommaText := FLanguages.CommaText + FIni.ReadString(Languages[i],
         IntToStr(FIRST_LANGUAGE_START_INDEX), '') +'='+ Languages[i]+',';
+    end;  //of for
 
+    // Remove last separator
     FLanguages.CommaText := Copy(FLanguages.CommaText, 0, Length(FLanguages.CommaText) - 1);
 
   finally
     Languages.Free;
-  end;
+  end;  //of try
 
-  // Set language ID
-  FLangId := FLanguages.Values[FLocale];
+  // Try to set user prefered language
+  SetLocale(GetUserDefaultUILanguage());
 {$ENDIF}
 end;
 
@@ -780,105 +510,71 @@ begin
     FListeners.Remove(AListener);
 end;
 
-function TLanguageFile.ShowMessage(const AText: string;
-  AMessageType: TMsgDlgType = mtInformation): Integer;
-begin
-  Result := ShowMessage('', AText, AMessageType);
-end;
-
-function TLanguageFile.ShowMessage(const ATitle, AText: string;
-  AMessageType: TMsgDlgType = mtInformation): Integer;
+procedure TLanguageFile.SetLocale(const ALocale: TLocale);
 var
-  Buttons: TMsgDlgButtons;
+  i: Integer;
+  Listener: IChangeLanguageListener;
+
+begin
+  if (FLocale <> ALocale) then
+  begin
+  {$IFDEF MSWINDOWS}
+    // Requested language not found?
+    if (FLanguages.Values[IntToStr(ALocale)] = '') then
+    begin
+      // English as fallback
+      FLocale := MAKELANGID(LANG_ENGLISH, SUBLANG_DEFAULT);
+
+      // Default language not found?
+      if (FLanguages.Values[IntToStr(FLocale)] = '') then
+        raise ELanguageException.Create('No default language found in language file!');
+    end  //of begin
+    else
+      FLocale := ALocale;
+
+    FLangId := StrToInt(FLanguages.Values[IntToStr(FLocale)]);
+  {$ELSE}
+    // Requested language not found?
+    if (FLanguages.Values[ALocale] = '') then
+    begin
+      // English as fallback
+      FLocale := 'en_US';
+
+      // Default language not found?
+      if (FLanguages.Values[FLocale] = '') then
+        raise ELanguageException.Create('No default language found in language file!');
+    end  //of begin
+    else
+      FLocale := ALocale;
+
+    FLangId := FLanguages.Values[FLocale];
+  {$ENDIF}
+
+    // Notify all listeners
+    for i := 0 to FListeners.Count - 1 do
+    begin
+      if Supports(FListeners[i], IChangeLanguageListener, Listener) then
+        Listener.LanguageChanged();
+    end;  //of for
+  end;  //of begin
+end;
+
 {$IFDEF MSWINDOWS}
-  DefaultButton: TMsgDlgBtn;
+procedure TLanguageFile.HyperlinkClicked(Sender: TObject);
+begin
+{$WARN SYMBOL_PLATFORM OFF}
+  // Try to send the report by mail client
+  if (Sender is TTaskDialog) and (ShellExecute(0, 'open',
+    PChar((Sender as TTaskDialog).URL), nil, nil, SW_SHOWNORMAL) <= 32) then
+    // No mail client installed: Send it by report bug formular on website
+    ShellExecute(0, 'open', 'http://www.pm-codeworks.de/kontakt.html', nil, nil, SW_SHOWNORMAL);
+{$WARN SYMBOL_PLATFORM ON}
+end;
 {$ENDIF}
 
-begin
+procedure TLanguageFile.ShowException(const AMessage, ATechnicalDetails: string);
 {$IFDEF MSWINDOWS}
-  DefaultButton := mbOK;
-{$ENDIF}
-
-  case AMessageType of
-    mtInformation:
-      begin
-        Buttons := [mbOK];
-      {$IFDEF MSWINDOWS}
-        DefaultButton := mbOK;
-        MessageBeep(MB_ICONINFORMATION);
-      {$ENDIF}
-      end;
-
-    mtWarning:
-      begin
-        Buttons := [mbOK];
-      {$IFDEF MSWINDOWS}
-        MessageBeep(MB_ICONWARNING);
-      {$ENDIF}
-      end;
-
-    mtConfirmation:
-      begin
-        Buttons := mbYesNo;
-      {$IFDEF MSWINDOWS}
-        DefaultButton := mbYes;
-        MessageBeep(MB_ICONWARNING);
-      {$ENDIF}
-      end;
-
-    mtCustom:
-      begin
-        Buttons := mbYesNo;
-      {$IFDEF MSWINDOWS}
-        DefaultButton := mbNo;
-      {$ENDIF}
-        AMessageType := mtWarning;
-      end;
-
-    mtError:
-      begin
-        Buttons := [mbClose];
-      {$IFDEF MSWINDOWS}
-        DefaultButton := mbClose;
-        MessageBeep(MB_ICONERROR);
-      {$ENDIF}
-      end;
-  end;  //of case
-
-{$IFDEF MSWINDOWS}
-  if (Win32MajorVersion >= 6) then
-    Result := TaskMessageDlg(ATitle, AText, AMessageType, Buttons, 0, DefaultButton)
-  else
-    Result := MessageDlg(ATitle + sLineBreak + AText, AMessageType, Buttons, 0);
-{$ELSE}
-  if (ATitle <> '') then
-    Result := MessageDlg(ATitle + sLineBreak + AText, AMessageType, Buttons, 0)
-  else
-    Result := MessageDlg(AText, AMessageType, Buttons, 0);
-{$ENDIF}
-end;
-
-function TLanguageFile.ShowMessage(ATitle, AText: TLanguageId;
-  AMessageType: TMsgDlgType = mtInformation): Integer;
-begin
-  Result := ShowMessage(GetString(ATitle), GetString(AText), AMessageType);
-end;
-
-function TLanguageFile.ShowMessage(ATitle: TLanguageId; AIndices: array of TLanguageId;
-  AMessageType: TMsgDlgType = mtInformation): Integer;
-begin
-  Result := ShowMessage(GetString(ATitle), GetString(AIndices), AMessageType);
-end;
-
-function TLanguageFile.ShowMessage(ATitle: TLanguageId; AIndices: array of TLanguageId;
-  AArgs: array of const; AMessageType: TMsgDlgType = mtInformation): Integer;
-begin
-  Result := ShowMessage(GetString(ATitle), Format(AIndices, AArgs), AMessageType);
-end;
-
-procedure TLanguageFile.ShowException(const AText, AInformation: string{$IFDEF MSWINDOWS};
-  AOptions: TTaskDialogFlags = []{$ENDIF});
-{$IFDEF MSWINDOWS}
+{$WARN SYMBOL_PLATFORM OFF}
 const
   URL_MAILTO = '<a href="mailto:%s?subject=%s&body=%s">%s</a>';
 
@@ -889,17 +585,18 @@ var
   function URLEncode(const AString: string): string;
   begin
     Result := TNetEncoding.URL.Encode(AString);
+
     // Embarcadero encodes spaces as '+' which is generally correct but not in
     // mailto hyperlinks: there it must be '%20' to generate a correct mail!
-    Result := StringReplace(Result, '+', '%20', [rfReplaceAll]);
+    Result := Result.Replace('+', '%20');
   end;
 
 begin
-  // TaskDialogIndirect only possible for Windows >= Vista!
+  // TaskDialog only since Windows Vista
   if (Win32MajorVersion < 6) then
   begin
-    ShowMessage(GetString(LID_FATAL_ERROR) +': '+ AText + sLineBreak +
-      AInformation, mtError);
+    MessageDlg(GetString(LID_FATAL_ERROR) +': '+ AMessage + sLineBreak
+      + ATechnicalDetails, mtError, [mbClose], 0);
     Exit;
   end;  //of begin
 
@@ -911,31 +608,29 @@ begin
       Caption := Application.Title;
       MainIcon := tdiError;
       Title := GetString(LID_FATAL_ERROR);
-      Text := AText;
-      ExpandedText := AInformation;
+      Text := AMessage;
+      ExpandedText := ATechnicalDetails;
       ExpandButtonCaption := GetString(LID_TECHNICAL_DETAILS);
       MailSubject := URLEncode(Format(LID_REPORT_BUG_SUBJECT, [Application.Title]));
-      MailBody := URLEncode(Format(LID_REPORT_BUG_BODY, [AText, AInformation]));
-      FooterText := SysUtils.Format(URL_MAILTO, ['team@pm-codeworks.de', MailSubject,
-        MailBody, GetString(LID_REPORT_BUG)]);
-      Flags := [tfExpandFooterArea, tfEnableHyperlinks] + AOptions;
+      MailBody := URLEncode(Format(LID_REPORT_BUG_BODY, [AMessage, ATechnicalDetails]));
+      FooterText := SysUtils.Format(URL_MAILTO, ['team@pm-codeworks.de',
+        MailSubject, MailBody, GetString(LID_REPORT_BUG)]);
+      Flags := [tfExpandFooterArea, tfEnableHyperlinks];
       CommonButtons := [tcbClose];
-      OnHyperlinkClicked := Self.OnHyperlinkClicked;
+      OnHyperlinkClicked := HyperlinkClicked;
     end;  //of with
 
     MessageBeep(MB_ICONERROR);
-
-    if not TaskDialog.Execute() then
-      ShowMessage(GetString(LID_FATAL_ERROR) +': '+ AText + sLineBreak +
-        AInformation, mtError);
+    TaskDialog.Execute();
 
   finally
     TaskDialog.Free;
   end;  //of try
+{$WARN SYMBOL_PLATFORM ON}
 {$ELSE}
 begin
-  ShowMessage(GetString(LID_FATAL_ERROR) +': '+ AText + sLineBreak + AInformation,
-    mtError);
+  MessageDlg(GetString(LID_FATAL_ERROR) +': '+ AMessage + sLineBreak
+    + ATechnicalDetails, mtError, [mbClose], 0);
 {$ENDIF}
 end;
 
