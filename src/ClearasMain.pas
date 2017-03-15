@@ -347,8 +347,8 @@ begin
   mmUpdate.Caption := FLang.GetString(LID_UPDATE_DOWNLOAD);
 
   // Ask user to permit download
-  if (FLang.ShowMessage(FLang.Format(LID_UPDATE_AVAILABLE, [ANewBuild]),
-    FLang.GetString(LID_UPDATE_CONFIRM_DOWNLOAD), mtConfirmation) = idYes) then
+  if (TaskMessageDlg(FLang.Format(LID_UPDATE_AVAILABLE, [ANewBuild]),
+    FLang[LID_UPDATE_CONFIRM_DOWNLOAD], mtConfirmation, mbYesNo, 0, mbYes) = idYes) then
   begin
     // init TUpdate instance
     Updater := TUpdateDialog.Create(Self, FLang);
@@ -514,8 +514,8 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([LID_REFRESH, LID_IMPOSSIBLE]),
-        FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
+      TaskMessageDlg(FLang.GetString([LID_REFRESH, LID_IMPOSSIBLE]),
+        FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
   end;  //of try
 end;
 
@@ -1288,8 +1288,10 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([LID_EXPORT, LID_IMPOSSIBLE]),
-        FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
+    begin
+      TaskMessageDlg(FLang.GetString([LID_EXPORT, LID_IMPOSSIBLE]),
+        FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
+    end;
 
     on E: Exception do
       FLang.ShowException(FLang.GetString([LID_EXPORT, LID_IMPOSSIBLE]), E.Message);
@@ -1314,7 +1316,7 @@ begin
     // No erasable items?
     if (RootList.ErasableItemsCount = 0) then
     begin
-      FLang.ShowMessage(FLang[LID_DELETE_ERASABLE_NO_ITEMS]);
+      TaskMessageDlg('', FLang[LID_DELETE_ERASABLE_NO_ITEMS], mtInformation, [mbOK], 0);
       Exit;
     end;  //of begin
 
@@ -1357,7 +1359,8 @@ begin
         end;  //of case
       end;  //of for
 
-      FLang.ShowMessage(FLang.Format(LID_DELETE_ERASABLE_SUCCESS, [ItemsDeleted]));
+      TaskMessageDlg('', FLang.Format(LID_DELETE_ERASABLE_SUCCESS, [ItemsDeleted]),
+        mtInformation, [mbOK], 0);
 
     finally
       if (ItemsDeleted > 0) then
@@ -1366,11 +1369,16 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([LID_DELETE_ERASABLE, LID_IMPOSSIBLE]),
-        FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
+    begin
+      TaskMessageDlg(FLang.GetString([LID_DELETE_ERASABLE, LID_IMPOSSIBLE]),
+        FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
+    end;
 
     on E: EListBlocked do
-      FLang.ShowMessage(LID_OPERATION_PENDING1, LID_OPERATION_PENDING2, mtWarning);
+    begin
+      TaskMessageDlg('', FLang.GetString([LID_OPERATION_PENDING1, LID_OPERATION_PENDING2]),
+        mtWarning, [mbOK], 0);
+    end;
 
     on E: Exception do
       FLang.ShowException(FLang.GetString([LID_DELETE_ERASABLE, LID_IMPOSSIBLE]), E.Message);
@@ -1442,12 +1450,13 @@ begin
     end;  //of case
 
     // Confirm deletion of item
-    if (FLang.ShowMessage(FLang.Format([ConfirmMessage],
-      [ListView.ItemFocused.SubItems[0]]), FLang.GetString([LID_ITEM_DELETE_CONFIRM1,
-      LID_ITEM_DELETE_CONFIRM2]), mtCustom) = idYes) then
+    if (TaskMessageDlg(FLang.Format([ConfirmMessage], [ListView.ItemFocused.SubItems[0]]),
+      FLang.GetString([LID_ITEM_DELETE_CONFIRM1, LID_ITEM_DELETE_CONFIRM2]),
+      mtWarning, mbYesNo, 0, mbNo) = idYes) then
     begin
       // Ask user to export item
-      Answer := FLang.ShowMessage(FLang.GetString(LID_ITEM_DELETE_STORE), mtConfirmation);
+      Answer := TaskMessageDlg('', FLang.GetString(LID_ITEM_DELETE_STORE),
+        mtConfirmation, mbYesNo, 0, mbYes);
 
       // Abort if user clicks cancel!
       if (((Answer = idYes) and ShowExportItemDialog()) or (Answer = idNo)) then
@@ -1466,15 +1475,22 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([LID_DELETE, LID_IMPOSSIBLE]),
-        FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
+    begin
+      TaskMessageDlg(FLang.GetString([LID_DELETE, LID_IMPOSSIBLE]),
+        FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
+    end;
 
     on E: EListBlocked do
-      FLang.ShowMessage(LID_OPERATION_PENDING1, LID_OPERATION_PENDING2, mtWarning);
+    begin
+      TaskMessageDlg('', FLang.GetString([LID_OPERATION_PENDING1, LID_OPERATION_PENDING2]),
+        mtWarning, [mbOK], 0);
+    end;
 
     on E: EWarning do
-      FLang.ShowMessage(FLang.GetString([LID_DELETE, LID_IMPOSSIBLE]), E.Message,
-        mtWarning);
+    begin
+      TaskMessageDlg(FLang.GetString([LID_DELETE, LID_IMPOSSIBLE]), E.Message,
+        mtWarning, [mbOK], 0);
+    end;
 
     on E: Exception do
       FLang.ShowException(FLang.GetString([LID_DELETE, LID_IMPOSSIBLE]), E.Message);
@@ -1506,18 +1522,29 @@ begin
 
     // Item is erasable?
     if RootList.Selected.Erasable then
-      FLang.ShowMessage(LID_FILE_DOES_NOT_EXIST, LID_ENTRY_CAN_DE_DELETED, mtWarning);
+    begin
+      TaskMessageDlg('', FLang.GetString([LID_FILE_DOES_NOT_EXIST, LID_ENTRY_CAN_DE_DELETED]),
+        mtWarning, [mbOK], 0);
+    end;  //of begin
 
   except
     on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([LID_DISABLE, LID_IMPOSSIBLE]),
-        FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
+    begin
+      TaskMessageDlg(FLang.GetString([LID_DISABLE, LID_IMPOSSIBLE]),
+        FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
+    end;
 
     on E: EListBlocked do
-      FLang.ShowMessage(LID_OPERATION_PENDING1, LID_OPERATION_PENDING2, mtWarning);
+    begin
+      TaskMessageDlg('', FLang.GetString([LID_OPERATION_PENDING1, LID_OPERATION_PENDING2]),
+        mtWarning, [mbOK], 0);
+    end;
 
     on E: EWarning do
-      FLang.ShowMessage(FLang.GetString([LID_DISABLE, LID_IMPOSSIBLE]), E.Message, mtWarning);
+    begin
+      TaskMessageDlg(FLang.GetString([LID_DISABLE, LID_IMPOSSIBLE]), E.Message,
+        mtWarning, [mbOK], 0);
+    end;
 
     on E: Exception do
       FLang.ShowException(FLang.GetString([LID_DISABLE, LID_IMPOSSIBLE]), E.Message);
@@ -1549,18 +1576,29 @@ begin
 
     // Item is erasable?
     if RootList.Selected.Erasable then
-      FLang.ShowMessage(LID_FILE_DOES_NOT_EXIST, LID_ENTRY_CAN_DE_DELETED, mtWarning);
+    begin
+      TaskMessageDlg('', FLang.GetString([LID_FILE_DOES_NOT_EXIST, LID_ENTRY_CAN_DE_DELETED]),
+        mtWarning, [mbOK], 0);
+    end;  //of begin
 
   except
     on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([LID_ENABLE, LID_IMPOSSIBLE]),
-        FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
+    begin
+      TaskMessageDlg(FLang.GetString([LID_ENABLE, LID_IMPOSSIBLE]),
+        FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
+    end;
 
     on E: EListBlocked do
-      FLang.ShowMessage(LID_OPERATION_PENDING1, LID_OPERATION_PENDING2, mtWarning);
+    begin
+      TaskMessageDlg('', FLang.GetString([LID_OPERATION_PENDING1, LID_OPERATION_PENDING2]),
+        mtWarning, [mbOK], 0);
+    end;
 
     on E: EWarning do
-      FLang.ShowMessage(FLang.GetString([LID_ENABLE, LID_IMPOSSIBLE]), E.Message, mtWarning);
+    begin
+      TaskMessageDlg(FLang.GetString([LID_ENABLE, LID_IMPOSSIBLE]),
+        E.Message, mtWarning, [mbOK], 0);
+    end;
 
     on E: Exception do
       FLang.ShowException(FLang.GetString([LID_ENABLE, LID_IMPOSSIBLE]), E.Message);
@@ -1972,12 +2010,16 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([LID_CONTEXT_MENU_ICON_CHANGE, LID_IMPOSSIBLE]),
-        FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
+    begin
+      TaskMessageDlg(FLang.GetString([LID_CONTEXT_MENU_ICON_CHANGE, LID_IMPOSSIBLE]),
+        FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
+    end;
 
     on E: Exception do
+    begin
       FLang.ShowException(FLang.GetString([LID_CONTEXT_MENU_ICON_CHANGE,
         LID_IMPOSSIBLE]), E.Message);
+    end;
   end;  //of try
 end;
 
@@ -1993,8 +2035,8 @@ begin
       Exit;
 
     // Show confimation
-    if (FLang.ShowMessage(FLang.GetString(LID_CONTEXT_MENU_ICON_DELETE_CONFIRM),
-      mtConfirmation) = ID_YES) then
+    if (TaskMessageDlg('', FLang.GetString(LID_CONTEXT_MENU_ICON_DELETE_CONFIRM),
+      mtConfirmation, mbYesNo, 0) = idYes) then
     begin
       if not (FContext.Selected as TContextMenuShellItem).DeleteIcon() then
         raise Exception.Create('Unknown error!');
@@ -2004,12 +2046,16 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([LID_CONTEXT_MENU_ICON_DELETE, LID_IMPOSSIBLE]),
-        FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
+    begin
+      TaskMessageDlg(FLang.GetString([LID_CONTEXT_MENU_ICON_DELETE, LID_IMPOSSIBLE]),
+        FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
+    end;
 
     on E: Exception do
+    begin
       FLang.ShowException(FLang.GetString([LID_CONTEXT_MENU_ICON_DELETE,
         LID_IMPOSSIBLE]), E.Message);
+    end;
   end;  //of try
 end;
 
@@ -2024,11 +2070,16 @@ begin
 
   except
     on E: EWarning do
-      FLang.ShowMessage(LID_FILE_DOES_NOT_EXIST, LID_ENTRY_CAN_DE_DELETED, mtWarning);
+    begin
+      TaskMessageDlg('', FLang.GetString([LID_FILE_DOES_NOT_EXIST,
+        LID_ENTRY_CAN_DE_DELETED]), mtWarning, [mbOK], 0);
+    end;
 
     on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([LID_OPEN_IN_EXPLORER, LID_IMPOSSIBLE]),
-        FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
+    begin
+      TaskMessageDlg(FLang.GetString([LID_OPEN_IN_EXPLORER, LID_IMPOSSIBLE]),
+        FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
+    end;
   end;  //of try
 end;
 
@@ -2049,8 +2100,10 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([LID_OPEN_IN_REGEDIT, LID_IMPOSSIBLE]),
-        FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
+    begin
+      TaskMessageDlg(FLang.GetString([LID_OPEN_IN_REGEDIT, LID_IMPOSSIBLE]),
+        FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
+    end;
   end;  //of try
 end;
 
@@ -2086,16 +2139,23 @@ begin
     end;  //of begin
 
   except
-    on E: EListBlocked do
-      FLang.ShowMessage(LID_OPERATION_PENDING1, LID_OPERATION_PENDING2, mtWarning);
-
     on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([LID_RENAME, LID_IMPOSSIBLE]),
-        FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
+    begin
+      TaskMessageDlg(FLang.GetString([LID_RENAME, LID_IMPOSSIBLE]),
+        FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
+    end;
+
+    on E: EListBlocked do
+    begin
+      TaskMessageDlg('', FLang.GetString([LID_OPERATION_PENDING1, LID_OPERATION_PENDING2]),
+        mtWarning, [mbOK], 0);
+    end;
 
     on E: EWarning do
-      FLang.ShowMessage(FLang.GetString([LID_RENAME, LID_IMPOSSIBLE]),
-        FLang.GetString(LID_ENTRY_ALREADY_EXISTS), mtWarning);
+    begin
+      TaskMessageDlg(FLang.GetString([LID_RENAME, LID_IMPOSSIBLE]),
+        FLang.GetString(LID_ENTRY_ALREADY_EXISTS), mtWarning, [mbOK], 0);
+    end;
 
     on E: Exception do
       FLang.ShowException(FLang.GetString([LID_RENAME, LID_IMPOSSIBLE]), E.Message);
@@ -2193,8 +2253,10 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([LID_LOCATION_COPY, LID_IMPOSSIBLE]),
-        FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
+    begin
+      TaskMessageDlg(FLang.GetString([LID_LOCATION_COPY, LID_IMPOSSIBLE]),
+        FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
+    end;
   end;  //of try
 end;
 
@@ -2226,12 +2288,17 @@ begin
       GetSelectedListView().ItemFocused.SubItems[1] := EnteredPath;
 
   except
-    on E: EListBlocked do
-      FLang.ShowMessage(LID_OPERATION_PENDING1, LID_OPERATION_PENDING2, mtWarning);
-
     on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([LID_PATH_EDIT, LID_IMPOSSIBLE]),
-        FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
+    begin
+      TaskMessageDlg(FLang.GetString([LID_PATH_EDIT, LID_IMPOSSIBLE]),
+        FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
+    end;
+
+    on E: EListBlocked do
+    begin
+      TaskMessageDlg('', FLang.GetString([LID_OPERATION_PENDING1, LID_OPERATION_PENDING2]),
+        mtWarning, [mbOK], 0);
+    end;
 
     on E: Exception do
       FLang.ShowException(FLang.GetString([LID_PATH_EDIT, LID_IMPOSSIBLE]), E.Message);
@@ -2306,11 +2373,13 @@ begin
 
              // User choice exists for selected file extension?
              if FContext.Last.UserChoiceExists(Location) then
+             begin
                // Delete user choice?
-               if (FLang.ShowMessage(LID_CONTEXT_MENU_USER_CHOICE_WARNING1,
-                 [LID_CONTEXT_MENU_USER_CHOICE_WARNING2, LID_CONTEXT_MENU_USER_CHOICE_RESET],
-                 mtConfirmation) = ID_YES) then
+               if (TaskMessageDlg('', FLang.Format(LID_CONTEXT_MENU_USER_CHOICE_WARNING1,
+                 [LID_CONTEXT_MENU_USER_CHOICE_WARNING2, LID_CONTEXT_MENU_USER_CHOICE_RESET]),
+                 mtConfirmation, mbYesNo, 0) = idYes) then
                  FContext.Last.DeleteUserChoice(Location);
+             end;
 
            finally
              List.Free;
@@ -2325,19 +2394,28 @@ begin
 
   except
     on E: EListBlocked do
-      FLang.ShowMessage(LID_OPERATION_PENDING1, LID_OPERATION_PENDING2, mtWarning);
+    begin
+      TaskMessageDlg('', FLang.GetString([LID_OPERATION_PENDING1, LID_OPERATION_PENDING2]),
+        mtWarning, [mbOK], 0);
+    end;
 
     on E: EAlreadyExists do
-      FLang.ShowMessage(StripHotKey(mmAdd.Caption) + FLang.GetString(LID_IMPOSSIBLE),
-        FLang.GetString(LID_ENTRY_ALREADY_EXISTS), mtWarning);
+    begin
+      TaskMessageDlg(StripHotKey(mmAdd.Caption) + FLang.GetString(LID_IMPOSSIBLE),
+        FLang.GetString(LID_ENTRY_ALREADY_EXISTS), mtWarning, [mbOK], 0);
+    end;
 
     on E: EAssertionFailed do
-      FLang.ShowMessage(StripHotKey(mmAdd.Caption) + FLang.GetString(LID_IMPOSSIBLE),
-        E.Message, mtError);
+    begin
+      TaskMessageDlg(StripHotKey(mmAdd.Caption) + FLang.GetString(LID_IMPOSSIBLE),
+        E.Message, mtWarning, [mbOK], 0);
+    end;
 
     on E: Exception do
+    begin
       FLang.ShowException(StripHotKey(mmAdd.Caption) + FLang.GetString(LID_IMPOSSIBLE),
         E.Message);
+    end;
   end;  //of try
 end;
 
@@ -2405,11 +2483,16 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([LID_ITEMS_EXPORT, LID_IMPOSSIBLE]),
-        FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
+    begin
+      TaskMessageDlg(FLang.GetString([LID_ITEMS_EXPORT, LID_IMPOSSIBLE]),
+        FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
+    end;
 
     on E: EListBlocked do
-      FLang.ShowMessage(LID_OPERATION_PENDING1, LID_OPERATION_PENDING2, mtWarning);
+    begin
+      TaskMessageDlg('', FLang.GetString([LID_OPERATION_PENDING1, LID_OPERATION_PENDING2]),
+        mtWarning, [mbOK], 0);
+    end;
   end;  //of try
 end;
 
@@ -2439,19 +2522,28 @@ begin
 
   except
     on E: EInvalidItem do
-      FLang.ShowMessage(FLang.GetString([LID_BACKUP_IMPORT, LID_IMPOSSIBLE]),
-        FLang.GetString(LID_NOTHING_SELECTED), mtWarning);
+    begin
+      TaskMessageDlg(FLang.GetString([LID_BACKUP_IMPORT, LID_IMPOSSIBLE]),
+        FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
+    end;
 
     on E: EListBlocked do
-      FLang.ShowMessage(LID_OPERATION_PENDING1, LID_OPERATION_PENDING2, mtWarning);
+    begin
+      TaskMessageDlg('', FLang.GetString([LID_OPERATION_PENDING1, LID_OPERATION_PENDING2]),
+        mtWarning, [mbOK], 0);
+    end;
 
     on E: EWarning do
-      FLang.ShowMessage(FLang.GetString([LID_BACKUP_IMPORT, LID_IMPOSSIBLE]),
-        E.Message, mtWarning);
+    begin
+      TaskMessageDlg(FLang.GetString([LID_BACKUP_IMPORT, LID_IMPOSSIBLE]),
+        E.Message, mtWarning, [mbOK], 0);
+    end;
 
     on E: Exception do
+    begin
       FLang.ShowException(FLang.GetString([LID_BACKUP_IMPORT, LID_IMPOSSIBLE]),
         E.Message);
+    end;
   end;  //of try
 end;
 
@@ -2566,11 +2658,13 @@ begin
 
   try
     // Certificate already installed?
-    if not Updater.CertificateExists() then
-      Updater.InstallCertificate()
+    if Updater.CertificateExists() then
+    begin
+      TaskMessageDlg('', FLang.GetString(LID_CERTIFICATE_ALREADY_INSTALLED),
+        mtInformation, [mbOK], 0);
+    end  //of begin
     else
-      FLang.ShowMessage(FLang.GetString(LID_CERTIFICATE_ALREADY_INSTALLED),
-        mtInformation);
+      Updater.InstallCertificate();
 
   finally
     Updater.Free;

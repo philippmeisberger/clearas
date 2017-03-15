@@ -641,14 +641,20 @@ begin
         LID_UPDATE_CHECK_CONNECTION]), AResponseText + Format(' (%d)', [AResponseCode]));
     end  //of begin
     else
-      FLanguageFile.ShowMessage(LID_UPDATE_NO_CONNECTION, LID_UPDATE_CHECK_CONNECTION, mtError);
+    begin
+      TaskMessageDlg(FLanguageFile.Strings[LID_UPDATE_NO_CONNECTION],
+        FLanguageFile.Strings[LID_UPDATE_CHECK_CONNECTION], mtError, [mbOK], 0);
+    end;  //of if
   end;  //of begin
 end;
 
 procedure TUpdateCheck.OnNoUpdateAvailable(Sender: TObject);
 begin
   if FNotifyNoUpdate then
-    FLanguageFile.ShowMessage(FLanguageFile.GetString(LID_UPDATE_NOT_AVAILABLE));
+  begin
+    TaskMessageDlg('', FLanguageFile.Strings[LID_UPDATE_NOT_AVAILABLE],
+      mtInformation, [mbOK], 0);
+  end;  //of begin
 end;
 
 procedure TUpdateCheck.OnUpdateAvailable(Sender: TThread; const ANewBuild: Cardinal);
@@ -970,7 +976,7 @@ begin
   FTaskBar.ProgressState := TTaskBarProgressState.Error;
   FProgressBar.State := TProgressBarState.pbsError;
   Reset();
-  FLanguageFile.ShowMessage(FLanguageFile.GetString(LID_UPDATE_CANCELED));
+  TaskMessageDlg('', FLanguageFile.GetString(LID_UPDATE_CANCELED), mtInformation, [mbOK], 0);
   FForm.ModalResult := mrCancel;
 end;
 
@@ -1128,8 +1134,9 @@ begin
 
     if not Result then
     begin
-      FLanguageFile.ShowMessage(FLanguageFile.GetString([LID_CERTIFICATE_INSTALL,
-        LID_IMPOSSIBLE]), FLanguageFile.GetString(LID_CERTIFICATE_NO_CERTUTIL), mtError);
+      TaskMessageDlg(FLanguageFile.GetString([LID_CERTIFICATE_INSTALL,
+        LID_IMPOSSIBLE]), FLanguageFile.GetString(LID_CERTIFICATE_NO_CERTUTIL),
+        mtError, [mbOK], 0);
     end;  //of begin
 
   finally
