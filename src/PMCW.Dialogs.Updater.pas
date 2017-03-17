@@ -46,16 +46,6 @@ const
 
 {$IFDEF MSWINDOWS}
   /// <summary>
-  ///   The version of the updater.
-  /// </summary>
-  UPDATER_VERSION    = '3.1';
-
-  /// <summary>
-  ///   The used user-agent string during the HTTP(S) connection.
-  /// </summary>
-  UPDATER_USER_AGENT = 'Updater/'+ UPDATER_VERSION +' (PM Code Works Update Utility)';
-
-  /// <summary>
   ///   Error saying that something went wrong with server certificate validation.
   /// </summary>
   ERROR_CERTIFICATE_VALIDATION = -2;
@@ -248,6 +238,7 @@ type
   ///   in the <see cref="OnDownloading"/> event. Of course the download can be
   ///   canceled: Just use the <c>Terminate</c> method.
   /// </summary>
+  // TODO: Use taskbar progress bar OR use update form (remove one)
   TDownloadThread = class(THttpThread)
   private
     FOnFinish: TNotifyEvent;
@@ -383,7 +374,7 @@ begin
 
   with FHttpClient do
   begin
-    UserAgent := UPDATER_USER_AGENT;
+    UserAgent := 'Updater/3.1 (PM Code Works Update Utility)';
     CustomHeaders['Connection'] := 'close';
     OnValidateServerCertificate := ValidateServerCertificate;
     OnReceiveData := Downloading;
