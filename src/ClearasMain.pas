@@ -2663,14 +2663,20 @@ end;
 
 procedure TMain.mmInstallCertificateClick(Sender: TObject);
 begin
-  // Certificate already installed?
-  if CertificateExists() then
-  begin
-    MessageDlg(FLang.GetString(LID_CERTIFICATE_ALREADY_INSTALLED),
-      mtInformation, [mbOK], 0);
-  end  //of begin
-  else
-    InstallCertificate();
+  try
+    // Certificate already installed?
+    if CertificateExists() then
+    begin
+      MessageDlg(FLang.GetString(LID_CERTIFICATE_ALREADY_INSTALLED),
+        mtInformation, [mbOK], 0);
+    end  //of begin
+    else
+      InstallCertificate();
+
+  except
+    on E: EOSError do
+      MessageDlg(E.Message, mtError, [mbOK], 0);
+  end;
 end;
 
 { TMain.mmUpdateClick

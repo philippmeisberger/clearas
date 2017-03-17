@@ -1688,6 +1688,11 @@ type
       /// </summary>
       SubCommandsValueName = 'SubCommands';
 
+      /// <summary>
+      ///   Name of registry value that contains caption of item.
+      /// </summary>
+      CaptionValueName    = 'MUIVerb';
+
     /// <summary>
     ///   Constructor for creating a <c>TContextMenuShellCascadingItem</c> instance.
     /// </summary>
@@ -5063,7 +5068,7 @@ end;
 
 procedure TContextMenuShellCascadingItem.Rename(const ANewName: string);
 begin
-  Rename('MUIVerb', ANewName);
+  Rename(CaptionValueName, ANewName);
 end;
 
 function TContextMenuShellCascadingItem.ToString(): string;
@@ -5600,11 +5605,12 @@ begin
           // Cascading shell item?
           if not Reg.OpenKey('command', False) then
           begin
-            if ((not Reg.ValueExists('MUIVerb') or not Reg.ValueExists(TContextMenuShellCascadingItem.SubCommandsValueName)) and
+            if ((not Reg.ValueExists(TContextMenuShellCascadingItem.CaptionValueName) or
+              not Reg.ValueExists(TContextMenuShellCascadingItem.SubCommandsValueName)) and
               not Reg.KeyExists('ExtendedSubCommandsKey')) then
               Continue;
 
-            Caption := Reg.ReadString('MUIVerb');
+            Caption := Reg.ReadString(TContextMenuShellCascadingItem.CaptionValueName);
             Add(TContextMenuShellCascadingItem.Create(ItemName, Caption, ALocationRoot,
               Enabled, Extended));
             Continue;
