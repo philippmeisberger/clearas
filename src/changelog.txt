@@ -14,6 +14,7 @@ Version 4.4  [??.??.17]
   - Kein Export mehr als .reg sondern als .Startup bzw. .CommonStartup
   - Menü-Eintrag "Backup beim Aktivieren löschen" entfernt
 - "In Explorer öffnen" verbessert
+- Beschreibung für ShellEx Einträge hinzugefügt
 - Potentielles Handle-Leak geschlossen
 - Memory-Leak beim Exportieren geschlossen
 - Memory-Leak beim Importieren einer Aufgabe geschlossen

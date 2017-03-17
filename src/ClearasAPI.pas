@@ -1760,12 +1760,6 @@ type
       /// </summary>
       HandlersKey      = CanonicalName +'\ContextMenuHandlers';
 
-      /// <summary>
-      ///   The format string of the registry key where command string of the
-      ///   context menu item is located.
-      /// </summary>
-      CommandStringKey = 'CLSID\%s\InProcServer32';
-
     /// <summary>
     ///   Exports the item as file.
     /// </summary>
@@ -5151,7 +5145,7 @@ begin
       raise EContextMenuException.Create(Reg.LastErrorMsg);
 
     // Read GUID and setup key of program
-    ProgramKeyPath := Format(CommandStringKey, [Reg.ReadString('')]);
+    ProgramKeyPath := Format('CLSID\%s\InProcServer32', [Reg.ReadString('')]);
     Reg.CloseKey;
 
     // Invalid program key?
@@ -5648,13 +5642,18 @@ begin
             Reg.CloseKey();
             Wow64 := False;
 
-            // Get file path of command (native hive)
-            if Reg.OpenKey(Format(TContextMenuShellExItem.CommandStringKey, [GuID]), False) then
+            // Try to get file path and description in native hive
+            if Reg.OpenKey('CLSID\'+ GuID, False) then
             begin
-              if not (Reg.GetDataType('') in [rdString, rdExpandString]) then
-                Continue;
+              Caption := Reg.ReadString('');
 
-              FileName := Reg.ReadString('');
+              if Reg.OpenKey('InProcServer32', False) then
+              begin
+                if not (Reg.GetDataType('') in [rdString, rdExpandString]) then
+                  Continue;
+
+                FileName := Reg.ReadString('');
+              end;  //of begin
             end  //of begin
             else
               if AWow64 then
@@ -5663,19 +5662,27 @@ begin
                 Reg.Access := KEY_WOW64_32KEY or KEY_READ;
                 Wow64 := True;
 
-                if Reg.OpenKey(Format(TContextMenuShellExItem.CommandStringKey, [GuID]), False) then
-                begin
-                  if not (Reg.GetDataType('') in [rdString, rdExpandString]) then
-                    Continue;
+                try
+                  if Reg.OpenKey('CLSID\'+ GuID, False) then
+                  begin
+                    Caption := Reg.ReadString('') +'32';
 
-                  FileName := Reg.ReadString('');
-                end;  //of begin
+                    if Reg.OpenKey('InProcServer32', False) then
+                    begin
+                      if not (Reg.GetDataType('') in [rdString, rdExpandString]) then
+                        Continue;
 
-                // Switch back to 64 bit hive
-                Reg.Access := KEY_WOW64_64KEY or KEY_READ;
+                      FileName := Reg.ReadString('');
+                    end;  //of begin
+                  end;  //of begin
+
+                finally
+                  // Switch back to 64 bit hive
+                  Reg.Access := KEY_WOW64_64KEY or KEY_READ;
+                end;  //of try
               end;  //of if
 
-            Add(TContextMenuShellExItem.Create(ItemName, '', FileName, ALocationRoot, Enabled, Wow64));
+            Add(TContextMenuShellExItem.Create(ItemName, Caption, FileName, ALocationRoot, Enabled, Wow64));
           end;  //of begin
       end;  //of for
     end;  //of if
