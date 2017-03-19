@@ -27,22 +27,17 @@ const
   /// <summary>
   ///   URL to the website.
   /// </summary>
-  URL_BASE           = 'http://www.pm-codeworks.de/';
+  URL_BASE                     = 'http://www.pm-codeworks.de/';
 
   /// <summary>
   ///   URL to the download (base) directory on website.
   /// </summary>
-  URL_DIR            = URL_BASE + 'media/';
-
-  /// <summary>
-  ///   URL to the PHP web downloader script.
-  /// </summary>
-  URL_DOWNLOAD       = URL_DIR + 'downloader.php?file=';
+  URL_DIR                      = URL_BASE +'media/';
 
   /// <summary>
   ///   URL to the report bug formular on the website.
   /// </summary>
-  URL_CONTACT        = URL_BASE +'kontakt.html';
+  URL_CONTACT                  = URL_BASE +'kontakt.html';
 
 {$IFDEF MSWINDOWS}
   /// <summary>
@@ -143,17 +138,6 @@ type
   end;
 
   /// <summary>
-  ///   Occurs when an update is available.
-  /// </summary>
-  /// <param name="Sender">
-  ///   The sender.
-  /// </param>
-  /// <param name="ANewBuild">
-  ///   The newest build number.
-  /// </param>
-  TUpdateAvailableEvent = procedure(Sender: TObject; const ANewBuild: Cardinal) of object;
-
-  /// <summary>
   ///   A <c>TUpdateCheckThread</c> downloads the version.txt from the website
   ///   and notifies about update status.
   /// </summary>
@@ -176,6 +160,17 @@ type
     /// </summary>
     property RemoteBuild: Integer read FRemoteBuild;
   end;
+
+  /// <summary>
+  ///   Occurs when an update is available.
+  /// </summary>
+  /// <param name="Sender">
+  ///   The sender.
+  /// </param>
+  /// <param name="ANewBuild">
+  ///   The newest build number.
+  /// </param>
+  TUpdateAvailableEvent = procedure(Sender: TObject; const ANewBuild: Cardinal) of object;
 
   /// <summary>
   ///   The <c>TUpdateCheck</c> is a light-weight async update notificator to
@@ -318,7 +313,7 @@ type
     destructor Destroy; override;
 
     /// <summary>
-    ///   Executes the update progress.
+    ///   Executes the update process.
     /// </summary>
     /// <returns>
     ///   <c>True</c> if downloading was sucessful or <c>False</c> otherwise.
@@ -871,7 +866,7 @@ begin
     FButtonFinished.Caption := FLanguageFile.GetString(LID_CANCEL);
 
     // Initialize thread
-    FThread := TDownloadThread.Create(URL_DOWNLOAD + FRemoteFileName, FFileName);
+    FThread := TDownloadThread.Create(URL_DIR + 'downloader.php?file='+ FRemoteFileName, FFileName);
 
     with FThread do
     begin
