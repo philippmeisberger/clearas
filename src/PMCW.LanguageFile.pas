@@ -140,7 +140,9 @@ type
   {$ENDIF}
     procedure SetLocale(const ALocale: TLocale);
     procedure LanguageSelected(Sender: TObject);
+  {$IFDEF MSWINDOWS}
     procedure HyperlinkClicked(Sender: TObject);
+  {$ENDIF}
   protected
     /// <summary>
     ///   Loads available languages from language resource.
