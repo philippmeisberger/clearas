@@ -14,7 +14,7 @@ interface
 
 uses
 {$IFDEF MSWINDOWS}
-  Windows,
+  Winapi.Windows,
 {$ENDIF}
   SysUtils, Classes, Controls, Forms, StdCtrls, ExtCtrls, ComCtrls, Dialogs,
   PMCW.FileSystem;
@@ -104,7 +104,6 @@ type
     ///   Gets or set the caption of the description tab.
     /// </summary>
     property DescriptionCaption: TCaption read GetDescriptionCaption write SetDescriptionCaption;
-
   {$IFDEF LINUX}
     /// <summary>
     ///   Gets or sets the absolute path to the application icon that will be
@@ -115,7 +114,6 @@ type
     /// </remarks>
     property ImageFile: string read FImageFile write FImageFile;
   {$ENDIF}
-
     /// <summary>
     ///   Gets or sets the dialog title.
     /// </summary>
@@ -186,7 +184,7 @@ begin
     AutoSize := False;
     Top := FImage.Top + FImage.Height + 5;
     Width := (2 * FImage.Left) + FImage.Width;
-    Height := 2 * Height;
+    Height := 3 * Height;
     Alignment := taCenter;
     WordWrap := True;
   end;  //of with
@@ -272,6 +270,9 @@ begin
 end;
 
 function TAboutDialog.Execute({$IFNDEF FPC}AParentHwnd: HWND{$ENDIF}): Boolean;
+const
+  Architecture = {$IFDEF CPUX64}'64-bit'{$ELSE}'32-bit'{$ENDIF};
+
 var
   FileVersion: TFileVersion;
 
@@ -280,10 +281,16 @@ begin
   if FileVersion.FromFile(Application.ExeName) then
   begin
     if (FileVersion.Service <> 0) then
-      FVersionLabel.Caption := FileVersion.ToString('v%d.%d.%d'+ sLineBreak +'(Build: %d)')
+    begin
+      FVersionLabel.Caption := FileVersion.ToString('v%d.%d.%d'+ sLineBreak
+        +'(Build: %d)'+ sLineBreak + Architecture);
+    end  //of begin
     else
-      FVersionLabel.Caption := Format('v%d.%d'+ sLineBreak +'(Build: %d)',
-        [FileVersion.Major, FileVersion.Minor, FileVersion.Build]);
+    begin
+      FVersionLabel.Caption := Format('v%d.%d'+ sLineBreak +'(Build: %d)'
+        + sLineBreak + Architecture, [FileVersion.Major, FileVersion.Minor,
+        FileVersion.Build]);
+    end;  //of if
   end;  //of begin
 
   // Load application icon into TImage

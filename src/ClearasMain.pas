@@ -14,9 +14,8 @@ uses
   Winapi.Windows, System.SysUtils, System.Classes, Vcl.Controls, Vcl.Forms,
   Vcl.ComCtrls, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Dialogs, Vcl.Menus, Vcl.Graphics,
   Vcl.ClipBrd, Registry, System.ImageList, Winapi.CommCtrl, System.UITypes,
-  ClearasAPI, PMCW.Dialogs.About, PMCW.Utils, PMCW.LanguageFile, PMCW.FileSystem,
-  PMCW.Dialogs.Updater, ClearasDialogs, Vcl.ImgList, Winapi.Messages, PMCW.Registry,
-  PMCW.CA;
+  ClearasAPI, PMCW.Dialogs.About, PMCW.LanguageFile, PMCW.FileSystem, PMCW.CA,
+  PMCW.Dialogs.Updater, ClearasDialogs, Vcl.ImgList, Winapi.Messages, PMCW.Registry;
 
 type
   { TMain }
@@ -292,9 +291,6 @@ begin
     OnChanged := OnTaskItemChanged;
     OnRefresh := OnTaskSearchEnd;
   end;  //of with
-
-  // Set title
-  Caption := Application.Title + PLATFORM_ARCH;
 
   // Get version information
   if FileVersion.FromFile(Application.ExeName) then
