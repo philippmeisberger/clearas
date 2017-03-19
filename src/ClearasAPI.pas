@@ -16,7 +16,7 @@ uses
   Winapi.Windows, Winapi.WinSvc, System.Classes, System.SysUtils, System.Win.Registry,
   Winapi.ShlObj, Winapi.ActiveX, System.Win.ComObj, System.Zip, Vcl.Graphics,
   Winapi.ShellAPI, System.SyncObjs, System.Generics.Collections, System.IOUtils,
-  Winapi.KnownFolders, System.Variants, Winapi.Taskschd, PMCW.Registry, PMCW.Utils,
+  Winapi.KnownFolders, System.Variants, Winapi.Taskschd, PMCW.Registry,
   PMCW.LanguageFile, PMCW.IniFileParser, PMCW.FileSystem;
 
 type
