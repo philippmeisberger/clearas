@@ -354,28 +354,18 @@ begin
   if (TaskMessageDlg(FLang.Format(LID_UPDATE_AVAILABLE, [ANewBuild]),
     FLang[LID_UPDATE_CONFIRM_DOWNLOAD], mtConfirmation, mbYesNo, 0, mbYes) = idYes) then
   begin
-    // init TUpdate instance
-    Updater := TUpdateDialog.Create(Self);
+    Updater := TUpdateDialog.Create(Self, FLang);
 
     try
-      Updater.LanguageFile := FLang;
-
-      // Set updater options
       with Updater do
       begin
         FileNameLocal := 'Clearas.exe';
 
-      {$IFDEF WIN64}
-        FileNameRemote := 'clearas64.exe';
-      {$ELSE}
-        // Ask user to permit download of 64-Bit version
-        if ((TOSVersion.Architecture = arIntelX64) and (FLang.ShowMessage(
-          FLang.Format([LID_UPDATE_64BIT, LID_UPDATE_64BIT_CONFIRM], ['Clearas']),
-            mtConfirmation) = idYes)) then
+        // Download 64-Bit version?
+        if (TOSVersion.Architecture = arIntelX64) then
           FileNameRemote := 'clearas64.exe'
         else
           FileNameRemote := 'clearas.exe';
-      {$ENDIF}
       end;  //of begin
 
       // Successfully downloaded update?
