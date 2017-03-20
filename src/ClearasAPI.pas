@@ -4749,6 +4749,7 @@ function TContextMenuListItem.DeleteUserChoice(const AFileExtension: string): Bo
 begin
   Result := (RegDeleteKey(HKEY_CURRENT_USER, PChar(Format(KEY_USERCHOICE,
     [AFileExtension]))) = ERROR_SUCCESS);
+  SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, nil, nil);
 end;
 
 function TContextMenuListItem.UserChoiceExists(const AFileExtension: string): Boolean;
@@ -5166,6 +5167,7 @@ begin
 
     // Update path
     inherited ChangeFilePath(ANewFileName);
+    SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, nil, nil);
 
   finally
     Reg.CloseKey();
@@ -5426,6 +5428,7 @@ begin
       // Adds item to list
       Result := (Add(TContextMenuShellItem.Create(Name, ACaption, FullPath, FileType, True,
         AExtended)) <> -1);
+      SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, nil, nil);
 
     finally
       Reg.CloseKey();
@@ -5526,6 +5529,7 @@ begin
     if (AContextMenuItemType = itShellNew) then
     begin
       // "ShellNew" and "_ShellNew" in same key are possible: prefer "ShellNew"
+      // TODO: Remove _ShellNew and disable ShellNew
       if Reg.KeyExists(TContextMenuShellNewItem.CanonicalName) then
         Enabled := True
       else
