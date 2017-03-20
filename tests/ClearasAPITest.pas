@@ -696,7 +696,7 @@ end;
 procedure TContextListTest.SetUp;
 begin
   inherited SetUp;
-  FRootList := TRootList<TRootItem>(TContextList.Create);
+  FRootList := TRootList<TRootItem>(TContextMenuList.Create);
   FRootList.Duplicates := True;
 
   FTestItems.Append(cShellCMItem);
@@ -839,7 +839,7 @@ begin
 
   try
     Reg.RootKey := HKEY_CLASSES_ROOT;
-    Reg.OpenKey(AFileExt +'\'+ TShellExItem.HandlersKey +'\'+ AName, True);
+    Reg.OpenKey(AFileExt +'\'+ TContextMenuShellExItem.HandlersKey +'\'+ AName, True);
     Reg.WriteString('', AGuid);
     CheckEqualsString('', Reg.LastErrorMsg, Reg.LastErrorMsg);
 
@@ -906,7 +906,7 @@ begin
 
     Reg.CloseKey;
     Reg.RootKey := HKEY_CLASSES_ROOT;
-    Reg.OpenKey(AFileExt +'\'+ TShellNewItem.CanonicalName, True);
+    Reg.OpenKey(AFileExt +'\'+ TContextMenuShellNewItem.CanonicalName, True);
     Reg.WriteExpandString('ItemName', '@%systemroot%\system32\mspaint.exe,-59414');
     Reg.WriteString('NullFile', '');
     CheckEqualsString('', Reg.LastErrorMsg, Reg.LastErrorMsg);
@@ -919,8 +919,8 @@ end;
 
 procedure TContextListTest.LoadItems();
 begin
-  TContextList(FRootList).LoadContextmenu(cShellFileExt, False);
-  TContextList(FRootList).LoadContextmenu(cShellFileExtErasable, False);
+  TContextMenuList(FRootList).LoadContextmenu(cShellFileExt, False);
+  TContextMenuList(FRootList).LoadContextmenu(cShellFileExtErasable, False);
   CheckEquals(FErasableTestItems.Count, FRootList.ErasableItemsCount, 'Count of erasable items differs from expected');
 end;
 
