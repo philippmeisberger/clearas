@@ -944,6 +944,11 @@ type
     property PageControlIndex: Integer read FPageControlIndex;
   end;
 
+  /// <summary>
+  ///   Raised by startup feature classes.
+  /// </summary>
+  EStartupException = class(Exception);
+
 const
   /// <summary>
   ///   Used in <see cref="TStartupItemStatus"/> to signal that a startup item
@@ -958,11 +963,6 @@ const
   ST_DISABLED = $3;
 
 type
-  /// <summary>
-  ///   Raised by startup feature classes.
-  /// </summary>
-  EStartupException = class(Exception);
-
   /// <summary>
   ///   A <c>TStartupItemStatus</c> represents the new status of startup items
   ///   since Windows 8. The status of startup items is a binary value of 12
@@ -1016,8 +1016,6 @@ type
   ///   This class is intended to be only ancenstor for items.
   /// </remarks>
   TStartupListItem = class(TRegistryItem)
-  private
-    function GetTime(): TDateTime;
   protected
     FTime: TDateTime;
     FRootKey: TRootKey;
@@ -1107,7 +1105,7 @@ type
     /// <summary>
     ///   Gets or sets the deactivation timstamp.
     /// </summary>
-    property Time: TDateTime read GetTime write FTime;
+    property Time: TDateTime read FTime write FTime;
 
     /// <summary>
     ///   Gets the virtual Registry key redirected by WOW64.
@@ -2023,7 +2021,6 @@ type
     FTime: TDateTime;
     FServiceStart: TServiceStart;
     function GetHandle(AAccess: DWORD): SC_HANDLE;
-    function GetTime(): TDateTime;
   protected
     procedure ChangeFilePath(const ANewFileName: string); override;
     procedure ChangeStatus(const ANewStatus: Boolean); override;
@@ -2088,7 +2085,7 @@ type
     /// <summary>
     ///   Gets or sets the deactivation timestamp.
     /// </summary>
-    property Time: TDateTime read GetTime write FTime;
+    property Time: TDateTime read FTime write FTime;
   end;
 
   /// <summary>
@@ -3408,15 +3405,7 @@ begin
   inherited Create(AName, AName, AFileName, ALocation, AEnabled, AWow64);
   FRootKey := ARootKey;
   FCaption := GetFileDescription(FileNameOnly);
-end;
-
-function TStartupListItem.GetTime(): TDateTime;
-begin
-  if not FEnabled then
-    Result := FTime
-  else
-    // No deactivation time for enabled items!
-    Result := 0;
+  FTime := 0;
 end;
 
 function TStartupListItem.GetWow64Key(): string;
@@ -5827,6 +5816,7 @@ begin
   inherited Create(AName, ACaption, AFileName, '', AEnabled, False);
   FServiceStart := AServiceStart;
   FServiceManager := AServiceManager;
+  FTime := 0;
 end;
 
 function TServiceListItem.GetHandle(AAccess: DWORD): SC_HANDLE;
@@ -5842,15 +5832,6 @@ begin
     raise EServiceException.Create(SysErrorMessage(GetLastError()));
 
   Result := Handle;
-end;
-
-function TServiceListItem.GetTime(): TDateTime;
-begin
-  if not FEnabled then
-    Result := FTime
-  else
-    // No deactivation time for enabled items!
-    Result := 0;
 end;
 
 function TServiceListItem.GetLocation(): string;
