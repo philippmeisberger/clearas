@@ -5105,7 +5105,7 @@ begin
 
     // Item disabled?
     if (ANewStatus and not OldValue.StartsWith('{')) then
-      Reg.WriteString('', OldValue.Substring(1))
+      Reg.WriteString('', OldValue.Substring(OldValue.IndexOf('{')))
     else
       // Item enabled?
       if OldValue.StartsWith('{') then
@@ -5643,7 +5643,7 @@ begin
 
             // Disabled ShellEx items got "-" before GUID!
             if not Enabled then
-              GUID := GuID.Substring(1);
+              GUID := GuID.Substring(GuID.IndexOf('{'));
 
             Reg.CloseKey();
             Wow64 := False;
