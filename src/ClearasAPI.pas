@@ -2022,8 +2022,6 @@ type
     FServiceManager: SC_HANDLE;
     FTime: TDateTime;
     FServiceStart: TServiceStart;
-    function Disable(): Boolean;
-    function Enable(): Boolean;
     function GetHandle(AAccess: DWORD): SC_HANDLE;
     function GetTime(): TDateTime;
   protected
@@ -5886,20 +5884,91 @@ begin
 end;
 
 procedure TServiceListItem.ChangeStatus(const ANewStatus: Boolean);
+var
+  Service: SC_HANDLE;
+  Reg: TRegistry;
+
 begin
-  if (FEnabled and not ANewStatus) then
-  begin
-    if not Disable() then
-      raise Exception.Create('Unknown error!');
-  end  //of begin
-  else
-    if (not FEnabled and ANewStatus) then
+  Service := GetHandle(SERVICE_CHANGE_CONFIG);
+  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
+
+  try
+    Reg.RootKey := HKEY_LOCAL_MACHINE;
+
+    if ANewStatus then
     begin
-      if not Enable() then
-        raise Exception.Create('Unknown error!');
+      // Windows >= Vista?
+      if CheckWin32Version(6) then
+      begin
+        if not Reg.OpenKey(KEY_SERVICE_DISABLED +'\'+ Name, False) then
+          raise EServiceException.Create(Reg.LastErrorMsg);
+      end  //of begin
+      else
+        Reg.OpenKey(KEY_SERVICE_DISABLED, True);
+
+      // Last status exists?
+      if not Reg.ValueExists(Name) then
+        raise EStartupException.Create('Last status does not exist!');
+
+      // Enable service
+      if not ChangeServiceConfig(Service, SERVICE_NO_CHANGE, Reg.ReadInteger(Name),
+        SERVICE_NO_CHANGE, nil, nil, nil, nil, nil, nil, nil) then
+        raise EServiceException.Create(SysErrorMessage(GetLastError()));
+
+      // Windows >= Vista?
+      if CheckWin32Version(6) then
+      begin
+        Reg.CloseKey();
+        Reg.OpenKey(KEY_SERVICE_DISABLED, True);
+
+        // Delete disable key
+        if (Reg.KeyExists(Name) and not Reg.DeleteKey(Name)) then
+          raise EServiceException.Create('Could not delete disabled key!');
+      end  //of begin
+      else
+      begin
+        // Delete last status
+        if not Reg.DeleteValue(Name) then
+          raise EServiceException.Create('Could not delete last status!');
+      end;  //of if
+
+      FTime := 0;
+    end  //of begin
+    else
+    begin
+      // Disable service
+      if not ChangeServiceConfig(Service, SERVICE_NO_CHANGE, SERVICE_DISABLED,
+        SERVICE_NO_CHANGE, nil, nil, nil, nil, nil, nil, nil) then
+        raise EServiceException.Create(SysErrorMessage(GetLastError()));
+
+      // Windows >= Vista?
+      if CheckWin32Version(6) then
+      begin
+        // Write disable key
+        if not Reg.OpenKey(KEY_SERVICE_DISABLED +'\'+ Name, True) then
+          raise EServiceException.Create('Could not create disable key: '+ Reg.LastErrorMsg);
+
+        // Save deactivation timestamp
+        FTime := WriteTimestamp(Reg);
+      end  //of begin
+      else
+      begin
+        // Write disable key
+        if not Reg.OpenKey(KEY_SERVICE_DISABLED, True) then
+          raise EServiceException.Create('Could not create disable key: '+ Reg.LastErrorMsg);
+      end;  //of if
+
+      // Write last status
+      Reg.WriteInteger(Name, Ord(Start));
     end;  //of if
 
-  inherited ChangeStatus(ANewStatus);
+    inherited ChangeStatus(ANewStatus);
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
+    CloseServiceHandle(Service);
+  end;  //of try
 end;
 
 function TServiceListItem.Delete(): Boolean;
@@ -5934,108 +6003,6 @@ begin
     end  //of begin
     else
       Result := True;
-
-  finally
-    Reg.CloseKey();
-    Reg.Free;
-    CloseServiceHandle(Service);
-  end;  //of try
-end;
-
-function TServiceListItem.Disable(): Boolean;
-var
-  Service: SC_HANDLE;
-  Reg: TRegistry;
-
-begin
-  Result := False;
-  Service := GetHandle(SERVICE_CHANGE_CONFIG);
-  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
-
-  try
-    // Disable service
-    if not ChangeServiceConfig(Service, SERVICE_NO_CHANGE, SERVICE_DISABLED,
-      SERVICE_NO_CHANGE, nil, nil, nil, nil, nil, nil, nil) then
-      raise EServiceException.Create(SysErrorMessage(GetLastError()));
-
-    // Save disable key ...
-    Reg.RootKey := HKEY_LOCAL_MACHINE;
-
-    // Windows >= Vista?
-    if CheckWin32Version(6) then
-    begin
-      // Write disable key
-      if not Reg.OpenKey(KEY_SERVICE_DISABLED +'\'+ Name, True) then
-        raise EServiceException.Create('Could not create disable key: '+ Reg.LastErrorMsg);
-
-      // Save deactivation timestamp
-      FTime := WriteTimestamp(Reg);
-    end  //of begin
-    else
-      // Write disable key
-      if not Reg.OpenKey(KEY_SERVICE_DISABLED, True) then
-        raise EServiceException.Create('Could not create disable key: '+ Reg.LastErrorMsg);
-
-    // Write last status
-    Reg.WriteInteger(Name, Ord(Start));
-    Result := True;
-
-  finally
-    Reg.CloseKey();
-    Reg.Free;
-    CloseServiceHandle(Service);
-  end;  //of try
-end;
-
-function TServiceListItem.Enable(): Boolean;
-var
-  Service: SC_HANDLE;
-  Reg: TRegistry;
-
-begin
-  Result := False;
-  Service := GetHandle(SERVICE_CHANGE_CONFIG);
-  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
-
-  try
-    Reg.RootKey := HKEY_LOCAL_MACHINE;
-
-    // Windows >= Vista?
-    if CheckWin32Version(6) then
-    begin
-      if not Reg.OpenKey(KEY_SERVICE_DISABLED +'\'+ Name, False) then
-        raise EServiceException.Create(Reg.LastErrorMsg);
-    end  //of begin
-    else
-      Reg.OpenKey(KEY_SERVICE_DISABLED, True);
-
-    // Last status exists?
-    if not Reg.ValueExists(Name) then
-      raise EStartupException.Create('Last status does not exist!');
-
-    // Enable service
-    if not ChangeServiceConfig(Service, SERVICE_NO_CHANGE, Reg.ReadInteger(Name),
-      SERVICE_NO_CHANGE, nil, nil, nil, nil, nil, nil, nil) then
-      raise EServiceException.Create(SysErrorMessage(GetLastError()));
-
-    // Windows >= Vista?
-    if CheckWin32Version(6) then
-    begin
-      Reg.CloseKey();
-      Reg.OpenKey(KEY_SERVICE_DISABLED, True);
-
-      // Delete disable key
-      if (Reg.KeyExists(Name) and not Reg.DeleteKey(Name)) then
-        raise EServiceException.Create('Could not delete disabled key!');
-    end  //of begin
-    else
-      // Delete last status
-      if not Reg.DeleteValue(Name) then
-        raise EServiceException.Create('Could not delete last status!');
-
-    // Update information
-    FTime := 0;
-    Result := True;
 
   finally
     Reg.CloseKey();
