@@ -18,9 +18,9 @@ uses
 {$WARN UNIT_PLATFORM OFF}
   Vcl.FileCtrl,
 {$WARN UNIT_PLATFORM ON}
-  Vcl.StdCtrls, Vcl.ComCtrls, System.UITypes, System.Win.TaskbarCore, Vcl.Consts,
-  System.Win.Registry, Vcl.Taskbar, System.Net.HttpClient, System.NetConsts,
-  System.Net.URLClient, PMCW.LanguageFile, PMCW.FileSystem, PMCW.CA,
+  Vcl.StdCtrls, Vcl.ComCtrls, System.UITypes, Vcl.Consts, System.Win.Registry,
+  System.Net.HttpClient, System.NetConsts, System.Net.URLClient, PMCW.FileSystem,
+  PMCW.LanguageFile, PMCW.CA,
 {$ELSE}
   Process, StrUtils,
 {$ENDIF}
@@ -236,7 +236,6 @@ type
   ///   in the <see cref="OnDownloading"/> event. Of course the download can be
   ///   canceled: Just use the <c>Terminate</c> method.
   /// </summary>
-  // TODO: Use taskbar progress bar OR use update form (remove one)
   TDownloadThread = class(THttpThread)
   private
     FOnFinish: TNotifyEvent;
@@ -263,9 +262,12 @@ type
   end;
 
   /// <summary>
-  ///   <c>TUpdateDialog</c> is a dialog which downloads a file from the website
-  ///   and shows the progress in a <c>TProgressBar</c> and on the taskbar. The
-  ///   download is encrypted using TLS per default.
+  ///   <c>TUpdateDialog</c> is a dialog which downloads a file specified by
+  ///   <see cref="FileNameRemote"/> from the website and shows the progress in
+  ///   a <c>TProgressBar</c>. The download is encrypted using TLS per default
+  ///   if certificate is installed. The file is downloaded to directory specified
+  ///   by <see cref="DownloadDirectory"/> and stored under name specified by
+  ///   <see cref="FileNameLocal"/> which is per default <see cref="FileNameRemote"/>.
   /// </summary>
   TUpdateDialog = class(TCommonDialog)
   private
@@ -279,7 +281,6 @@ type
     FLocalFileName,
     FFileName: string;
     FLanguageFile: TLanguageFile;
-    FTaskBar: TTaskbar;
     procedure FinishedClick(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
     procedure DownloadCanceled(Sender: TObject);
@@ -292,7 +293,7 @@ type
     procedure SetTitle(const ATitle: string);
   public
     /// <summary>
-    ///   Constructor for creating a <c>TUpdate</c> instance.
+    ///   Constructor for creating a <c>TUpdateDialog</c> instance.
     /// </summary>
     /// <param name="AOwner">
     ///   The owner.
@@ -300,7 +301,7 @@ type
     constructor Create(AOwner: TComponent); overload; override;
 
     /// <summary>
-    ///   Constructor for creating a <c>TUpdate</c> instance.
+    ///   Constructor for creating a <c>TUpdateDialog</c> instance.
     /// </summary>
     /// <param name="AOwner">
     ///   The owner.
@@ -311,7 +312,7 @@ type
     constructor Create(AOwner: TComponent; ALanguageFile: TLanguageFile); reintroduce; overload;
 
     /// <summary>
-    ///   Destructor for destroying a <c>TUpdate</c> instance.
+    ///   Destructor for destroying a <c>TUpdateDialog</c> instance.
     /// </summary>
     destructor Destroy; override;
 
@@ -644,6 +645,8 @@ begin
   begin
     OnError := HttpError;
     OnTerminate := CheckFinished;
+    // TODO: Encrypt?
+    //TLSEnabled := CertificateExists();
     Start();
   end;  //of with
 end;
@@ -761,8 +764,6 @@ begin
     TabOrder := 1;
     OnClick := FinishedClick;
   end;  //of with
-
-  FTaskBar := TTaskbar.Create(FForm);
 end;
 
 constructor TUpdateDialog.Create(AOwner: TComponent; ALanguageFile: TLanguageFile);
@@ -774,8 +775,6 @@ end;
 
 destructor TUpdateDialog.Destroy;
 begin
-  FTaskBar.ProgressState := TTaskBarProgressState.None;
-  FreeAndNil(FTaskBar);
   FreeAndNil(FButtonFinished);
   FreeAndNil(FProgressBar);
   FreeAndNil(FLabelStatistic);
@@ -790,7 +789,6 @@ end;
 
 procedure TUpdateDialog.DownloadCanceled(Sender: TObject);
 begin
-  FTaskBar.ProgressState := TTaskBarProgressState.Error;
   FProgressBar.State := TProgressBarState.pbsError;
   FLabelStatistic.Caption := FLanguageFile.GetString(LID_CANCELED);
   MessageDlg(FLanguageFile.GetString(LID_UPDATE_CANCELED), mtInformation, [mbOK], 0);
@@ -800,7 +798,6 @@ end;
 procedure TUpdateDialog.HttpError(Sender: TObject; const AResponseCode: Integer;
   const AResponseText: string);
 begin
-  FTaskBar.ProgressState := TTaskBarProgressState.Error;
   FProgressBar.State := TProgressBarState.pbsError;
   FLabelStatistic.Caption := FLanguageFile.GetString(LID_CANCELED);
 
@@ -822,7 +819,6 @@ end;
 
 procedure TUpdateDialog.DownloadFinished(Sender: TObject);
 begin
-  FTaskBar.ProgressState := TTaskBarProgressState.Normal;
   FForm.ModalResult := mrOk;
 end;
 
@@ -830,8 +826,6 @@ procedure TUpdateDialog.Downloading(Sender: TObject; AContentLength, AReadCount:
 begin
   FProgressBar.Max := AContentLength;
   FProgressBar.Position := AReadCount;
-  FTaskBar.ProgressMaxValue := AContentLength;
-  FTaskBar.ProgressValue := AReadCount;
   FLabelStatistic.Caption := Format('%d/%d KB', [AReadCount, AContentLength]);
 end;
 
@@ -912,11 +906,13 @@ begin
 
   if DirectorySelected then
   begin
-    FFileName := GetUniqueFileName(IncludeTrailingPathDelimiter(FDownloadDirectory) + FLocalFileName);
+    FFileName := GetUniqueFileName(IncludeTrailingPathDelimiter(FDownloadDirectory)
+      + FLocalFileName);
     FButtonFinished.Caption := FLanguageFile.GetString(LID_CANCEL);
 
     // Initialize thread
-    FThread := TDownloadThread.Create(URL_DIR + 'downloader.php?file='+ FRemoteFileName, FFileName);
+    FThread := TDownloadThread.Create(URL_DIR + 'downloader.php?file='
+      + FRemoteFileName, FFileName);
 
     with FThread do
     begin
@@ -925,14 +921,7 @@ begin
       OnFinish := DownloadFinished;
       OnTerminate := DownloadTerminated;
       OnError := HttpError;
-
-      // Use HTTPS?
-      if UseTls then
-      begin
-        TLSEnabled := True;
-        FForm.Caption := FLanguageFile.GetString(LID_UPDATE_SECURE);
-      end;  //of begin
-
+      TLSEnabled := UseTls;
       Start();
     end;  //of with
   end  //of begin
