@@ -523,6 +523,7 @@ end;
 
 procedure TMain.OnContextSearchStart(Sender: TObject);
 begin
+  lwContext.Clear();
   mmLang.Enabled := False;
   cbContextExpert.Enabled := False;
   lwContext.Cursor := crHourGlass;
@@ -773,6 +774,7 @@ end;
 
 procedure TMain.OnStartupSearchStart(Sender: TObject);
 begin
+  lwStartup.Clear();
   mmLang.Enabled := False;
   mmImport.Enabled := False;
   cbRunOnce.Enabled := False;
@@ -892,6 +894,7 @@ end;
 
 procedure TMain.OnServiceSearchStart(Sender: TObject);
 begin
+  lwService.Clear();
   mmLang.Enabled := False;
   cbServiceExpert.Enabled := False;
   lwService.Cursor := crHourGlass;
@@ -1059,6 +1062,7 @@ end;
 
 procedure TMain.OnTaskSearchStart(Sender: TObject);
 begin
+  lwTasks.Clear();
   mmLang.Enabled := False;
   mmImport.Enabled := False;
   cbTaskExpert.Enabled := False;

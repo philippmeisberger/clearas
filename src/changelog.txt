@@ -19,6 +19,7 @@ Version 4.4  [??.??.17]
 - Memory-Leak beim Exportieren geschlossen
 - Memory-Leak beim Importieren einer Aufgabe geschlossen
 - Bug fix in 64-Bit Version: Dateipfad von 32-Bit Kontextmenüeinträgen konnte nicht gefunden werden
+- Bug fix: AV beim Verwenden von Tastenkürzeln während der Suche
 - Bug fix: ShellNew-Einträge konnten leeren Namen haben
 - Bug fix: Spalte "Deaktivierungsdatum" hatte nach Wechsel der Sprache nicht richtige Beschriftung
 - Unterstützung für Windows 2000 und XP entfernt
