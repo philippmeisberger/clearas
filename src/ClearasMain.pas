@@ -1322,48 +1322,52 @@ begin
       raise EListBlocked.Create('Another operation is pending. Please wait!');
 
     ItemsDeleted := 0;
-    Answer := mrNone;
 
-    try
-      for i := 0 to ListView.Items.Count - 1 do
-      begin
-        RootList.Selected := TRootItem(ListView.Items[i].SubItems.Objects[0]);
+    for i := 0 to ListView.Items.Count - 1 do
+    begin
+      RootList.Selected := TRootItem(ListView.Items[i].SubItems.Objects[0]);
 
-        if not RootList.Selected.Erasable then
+      if not RootList.Selected.Erasable then
+        Continue;
+
+      // Confirm deletion of every erasable item
+      Answer := TaskMessageDlg(FLang.Format([LID_DELETE_ERASABLE_CONFIRM],
+        [ListView.Items[i].SubItems[0]]), FLang.GetString([LID_ITEM_DELETE_CONFIRM1,
+        LID_ITEM_DELETE_CONFIRM2]), mtConfirmation, mbYesNoCancel, 0);
+
+      case Answer of
+        mrCancel:
+          Break;
+
+        mrNo:
           Continue;
 
-        // Confirm deletion of every erasable item except "yes to all" was clicked
-        if (Answer <> mrYesToAll) then
-          Answer := TaskMessageDlg(FLang.Format([LID_DELETE_ERASABLE_CONFIRM],
-            [ListView.Items[i].SubItems[0]]), FLang.GetString([LID_ITEM_DELETE_CONFIRM1,
-            LID_ITEM_DELETE_CONFIRM2]), mtConfirmation, mbYesNoCancel + [mbYesToAll], 0);
-
-        case Answer of
-          mrCancel:
-            Break;
-
-          mrNo:
-            Continue;
-
-          mrYes, mrYesToAll:
+        mrYes:
+          begin
+            // Ask user to export item
+            if (MessageDlg(FLang.GetString(LID_ITEM_DELETE_STORE), mtConfirmation,
+              mbYesNo, 0, mbYes) = idYes) then
             begin
-              if RootList.DeleteItem() then
-                Inc(ItemsDeleted);
+              // User clicked cancel?
+              if not ShowExportItemDialog() then
+                Continue;
+            end;  //of begin
 
-              // All eraseble items deleted?
-              if (RootList.ErasableItemsCount = 0) then
-                Break;
-            end;
-        end;  //of case
-      end;  //of for
+            if RootList.DeleteItem() then
+            begin
+              ListView.Items[i].Delete();
+              Inc(ItemsDeleted);
+            end;  //of begin
 
-      MessageDlg(FLang.Format(LID_DELETE_ERASABLE_SUCCESS, [ItemsDeleted]),
-        mtInformation, [mbOK], 0);
+            // All eraseble items deleted?
+            if (RootList.ErasableItemsCount = 0) then
+              Break;
+          end;
+      end;  //of case
+    end;  //of for
 
-    finally
-      if (ItemsDeleted > 0) then
-        RootList.Refresh();
-    end;  //of try
+    MessageDlg(FLang.Format(LID_DELETE_ERASABLE_SUCCESS, [ItemsDeleted]),
+      mtInformation, [mbOK], 0);
 
   except
     on E: EInvalidItem do
@@ -1424,7 +1428,6 @@ end;
 
 procedure TMain.bDeleteItemClick(Sender: TObject);
 var
-  Answer: Integer;
   ListView: TListView;
   RootList: TRootList<TRootItem>;
   ConfirmMessage: TLanguageId;
@@ -1453,22 +1456,23 @@ begin
       mtWarning, mbYesNo, 0, mbNo) = idYes) then
     begin
       // Ask user to export item
-      Answer := MessageDlg(FLang.GetString(LID_ITEM_DELETE_STORE),
-        mtConfirmation, mbYesNo, 0, mbYes);
-
-      // Abort if user clicks cancel!
-      if (((Answer = idYes) and ShowExportItemDialog()) or (Answer = idNo)) then
+      if (MessageDlg(FLang.GetString(LID_ITEM_DELETE_STORE), mtConfirmation,
+        mbYesNo, 0, mbYes) = idYes) then
       begin
-        // Successfully deleted item physically?
-        if RootList.DeleteItem() then
-        begin
-          // Delete item from TListView
-          ListView.DeleteSelected();
-          ListView.ItemFocused := nil;
-        end  //of begin
-        else
-          raise Exception.Create('Unknown error!');
+        // User clicked cancel?
+        if not ShowExportItemDialog() then
+          Exit;
       end;  //of begin
+
+      // Successfully deleted?
+      if RootList.DeleteItem() then
+      begin
+        // Delete item from TListView
+        ListView.DeleteSelected();
+        ListView.ItemFocused := nil;
+      end  //of begin
+      else
+        raise Exception.Create('Unknown error!');
     end;  //of begin
 
   except
