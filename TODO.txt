@@ -13,7 +13,6 @@ Ideas:
   - User: Read and edit only items owned by user
 - Add items to listview async
   - Allow editing at same time
-- Export erasable items before deleting
 - Visual grouping
 - Add "Execute" to popup menu
 - Context menu: support cascading shell submenus (ExtendedSubCommandsKey)

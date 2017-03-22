@@ -1525,8 +1525,8 @@ begin
     // Item is erasable?
     if RootList.Selected.Erasable then
     begin
-      MessageDlg(FLang.GetString([LID_FILE_DOES_NOT_EXIST, LID_ENTRY_CAN_DE_DELETED]),
-        mtWarning, [mbOK], 0);
+      TaskMessageDlg(FLang.GetString(LID_FILE_DOES_NOT_EXIST),
+        FLang.GetString(LID_ENTRY_CAN_DE_DELETED), mtWarning, [mbOK], 0);
     end;  //of begin
 
   except
@@ -1579,8 +1579,8 @@ begin
     // Item is erasable?
     if RootList.Selected.Erasable then
     begin
-      MessageDlg(FLang.GetString([LID_FILE_DOES_NOT_EXIST, LID_ENTRY_CAN_DE_DELETED]),
-        mtWarning, [mbOK], 0);
+      TaskMessageDlg(FLang.GetString(LID_FILE_DOES_NOT_EXIST),
+        FLang.GetString(LID_ENTRY_CAN_DE_DELETED), mtWarning, [mbOK], 0);
     end;  //of begin
 
   except
@@ -2073,8 +2073,8 @@ begin
   except
     on E: EWarning do
     begin
-      MessageDlg(FLang.GetString([LID_FILE_DOES_NOT_EXIST, LID_ENTRY_CAN_DE_DELETED]),
-        mtWarning, [mbOK], 0);
+      TaskMessageDlg(FLang.GetString(LID_FILE_DOES_NOT_EXIST),
+        FLang.GetString(LID_ENTRY_CAN_DE_DELETED), mtWarning, [mbOK], 0);
     end;
 
     on E: EInvalidItem do
