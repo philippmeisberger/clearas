@@ -125,9 +125,10 @@ type
 
   /// <summary>
   ///   The <c>TLanguageFile</c> is a platform independent UI translater. It
-  ///   uses language IDs to unique identify strings inside a StringTable or
-  ///   INI file resource. It scans such a resource an identifies available
-  ///   languages. A menu can be automatically created using the found languages.
+  ///   uses language IDs to unique identify strings inside a StringTable resource
+  ///   on Windows or INI file on other platforms. It scans such a resource an
+  ///   identifies available languages. A menu for language selection can be
+  ///   created using <see cref="BuildLanguageMenu"/>.
   /// </summary>
   TLanguageFile = class(TObject)
   private
@@ -144,31 +145,45 @@ type
     procedure HyperlinkClicked(Sender: TObject);
   {$ENDIF}
   protected
+  {$IFDEF MSWINDOWS}
     /// <summary>
     ///   Loads available languages from language resource.
     /// </summary>
-  {$IFDEF MSWINDOWS}
     /// <param name="AInterval">
     ///   Optional: The application defined interval between languages.
     /// </param>
+    procedure Load(const AInterval: Word = 200);
+  {$ELSE}
+    /// <summary>
+    ///   Loads available languages from language resource.
+    /// </summary>
+    /// <exceptions>
+    ///   <c>ELanguageException</c> if no language was found.
+    /// </exceptions>
+    procedure Load();
   {$ENDIF}
-    procedure Load({$IFDEF MSWINDOWS}const AInterval: Word = 200{$ENDIF});
   public
+  {$IFDEF MSWINDOWS}
     /// <summary>
     ///   Constructor for creating a <c>TLanguageFile</c> instance.
     /// </summary>
-  {$IFDEF LINUX}
-    /// <param name="AIniFile">
-    ///   The absolute filename of the language file.
-    /// </param>
-  {$ELSE}
     /// <param name="AInterval">
     ///   Optional: The application defined interval between languages.
     /// </param>
+    constructor Create(const AInterval: Word = 200);
+  {$ELSE}
+    /// <summary>
+    ///   Constructor for creating a <c>TLanguageFile</c> instance.
+    /// </summary>
+    /// <param name="AIniFile">
+    ///   The absolute filename of the language file.
+    /// </param>
+    /// <exception>
+    ///   <c>EArgumentException</c> if file could not be found.
+    ///   <c>ELanguageException</c> if no language was found.
+    /// </exception>
+    constructor Create(const AIniFile: TFileName);
   {$ENDIF}
-    constructor Create({$IFDEF LINUX}const AIniFile: string = ''{$ELSE}
-      const AInterval: Word = 200{$ENDIF});
-
     /// <summary>
     ///   Destructor for destroying a <c>TLanguageFile</c> instance.
     /// </summary>
@@ -280,7 +295,7 @@ type
 implementation
 
 {$IFDEF MSWINDOWS}
-{$R lang.res}
+{$R languages.res}
 
 { TLocaleHelper }
 
@@ -303,31 +318,31 @@ end;
 
 { TLanguageFile }
 
-constructor TLanguageFile.Create({$IFDEF LINUX}const AIniFile: string = ''{$ELSE}
+constructor TLanguageFile.Create({$IFDEF LINUX}const AIniFile: TFileName{$ELSE}
   const AInterval: Word = 200{$ENDIF});
 begin
   inherited Create;
-  FListeners := TInterfaceList.Create;
-  FLanguages := TStringList.Create;
-  FLanguages.Duplicates := dupIgnore;
 {$IFDEF MSWINDOWS}
   FLangId := 0;
 {$ELSE}
-  if (AIniFile = '') then
-    FIni := TIniFile.Create(ExtractFilePath(ParamStr(0)) +'lang')
-  else
-    FIni := TIniFile.Create(AIniFile);
+  if not FileExists(AIniFile) then
+    raise EArgumentException.Create(SysUtils.Format('Language file "%s" could not be found!', [AIniFile]));
+
+  FIni := TIniFile.Create(AIniFile);
 {$ENDIF}
+  FListeners := TInterfaceList.Create;
+  FLanguages := TStringList.Create;
+  FLanguages.Duplicates := dupIgnore;
   Load({$IFDEF MSWINDOWS}AInterval{$ENDIF});
 end;
 
 destructor TLanguageFile.Destroy;
 begin
+  FreeAndNil(FLanguages);
+  FreeAndNil(FListeners);
 {$IFDEF LINUX}
   FreeAndNil(FIni);
 {$ENDIF}
-  FreeAndNil(FLanguages);
-  FreeAndNil(FListeners);
   inherited Destroy;
 end;
 
