@@ -2,7 +2,7 @@
 {                                                                         }
 { PM Code Works Application Mutex Unit                                    }
 {                                                                         }
-{ Copyright (c) 2011-2016 Philipp Meisberger (PM Code Works)              }
+{ Copyright (c) 2011-2017 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
 { *********************************************************************** }
 
@@ -16,11 +16,11 @@ uses
 implementation
 
 var
-  Handle: THandle;
+  Mutex: THandle;
 
 initialization
 
-  Handle := CreateMutex(nil, True, PChar(Application.Title));
+  Mutex := CreateMutex(nil, True, PChar(Application.Title));
 
   if (GetLastError() = ERROR_ALREADY_EXISTS) then
   begin
@@ -29,10 +29,12 @@ initialization
     Application.Terminate;
   end;  //of begin
 
-
 finalization
 
-  if (Handle <> 0) then
-    CloseHandle(Handle);
+  if (Mutex <> 0) then
+  begin
+    ReleaseMutex(Mutex);
+    CloseHandle(Mutex);
+  end;  //of begin
 
 end.
