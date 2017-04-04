@@ -179,6 +179,7 @@ type
     FTasks: TTaskList;
     FLang: TLanguageFile;
     FUpdateCheck: TUpdateCheck;
+    function GetListForIndex(AIndex: Integer): TRootList<TRootItem>;
     function GetSelectedItem(): TRootItem;
     function GetSelectedList(): TRootList<TRootItem>;
     function GetSelectedListView(): TListView;
@@ -380,23 +381,34 @@ begin
   end;  //of begin
 end;
 
+function TMain.GetListForIndex(AIndex: Integer): TRootList<TRootItem>;
+begin
+  case AIndex of
+    0:   Result := TRootList<TRootItem>(FStartup);
+    1:   Result := TRootList<TRootItem>(FContext);
+    2:   Result := TRootList<TRootItem>(FService);
+    3:   Result := TRootList<TRootItem>(FTasks);
+    else Result := nil;
+  end;  //of case
+
+  if not Assigned(Result) then
+    raise EInvalidItem.CreateFmt('No list at index %d!', [AIndex]);
+end;
+
 { private TMain.GetSelectedItem
 
   Returns the current selected TRootItem. }
 
 function TMain.GetSelectedItem(): TRootItem;
 var
-  Item: TRootItem;
   List: TRootList<TRootItem>;
 
 begin
   List := GetSelectedList();
-  Item := List.Selected;
+  Result := List.Selected;
 
-  if not Assigned(Item) then
+  if not Assigned(Result) then
     raise EInvalidItem.Create('No item selected!');
-
-  Result := Item;
 end;
 
 { private TMain.GetSelectedList
@@ -404,23 +416,8 @@ end;
   Returns the current selected TRootList. }
 
 function TMain.GetSelectedList(): TRootList<TRootItem>;
-var
-  List: TRootList<TRootItem>;
-
 begin
-  List := nil;
-
-  case PageControl.ActivePageIndex of
-    0: List := TRootList<TRootItem>(FStartup);
-    1: List := TRootList<TRootItem>(FContext);
-    2: List := TRootList<TRootItem>(FService);
-    3: List := TRootList<TRootItem>(FTasks);
-  end;  //of case
-
-  if not Assigned(List) then
-    raise EInvalidItem.Create('No list selected!');
-
-  Result := List;
+  Result := GetListForIndex(PageControl.ActivePageIndex);
 end;
 
 { private TMain.GetSelectedListView
@@ -428,23 +425,17 @@ end;
   Returns the current selected TListView. }
 
 function TMain.GetSelectedListView(): TListView;
-var
-  List: TListView;
-
 begin
-  List := nil;
-
   case PageControl.ActivePageIndex of
-    0: List := lwStartup;
-    1: List := lwContext;
-    2: List := lwService;
-    3: List := lwTasks;
+    0:   Result := lwStartup;
+    1:   Result := lwContext;
+    2:   Result := lwService;
+    3:   Result := lwTasks;
+    else Result := nil;
   end;  //of case
 
-  if not Assigned(List) then
+  if not Assigned(Result) then
     raise EInvalidItem.Create('No ListView selected!');
-
-  Result := List;
 end;
 
 { private TMain.Refresh
