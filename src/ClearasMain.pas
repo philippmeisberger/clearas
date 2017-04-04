@@ -182,7 +182,7 @@ type
     function GetSelectedItem(): TRootItem;
     function GetSelectedList(): TRootList<TRootItem>;
     function GetSelectedListView(): TListView;
-    procedure LoadItems(ATotalRefresh: Boolean = True);
+    procedure Refresh(ATotal: Boolean = True);
     procedure OnContextSearchStart(Sender: TObject);
     procedure OnContextSearchEnd(Sender: TObject);
     procedure OnContextItemChanged(Sender: TObject; AItemChange: TItemChange);
@@ -201,10 +201,9 @@ type
     procedure OnTaskItemChanged(Sender: TObject; AItemChange: TItemChange);
     function ShowExportItemDialog(): Boolean;
     procedure ShowColumnDate(AListView: TListView; AShow: Boolean = True);
+    // TODO: Remove recycle bin context menu feature
     function UpdateContextPath(): Boolean;
     procedure OnUpdate(Sender: TObject; const ANewBuild: Cardinal);
-    const
-      DELAY_TIMER = 1;
     procedure WMTimer(var Message: TWMTimer); message WM_TIMER;
     { IChangeLanguageListener }
     procedure LanguageChanged();
@@ -250,7 +249,7 @@ begin
   begin
     OnUpdate := Self.OnUpdate;
   {$IFNDEF DEBUG}
-    FUpdateCheck.CheckForUpdate();
+    CheckForUpdate();
   {$ENDIF}
   end;  //of with
 
@@ -448,11 +447,11 @@ begin
   Result := List;
 end;
 
-{ private TMain.LoadItems
+{ private TMain.Refresh
 
   Loads items and brings them into a TListView. }
 
-procedure TMain.LoadItems(ATotalRefresh: Boolean = True);
+procedure TMain.Refresh(ATotal: Boolean = True);
 var
   SearchThread: TSearchThread;
   SelectedList: TRootList<TRootItem>;
@@ -462,7 +461,7 @@ begin
     SelectedList := GetSelectedList();
 
     // Make a total refresh or just use cached items
-    if ATotalRefresh then
+    if ATotal then
     begin
       SearchThread := TSearchThread.Create(SelectedList);
 
@@ -725,7 +724,6 @@ begin
       begin
         bEnableStartupItem.Enabled := False;
         bDisableStartupItem.Enabled := True;
-        pmExport.Enabled := True;
         pmChangeStatus.Caption := bDisableStartupItem.Caption;
 
         // Delete deactivation timestamp if necassary
@@ -1027,6 +1025,7 @@ begin
 
     // Filter items
     if ((eTaskSearch.Text = '') or (Text.ToLower().Contains(LowerCase(eTaskSearch.Text)))) then
+    begin
       with lwTasks.Items.Add do
       begin
         Caption := FTasks[i].GetStatusText(FLang);
@@ -1034,6 +1033,7 @@ begin
         SubItems.Append(FTasks[i].FileName);
         SubItems.Append(FTasks[i].Location);
       end; //of with
+    end;  //of begin
   end;  //of for
 
   // Update some VCL
@@ -1085,7 +1085,7 @@ begin
   with FLang do
   begin
     // File menu labels
-    mmFile.Caption := GetString(33);
+    mmFile.Caption := GetString(LID_FILE);
 
     case PageControl.ActivePageIndex of
       0,2: mmAdd.Caption := GetString(LID_STARTUP_ADD);
@@ -1239,7 +1239,7 @@ begin
       begin
         Caption := FLang.GetString(LID_DATE_OF_DEACTIVATION);
         Width := 120;
-        LoadItems(False);
+        Refresh(False);
       end;  //of with
 end;
 
@@ -1422,8 +1422,10 @@ end;
 
 procedure TMain.WMTimer(var Message: TWMTimer);
 begin
-  KillTimer(Handle, DELAY_TIMER);
-  GetSelectedList().Refresh();
+  KillTimer(Handle, Message.TimerID);
+
+  // TODO: Wrong list is refreshed when tab is switched during delay
+  Refresh(False);
 end;
 
 { TMain.bDeleteItemClick
@@ -1642,7 +1644,7 @@ begin
   end;  //of if
 
   // Refresh TListView delayed
-  SetTimer(Handle, DELAY_TIMER, 250, nil);
+  SetTimer(Handle, PageControl.ActivePageIndex, 250, nil);
 end;
 
 { TMain.eSearchRightButtonClick
@@ -2603,7 +2605,7 @@ end;
 
 procedure TMain.mmRefreshClick(Sender: TObject);
 begin
-  LoadItems();
+  Refresh();
 end;
 
 { TMain.mmShowCaptionsClick
@@ -2797,7 +2799,7 @@ begin
 
   // Load items dynamically
   if (GetSelectedList().Count = 0) then
-    LoadItems();
+    Refresh();
 
   // Only allow popup menu if item is focused
   PopupMenu.AutoPopup := Assigned(GetSelectedListView().ItemFocused);

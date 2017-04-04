@@ -357,6 +357,7 @@ type
     /// <returns>
     ///   The status as text.
     /// </returns>
+    // TODO: GetStatusText() is called too often: Remove GetStatusText() and use cached text
     function GetStatusText(ALanguageFile: TLanguageFile): string;
 
     /// <summary>
@@ -623,6 +624,7 @@ type
   TRootList<T: TRootItem> = class abstract(TObjectList<T>, IInterface)
   strict private
     FItem: T;
+    // TODO: Better use TDuplicates
     FDuplicates: Boolean;
     FOnChanged: TItemChangeEvent;
     FOnRefresh: TNotifyEvent;
@@ -4855,6 +4857,7 @@ begin
       raise EContextMenuException.Create(Reg.LastErrorMsg);
 
     // Change path
+    // TODO: May use SHRegSetPath()
     case Reg.GetDataType('') of
       rdExpandString: Reg.WriteExpandString('', ANewFileName);
       rdString:       Reg.WriteString('', ANewFileName);
@@ -4891,6 +4894,7 @@ begin
       Exit(Reg.DeleteValue('Icon'));
 
     // Change icon
+    // TODO: May use SHRegSetPath()
     if Reg.ValueExists('Icon') then
       case Reg.GetDataType('Icon') of
         rdExpandString: Reg.WriteExpandString('Icon', ANewIconFileName);
@@ -5146,6 +5150,7 @@ begin
       raise EContextMenuException.Create(Reg.LastErrorMsg);
 
     // Change path
+    // TODO: May use SHRegSetPath()
     case Reg.GetDataType('') of
       rdExpandString: Reg.WriteExpandString('', ANewFileName);
       rdString:       Reg.WriteString('', ANewFileName);
