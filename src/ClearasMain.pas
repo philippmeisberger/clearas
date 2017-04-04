@@ -1414,9 +1414,7 @@ end;
 procedure TMain.WMTimer(var Message: TWMTimer);
 begin
   KillTimer(Handle, Message.TimerID);
-
-  // TODO: Wrong list is refreshed when tab is switched during delay
-  Refresh(False);
+  GetListForIndex(Message.TimerID).Refresh();
 end;
 
 { TMain.bDeleteItemClick

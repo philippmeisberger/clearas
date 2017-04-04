@@ -22,6 +22,7 @@ Version 4.4  [??.??.17]
 - Bug fix: AV beim Verwenden von Tastenkürzeln während der Suche
 - Bug fix: ShellNew-Einträge konnten leeren Namen haben
 - Bug fix: Spalte "Deaktivierungsdatum" hatte nach Wechsel der Sprache nicht richtige Beschriftung
+- Bug fix: Falsche TListView wurde aktualisiert, falls Tab während der Suche gewechselt wurde
 - Unterstützung für Windows 2000 und XP entfernt
 - Updater v3.1
   - Abhängigkeit zur "Indy"-Komponenten Bibliothek entfernt
