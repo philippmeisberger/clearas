@@ -8,6 +8,8 @@
 
 unit PMCW.FileSystem;
 
+{$IFDEF FPC}{$mode delphi}{$ENDIF}
+
 interface
 
 uses
