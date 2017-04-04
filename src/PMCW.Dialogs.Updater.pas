@@ -8,8 +8,6 @@
 
 unit PMCW.Dialogs.Updater;
 
-{$IFDEF FPC}{$mode delphi}{$ENDIF}
-
 interface
 
 uses
@@ -281,7 +279,6 @@ type
     FLocalFileName,
     FFileName: string;
     FLanguageFile: TLanguageFile;
-    procedure FinishedClick(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
     procedure DownloadCanceled(Sender: TObject);
     procedure Downloading(Sender: TObject; AContentLength, AReadCount: Int64);
@@ -645,8 +642,6 @@ begin
   begin
     OnError := HttpError;
     OnTerminate := CheckFinished;
-    // TODO: Encrypt?
-    //TLSEnabled := CertificateExists();
     Start();
   end;  //of with
 end;
@@ -718,7 +713,6 @@ begin
     Caption := 'Update';
     ClientHeight := 110;
     ClientWidth := 362;
-    OldCreateOrder := False;
     Position := poScreenCenter;
     OnCloseQuery := FormCloseQuery;
   end;  //of with
@@ -746,7 +740,6 @@ begin
     Top := 32;
     Width := 313;
     Height := 25;
-    TabOrder := 0;
   end;  //of with
 
   FButtonFinished := TButton.Create(Self);
@@ -761,8 +754,8 @@ begin
     Cancel := True;
     Caption := SCancelButton;
     Default := True;
-    TabOrder := 1;
-    OnClick := FinishedClick;
+    TabOrder := 0;
+    ModalResult := mrCancel;
   end;  //of with
 end;
 
@@ -770,7 +763,7 @@ constructor TUpdateDialog.Create(AOwner: TComponent; ALanguageFile: TLanguageFil
 begin
   Create(AOwner);
   FLanguageFile := ALanguageFile;
-  FForm.Caption := FLanguageFile.GetString(LID_UPDATE);
+  Title := FLanguageFile.GetString(LID_UPDATE);
 end;
 
 destructor TUpdateDialog.Destroy;
@@ -792,14 +785,13 @@ begin
   FProgressBar.State := TProgressBarState.pbsError;
   FLabelStatistic.Caption := FLanguageFile.GetString(LID_CANCELED);
   MessageDlg(FLanguageFile.GetString(LID_UPDATE_CANCELED), mtInformation, [mbOK], 0);
-  FForm.ModalResult := mrCancel;
 end;
 
 procedure TUpdateDialog.HttpError(Sender: TObject; const AResponseCode: Integer;
   const AResponseText: string);
 begin
   FProgressBar.State := TProgressBarState.pbsError;
-  FLabelStatistic.Caption := FLanguageFile.GetString(LID_CANCELED);
+  FLabelStatistic.Caption := FLanguageFile.GetString(LID_ERROR);
 
   // Certificate validation error?
   if (AResponseCode = ERROR_CERTIFICATE_VALIDATION) then
@@ -813,12 +805,14 @@ begin
     FLanguageFile.ShowException(FLanguageFile.GetString([LID_UPDATE_DOWNLOAD,
       LID_IMPOSSIBLE]), Format('HTTP/1.1 %d '+ AResponseText, [AResponseCode]));
   end;  //of if
-
-  FForm.ModalResult := mrAbort;
 end;
 
 procedure TUpdateDialog.DownloadFinished(Sender: TObject);
 begin
+  // Clear lock (NOTE: thread is ref-counted)
+  FThread := nil;
+
+  // Download successful: Close form automatically
   FForm.ModalResult := mrOk;
 end;
 
@@ -832,7 +826,6 @@ end;
 procedure TUpdateDialog.DownloadTerminated(Sender: TObject);
 begin
   FButtonFinished.Caption := FLanguageFile.GetString(LID_FINISHED);
-  FButtonFinished.SetFocus;
 
   // Clear lock (NOTE: thread is ref-counted)
   FThread := nil;
@@ -845,7 +838,7 @@ end;
 
 function TUpdateDialog.Execute(ParentHwnd: HWND): Boolean;
 var
-  UseTls, DirectorySelected: Boolean;
+  UseTls: Boolean;
 
   function GetUniqueFileName(const AFileName: string): string;
   var
@@ -894,42 +887,33 @@ begin
       UseTls := False;
   end;  //of begin
 
-  DirectorySelected := (FDownloadDirectory <> '');
-
   // Download folder not set yet?
-  if not DirectorySelected then
+  if (FDownloadDirectory = '') then
   begin
     // Show select directory dialog
-    DirectorySelected := SelectDirectory(FLanguageFile.GetString(LID_UPDATE_SELECT_DIR),
-      '', FDownloadDirectory);
+    if not SelectDirectory(FLanguageFile.GetString(LID_UPDATE_SELECT_DIR), '',
+      FDownloadDirectory) then
+      Exit(False);
   end;  //of begin
 
-  if DirectorySelected then
-  begin
-    FFileName := GetUniqueFileName(IncludeTrailingPathDelimiter(FDownloadDirectory)
-      + FLocalFileName);
-    FButtonFinished.Caption := FLanguageFile.GetString(LID_CANCEL);
+  FFileName := GetUniqueFileName(IncludeTrailingPathDelimiter(FDownloadDirectory)
+    + FLocalFileName);
+  FButtonFinished.Caption := FLanguageFile.GetString(LID_CANCEL);
 
-    // Initialize thread
-    FThread := TDownloadThread.Create(URL_DIR + 'downloader.php?file='
-      + FRemoteFileName, FFileName);
+  // Initialize thread
+  FThread := TDownloadThread.Create(URL_DIR + 'downloader.php?file='
+    + FRemoteFileName, FFileName);
 
-    with FThread do
-    begin
-      OnDownloading := Self.Downloading;
-      OnCancel := DownloadCanceled;
-      OnFinish := DownloadFinished;
-      OnTerminate := DownloadTerminated;
-      OnError := HttpError;
-      TLSEnabled := UseTls;
-      Start();
-    end;  //of with
-  end  //of begin
-  else
+  with FThread do
   begin
-    FLabelStatistic.Caption := FLanguageFile.GetString(LID_CANCELED);
-    FButtonFinished.Caption := FLanguageFile.GetString(LID_FINISHED);
-  end;  //of if
+    OnDownloading := Self.Downloading;
+    OnCancel := DownloadCanceled;
+    OnFinish := DownloadFinished;
+    OnTerminate := DownloadTerminated;
+    OnError := HttpError;
+    TLSEnabled := UseTls;
+    Start();
+  end;  //of with
 
   Result := (FForm.ShowModal() = mrOk);
 end;
@@ -937,11 +921,6 @@ end;
 procedure TUpdateDialog.LaunchSetup();
 begin
   ExecuteProgram(FFileName);
-end;
-
-procedure TUpdateDialog.FinishedClick(Sender: TObject);
-begin
-  FForm.Close;
 end;
 
 procedure TUpdateDialog.FormCloseQuery(Sender: TObject; var CanClose: Boolean);
