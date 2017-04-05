@@ -1318,7 +1318,9 @@ begin
 
     ItemsDeleted := 0;
 
-    for i := 0 to ListView.Items.Count - 1 do
+    // TListView.Items.Count is decreased when item is deleted which leads
+    // to an AV if erasable items are not consecutive: Start at the end to avoid this
+    for i := ListView.Items.Count - 1 downto 0 do
     begin
       RootList.Selected := TRootItem(ListView.Items[i].SubItems.Objects[0]);
 
