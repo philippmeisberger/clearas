@@ -532,48 +532,6 @@ type
   end;
 
   /// <summary>
-  ///   The possible item changes.
-  /// </summary>
-  TItemChange = (
-
-    /// <summary>
-    ///   Item has been enabled.
-    /// </summary>
-    icEnabled,
-
-    /// <summary>
-    ///   Item has been disabled.
-    /// </summary>
-    icDisabled,
-
-    /// <summary>
-    ///   Item has been deleted.
-    /// </summary>
-    icDeleted,
-
-    /// <summary>
-    ///   Path has changed.
-    /// </summary>
-    icPathChanged,
-
-    /// <summary>
-    ///   Name has changed.
-    /// </summary>
-    icRenamed
-  );
-
-  /// <summary>
-  ///   Occurs when an item has changed and needs a visual update.
-  /// </summary>
-  /// <param name="Sender">
-  ///   The sender.
-  /// </param>
-  /// <param name="AItemChange">
-  ///   The new item status.
-  /// </param>
-  TItemChangeEvent = procedure(Sender: TObject; AItemChange: TItemChange) of object;
-
-  /// <summary>
   ///   Occurs when something has failed.
   /// </summary>
   /// <param name="Sender">
@@ -626,13 +584,13 @@ type
     FItem: T;
     // TODO: Better use TDuplicates
     FDuplicates: Boolean;
-    FOnChanged: TItemChangeEvent;
+    FOnCounterUpdate,
     FOnRefresh: TNotifyEvent;
     FEnabledItemsCount,
     FErasableItemsCount: Integer;
+    procedure NotifyOnCounterUpdate();
   protected
     FLock: TCriticalSection;
-    procedure DoNotifyOnChanged(AItemChange: TItemChange);
     procedure Notify(const Item: T; Action: TCollectionNotification); override;
 
     { IInterface }
@@ -681,7 +639,7 @@ type
     ///   Deletes the current selected item.
     /// </summary>
     /// <returns>
-    ///   <c>>True</c> if item was successfully deleted or <c>False</c> otherwise.
+    ///   <c>True</c> if item was successfully deleted or <c>False</c> otherwise.
     /// </returns>
     /// <exception>
     ///   <c>EListBlocked</c> if another operation is pending on the list.
@@ -830,14 +788,14 @@ type
     property ErasableItemsCount: Integer read FErasableItemsCount;
 
     /// <summary>
-    ///   Occurs when an item has changed.
-    /// </summary>
-    property OnChanged: TItemChangeEvent read FOnChanged write FOnChanged;
-
-    /// <summary>
     ///   Occurs when the list needs a visual update.
     /// </summary>
     property OnRefresh: TNotifyEvent read FOnRefresh write FOnRefresh;
+
+    /// <summary>
+    ///   Occurs when counter is updated.
+    /// </summary>
+    property OnCounterUpdate: TNotifyEvent read FOnCounterUpdate write FOnCounterUpdate;
 
     /// <summary>
     ///   Gets or sets the current selected item.
@@ -2972,12 +2930,6 @@ begin
   inherited Destroy;
 end;
 
-procedure TRootList<T>.DoNotifyOnChanged(AItemChange: TItemChange);
-begin
-  if Assigned(FOnChanged) then
-    FOnChanged(Self, AItemChange);
-end;
-
 function TRootList<T>.QueryInterface(const IID: TGUID; out Obj): HResult;
 begin
   if GetInterface(IID, Obj) then
@@ -3001,8 +2953,6 @@ end;
 procedure TRootList<T>.Clear();
 begin
   inherited Clear;
-  FEnabledItemsCount := 0;
-  FErasableItemsCount := 0;
   FItem := nil;
 end;
 
@@ -3031,17 +2981,12 @@ begin
       if (not ItemErasable and FItem.Erasable) then
         Inc(FErasableItemsCount);
 
-    DoNotifyOnChanged(icPathChanged);
-
   finally
     FLock.Release();
   end;  //of try
 end;
 
 procedure TRootList<T>.ChangeItemStatus(const ANewStatus: Boolean);
-var
-  NewStatus: TItemChange;
-
 begin
   // List locked?
   if not FLock.TryEnter() then
@@ -3059,7 +3004,7 @@ begin
       // Enable item
       FItem.ChangeStatus(ANewStatus);
       Inc(FEnabledItemsCount);
-      DoNotifyOnChanged(icEnabled);
+      NotifyOnCounterUpdate();
     end  //of begin
     else
     begin
@@ -3071,10 +3016,10 @@ begin
 
       // Update active counter
       if (FEnabledItemsCount > 0) then
+      begin
         Dec(FEnabledItemsCount);
-
-      // Notify disable
-      DoNotifyOnChanged(icDisabled);
+        NotifyOnCounterUpdate();
+      end;  //of begin
     end;  //of if
 
   finally
@@ -3100,13 +3045,8 @@ begin
 
     // Successful?
     if Deleted then
-    begin
       // Remove item from list
       Remove(FItem);
-
-      // Notify delete
-      DoNotifyOnChanged(icDeleted);
-    end;  //of begin
 
   finally
     FLock.Release();
@@ -3223,6 +3163,8 @@ begin
 
         if Item.Erasable then
           Inc(FErasableItemsCount);
+
+        NotifyOnCounterUpdate();
       end;
 
     cnRemoved:
@@ -3236,9 +3178,16 @@ begin
         if (Item.Erasable and (FErasableItemsCount > 0)) then
           Dec(FErasableItemsCount);
 
+        NotifyOnCounterUpdate();
         FItem := nil;
       end;
   end;  //of case
+end;
+
+procedure TRootList<T>.NotifyOnCounterUpdate();
+begin
+  if Assigned(FOnCounterUpdate) then
+    FOnCounterUpdate(Self);
 end;
 
 procedure TRootList<T>.RenameItem(const ANewName: string);
@@ -3263,7 +3212,6 @@ begin
     end;  //of begin
 
     FItem.Name := ANewName;
-    DoNotifyOnChanged(icRenamed);
 
   finally
     FLock.Release();

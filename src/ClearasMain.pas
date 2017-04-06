@@ -186,20 +186,20 @@ type
     procedure Refresh(ATotal: Boolean = True);
     procedure OnContextSearchStart(Sender: TObject);
     procedure OnContextSearchEnd(Sender: TObject);
-    procedure OnContextItemChanged(Sender: TObject; AItemChange: TItemChange);
+    procedure OnContextCounterUpdate(Sender: TObject);
     procedure OnExportListStart(Sender: TObject);
     procedure OnExportListEnd(Sender: TObject);
     procedure OnExportListError(Sender: TObject; const AErrorMessage: string);
     procedure OnSearchError(Sender: TObject; const AErrorMessage: string);
     procedure OnStartupSearchStart(Sender: TObject);
     procedure OnStartupSearchEnd(Sender: TObject);
-    procedure OnStartupItemChanged(Sender: TObject; AItemChange: TItemChange);
+    procedure OnStartupCounterUpdate(Sender: TObject);
     procedure OnServiceSearchStart(Sender: TObject);
     procedure OnServiceSearchEnd(Sender: TObject);
-    procedure OnServiceItemChanged(Sender: TObject; AItemChange: TItemChange);
+    procedure OnServiceCounterUpdate(Sender: TObject);
     procedure OnTaskSearchStart(Sender: TObject);
     procedure OnTaskSearchEnd(Sender: TObject);
-    procedure OnTaskItemChanged(Sender: TObject; AItemChange: TItemChange);
+    procedure OnTaskCounterUpdate(Sender: TObject);
     function ShowExportItemDialog(): Boolean;
     procedure ShowColumnDate(AListView: TListView; AShow: Boolean = True);
     // TODO: Remove recycle bin context menu feature
@@ -260,7 +260,7 @@ begin
   // Link search events
   with FStartup do
   begin
-    OnChanged := OnStartupItemChanged;
+    OnCounterUpdate := OnStartupCounterUpdate;
     OnRefresh := OnStartupSearchEnd;
   end;  //of with
 
@@ -270,7 +270,7 @@ begin
   with FContext do
   begin
     Duplicates := True;
-    OnChanged := OnContextItemChanged;
+    OnCounterUpdate := OnContextCounterUpdate;
     OnRefresh := OnContextSearchEnd;
   end;  //of with
 
@@ -279,7 +279,7 @@ begin
   // Link search events
   with FService do
   begin
-    OnChanged := OnServiceItemChanged;
+    OnCounterUpdate := OnServiceCounterUpdate;
     OnRefresh := OnServiceSearchEnd;
   end;  //of with
 
@@ -288,7 +288,7 @@ begin
   // Link search events
   with FTasks do
   begin
-    OnChanged := OnTaskItemChanged;
+    OnCounterUpdate := OnTaskCounterUpdate;
     OnRefresh := OnTaskSearchEnd;
   end;  //of with
 
@@ -561,10 +561,13 @@ begin
       end; //of with
   end;  //of for
 
-  // Update some VCL
   mmLang.Enabled := True;
   cbContextExpert.Enabled := True;
   lwContext.Cursor := crDefault;
+  bEnableContextItem.Enabled := False;
+  bDisableContextItem.Enabled := False;
+  bDeleteContextItem.Enabled := False;
+  bExportContextItem.Enabled := False;
 
   // Hide progress bar
   if cbContextExpert.Checked then
@@ -575,45 +578,20 @@ begin
 
   // Sort!
   lwContext.AlphaSort();
-
-  // Refresh counter
-  OnContextItemChanged(Sender, icDeleted);
 end;
 
-{ private TMain.OnContextItemChanged
+{ private TMain.OnContextCounterUpdate
 
   Event method that is called when item status has been changed. }
 
-procedure TMain.OnContextItemChanged(Sender: TObject; AItemChange: TItemChange);
+procedure TMain.OnContextCounterUpdate(Sender: TObject);
 begin
   // Refresh counter label
-  lwContext.Columns[1].Caption := FLang.Format(LID_CONTEXT_MENU_COUNTER,
-    [FContext.EnabledItemsCount, FContext.Count]);
-
-  // Change button states
-  case AItemChange of
-    icEnabled:
-      begin
-        bEnableContextItem.Enabled := False;
-        bDisableContextItem.Enabled := True;
-        pmChangeStatus.Caption := bDisableContextItem.Caption;
-      end;
-
-    icDisabled:
-      begin
-        bEnableContextItem.Enabled := True;
-        bDisableContextItem.Enabled := False;
-        pmChangeStatus.Caption := bEnableContextItem.Caption;
-      end;
-
-    icDeleted:
-      begin
-        bEnableContextItem.Enabled := False;
-        bDisableContextItem.Enabled := False;
-        bDeleteContextItem.Enabled := False;
-        bExportContextItem.Enabled := False;
-      end;
-  end;  //of case
+  if Assigned(FContext) then
+  begin
+    lwContext.Columns[1].Caption := FLang.Format(LID_CONTEXT_MENU_COUNTER,
+      [FContext.EnabledItemsCount, FContext.Count]);
+  end;  //of begin
 end;
 
 { private TMain.OnExportListStart
@@ -695,66 +673,18 @@ begin
   FLang.ShowException(FLang.GetString([LID_EXPORT, LID_IMPOSSIBLE]), AErrorMessage);
 end;
 
-{ private TMain.OnStartupItemChanged
+{ private TMain.OnStartupCounterUpdate
 
   Event method that is called when item status has been changed. }
 
-procedure TMain.OnStartupItemChanged(Sender: TObject; AItemChange: TItemChange);
-var
-  Icon: TIcon;
-
+procedure TMain.OnStartupCounterUpdate(Sender: TObject);
 begin
   // Refresh counter label
   if Assigned(FStartup) then
+  begin
     lwStartup.Columns[1].Caption := FLang.Format(LID_PROGRAM_COUNTER,
       [FStartup.EnabledItemsCount, FStartup.Count]);
-
-  // Change button states
-  case AItemChange of
-    icEnabled:
-      begin
-        bEnableStartupItem.Enabled := False;
-        bDisableStartupItem.Enabled := True;
-        pmChangeStatus.Caption := bDisableStartupItem.Caption;
-
-        // Delete deactivation timestamp if necassary
-        if (mmDate.Enabled and mmDate.Checked) then
-          lwStartup.ItemFocused.SubItems[3] := '';
-      end;
-
-    icDisabled:
-      begin
-        bEnableStartupItem.Enabled := True;
-        bDisableStartupItem.Enabled := False;
-        pmChangeStatus.Caption := bEnableStartupItem.Caption;
-
-        // Append deactivation timestamp if necassary
-        if (mmDate.Enabled and mmDate.Checked and (FStartup.Selected.Time <> 0)) then
-          lwStartup.ItemFocused.SubItems[3] := DateTimeToStr(FStartup.Selected.Time);
-      end;
-
-    icDeleted:
-      begin
-        bEnableStartupItem.Enabled := False;
-        bDisableStartupItem.Enabled := False;
-        bDeleteStartupItem.Enabled := False;
-        bExportStartupItem.Enabled := False;
-      end;
-
-    icPathChanged:
-      begin
-        Icon := TIcon.Create;
-
-        try
-          // Update icon
-          Icon.Handle := FStartup.Selected.Icon;
-          lwStartup.ItemFocused.ImageIndex := IconList.AddIcon(Icon);
-
-        finally
-          FreeAndNil(Icon);
-        end;  //of try
-      end;
-  end;  //of case
+  end;  //of begin
 end;
 
 { private TMain.OnStartupSearchStart
@@ -820,61 +750,31 @@ begin
     Icon.Free;
   end;  //of try
 
-  // Update some VCL
   mmImport.Enabled := True;
   mmLang.Enabled := True;
   cbRunOnce.Enabled := True;
   lwStartup.Cursor := crDefault;
+  bEnableStartupItem.Enabled := False;
+  bDisableStartupItem.Enabled := False;
+  bDeleteStartupItem.Enabled := False;
+  bExportStartupItem.Enabled := False;
 
   // Sort!
   lwStartup.AlphaSort();
-
-  // Refresh counter
-  OnStartupItemChanged(Sender, icDeleted);
 end;
 
-{ private TMain.OnServiceItemChanged
+{ private TMain.OnServiceCounterUpdate
 
   Event method that is called when item status has been changed. }
 
-procedure TMain.OnServiceItemChanged(Sender: TObject; AItemChange: TItemChange);
+procedure TMain.OnServiceCounterUpdate(Sender: TObject);
 begin
   // Refresh counter label
-  lwService.Columns[1].Caption := FLang.Format(LID_SERVICE_COUNTER,
-    [FService.EnabledItemsCount, FService.Count]);
-
-  // Change button states
-  case AItemChange of
-    icEnabled:
-      begin
-        bEnableServiceItem.Enabled := False;
-        bDisableServiceItem.Enabled := True;
-        pmChangeStatus.Caption := bDisableServiceItem.Caption;
-
-        // Delete deactivation timestamp if necassary
-        if (mmDate.Enabled and mmDate.Checked) then
-          lwService.ItemFocused.SubItems[3] := '';
-      end;
-
-    icDisabled:
-      begin
-        bEnableServiceItem.Enabled := True;
-        bDisableServiceItem.Enabled := False;
-        pmChangeStatus.Caption := bEnableServiceItem.Caption;
-
-        // Append deactivation timestamp if necassary
-        if (mmDate.Enabled and mmDate.Checked and (FService.Selected.Time <> 0)) then
-          lwService.ItemFocused.SubItems[3] := DateTimeToStr(FService.Selected.Time);
-      end;
-
-    icDeleted:
-      begin
-        bEnableServiceItem.Enabled := False;
-        bDisableServiceItem.Enabled := False;
-        bDeleteServiceItem.Enabled := False;
-        bExportServiceItem.Enabled := False;
-      end;
-  end;  //of case
+  if Assigned(FService) then
+  begin
+    lwService.Columns[1].Caption := FLang.Format(LID_SERVICE_COUNTER,
+      [FService.EnabledItemsCount, FService.Count]);
+  end;  //of begin
 end;
 
 { private TMain.OnServiceSearchStart
@@ -936,6 +836,10 @@ begin
   mmLang.Enabled := True;
   cbServiceExpert.Enabled := True;
   lwService.Cursor := crDefault;
+  bEnableServiceItem.Enabled := False;
+  bDisableServiceItem.Enabled := False;
+  bDeleteServiceItem.Enabled := False;
+  bExportServiceItem.Enabled := False;
 
   // Hide progress bar
   if cbServiceExpert.Checked then
@@ -946,9 +850,6 @@ begin
 
   // Sort!
   lwService.AlphaSort();
-
-  // Refresh counter
-  OnServiceItemChanged(Sender, icDeleted);
 end;
 
 { private TMain.OnSearchError
@@ -960,40 +861,18 @@ begin
   FLang.ShowException(FLang.GetString([LID_REFRESH, LID_IMPOSSIBLE]), AErrorMessage);
 end;
 
-{ private TMain.OnTaskItemChanged
+{ private TMain.OnTaskCounterUpdate
 
   Event method that is called when item status has been changed. }
 
-procedure TMain.OnTaskItemChanged(Sender: TObject; AItemChange: TItemChange);
+procedure TMain.OnTaskCounterUpdate(Sender: TObject);
 begin
   // Refresh counter label
-  lwTasks.Columns[1].Caption := FLang.Format(LID_TASKS_COUNTER, [FTasks.EnabledItemsCount,
-    FTasks.Count]);
-
-  // Change button states
-  case AItemChange of
-    icEnabled:
-      begin
-        bEnableTaskItem.Enabled := False;
-        bDisableTaskitem.Enabled := True;
-        pmChangeStatus.Caption := bDisableTaskitem.Caption;
-      end;
-
-    icDisabled:
-      begin
-        bEnableTaskItem.Enabled := True;
-        bDisableTaskitem.Enabled := False;
-        pmChangeStatus.Caption := bEnableTaskItem.Caption;
-      end;
-
-    icDeleted:
-      begin
-        bEnableTaskItem.Enabled := False;
-        bDisableTaskitem.Enabled := False;
-        bDeleteTaskItem.Enabled := False;
-        bExportTaskItem.Enabled := False;
-      end;
-  end;  //of case
+  if Assigned(FTasks) then
+  begin
+    lwTasks.Columns[1].Caption := FLang.Format(LID_TASKS_COUNTER, [FTasks.EnabledItemsCount,
+      FTasks.Count]);
+  end;  //of begin
 end;
 
 { private TMain.OnTaskSearchEnd
@@ -1027,11 +906,14 @@ begin
     end;  //of begin
   end;  //of for
 
-  // Update some VCL
   mmImport.Enabled := True;
   mmLang.Enabled := True;
   cbTaskExpert.Enabled := True;
   lwTasks.Cursor := crDefault;
+  bEnableTaskItem.Enabled := False;
+  bDisableTaskitem.Enabled := False;
+  bDeleteTaskItem.Enabled := False;
+  bExportTaskItem.Enabled := False;
 
   // Hide progress bar
   if cbTaskExpert.Checked then
@@ -1042,9 +924,6 @@ begin
 
   // Sort!
   lwTasks.AlphaSort();
-
-  // Refresh counter
-  OnTaskItemChanged(Sender, icDeleted);
 end;
 
 { private TMain.OnTaskSearchStart
@@ -1464,6 +1343,40 @@ begin
       // Successfully deleted?
       if RootList.DeleteItem() then
       begin
+        case PageControl.ActivePageIndex of
+          0:
+            begin
+              bEnableStartupItem.Enabled := False;
+              bDisableStartupItem.Enabled := False;
+              bDeleteStartupItem.Enabled := False;
+              bExportStartupItem.Enabled := False;
+            end;
+
+          1:
+            begin
+              bEnableContextItem.Enabled := False;
+              bDisableContextItem.Enabled := False;
+              bDeleteContextItem.Enabled := False;
+              bExportContextItem.Enabled := False;
+            end;
+
+          2:
+            begin
+              bEnableServiceItem.Enabled := False;
+              bDisableServiceItem.Enabled := False;
+              bDeleteServiceItem.Enabled := False;
+              bExportServiceItem.Enabled := False;
+            end;
+
+          3:
+            begin
+              bEnableTaskItem.Enabled := False;
+              bDisableTaskitem.Enabled := False;
+              bDeleteTaskItem.Enabled := False;
+              bExportTaskItem.Enabled := False;
+            end;
+        end;  //of case
+
         // Delete item from TListView
         ListView.DeleteSelected();
         ListView.ItemFocused := nil;
@@ -1515,6 +1428,44 @@ begin
       raise EInvalidItem.Create('No item selected!');
 
     RootList.DisableItem();
+
+    case PageControl.ActivePageIndex of
+      0:
+        begin
+          bEnableStartupItem.Enabled := True;
+          bDisableStartupItem.Enabled := False;
+          pmChangeStatus.Caption := bEnableStartupItem.Caption;
+
+          // Append deactivation timestamp if necassary
+          if (mmDate.Enabled and mmDate.Checked and (FStartup.Selected.Time <> 0)) then
+            lwStartup.ItemFocused.SubItems[3] := DateTimeToStr(FStartup.Selected.Time);
+        end;
+
+      1:
+        begin
+          bEnableContextItem.Enabled := True;
+          bDisableContextItem.Enabled := False;
+          pmChangeStatus.Caption := bEnableContextItem.Caption;
+        end;
+
+      2:
+        begin
+          bEnableServiceItem.Enabled := True;
+          bDisableServiceItem.Enabled := False;
+          pmChangeStatus.Caption := bEnableServiceItem.Caption;
+
+          // Append deactivation timestamp if necassary
+          if (mmDate.Enabled and mmDate.Checked and (FService.Selected.Time <> 0)) then
+            lwService.ItemFocused.SubItems[3] := DateTimeToStr(FService.Selected.Time);
+        end;
+
+      3:
+        begin
+          bEnableTaskItem.Enabled := True;
+          bDisableTaskitem.Enabled := False;
+          pmChangeStatus.Caption := bEnableTaskItem.Caption;
+        end;
+    end;  //of case
 
     // Change item visual status
     ListView.ItemFocused.Caption := RootList.Selected.GetStatusText(FLang);
@@ -1569,6 +1520,44 @@ begin
       raise EInvalidItem.Create('No item selected!');
 
     RootList.EnableItem();
+
+    case PageControl.ActivePageIndex of
+      0:
+        begin
+          bEnableStartupItem.Enabled := False;
+          bDisableStartupItem.Enabled := True;
+          pmChangeStatus.Caption := bDisableStartupItem.Caption;
+
+          // Delete deactivation timestamp if necassary
+          if (mmDate.Enabled and mmDate.Checked) then
+            lwStartup.ItemFocused.SubItems[3] := '';
+        end;
+
+      1:
+        begin
+          bEnableContextItem.Enabled := False;
+          bDisableContextItem.Enabled := True;
+          pmChangeStatus.Caption := bDisableContextItem.Caption;
+        end;
+
+      2:
+        begin
+          bEnableServiceItem.Enabled := False;
+          bDisableServiceItem.Enabled := True;
+          pmChangeStatus.Caption := bDisableServiceItem.Caption;
+
+          // Delete deactivation timestamp if necassary
+          if (mmDate.Enabled and mmDate.Checked) then
+            lwService.ItemFocused.SubItems[3] := '';
+        end;
+
+      3:
+        begin
+          bEnableTaskItem.Enabled := False;
+          bDisableTaskitem.Enabled := True;
+          pmChangeStatus.Caption := bDisableTaskitem.Caption;
+        end;
+    end;  //of case
 
     // Change item visual status
     ListView.ItemFocused.Caption := RootList.Selected.GetStatusText(FLang);
@@ -2266,6 +2255,7 @@ end;
 procedure TMain.pmEditClick(Sender: TObject);
 var
   Path, EnteredPath: string;
+  Icon: TIcon;
 
 begin
   try
@@ -2281,6 +2271,20 @@ begin
 
     // Try to change the file path
     GetSelectedList().ChangeItemFilePath(EnteredPath);
+
+    // Update icon
+    if (PageControl.ActivePageIndex = 0) then
+    begin
+      Icon := TIcon.Create;
+
+      try
+        Icon.Handle := FStartup.Selected.Icon;
+          lwStartup.ItemFocused.ImageIndex := IconList.AddIcon(Icon);
+
+      finally
+        FreeAndNil(Icon);
+      end;  //of try
+    end;  //of begin
 
     // Update file path in TListView
     if (PageControl.ActivePageIndex <> 1) then
