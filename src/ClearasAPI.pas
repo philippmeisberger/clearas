@@ -3233,7 +3233,7 @@ begin
           Dec(FEnabledItemsCount);
 
         // Update erasable count
-        if Item.Erasable then
+        if (Item.Erasable and (FErasableItemsCount > 0)) then
           Dec(FErasableItemsCount);
 
         FItem := nil;
