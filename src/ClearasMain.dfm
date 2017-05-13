@@ -78,6 +78,7 @@ object Main: TMain
         Caption = 'Windows'
       end
       object lwStartup: TListView
+        Tag = -1
         Left = 21
         Top = 56
         Width = 396
@@ -287,6 +288,7 @@ object Main: TMain
         OnClick = bEnableItemClick
       end
       object lwContext: TListView
+        Tag = -1
         Left = 21
         Top = 56
         Width = 396
@@ -419,6 +421,7 @@ object Main: TMain
         Visible = False
       end
       object lwService: TListView
+        Tag = -1
         Left = 21
         Top = 56
         Width = 396
@@ -676,6 +679,7 @@ object Main: TMain
         OnRightButtonClick = eSearchRightButtonClick
       end
       object lwTasks: TListView
+        Tag = -1
         Left = 21
         Top = 56
         Width = 396

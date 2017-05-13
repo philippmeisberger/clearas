@@ -4,8 +4,10 @@ Ein Open-Source Projekt von PM Code Works
 Changelog
 =========
 
-Version 4.4  [??.??.17]
+Version 5.0  [??.??.17]
 
+- Gefundene Einträge werden asynchron den Listen hinzugefügt
+  - Bearbeitung während des Suchens möglich
 - Automatische Suche nach ungültigen Einträgen hinzugefügt
   - "Ungültige Einträge löschen" hinzugefügt
   - Für ungültige Autostarteinträge wird kein Symbol mehr angezeigt
