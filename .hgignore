@@ -1,10 +1,9 @@
 syntax: glob
-BACKUP/**
+BACKUP
 __history
 **.dcu
 **.exe
 **.zip
-**.stat
 **.rsm
 **.otares
 **.identcache
