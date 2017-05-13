@@ -2290,6 +2290,8 @@ begin
     if (PageControl.ActivePageIndex <> 1) then
       GetSelectedListView().ItemFocused.SubItems[1] := EnteredPath;
 
+    // TODO: Update caption or name depending on mmShowCaptions.Checked
+
   except
     on E: EInvalidItem do
     begin

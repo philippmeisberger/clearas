@@ -3511,6 +3511,9 @@ begin
     Reg.WriteString(ItemName, ANewFileName);
     inherited ChangeFilePath(ANewFileName);
 
+    // Update caption
+    FCaption := GetFileDescription(FileNameOnly);
+
   finally
     Reg.CloseKey();
     Reg.Free;
@@ -3955,6 +3958,9 @@ begin
   FLnkFile.Arguments := ExtractArguments(ANewFileName).DeQuotedString('"');
   FFileName := ANewFileName;
   FErasable := not FileExists();
+
+  // Update caption
+  FCaption := GetFileDescription(FileNameOnly);
 
   // Rewrite backup prior to Windows 7
   if not FEnabled then
