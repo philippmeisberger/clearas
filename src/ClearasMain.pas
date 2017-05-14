@@ -63,8 +63,6 @@ type
     bEnableContextItem: TButton;
     lwContext: TListView;
     lContext: TLabel;
-    lVersion2: TLabel;
-    lVersion1: TLabel;
     pbContextProgress: TProgressBar;
     cbContextExpert: TCheckBox;
     lWindows2: TLabel;
@@ -87,7 +85,6 @@ type
     bCloseService: TButton;
     bDisableServiceItem: TButton;
     bEnableServiceItem: TButton;
-    lVersion3: TLabel;
     bEnableStartupItem: TButton;
     cbServiceExpert: TCheckBox;
     cbRunOnce: TCheckBox;
@@ -104,7 +101,6 @@ type
     cbTaskExpert: TCheckBox;
     eTaskSearch: TButtonedEdit;
     lTasks: TLabel;
-    lVersion4: TLabel;
     lWindows4: TLabel;
     lwTasks: TListView;
     pbTaskProgress: TProgressBar;
@@ -230,9 +226,6 @@ const
   VCL event that is called when form is being created. }
 
 procedure TMain.FormCreate(Sender: TObject);
-var
-  FileVersion: TFileVersion;
-
 begin
   // Setup languages
   FLang := TLanguageFile.Create;
@@ -291,15 +284,6 @@ begin
     OnCounterUpdate := OnTaskCounterUpdate;
     OnRefresh := OnTaskSearchEnd;
   end;  //of with
-
-  // Get version information
-  if FileVersion.FromFile(Application.ExeName) then
-  begin
-    lVersion1.Caption := FileVersion.ToString('v%d.%d');
-    lVersion2.Caption := lVersion1.Caption;
-    lVersion3.Caption := lVersion1.Caption;
-    lVersion4.Caption := lVersion1.Caption;
-  end;  //of begin
 end;
 
 { TMain.FormDestroy

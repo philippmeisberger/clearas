@@ -61,15 +61,6 @@ object Main: TMain
         OnMouseEnter = lCopy1MouseEnter
         OnMouseLeave = lCopy1MouseLeave
       end
-      object lVersion1: TLabel
-        Left = 510
-        Top = 4
-        Width = 21
-        Height = 14
-        Alignment = taRightJustify
-        Anchors = [akTop, akRight]
-        Caption = 'v4.4'
-      end
       object lWindows: TLabel
         Left = 21
         Top = 4
@@ -191,15 +182,6 @@ object Main: TMain
         Width = 287
         Height = 14
         Caption = 'The following items are included in different context menus.'
-      end
-      object lVersion2: TLabel
-        Left = 510
-        Top = 4
-        Width = 21
-        Height = 14
-        Alignment = taRightJustify
-        Anchors = [akTop, akRight]
-        Caption = 'v4.4'
       end
       object lWindows2: TLabel
         Left = 21
@@ -379,15 +361,6 @@ object Main: TMain
         Height = 14
         Caption = 'The following programs are run at every startup.'
       end
-      object lVersion3: TLabel
-        Left = 510
-        Top = 4
-        Width = 21
-        Height = 14
-        Alignment = taRightJustify
-        Anchors = [akTop, akRight]
-        Caption = 'v4.4'
-      end
       object lCopy3: TLabel
         Left = 223
         Top = 261
@@ -547,15 +520,6 @@ object Main: TMain
         Width = 232
         Height = 14
         Caption = 'The following tasks are executed as scheduled.'
-      end
-      object lVersion4: TLabel
-        Left = 510
-        Top = 4
-        Width = 21
-        Height = 14
-        Alignment = taRightJustify
-        Anchors = [akTop, akRight]
-        Caption = 'v4.4'
       end
       object lWindows4: TLabel
         Left = 21
