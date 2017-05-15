@@ -10,11 +10,19 @@ Version 4.4 [*??.??.17*]
   * Added "Delete invalid items" to "Edit" menu
   * No symbol is displayed for invalid Autostart items
   * Added warning for invalid items after disabling and enabling
+* Startup user items are handled prior to Windows 7 in the same way as from Windows 8
+  * Removed exporting as registry file but instead as .Startup and .CommonStartup
+  * Removed "Delete backups after enabling" menu item
 * Improved "Open in Explorer"
+* Added loading description of ShellEx items
 * Closed potential Handle-Leak
 * Closed memory leak during export
 * Closed memory leak when importing a task
-* Bug fix in 64 bit version: File path of 32 bit context menu entries could not be found
+* Bug fixes:
+  * In 64 bit version: File path of 32 bit context menu entries could not be found
+  * ShellNew items could have empty name
+  * Column "Deactivation time" did not have correct caption after changing language
+* Removed support for Windows 2000 and XP
 * Updater v3.1
   * Removed dependency to "indy" components library
   * Binary up to 1MB smaller
