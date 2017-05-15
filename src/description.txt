@@ -1,5 +1,5 @@
-﻿Clearas ist ein Reinigungs-Programm zum Editieren von Autostart-Programmen, Kontextmenü-Einträgen, Diensten sowie geplanten Aufgaben unter Windows. Es gibt viele Programme auf jedem Rechner, die die Startzeit des Betriebssytems erheblich beeinträchtigen. Abhilfe schafft hier Clearas.
+﻿Clearas is a cleansing program to edit autostart, context menu, service and scheduled task items. There are many programs on each computer, which significantly affect the start time of the operating system. Remedy is provided by Clearas.
 
-Copyright (C) 2011 Philipp Meisberger
+Copyright (C) 2011 Philipp Meisberger <team@pm-codeworks.de>
 
-Dieses Programm kann durch jedermann gemäß den Bestimmungen der Deutschen Freien Software Lizenz genutzt werden. Die Lizenz kann unter http://www.d-fsl.de abgerufen werden.
+This Program may be used by anyone in accordance with the terms of the German Free Software License. The License may be obtained under <http://www.d-fsl.org>.
