@@ -21,6 +21,8 @@ Version 4.4 [*??.??.17*]
 * Bug fixes:
   * In 64 bit version: File path of 32 bit context menu entries could not be found
   * ShellNew items could have empty name
+  * AV when using keyboard shortcuts during a search
+  * Wrong listview was refreshed when switching the tab during a search
   * Column "Deactivation time" did not have correct caption after changing language
 * Removed support for Windows 2000 and XP
 * Updater v3.1
