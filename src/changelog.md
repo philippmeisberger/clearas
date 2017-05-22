@@ -14,6 +14,7 @@ Version 4.4 [*??.??.17*]
   * Removed exporting as registry file but instead as .Startup and .CommonStartup
   * Removed "Delete backups after enabling" menu item
 * Added "Quick-Search" to Autostart tab
+* Added "Execute" to popup menu
 * Improved "Open in Explorer"
 * Added loading description of ShellEx items
 * Closed potential Handle-Leak

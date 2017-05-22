@@ -115,6 +115,7 @@ type
     N11: TMenuItem;
     mmDeleteErasable: TMenuItem;
     eStartupSearch: TButtonedEdit;
+    pmExecute: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -169,6 +170,7 @@ type
     procedure mmShowCaptionsClick(Sender: TObject);
     procedure mmDeleteErasableClick(Sender: TObject);
     procedure PopupMenuPopup(Sender: TObject);
+    procedure pmExecuteClick(Sender: TObject);
   private
     FStartup: TStartupList;
     FContext: TContextMenuList;
@@ -1052,8 +1054,9 @@ begin
     lCopy4.Hint := lCopy1.Hint;
     eTaskSearch.TextHint := eStartupSearch.TextHint;
 
-    // Popup menu labels
+    // Popup menu captions
     pmChangeStatus.Caption := bDisableStartupItem.Caption;
+    pmExecute.Caption := GetString(LID_EXECUTE);
     pmOpenRegedit.Caption := GetString(LID_OPEN_IN_REGEDIT);
     pmOpenExplorer.Caption := GetString(LID_OPEN_IN_EXPLORER);
     pmEdit.Caption := GetString(LID_PATH_EDIT);
@@ -2169,6 +2172,7 @@ begin
         pmDeleteIcon.Visible := False;
         pmChangeIcon.Visible := False;
         pmEdit.Enabled := True;
+        pmExecute.Enabled := not SelectedItem.Erasable;
       end;
 
     1:
@@ -2186,6 +2190,9 @@ begin
         pmChangeIcon.Visible := pmRename.Enabled;
         pmDeleteIcon.Visible := (pmRename.Enabled and (SelectedItem.Icon <> 0));
         pmEdit.Enabled := (SelectedItem.FileName <> '');
+
+        // Context menu items cannot be executed
+        pmExecute.Enabled := False;
       end;
 
     2:
@@ -2196,6 +2203,7 @@ begin
         pmDeleteIcon.Visible := False;
         pmChangeIcon.Visible := False;
         pmEdit.Enabled := (SelectedItem.FileName <> '');
+        pmExecute.Enabled := not SelectedItem.Erasable;
       end;
 
     3:
@@ -2206,6 +2214,9 @@ begin
         pmDeleteIcon.Visible := False;
         pmChangeIcon.Visible := False;
         pmEdit.Enabled := (SelectedItem.FileName <> '');
+
+        // Tasks cannot be executed when they are disabled
+        pmExecute.Enabled := SelectedItem.Enabled;
       end;
   end;  //of case
 end;
@@ -2295,6 +2306,23 @@ begin
 
     on E: Exception do
       FLang.ShowException(FLang.GetString([LID_PATH_EDIT, LID_IMPOSSIBLE]), E.Message);
+  end;  //of try
+end;
+
+procedure TMain.pmExecuteClick(Sender: TObject);
+begin
+  try
+    GetSelectedItem().Execute();
+
+  except
+    on E: EInvalidItem do
+    begin
+      TaskMessageDlg(FLang.GetString([LID_EXECUTE, LID_IMPOSSIBLE]),
+        FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
+    end;
+
+    on E: Exception do
+      FLang.ShowException(FLang.GetString([LID_EXECUTE, LID_IMPOSSIBLE]), E.Message);
   end;  //of try
 end;
 

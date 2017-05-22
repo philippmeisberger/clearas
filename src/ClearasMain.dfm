@@ -698,12 +698,16 @@ object Main: TMain
     OnPopup = PopupMenuPopup
     Left = 336
     object pmChangeStatus: TMenuItem
-      Caption = 'disable'
+      Caption = 'Disable'
       Default = True
       OnClick = pmChangeStatusClick
     end
     object N1: TMenuItem
       Caption = '-'
+    end
+    object pmExecute: TMenuItem
+      Caption = 'Execute'
+      OnClick = pmExecuteClick
     end
     object pmCopyLocation: TMenuItem
       Caption = 'Copy location'

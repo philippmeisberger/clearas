@@ -313,6 +313,11 @@ type
     function Delete(): Boolean; virtual; abstract;
 
     /// <summary>
+    ///   Executes the item.
+    /// </summary>
+    procedure Execute(); virtual;
+
+    /// <summary>
     ///   Exports the item as file.
     /// </summary>
     /// <param name="AFileName">
@@ -1533,6 +1538,14 @@ type
     function Delete(): Boolean; override;
 
     /// <summary>
+    ///   Executes the item.
+    /// </summary>
+    /// <remarks>
+    ///   Not possible for context menu items!
+    /// </remarks>
+    procedure Execute(); override;
+
+    /// <summary>
     ///   Deletes a user defined program association.
     /// </summary>
     /// <returns>
@@ -2188,6 +2201,11 @@ type
     function Delete(): Boolean; override;
 
     /// <summary>
+    ///   Executes the item.
+    /// </summary>
+    procedure Execute(); override;
+
+    /// <summary>
     ///   Exports the item as file.
     /// </summary>
     /// <param name="AFileName">
@@ -2592,6 +2610,11 @@ begin
     DestroyIcon(FIcon);
     FIcon := 0;
   end;  //of begin
+end;
+
+procedure TRootItem.Execute();
+begin
+  ExecuteProgram(FileNameOnly, Arguments);
 end;
 
 function TRootItem.ExtractArguments(const AFileName: string): string;
@@ -4695,6 +4718,11 @@ begin
   SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, nil, nil);
 end;
 
+procedure TContextMenuListItem.Execute();
+begin
+  raise EAbstractError.Create('It is impossible to execute a '+ ToString() +' item!');
+end;
+
 function TContextMenuListItem.UserChoiceExists(const AFileExtension: string): Boolean;
 var
   UserChoice: string;
@@ -6339,6 +6367,14 @@ begin
   OleCheck(FTaskService.GetFolder(PChar(Location), TaskFolder));
   OleCheck(TaskFolder.DeleteTask(PChar(Name), 0));
   Result := True;
+end;
+
+procedure TTaskListItem.Execute();
+var
+  RunningTask: IRunningTask;
+
+begin
+  OleCheck(FTask.Run(VT_NULL, RunningTask));
 end;
 
 procedure TTaskListItem.ExportItem(const AFileName: string);

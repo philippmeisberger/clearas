@@ -14,7 +14,6 @@ Ideas:
 - Add items to listview async
   - Allow editing at same time
 - Visual grouping
-- Add "Execute" to popup menu
 - Context menu: support cascading shell submenus (ExtendedSubCommandsKey)
 - Receive notifications about registry changes
 - New feature: shell bags cleaning
