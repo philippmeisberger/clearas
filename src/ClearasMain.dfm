@@ -714,9 +714,9 @@ object Main: TMain
       ShortCut = 16451
       OnClick = pmCopyLocationClick
     end
-    object pmEdit: TMenuItem
+    object pmEditPath: TMenuItem
       Caption = 'Edit path'
-      OnClick = pmEditClick
+      OnClick = pmEditPathClick
     end
     object pmExport: TMenuItem
       Caption = 'Export'

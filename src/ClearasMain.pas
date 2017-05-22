@@ -71,7 +71,7 @@ type
     N9: TMenuItem;
     mmInstallCertificate: TMenuItem;
     N10: TMenuItem;
-    pmEdit: TMenuItem;
+    pmEditPath: TMenuItem;
     mmReport: TMenuItem;
     pmOpenRegedit: TMenuItem;
     pmOpenExplorer: TMenuItem;
@@ -154,7 +154,7 @@ type
     procedure PageControlChange(Sender: TObject);
     procedure pmChangeStatusClick(Sender: TObject);
     procedure pmCopyLocationClick(Sender: TObject);
-    procedure pmEditClick(Sender: TObject);
+    procedure pmEditPathClick(Sender: TObject);
     procedure pmOpenRegeditClick(Sender: TObject);
     procedure pmOpenExplorerClick(Sender: TObject);
     procedure lCopy1MouseLeave(Sender: TObject);
@@ -1059,7 +1059,7 @@ begin
     pmExecute.Caption := GetString(LID_EXECUTE);
     pmOpenRegedit.Caption := GetString(LID_OPEN_IN_REGEDIT);
     pmOpenExplorer.Caption := GetString(LID_OPEN_IN_EXPLORER);
-    pmEdit.Caption := GetString(LID_PATH_EDIT);
+    pmEditPath.Caption := GetString(LID_PATH_EDIT);
     pmExport.Caption := bExportStartupItem.Caption;
     pmDelete.Caption := bDeleteStartupItem.Caption;
     pmRename.Caption := GetString(LID_RENAME);
@@ -2171,7 +2171,7 @@ begin
         pmRename.Enabled := True;
         pmDeleteIcon.Visible := False;
         pmChangeIcon.Visible := False;
-        pmEdit.Enabled := True;
+        pmEditPath.Enabled := True;
         pmExecute.Enabled := not SelectedItem.Erasable;
       end;
 
@@ -2189,7 +2189,7 @@ begin
         // Only icon of Shell contextmenu items can be changed
         pmChangeIcon.Visible := pmRename.Enabled;
         pmDeleteIcon.Visible := (pmRename.Enabled and (SelectedItem.Icon <> 0));
-        pmEdit.Enabled := (SelectedItem.FileName <> '');
+        pmEditPath.Enabled := (SelectedItem.FileName <> '');
 
         // Context menu items cannot be executed
         pmExecute.Enabled := False;
@@ -2202,7 +2202,7 @@ begin
         pmRename.Enabled := True;
         pmDeleteIcon.Visible := False;
         pmChangeIcon.Visible := False;
-        pmEdit.Enabled := (SelectedItem.FileName <> '');
+        pmEditPath.Enabled := (SelectedItem.FileName <> '');
         pmExecute.Enabled := not SelectedItem.Erasable;
       end;
 
@@ -2213,7 +2213,7 @@ begin
         pmRename.Enabled := True;
         pmDeleteIcon.Visible := False;
         pmChangeIcon.Visible := False;
-        pmEdit.Enabled := (SelectedItem.FileName <> '');
+        pmEditPath.Enabled := (SelectedItem.FileName <> '');
 
         // Tasks cannot be executed when they are disabled
         pmExecute.Enabled := SelectedItem.Enabled;
@@ -2251,7 +2251,7 @@ end;
 
   Popup menu entry to edit the path of a program. }
 
-procedure TMain.pmEditClick(Sender: TObject);
+procedure TMain.pmEditPathClick(Sender: TObject);
 var
   Path, EnteredPath: string;
   Icon: TIcon;
@@ -2278,7 +2278,7 @@ begin
 
       try
         Icon.Handle := FStartup.Selected.Icon;
-          lwStartup.ItemFocused.ImageIndex := IconList.AddIcon(Icon);
+        lwStartup.ItemFocused.ImageIndex := IconList.AddIcon(Icon);
 
       finally
         FreeAndNil(Icon);
