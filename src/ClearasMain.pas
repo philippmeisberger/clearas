@@ -114,6 +114,7 @@ type
     lCopy4: TLabel;
     N11: TMenuItem;
     mmDeleteErasable: TMenuItem;
+    eStartupSearch: TButtonedEdit;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -703,32 +704,34 @@ begin
   try
     // Print all information about startup entires
     for i := 0 to FStartup.Count - 1 do
-      with lwStartup.Items.Add do
-      begin
-        Caption := FStartup[i].GetStatusText(FLang);
+    begin
+      if ((FStartup[i].Caption <> '') and mmShowCaptions.Checked) then
+        Text := FStartup[i].Caption
+      else
+        Text := FStartup[i].Name;
 
-        if ((FStartup[i].Caption <> '') and mmShowCaptions.Checked) then
-          Text := FStartup[i].Caption
-        else
-          Text := FStartup[i].Name;
-
-        SubItems.AddObject(Text, FStartup[i]);
-        SubItems.Append(FStartup[i].FileName);
-        SubItems.Append(FStartup[i].ToString());
-
-        // Show deactivation timestamp?
-        if mmDate.Checked then
+      if ((eStartupSearch.Text = '') or (Text.ToLower().Contains(LowerCase(eStartupSearch.Text)))) then
+        with lwStartup.Items.Add do
         begin
-          if (FStartup[i].Time <> 0) then
-            SubItems.Append(DateTimeToStr(FStartup[i].Time))
-          else
-            SubItems.Append('');
-        end;  //of begin
+          Caption := FStartup[i].GetStatusText(FLang);
+          SubItems.AddObject(Text, FStartup[i]);
+          SubItems.Append(FStartup[i].FileName);
+          SubItems.Append(FStartup[i].ToString());
 
-        // Get icon of program
-        Icon.Handle := FStartup[i].Icon;
-        ImageIndex := IconList.AddIcon(Icon);
-      end;  //of with
+          // Show deactivation timestamp?
+          if mmDate.Checked then
+          begin
+            if (FStartup[i].Time <> 0) then
+              SubItems.Append(DateTimeToStr(FStartup[i].Time))
+            else
+              SubItems.Append('');
+          end;  //of begin
+
+          // Get icon of program
+          Icon.Handle := FStartup[i].Icon;
+          ImageIndex := IconList.AddIcon(Icon);
+        end;  //of with
+    end;  //of for
 
   finally
     Icon.Free;
@@ -815,7 +818,7 @@ begin
         if (mmDate.Checked and (FService[i].Time <> 0)) then
           SubItems.Append(DateTimeToStr(FService[i].Time));
       end;  //of with
-    end;  //of for
+  end;  //of for
 
   mmLang.Enabled := True;
   cbServiceExpert.Enabled := True;
@@ -980,7 +983,7 @@ begin
     bDeleteStartupItem.Caption := GetString(LID_DELETE);
     bCloseStartup.Caption := mmClose.Caption;
 
-    // "Startup" tab TListView labels
+    // "Startup" column captions
     lStartup.Caption := GetString(LID_STARTUP_HEADLINE);
     lwStartup.Columns[0].Caption := GetString(LID_ENABLED);
     lwStartup.Columns[2].Caption := StripHotkey(mmFile.Caption);
@@ -991,6 +994,7 @@ begin
       lwStartup.Columns[4].Caption := GetString(LID_DATE_OF_DEACTIVATION);
 
     lCopy1.Hint := GetString(LID_TO_WEBSITE);
+    eStartupSearch.TextHint := GetString(LID_SEARCH);
 
     // "Context menu" tab TButton labels
     tsContext.Caption := GetString(LID_CONTEXT_MENU);
@@ -1000,9 +1004,9 @@ begin
     bDeleteContextItem.Caption := bDeleteStartupItem.Caption;
     bCloseContext.Caption := bCloseStartup.Caption;
     cbContextExpert.Caption := GetString(LID_EXPERT_MODE);
-    eContextSearch.TextHint := GetString(LID_SEARCH);
+    eContextSearch.TextHint := eStartupSearch.TextHint;
 
-    // "Context menu" tab TListView labels
+    // "Context menu" column captions
     lContext.Caption := GetString(LID_CONTEXT_MENU_HEADLINE);
     lwContext.Columns[0].Caption := lwStartup.Columns[0].Caption;
     lwContext.Columns[2].Caption := GetString(LID_LOCATION);
@@ -1019,7 +1023,7 @@ begin
     bCloseService.Caption := bCloseStartup.Caption;
     cbServiceExpert.Caption := cbContextExpert.Caption;
 
-    // "Service" tab TListView labels
+    // "Service" column captions
     lwService.Columns[0].Caption := lwStartup.Columns[0].Caption;
     lwService.Columns[2].Caption := lwStartup.Columns[2].Caption;
     lwService.Columns[3].Caption := GetString(LID_SERVICE_START);
@@ -1029,7 +1033,7 @@ begin
       lwService.Columns[4].Caption := GetString(LID_DATE_OF_DEACTIVATION);
 
     lCopy3.Hint := lCopy1.Hint;
-    eServiceSearch.TextHint := eContextSearch.TextHint;
+    eServiceSearch.TextHint := eStartupSearch.TextHint;
 
     // "Tasks" tab TButton labels
     tsTasks.Caption := GetString(LID_TASKS);
@@ -1041,12 +1045,12 @@ begin
     bCloseTasks.Caption := bCloseStartup.Caption;
     cbTaskExpert.Caption := cbContextExpert.Caption;
 
-    // "Tasks" tab TListView labels
+    // "Tasks" column captions
     lwTasks.Columns[0].Caption := lwStartup.Columns[0].Caption;
     lwTasks.Columns[2].Caption := lwStartup.Columns[2].Caption;
     lwTasks.Columns[3].Caption := lwContext.Columns[2].Caption;
     lCopy4.Hint := lCopy1.Hint;
-    eTaskSearch.TextHint := eContextSearch.TextHint;
+    eTaskSearch.TextHint := eStartupSearch.TextHint;
 
     // Popup menu labels
     pmChangeStatus.Caption := bDisableStartupItem.Caption;

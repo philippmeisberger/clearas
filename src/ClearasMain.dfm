@@ -169,6 +169,23 @@ object Main: TMain
         TabOrder = 6
         OnClick = mmRefreshClick
       end
+      object eStartupSearch: TButtonedEdit
+        Left = 21
+        Top = 255
+        Width = 148
+        Height = 22
+        Anchors = [akLeft, akBottom]
+        Images = QuickSearchIconList
+        RightButton.DisabledImageIndex = 0
+        RightButton.HotImageIndex = 0
+        RightButton.ImageIndex = 0
+        RightButton.PressedImageIndex = 0
+        RightButton.Visible = True
+        TabOrder = 7
+        TextHint = 'Search ...'
+        OnChange = eSearchChange
+        OnRightButtonClick = eSearchRightButtonClick
+      end
     end
     object tsContext: TTabSheet
       Caption = 'Context menu'
