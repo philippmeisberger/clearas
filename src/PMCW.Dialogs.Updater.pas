@@ -354,13 +354,13 @@ type
 {$ENDIF}
 
 /// <summary>
-///   Opens a given URL in the default web browser.
+///   Opens a given HTTP URL in the default web browser.
 /// </summary>
 /// <param name="AUrl">
-///    The URL that should be opened.
+///    The HTTP URL that should be opened.
 /// </param>
 /// <returns>
-///   <c>True</c> if the URL was successfully opened or <c>False</c> otherwise.
+///   <c>True</c> if the HTTP URL was successfully opened or <c>False</c> otherwise.
 /// </returns>
 function OpenUrl(const AUrl: string): Boolean;
 
@@ -369,38 +369,33 @@ implementation
 function OpenUrl(const AUrl: string): Boolean;
 {$IFNDEF MSWINDOWS}
 var
-  Process : TProcess;
-{$ENDIF}
+  Process: TProcess;
+
 begin
-  Result := False;
-{$IFNDEF MSWINDOWS}
-  if (not AnsiStartsText('http://', AUrl) or not AnsiStartsText('https://', AUrl)) then
-    Exit;
+  if (not AnsiStartsText('http://', AUrl) and not AnsiStartsText('https://', AUrl)) then
+    Exit(False);
 
-  if FileExists('/usr/bin/xdg-open') then
-    try
-      Process := TProcess.Create(nil);
+  Process := TProcess.Create(nil);
 
-      try
-        Process.Executable := '/usr/bin/xdg-open';
-        Process.Parameters.Append(AUrl);
-        Process.Execute();
-        Result := True;
+  try
+    Process.Executable := '/usr/bin/xdg-open';
+    Process.Parameters.Append(AUrl);
+    Process.Options := Process.Options + [poWaitOnExit];
+    Process.Execute();
+    Result := (Process.ExitStatus = 0);
 
-      finally
-        Process.Free;
-      end;  //of try
-
-    except
-      Result := False;
-    end  //of try
+  finally
+    Process.Free;
+  end;  //of try
+end;
+{$ELSE}
+begin
+  if (AUrl.StartsWith('http://') or AUrl.StartsWith('https://')) then
+    Result := ExecuteProgram(AUrl)
   else
     Result := False;
-{$ELSE}
-  if (AUrl.StartsWith('http://') or AUrl.StartsWith('https://')) then
-    Result := ExecuteProgram(AUrl);
-{$ENDIF}
 end;
+{$ENDIF}
 
 {$IFDEF MSWINDOWS}
 { THttpThread }
