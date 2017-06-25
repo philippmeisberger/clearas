@@ -940,23 +940,26 @@ var
   Text: string;
 
 begin
-  // Print all information about task items
-  for i := 0 to FTasks.Count - 1 do
+  if (AAction = cnAdded) then
   begin
-    Text := FTasks[i].Name;
-
-    // Filter items
-    if ((eTaskSearch.Text = '') or (Text.ToLower().Contains(LowerCase(eTaskSearch.Text)))) then
+    // Print all information about task items
+    for i := 0 to FTasks.Count - 1 do
     begin
-      with lwTasks.Items.Add do
+      Text := FTasks[i].Name;
+
+      // Filter items
+      if ((eTaskSearch.Text = '') or (Text.ToLower().Contains(LowerCase(eTaskSearch.Text)))) then
       begin
-        Caption := FTasks[i].GetStatusText(FLang);
-        SubItems.AddObject(Text, FTasks[i]);
-        SubItems.Append(FTasks[i].FileName);
-        SubItems.Append(FTasks[i].Location);
-      end; //of with
-    end;  //of begin
-  end;  //of for
+        with lwTasks.Items.Add do
+        begin
+          Caption := FTasks[i].GetStatusText(FLang);
+          SubItems.AddObject(Text, FTasks[i]);
+          SubItems.Append(FTasks[i].FileName);
+          SubItems.Append(FTasks[i].Location);
+        end; //of with
+      end;  //of begin
+    end;  //of for
+  end;  //of begin
 end;
 
 procedure TMain.OnTaskSearchEnd(Sender: TObject);
