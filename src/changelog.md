@@ -26,6 +26,7 @@ Version 4.4 [*??.??.17*]
   * AV when using keyboard shortcuts during a search
   * Wrong listview was refreshed when switching the tab during a search
   * Column "Deactivation time" did not have correct caption after changing language
+  * Caption was not refreshed after editing the path
 * Removed support for Windows 2000 and XP
 * Updater v3.1
   * Removed dependency to "indy" components library
