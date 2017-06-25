@@ -17,7 +17,7 @@ uses
   Vcl.FileCtrl,
 {$WARN UNIT_PLATFORM ON}
   Vcl.StdCtrls, Vcl.ComCtrls, System.UITypes, Vcl.Consts, System.Win.Registry,
-  System.Net.HttpClient, System.NetConsts, System.Net.URLClient, PMCW.FileSystem,
+  System.Net.HttpClient, System.NetConsts, System.Net.URLClient, PMCW.SysUtils,
   PMCW.LanguageFile, PMCW.CA,
 {$ELSE}
   Process, StrUtils,

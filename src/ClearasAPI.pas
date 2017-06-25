@@ -17,7 +17,7 @@ uses
   Winapi.ShlObj, Winapi.ActiveX, System.Win.ComObj, System.Zip, Vcl.Graphics,
   Winapi.ShellAPI, System.SyncObjs, System.Generics.Collections, System.IOUtils,
   Winapi.KnownFolders, System.Variants, Winapi.Taskschd, PMCW.Registry,
-  PMCW.LanguageFile, PMCW.IniFileParser, PMCW.FileSystem;
+  PMCW.LanguageFile, PMCW.IniFileParser, PMCW.SysUtils;
 
 type
   /// <summary>

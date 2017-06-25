@@ -1,12 +1,12 @@
 { *********************************************************************** }
 {                                                                         }
-{ PM Code Works Filesystem Unit v1.0                                      }
+{ PM Code Works System Utilities Unit v1.0                                }
 {                                                                         }
 { Copyright (c) 2011-2017 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
 { *********************************************************************** }
 
-unit PMCW.FileSystem;
+unit PMCW.SysUtils;
 
 {$IFDEF FPC}{$mode delphi}{$ENDIF}
 
@@ -242,7 +242,7 @@ var
   ProcessExitCode: Cardinal;
 
 begin
-  Info := Default(TShellExecuteInfo);
+  ZeroMemory(@Info, SizeOf(TShellExecuteInfo));
 
   with Info do
   begin

@@ -17,7 +17,7 @@ uses
   Winapi.Windows,
 {$ENDIF}
   SysUtils, Classes, Controls, Forms, StdCtrls, ExtCtrls, ComCtrls, Dialogs,
-  PMCW.FileSystem;
+  PMCW.SysUtils;
 
 const
   /// <summary>
