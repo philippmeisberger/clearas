@@ -199,7 +199,7 @@ type
     procedure OnTaskSearchStart(Sender: TObject);
     procedure OnTaskSearchEnd(Sender: TObject);
     procedure OnTaskCounterUpdate(Sender: TObject);
-    function ShowExportItemDialog(): Boolean;
+    function ShowExportItemDialog(AItem: TRootItem): Boolean;
     procedure ShowColumnDate(AListView: TListView; AShow: Boolean = True);
     // TODO: Remove recycle bin context menu feature
     function UpdateContextPath(): Boolean;
@@ -388,14 +388,18 @@ end;
 
 function TMain.GetSelectedItem(): TRootItem;
 var
-  List: TRootList<TRootItem>;
+  SelectedListView: TListView;
 
 begin
-  List := GetSelectedList();
-  Result := List.Selected;
+  SelectedListView := GetSelectedListView();
+
+  if not Assigned(SelectedListView.ItemFocused) then
+    raise EInvalidItem.Create('No item selected!');
+
+  Result := TRootItem(SelectedListView.ItemFocused.SubItems.Objects[0]);
 
   if not Assigned(Result) then
-    raise EInvalidItem.Create('No item selected!');
+    raise EInvalidItem.Create('No object attached!');
 end;
 
 { private TMain.GetSelectedList
@@ -1108,10 +1112,11 @@ end;
 
   Shows a file export dialog. }
 
-function TMain.ShowExportItemDialog(): Boolean;
+function TMain.ShowExportItemDialog(AItem: TRootItem): Boolean;
 var
   FileName, Filter, DefaultExt: string;
   SelectedList: TRootList<TRootItem>;
+  ContextMenuItem: TContextMenuListItem;
 
 begin
   Result := False;
@@ -1119,33 +1124,31 @@ begin
   try
     SelectedList := GetSelectedList();
 
-    // No item selected?
-    if not Assigned(SelectedList.Selected) then
-      raise EInvalidItem.Create('No item selected!');
-
     // Set a default file name
     if (PageControl.ActivePageIndex = 1) then
     begin
-      if (FContext.Selected.LocationRoot = '*') then
-        FileName := FContext.Selected.Name
+      ContextMenuItem := (AItem as TContextMenuListItem);
+
+      if (ContextMenuItem.LocationRoot = '*') then
+        FileName := ContextMenuItem.Name
       else
-        if (FContext.Selected is TContextMenuShellNewItem) then
-          FileName := FContext.Selected.Name +'_'+ TContextMenuShellNewItem.CanonicalName
+        if (AItem is TContextMenuShellNewItem) then
+          FileName := ContextMenuItem.Name +'_'+ TContextMenuShellNewItem.CanonicalName
         else
-          FileName := FContext.Selected.Name +'_'+ FContext.Selected.LocationRoot;
+          FileName := ContextMenuItem.Name +'_'+ ContextMenuItem.LocationRoot;
     end  //of begin
     else
-      FileName := SelectedList.Selected.Name;
+      FileName := AItem.Name;
 
-    Filter := SelectedList.Selected.GetExportFilter(FLang);
-    DefaultExt := SelectedList.Selected.GetBackupExtension();
+    Filter := AItem.GetExportFilter(FLang);
+    DefaultExt := AItem.GetBackupExtension();
     FileName := FileName + DefaultExt;
 
     // Show save dialog
     if PromptForFileName(FileName, Filter, DefaultExt, StripHotkey(pmExport.Caption),
       '', True) then
     begin
-      SelectedList.ExportItem(FileName);
+      SelectedList.ExportItem(AItem, FileName);
       Result := True;
     end;  //of begin
 
@@ -1168,38 +1171,39 @@ end;
 procedure TMain.mmDeleteErasableClick(Sender: TObject);
 var
   i, Answer, ItemsDeleted: Integer;
-  RootList: TRootList<TRootItem>;
-  ListView: TListView;
+  SelectedList: TRootList<TRootItem>;
+  SelectedItem: TRootItem;
+  SelectedListView: TListView;
 
 begin
   try
-    RootList := GetSelectedList();
-    ListView := GetSelectedListView();
+    SelectedList := GetSelectedList();
+    SelectedListView := GetSelectedListView();
 
     // No erasable items?
-    if (RootList.ErasableItemsCount = 0) then
+    if (SelectedList.ErasableItemsCount = 0) then
     begin
       MessageDlg(FLang[LID_DELETE_ERASABLE_NO_ITEMS], mtInformation, [mbOK], 0);
       Exit;
     end;  //of begin
 
-    if RootList.IsLocked() then
+    if SelectedList.IsLocked() then
       raise EListBlocked.Create('Another operation is pending. Please wait!');
 
     ItemsDeleted := 0;
 
     // TListView.Items.Count is decreased when item is deleted which leads
     // to an AV if erasable items are not consecutive: Start at the end to avoid this
-    for i := ListView.Items.Count - 1 downto 0 do
+    for i := SelectedListView.Items.Count - 1 downto 0 do
     begin
-      RootList.Selected := TRootItem(ListView.Items[i].SubItems.Objects[0]);
+      SelectedItem := TRootItem(SelectedListView.Items[i].SubItems.Objects[0]);
 
-      if not RootList.Selected.Erasable then
+      if not SelectedItem.Erasable then
         Continue;
 
       // Confirm deletion of every erasable item
       Answer := TaskMessageDlg(FLang.Format([LID_DELETE_ERASABLE_CONFIRM],
-        [ListView.Items[i].SubItems[0]]), FLang.GetString([LID_ITEM_DELETE_CONFIRM1,
+        [SelectedListView.Items[i].SubItems[0]]), FLang.GetString([LID_ITEM_DELETE_CONFIRM1,
         LID_ITEM_DELETE_CONFIRM2]), mtConfirmation, mbYesNoCancel, 0);
 
       case Answer of
@@ -1216,18 +1220,18 @@ begin
               mbYesNo, 0, mbYes) = idYes) then
             begin
               // User clicked cancel?
-              if not ShowExportItemDialog() then
+              if not ShowExportItemDialog(SelectedItem) then
                 Continue;
             end;  //of begin
 
-            if RootList.DeleteItem() then
+            if SelectedList.DeleteItem(SelectedItem) then
             begin
-              ListView.Items[i].Delete();
+              SelectedListView.Items[i].Delete();
               Inc(ItemsDeleted);
             end;  //of begin
 
             // All eraseble items deleted?
-            if (RootList.ErasableItemsCount = 0) then
+            if (SelectedList.ErasableItemsCount = 0) then
               Break;
           end;
       end;  //of case
@@ -1295,18 +1299,16 @@ end;
 
 procedure TMain.bDeleteItemClick(Sender: TObject);
 var
-  ListView: TListView;
-  RootList: TRootList<TRootItem>;
+  SelectedListView: TListView;
+  SelectedList: TRootList<TRootItem>;
+  SelectedItem: TRootItem;
   ConfirmMessage: TLanguageId;
 
 begin
   try
-    ListView := GetSelectedListView();
-    RootList := GetSelectedList();
-
-    // Nothing selected?
-    if (not Assigned(ListView.ItemFocused) or not Assigned(RootList.Selected)) then
-      raise EInvalidItem.Create('No item selected!');
+    SelectedListView := GetSelectedListView();
+    SelectedList := GetSelectedList();
+    SelectedItem := GetSelectedItem();
 
     // Different message per tab
     case PageControl.ActivePageIndex of
@@ -1318,7 +1320,7 @@ begin
     end;  //of case
 
     // Confirm deletion of item
-    if (TaskMessageDlg(FLang.Format([ConfirmMessage], [ListView.ItemFocused.SubItems[0]]),
+    if (TaskMessageDlg(FLang.Format([ConfirmMessage], [SelectedListView.ItemFocused.SubItems[0]]),
       FLang.GetString([LID_ITEM_DELETE_CONFIRM1, LID_ITEM_DELETE_CONFIRM2]),
       mtWarning, mbYesNo, 0, mbNo) = idYes) then
     begin
@@ -1327,12 +1329,12 @@ begin
         mbYesNo, 0, mbYes) = idYes) then
       begin
         // User clicked cancel?
-        if not ShowExportItemDialog() then
+        if not ShowExportItemDialog(SelectedItem) then
           Exit;
       end;  //of begin
 
       // Successfully deleted?
-      if RootList.DeleteItem() then
+      if SelectedList.DeleteItem(SelectedItem) then
       begin
         case PageControl.ActivePageIndex of
           0:
@@ -1369,8 +1371,8 @@ begin
         end;  //of case
 
         // Delete item from TListView
-        ListView.DeleteSelected();
-        ListView.ItemFocused := nil;
+        SelectedListView.DeleteSelected();
+        SelectedListView.ItemFocused := nil;
       end  //of begin
       else
         raise Exception.Create('Unknown error!');
@@ -1406,19 +1408,16 @@ end;
 
 procedure TMain.bDisableItemClick(Sender: TObject);
 var
-  ListView: TListView;
-  RootList: TRootList<TRootItem>;
+  SelectedListView: TListView;
+  SelectedList: TRootList<TRootItem>;
+  SelectedItem: TRootItem;
 
 begin
   try
-    ListView := GetSelectedListView();
-    RootList := GetSelectedList();
-
-    // Nothing selected?
-    if not Assigned(ListView.ItemFocused) then
-      raise EInvalidItem.Create('No item selected!');
-
-    RootList.DisableItem();
+    SelectedListView := GetSelectedListView();
+    SelectedList := GetSelectedList();
+    SelectedItem := GetSelectedItem();
+    SelectedList.DisableItem(SelectedItem);
 
     case PageControl.ActivePageIndex of
       0:
@@ -1428,8 +1427,8 @@ begin
           pmChangeStatus.Caption := bEnableStartupItem.Caption;
 
           // Append deactivation timestamp if necassary
-          if (mmDate.Enabled and mmDate.Checked and (FStartup.Selected.Time <> 0)) then
-            lwStartup.ItemFocused.SubItems[3] := DateTimeToStr(FStartup.Selected.Time);
+          if (mmDate.Enabled and mmDate.Checked and ((SelectedItem as TStartupListItem).Time <> 0)) then
+            lwStartup.ItemFocused.SubItems[3] := DateTimeToStr((SelectedItem as TStartupListItem).Time);
         end;
 
       1:
@@ -1446,8 +1445,8 @@ begin
           pmChangeStatus.Caption := bEnableServiceItem.Caption;
 
           // Append deactivation timestamp if necassary
-          if (mmDate.Enabled and mmDate.Checked and (FService.Selected.Time <> 0)) then
-            lwService.ItemFocused.SubItems[3] := DateTimeToStr(FService.Selected.Time);
+          if (mmDate.Enabled and mmDate.Checked and ((SelectedItem as TServiceListItem).Time <> 0)) then
+            lwService.ItemFocused.SubItems[3] := DateTimeToStr((SelectedItem as TServiceListItem).Time);
         end;
 
       3:
@@ -1459,10 +1458,10 @@ begin
     end;  //of case
 
     // Change item visual status
-    ListView.ItemFocused.Caption := RootList.Selected.GetStatusText(FLang);
+    SelectedListView.ItemFocused.Caption := SelectedItem.GetStatusText(FLang);
 
     // Item is erasable?
-    if RootList.Selected.Erasable then
+    if SelectedItem.Erasable then
     begin
       TaskMessageDlg(FLang.GetString(LID_FILE_DOES_NOT_EXIST),
         FLang.GetString(LID_ENTRY_CAN_DE_DELETED), mtWarning, [mbOK], 0);
@@ -1498,19 +1497,16 @@ end;
 
 procedure TMain.bEnableItemClick(Sender: TObject);
 var
-  ListView: TListView;
-  RootList: TRootList<TRootItem>;
+  SelectedListView: TListView;
+  SelectedList: TRootList<TRootItem>;
+  SelectedItem: TRootItem;
 
 begin
   try
-    ListView := GetSelectedListView();
-    RootList := GetSelectedList();
-
-    // Nothing selected?
-    if not Assigned(ListView.ItemFocused) then
-      raise EInvalidItem.Create('No item selected!');
-
-    RootList.EnableItem();
+    SelectedListView := GetSelectedListView();
+    SelectedList := GetSelectedList();
+    SelectedItem := GetSelectedItem();
+    SelectedList.EnableItem(SelectedItem);
 
     case PageControl.ActivePageIndex of
       0:
@@ -1551,10 +1547,10 @@ begin
     end;  //of case
 
     // Change item visual status
-    ListView.ItemFocused.Caption := RootList.Selected.GetStatusText(FLang);
+    SelectedListView.ItemFocused.Caption := SelectedItem.GetStatusText(FLang);
 
     // Item is erasable?
-    if RootList.Selected.Erasable then
+    if SelectedItem.Erasable then
     begin
       TaskMessageDlg(FLang.GetString(LID_FILE_DOES_NOT_EXIST),
         FLang.GetString(LID_ENTRY_CAN_DE_DELETED), mtWarning, [mbOK], 0);
@@ -1590,7 +1586,7 @@ end;
 
 procedure TMain.bExportItemClick(Sender: TObject);
 begin
-  ShowExportItemDialog();
+  ShowExportItemDialog(GetSelectedItem());
 end;
 
 { TMain.eSearchChange
@@ -1665,10 +1661,8 @@ begin
   // Item selected?
   if (Selected and Assigned(Item)) then
   begin
-    FContext.Selected := TContextMenuListItem(Item.SubItems.Objects[0]);
-
     // Change button states
-    bEnableContextItem.Enabled := not FContext.Selected.Enabled;
+    bEnableContextItem.Enabled := not TRootItem(Item.SubItems.Objects[0]).Enabled;
     bDisableContextItem.Enabled := not bEnableContextItem.Enabled;
     bDeleteContextItem.Enabled := True;
     bExportContextItem.Enabled := True;
@@ -1680,7 +1674,6 @@ begin
   begin
     // Nothing selected
     lwContext.ItemFocused := nil;
-    FContext.Selected := nil;
     bEnableContextItem.Enabled := False;
     bDisableContextItem.Enabled := False;
     bDeleteContextItem.Enabled := False;
@@ -1714,10 +1707,8 @@ begin
   // Item selected?
   if (Selected and Assigned(Item)) then
   begin
-    FService.Selected := TServiceListItem(Item.SubItems.Objects[0]);
-
     // Change button states
-    bEnableServiceItem.Enabled := not FService.Selected.Enabled;
+    bEnableServiceItem.Enabled := not TRootItem(Item.SubItems.Objects[0]).Enabled;
     bDisableServiceItem.Enabled := not bEnableServiceItem.Enabled;
     bDeleteServiceItem.Enabled := True;
     bExportServiceItem.Enabled := True;
@@ -1729,7 +1720,6 @@ begin
   begin
     // Nothing selected
     lwService.ItemFocused := nil;
-    FService.Selected := nil;
     bEnableServiceItem.Enabled := False;
     bDisableServiceItem.Enabled := False;
     bDeleteServiceItem.Enabled := False;
@@ -1763,10 +1753,8 @@ begin
   // Item selected?
   if (Selected and Assigned(Item)) then
   begin
-    FTasks.Selected := TTaskListItem(Item.SubItems.Objects[0]);
-
     // Change button states
-    bEnableTaskItem.Enabled := not FTasks.Selected.Enabled;
+    bEnableTaskItem.Enabled := not TRootItem(Item.SubItems.Objects[0]).Enabled;
     bDisableTaskitem.Enabled := not bEnableTaskItem.Enabled;
     bDeleteTaskItem.Enabled := True;
     bExportTaskItem.Enabled := True;
@@ -1778,7 +1766,6 @@ begin
   begin
     // Nothing selected
     lwTasks.ItemFocused := nil;
-    FTasks.Selected := nil;
     bEnableTaskItem.Enabled := False;
     bDisableTaskitem.Enabled := False;
     bDeleteTaskItem.Enabled := False;
@@ -1929,10 +1916,8 @@ begin
   // Item selected?
   if (Selected and Assigned(Item)) then
   begin
-    FStartup.Selected := TStartupListItem(Item.SubItems.Objects[0]);
-
     // Change button states
-    bEnableStartupItem.Enabled := not FStartup.Selected.Enabled;
+    bEnableStartupItem.Enabled := not TRootItem(Item.SubItems.Objects[0]).Enabled;
     bDisableStartupItem.Enabled := not bEnableStartupItem.Enabled;
     bDeleteStartupItem.Enabled := True;
     bExportStartupItem.Enabled := True;
@@ -1944,7 +1929,6 @@ begin
   begin
     // Nothing selected
     lwStartup.ItemFocused := nil;
-    FStartup.Selected := nil;
     bEnableStartupItem.Enabled := False;
     bDisableStartupItem.Enabled := False;
     bDeleteStartupItem.Enabled := False;
@@ -1971,17 +1955,20 @@ end;
 procedure TMain.pmChangeIconClick(Sender: TObject);
 var
   FileName: string;
+  SelectedItem: TRootItem;
 
 begin
   try
+    SelectedItem := GetSelectedItem();
+
     // Only icon of shell item can be changed
-    if not (FContext.Selected is TContextMenuShellItem) then
+    if not (SelectedItem is TContextMenuShellItem) then
       Exit;
 
     if PromptForFileName(FileName, 'Application *.exe|*.exe|Icon *.ico|*.ico',
       '', StripHotkey(pmChangeIcon.Caption)) then
     begin
-      if not (FContext.Selected as TContextMenuShellItem).ChangeIcon('"'+ FileName +'"') then
+      if not (SelectedItem as TContextMenuShellItem).ChangeIcon('"'+ FileName +'"') then
         raise Exception.Create('Unknown error!');
 
       pmDeleteIcon.Visible := True;
@@ -2007,17 +1994,22 @@ end;
   Popup menu entry to delete the icon of the current selected shell item. }
 
 procedure TMain.pmDeleteIconClick(Sender: TObject);
+var
+  SelectedItem: TRootItem;
+
 begin
   try
+    SelectedItem := GetSelectedItem();
+
     // Only icon of shell item can be deleted
-    if not (FContext.Selected is TContextMenuShellItem) then
+    if not (SelectedItem is TContextMenuShellItem) then
       Exit;
 
     // Show confimation
     if (MessageDlg(FLang.GetString(LID_CONTEXT_MENU_ICON_DELETE_CONFIRM),
       mtConfirmation, mbYesNo, 0) = idYes) then
     begin
-      if not (FContext.Selected as TContextMenuShellItem).DeleteIcon() then
+      if not (SelectedItem as TContextMenuShellItem).DeleteIcon() then
         raise Exception.Create('Unknown error!');
 
       pmDeleteIcon.Visible := False;
@@ -2110,7 +2102,7 @@ begin
       if ((Trim(Name) = '') or (Name = Item.Name) or (Name = Item.Caption)) then
         Exit;
 
-      GetSelectedList().RenameItem(Name);
+      GetSelectedList().RenameItem(Item, Name);
 
       // Names are visible instead of captions?
       if (not mmShowCaptions.Checked or (PageControl.ActivePageIndex in [1, 3])) then
@@ -2227,16 +2219,19 @@ end;
 
 procedure TMain.pmCopyLocationClick(Sender: TObject);
 var
-  Item: TRootItem;
+  SelectedItem: TRootItem;
 
 begin
   try
-    Item := GetSelectedItem();
+    SelectedItem := GetSelectedItem();
 
-    if (Item is TStartupItem) then
-      Clipboard.AsText := TStartupItem(Item).RootKey.ToString() +'\'+ TStartupItem(Item).Wow64Location
+    if (SelectedItem is TStartupItem) then
+    begin
+      with SelectedItem as TStartupItem do
+        Clipboard.AsText := RootKey.ToString() +'\'+ Wow64Location
+    end  //of begin
     else
-      Clipboard.AsText := Item.LocationFull;
+      Clipboard.AsText := SelectedItem.LocationFull;
 
   except
     on E: EInvalidItem do
@@ -2255,10 +2250,14 @@ procedure TMain.pmEditPathClick(Sender: TObject);
 var
   Path, EnteredPath: string;
   Icon: TIcon;
+  SelectedListView: TListView;
+  SelectedItem: TRootItem;
 
 begin
   try
-    Path := GetSelectedItem().FileName;
+    SelectedListView := GetSelectedListView();
+    SelectedItem := GetSelectedItem();
+    Path := SelectedItem.FileName;
 
     // Show input box for editing path
     EnteredPath := InputBox(FLang.GetString(LID_PATH_EDIT),
@@ -2269,7 +2268,7 @@ begin
       Exit;
 
     // Try to change the file path
-    GetSelectedList().ChangeItemFilePath(EnteredPath);
+    GetSelectedList().ChangeItemFilePath(SelectedItem, EnteredPath);
 
     // Update icon
     if (PageControl.ActivePageIndex = 0) then
@@ -2277,7 +2276,7 @@ begin
       Icon := TIcon.Create;
 
       try
-        Icon.Handle := FStartup.Selected.Icon;
+        Icon.Handle := SelectedItem.Icon;
         lwStartup.ItemFocused.ImageIndex := IconList.AddIcon(Icon);
 
       finally
@@ -2287,11 +2286,11 @@ begin
 
     // Update file path in TListView
     if (PageControl.ActivePageIndex <> 1) then
-      GetSelectedListView().ItemFocused.SubItems[1] := EnteredPath;
+      SelectedListView.ItemFocused.SubItems[1] := EnteredPath;
 
     // Update caption
-    if ((GetSelectedItem().Caption <> '') and mmShowCaptions.Checked) then
-      GetSelectedListView().ItemFocused.SubItems[0] := GetSelectedItem().Caption;
+    if ((SelectedItem.Caption <> '') and mmShowCaptions.Checked) then
+      SelectedListView.ItemFocused.SubItems[0] := SelectedItem.Caption;
 
   except
     on E: EInvalidItem do

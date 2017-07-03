@@ -586,7 +586,6 @@ type
   /// </remarks>
   TRootList<T: TRootItem> = class abstract(TObjectList<T>, IInterface)
   strict private
-    FItem: T;
     // TODO: Better use TDuplicates
     FDuplicates: Boolean;
     FOnCounterUpdate,
@@ -620,11 +619,14 @@ type
     ///   <c>EListBlocked</c> if another operation is pending on the list.
     ///   <c>EInvalidItem</c> if no item is selected.
     /// </exception>
-    procedure ChangeItemFilePath(const ANewFilePath: string);
+    procedure ChangeItemFilePath(AItem: T; const ANewFilePath: string);
 
     /// <summary>
-    ///   Changes the item status of the current selected item.
+    ///   Changes the enabled status of an item.
     /// </summary>
+    /// <param name="AItem">
+    ///   The item.
+    /// </param>
     /// <param name="ANewStatus">
     ///   The new status.
     /// </param>
@@ -633,16 +635,14 @@ type
     ///   <c>EInvalidItem</c> if no item is selected.
     ///   <c>EWarning</c> if new status is equal to current.
     /// </exception>
-    procedure ChangeItemStatus(const ANewStatus: Boolean);
+    procedure ChangeItemStatus(AItem: T; const ANewStatus: Boolean);
 
     /// <summary>
-    ///   Removes all items from the list.
+    ///   Deletes an item.
     /// </summary>
-    procedure Clear();
-
-    /// <summary>
-    ///   Deletes the current selected item.
-    /// </summary>
+    /// <param name="AItem">
+    ///   The item.
+    /// </param>
     /// <returns>
     ///   <c>True</c> if item was successfully deleted or <c>False</c> otherwise.
     /// </returns>
@@ -650,31 +650,40 @@ type
     ///   <c>EListBlocked</c> if another operation is pending on the list.
     ///   <c>EInvalidItem</c> if no item is selected.
     /// </exception>
-    function DeleteItem(): Boolean;
+    function DeleteItem(AItem: T): Boolean;
 
     /// <summary>
-    ///   Disables the current selected item.
+    ///   Disables an item.
     /// </summary>
+    /// <param name="AItem">
+    ///   The item.
+    /// </param>
     /// <exception>
     ///   <c>EListBlocked</c> if another operation is pending on the list.
     ///   <c>EInvalidItem</c> if no item is selected.
     ///   <c>EWarning</c> if item is already disabled.
     /// </exception>
-    procedure DisableItem();
+    procedure DisableItem(AItem: T);
 
     /// <summary>
-    ///   Enables the current selected item.
+    ///   Enables an item.
     /// </summary>
+    /// <param name="AItem">
+    ///   The item.
+    /// </param>
     /// <exception>
     ///   <c>EListBlocked</c> if another operation is pending on the list.
     ///   <c>EInvalidItem</c> if no item is selected.
     ///   <c>EWarning</c> if item is already enabled.
     /// </exception>
-    procedure EnableItem();
+    procedure EnableItem(AItem: T);
 
     /// <summary>
-    ///   Exports the current selected item as file.
+    ///   Exports an item as file.
     /// </summary>
+    /// <param name="AItem">
+    ///   The item.
+    /// </param>
     /// <param name="AFileName">
     ///   The absolute filename to the file.
     /// </param>
@@ -682,7 +691,7 @@ type
     ///   <c>EListBlocked</c> if another operation is pending on the list.
     ///   <c>EInvalidItem</c> if no item is selected.
     /// </exception>
-    procedure ExportItem(const AFileName: string);
+    procedure ExportItem(AItem: T; const AFileName: string);
 
     /// <summary>
     ///   Exports the complete list as file.
@@ -753,8 +762,11 @@ type
     procedure Refresh();
 
     /// <summary>
-    ///   Renames the current selected item.
+    ///   Renames an item.
     /// </summary>
+    /// <param name="AItem">
+    ///   The item.
+    /// </param>
     /// <param name="ANewName">
     ///   The new name.
     /// </param>
@@ -763,7 +775,7 @@ type
     ///   <c>EInvalidItem</c> if no item is selected.
     ///   <c>EWarning</c> if item with new name already exists.
     /// </exception>
-    procedure RenameItem(const ANewName: string);
+    procedure RenameItem(AItem: T; const ANewName: string);
 
     /// <summary>
     ///   Searches for items and adds them to the list.
@@ -801,11 +813,6 @@ type
     ///   Occurs when counter is updated.
     /// </summary>
     property OnCounterUpdate: TNotifyEvent read FOnCounterUpdate write FOnCounterUpdate;
-
-    /// <summary>
-    ///   Gets or sets the current selected item.
-    /// </summary>
-    property Selected: T read FItem write FItem;
   end;
 
   /// <summary>
@@ -2973,13 +2980,7 @@ begin
   Result := -1;
 end;
 
-procedure TRootList<T>.Clear();
-begin
-  inherited Clear;
-  FItem := nil;
-end;
-
-procedure TRootList<T>.ChangeItemFilePath(const ANewFilePath: string);
+procedure TRootList<T>.ChangeItemFilePath(AItem: T; const ANewFilePath: string);
 var
   ItemErasable: Boolean;
 
@@ -2990,18 +2991,18 @@ begin
 
   try
     // Invalid item?
-    if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
+    if (not Assigned(AItem) or (IndexOf(AItem) = -1)) then
       raise EInvalidItem.Create('No item selected!');
 
     // Change item file path
-    ItemErasable := FItem.Erasable;
-    FItem.ChangeFilePath(ANewFilePath);
+    ItemErasable := AItem.Erasable;
+    AItem.ChangeFilePath(ANewFilePath);
 
     // Update erasable count
-    if (ItemErasable and not FItem.Erasable) then
+    if (ItemErasable and not AItem.Erasable) then
       Dec(FErasableItemsCount)
     else
-      if (not ItemErasable and FItem.Erasable) then
+      if (not ItemErasable and AItem.Erasable) then
         Inc(FErasableItemsCount);
 
   finally
@@ -3009,33 +3010,33 @@ begin
   end;  //of try
 end;
 
-procedure TRootList<T>.ChangeItemStatus(const ANewStatus: Boolean);
+procedure TRootList<T>.ChangeItemStatus(AItem: T; const ANewStatus: Boolean);
 begin
   // List locked?
   if not FLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
 
   try
-    if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
+    if (not Assigned(AItem) or (IndexOf(AItem) = -1)) then
       raise EInvalidItem.Create('No item selected!');
 
     if ANewStatus then
     begin
-      if FItem.Enabled then
+      if AItem.Enabled then
         raise EWarning.Create('Item already enabled!');
 
       // Enable item
-      FItem.ChangeStatus(ANewStatus);
+      AItem.ChangeStatus(ANewStatus);
       Inc(FEnabledItemsCount);
       NotifyOnCounterUpdate();
     end  //of begin
     else
     begin
-      if not FItem.Enabled then
+      if not AItem.Enabled then
         raise EWarning.Create('Item already disabled!');
 
       // Disable item
-      FItem.ChangeStatus(ANewStatus);
+      AItem.ChangeStatus(ANewStatus);
 
       // Update active counter
       if (FEnabledItemsCount > 0) then
@@ -3050,7 +3051,7 @@ begin
   end;  //of try
 end;
 
-function TRootList<T>.DeleteItem(): Boolean;
+function TRootList<T>.DeleteItem(AItem: T): Boolean;
 var
   Deleted: Boolean;
 
@@ -3060,16 +3061,16 @@ begin
     raise EListBlocked.Create('Another operation is pending. Please wait!');
 
   try
-    if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
+    if (not Assigned(AItem) or (IndexOf(AItem) = -1)) then
       raise EInvalidItem.Create('No item selected!');
 
-    // Delete task from filesystem
-    Deleted := FItem.Delete();
+    // Delete item
+    Deleted := AItem.Delete();
 
     // Successful?
     if Deleted then
       // Remove item from list
-      Remove(FItem);
+      Remove(AItem);
 
   finally
     FLock.Release();
@@ -3077,9 +3078,9 @@ begin
   end;  //of try
 end;
 
-procedure TRootList<T>.DisableItem();
+procedure TRootList<T>.DisableItem(AItem: T);
 begin
-  ChangeItemStatus(False);
+  ChangeItemStatus(AItem, False);
 end;
 
 procedure TRootList<T>.Refresh();
@@ -3088,22 +3089,22 @@ begin
     FOnRefresh(Self);
 end;
 
-procedure TRootList<T>.EnableItem();
+procedure TRootList<T>.EnableItem(AItem: T);
 begin
-  ChangeItemStatus(True);
+  ChangeItemStatus(AItem, True);
 end;
 
-procedure TRootList<T>.ExportItem(const AFileName: string);
+procedure TRootList<T>.ExportItem(AItem: T; const AFileName: string);
 begin
   // List locked?
   if not FLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
 
   try
-    if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
+    if (not Assigned(AItem) or (IndexOf(AItem) = -1)) then
       raise EInvalidItem.Create('No item selected!');
 
-    FItem.ExportItem(AFileName);
+    AItem.ExportItem(AFileName);
 
   finally
     FLock.Release();
@@ -3202,7 +3203,6 @@ begin
           Dec(FErasableItemsCount);
 
         NotifyOnCounterUpdate();
-        FItem := nil;
       end;
   end;  //of case
 end;
@@ -3213,7 +3213,7 @@ begin
     FOnCounterUpdate(Self);
 end;
 
-procedure TRootList<T>.RenameItem(const ANewName: string);
+procedure TRootList<T>.RenameItem(AItem: T; const ANewName: string);
 var
   i: Integer;
 
@@ -3223,7 +3223,7 @@ begin
     raise EListBlocked.Create('Another operation is pending. Please wait!');
 
   try
-    if (not Assigned(FItem) or (IndexOf(FItem) = -1)) then
+    if (not Assigned(AItem) or (IndexOf(AItem) = -1)) then
       raise EInvalidItem.Create('No item selected!');
 
     if not FDuplicates then
@@ -3234,7 +3234,7 @@ begin
           raise EWarning.Create('Item named "'+ ANewName +'" already exists!');
     end;  //of begin
 
-    FItem.Name := ANewName;
+    AItem.Name := ANewName;
 
   finally
     FLock.Release();

@@ -29,14 +29,14 @@ type
     FTestItems,
     FErasableTestItems: TStringList;
     procedure LoadItems(); virtual; abstract;
-    procedure SelectItem(const AItemName: string);
+    function GetItemForName(const AItemName: string): TRootItem;
     procedure TestDisable(const AItemName: string);
     procedure TestEnable(const AItemName: string);
     procedure TestDelete(const AItemName: string);
     procedure TestExport(const AItemName: string);
     procedure TestRename(const AItemName: string); virtual;
-    procedure TestChangeFilePath(const AItemName, AExpectedFilePath,
-      ANewFilePath: string);
+    function TestChangeFilePath(const AItemName, AExpectedFilePath,
+      ANewFilePath: string): TRootItem;
   public
     procedure SetUp; override;
     procedure TearDown; override;
@@ -200,7 +200,7 @@ begin
   FindClose(SearchResult);
 end;
 
-procedure TRootListTest.SelectItem(const AItemName: string);
+function TRootListTest.GetItemForName(const AItemName: string): TRootItem;
 var
   Index: Integer;
 
@@ -208,30 +208,31 @@ begin
   CheckNotEquals(0, FRootList.Count, 'List is empty: Load() was not called');
   Index := FRootList.IndexOf(AItemName);
   CheckNotEquals(-1, Index, 'Item "'+ AItemName +'" could not be found');
-  FRootList.Selected := FRootList[Index];
+  Result := FRootList[Index];
 end;
 
-procedure TRootListTest.TestChangeFilePath(const AItemName, AExpectedFilePath,
-  ANewFilePath: string);
+function TRootListTest.TestChangeFilePath(const AItemName, AExpectedFilePath,
+  ANewFilePath: string): TRootItem;
 begin
-  SelectItem(AItemName);
-  CheckEqualsString(AExpectedFilePath, FRootList.Selected.FileNameOnly, 'FileName of "'+ AItemName +'" does not match before changing file path');
-  FRootList.ChangeItemFilePath(ANewFilePath);
-  CheckEqualsString(ANewFilePath, FRootList.Selected.FileName, 'FileName of "'+ AItemName +'" does not match after changing file path');
+  Result := GetItemForName(AItemName);
+  CheckEqualsString(AExpectedFilePath, Result.FileNameOnly, 'FileName of "'+ AItemName +'" does not match before changing file path');
+  FRootList.ChangeItemFilePath(Result, ANewFilePath);
+  CheckEqualsString(ANewFilePath, Result.FileName, 'FileName of "'+ AItemName +'" does not match after changing file path');
 end;
 
 procedure TRootListTest.TestChangeItemFilePaths;
 var
   i, ErasableItems: Integer;
+  SelectedItem: TRootItem;
 
 begin
   LoadItems();
 
   for i := 0 to FTestItems.Count - 1 do
   begin
-    TestChangeFilePath(FTestItems[i], cTestExe, cNewTestFileName);
-    CheckEqualsString(cNewTestArgument, FRootList.Selected.Arguments, 'Arguments of "'+ FTestItems[i] +'" does not match after changing file path');
-    CheckEqualsString(cNewTestExe, FRootList.Selected.FileNameOnly, 'FileNameOnly of "'+ FTestItems[i] +'" does not match after changing file path');
+    SelectedItem := TestChangeFilePath(FTestItems[i], cTestExe, cNewTestFileName);
+    CheckEqualsString(cNewTestArgument, SelectedItem.Arguments, 'Arguments of "'+ FTestItems[i] +'" does not match after changing file path');
+    CheckEqualsString(cNewTestExe, SelectedItem.FileNameOnly, 'FileNameOnly of "'+ FTestItems[i] +'" does not match after changing file path');
   end;  //of for
 
   // Turn erasable items to normal items
@@ -240,9 +241,9 @@ begin
 
   for i := 0 to FErasableTestItems.Count - 1 do
   begin
-    TestChangeFilePath(FErasableTestItems[i], cTestExeErasable, cNewTestFileName);
-    CheckEqualsString(cNewTestArgument, FRootList.Selected.Arguments, 'Arguments of "'+ FErasableTestItems[i] +'" does not match after changing file path');
-    CheckEqualsString(cNewTestExe, FRootList.Selected.FileNameOnly, 'FileNameOnly of "'+ FErasableTestItems[i] +'" does not match after changing file path');
+    SelectedItem := TestChangeFilePath(FErasableTestItems[i], cTestExeErasable, cNewTestFileName);
+    CheckEqualsString(cNewTestArgument, SelectedItem.Arguments, 'Arguments of "'+ FErasableTestItems[i] +'" does not match after changing file path');
+    CheckEqualsString(cNewTestExe, SelectedItem.FileNameOnly, 'FileNameOnly of "'+ FErasableTestItems[i] +'" does not match after changing file path');
   end;  //of for
 
   CheckEquals(0, FRootList.ErasableItemsCount, 'After changing file paths of erasable items to a valid path ErasableItemsCount differs from expected');
@@ -256,19 +257,19 @@ end;
 
 procedure TRootListTest.TestDelete(const AItemName: string);
 var
+  SelectedItem: TRootItem;
   Counter, EnabledCounter: Integer;
 
 begin
-  SelectItem(AItemName);
+  SelectedItem := GetItemForName(AItemName);
   Counter := FRootList.Count;
   EnabledCounter := FRootList.EnabledItemsCount;
 
-  if FRootList.Selected.Enabled then
+  if SelectedItem.Enabled then
     Dec(EnabledCounter);
 
-  CheckTrue(FRootList.DeleteItem(), 'Item "'+ AItemName +'" was not deleted!');
+  CheckTrue(FRootList.DeleteItem(SelectedItem), 'Item "'+ AItemName +'" was not deleted!');
   Dec(Counter);
-  CheckNull(FRootList.Selected, 'After deleting selected item Selected should not be assigned');
   CheckEquals(EnabledCounter, FRootList.EnabledItemsCount, 'After deleting item "'+ AItemName +'" EnabledItemsCount should be equal to EnabledCounter');
   CheckEquals(Counter, FRootList.Count, 'After deleting item "'+ AItemName +'" Count should be decreased by 1');
 end;
@@ -304,15 +305,16 @@ end;
 
 procedure TRootListTest.TestDisable(const AItemName: string);
 var
+  SelectedItem: TRootItem;
   Counter, EnabledCounter: Integer;
 
 begin
-  SelectItem(AItemName);
+  SelectedItem := GetItemForName(AItemName);
   Counter := FRootList.Count;
   EnabledCounter := FRootList.EnabledItemsCount;
-  CheckTrue(FRootList.Selected.Enabled, 'Before disabling item "'+ AItemName +'" Enabled must be True');
-  FRootList.DisableItem();
-  CheckFalse(FRootList.Selected.Enabled, 'After disabling item "'+ AItemName +'" Enabled should also be False');
+  CheckTrue(SelectedItem.Enabled, 'Before disabling item "'+ AItemName +'" Enabled must be True');
+  FRootList.DisableItem(SelectedItem);
+  CheckFalse(SelectedItem.Enabled, 'After disabling item "'+ AItemName +'" Enabled should also be False');
   Dec(EnabledCounter);
   CheckEquals(EnabledCounter, FRootList.EnabledItemsCount, 'After disabling item "'+ AItemName +'" EnabledItemsCount must be decreased by 1');
   CheckEquals(Counter, FRootList.Count, 'After disabling item "'+ AItemName +'" Count must not be changed');
@@ -331,15 +333,16 @@ end;
 
 procedure TRootListTest.TestEnable(const AItemName: string);
 var
+  SelectedItem: TRootItem;
   Counter, EnabledCounter: Integer;
 
 begin
-  SelectItem(AItemName);
+  SelectedItem := GetItemForName(AItemName);
   Counter := FRootList.Count;
   EnabledCounter := FRootList.EnabledItemsCount;
-  CheckFalse(FRootList.Selected.Enabled, 'Before enabling item "'+ AItemName +'" Enabled must be False');
-  FRootList.EnableItem();
-  CheckTrue(FRootList.Selected.Enabled, 'After enabling item "'+ AItemName +'" Enabled should be True');
+  CheckFalse(SelectedItem.Enabled, 'Before enabling item "'+ AItemName +'" Enabled must be False');
+  FRootList.EnableItem(SelectedItem);
+  CheckTrue(SelectedItem.Enabled, 'After enabling item "'+ AItemName +'" Enabled should be True');
   Inc(EnabledCounter);
   CheckEquals(EnabledCounter, FRootList.EnabledItemsCount, 'After enabling item "'+ AItemName +'" EnabledItemsCount must be increased by 1');
   CheckEquals(Counter, FRootList.Count, 'After enabling item "'+ AItemName +'" Count must not be changed');
@@ -381,10 +384,13 @@ begin
 end;
 
 procedure TRootListTest.TestExport(const AItemName: string);
+var
+  SelectedItem: TRootItem;
+
 begin
-  SelectItem(AItemName);
-  FRootList.ExportItem(FRootList.Selected.Name + FRootList.Selected.GetBackupExtension());
-  EnsureFileExportedAndDelete(FRootList.Selected.Name + FRootList.Selected.GetBackupExtension());
+  SelectedItem := GetItemForName(AItemName);
+  FRootList.ExportItem(SelectedItem, SelectedItem.Name + SelectedItem.GetBackupExtension());
+  EnsureFileExportedAndDelete(SelectedItem.Name + SelectedItem.GetBackupExtension());
 end;
 
 procedure TRootListTest.TestLocking_SearchError(Sender: TObject;
@@ -397,7 +403,7 @@ procedure TRootListTest.TestLocking_SearchStart(Sender: TObject);
 begin
   try
     // This must not be possible e.g. during loading!
-    FRootList.EnableItem();
+    FRootList.EnableItem(nil);
 
   except
     on E: EListBlocked do
@@ -433,12 +439,15 @@ begin
 end;
 
 procedure TRootListTest.TestRename(const AItemName: string);
+var
+  SelectedItem: TRootItem;
+
 begin
-  SelectItem(AItemName);
-  FRootList.RenameItem(AItemName +'2');
-  CheckEquals(AItemName +'2', FRootList.Selected.Name, 'Item was not renamed correctly');
-  FRootList.RenameItem(AItemName);
-  CheckEquals(AItemName, FRootList.Selected.Name, 'Item was not renamed correctly twice');
+  SelectedItem := GetItemForName(AItemName);
+  FRootList.RenameItem(SelectedItem, AItemName +'2');
+  CheckEquals(AItemName +'2', SelectedItem.Name, 'Item was not renamed correctly');
+  FRootList.RenameItem(SelectedItem, AItemName);
+  CheckEquals(AItemName, SelectedItem.Name, 'Item was not renamed correctly twice');
 end;
 
 procedure TRootListTest.TestRenameItems;
@@ -934,14 +943,17 @@ begin
 end;
 
 procedure TContextListTest.TestRename(const AItemName: string);
+var
+  SelectedItem: TRootItem;
+
 begin
-  SelectItem(AItemName);
-  FRootList.RenameItem(AItemName +'2');
+  SelectedItem := GetItemForName(AItemName);
+  FRootList.RenameItem(SelectedItem, AItemName +'2');
 
   // NOTE: Renaming a contextmenu item changes the caption not the name!!!
-  CheckEquals(AItemName +'2', FRootList.Selected.Caption, 'Item was not renamed correctly');
-  FRootList.RenameItem(AItemName);
-  CheckEquals(AItemName, FRootList.Selected.Caption, 'Item was not renamed correctly twice');
+  CheckEquals(AItemName +'2', SelectedItem.Caption, 'Item was not renamed correctly');
+  FRootList.RenameItem(SelectedItem, AItemName);
+  CheckEquals(AItemName, SelectedItem.Caption, 'Item was not renamed correctly twice');
 end;
 
 procedure TContextListTest.TestRenameItems;
@@ -1030,14 +1042,17 @@ begin
 end;
 
 procedure TServiceListTest.TestRename(const AItemName: string);
+var
+  SelectedItem: TRootItem;
+
 begin
-  SelectItem(AItemName);
-  FRootList.RenameItem(AItemName +'2');
+  SelectedItem := GetItemForName(AItemName);
+  FRootList.RenameItem(SelectedItem, AItemName +'2');
 
   // NOTE: Renaming a service item changes the caption not the name!!!
-  CheckEquals(AItemName +'2', FRootList.Selected.Caption, 'Item was not renamed correctly');
-  FRootList.RenameItem(AItemName);
-  CheckEquals(AItemName, FRootList.Selected.Caption, 'Item was not renamed correctly twice');
+  CheckEquals(AItemName +'2', SelectedItem.Caption, 'Item was not renamed correctly');
+  FRootList.RenameItem(SelectedItem, AItemName);
+  CheckEquals(AItemName, SelectedItem.Caption, 'Item was not renamed correctly twice');
 end;
 
 
