@@ -183,7 +183,7 @@ type
     function GetSelectedList(): TRootList<TRootItem>;
     function GetSelectedListView(): TListView;
     function GetItemText(AItem: TRootItem): string; inline;
-    procedure Refresh(ATotal: Boolean = True);
+    procedure Refresh(AList: TRootList<TRootItem>; ATotal: Boolean = True);
     procedure OnContextSearchStart(Sender: TObject);
     procedure OnContextSearchEnd(Sender: TObject);
     procedure OnContextCounterUpdate(Sender: TObject);
@@ -442,19 +442,19 @@ end;
 
   Loads items and brings them into a TListView. }
 
-procedure TMain.Refresh(ATotal: Boolean = True);
+procedure TMain.Refresh(AList: TRootList<TRootItem>; ATotal: Boolean = True);
 var
   SearchThread: TSearchThread;
-  SelectedList: TRootList<TRootItem>;
 
 begin
   try
-    SelectedList := GetSelectedList();
+    if not Assigned(AList) then
+      raise EInvalidItem.Create('No list assigned!');
 
     // Make a total refresh or just use cached items
     if ATotal then
     begin
-      SearchThread := TSearchThread.Create(SelectedList);
+      SearchThread := TSearchThread.Create(AList);
 
       with SearchThread do
       begin
@@ -496,7 +496,7 @@ begin
       end;  //of with
     end  //of begin
     else
-      SelectedList.Refresh();
+      AList.Refresh();
 
   except
     on E: EInvalidItem do
@@ -942,6 +942,9 @@ end;
   Updates all component captions with new language text. }
 
 procedure TMain.LanguageChanged();
+var
+  i: Integer;
+
 begin
   with FLang do
   begin
@@ -1071,17 +1074,11 @@ begin
   end;  //of with
 
   // Refresh list captions
-  if Assigned(FStartup) then
-    FStartup.Refresh();
-
-  if Assigned(FContext) then
-    FContext.Refresh();
-
-  if Assigned(FService) then
-    FService.Refresh();
-
-  if Assigned(FTasks) then
-    FTasks.Refresh();
+  if Visible then
+  begin
+    for i := 0 to PageControl.PageCount - 1 do
+      Refresh(GetListForIndex(i), False);
+  end;  //of begin
 end;
 
 { private TMain.ShowColumnDate
@@ -1102,7 +1099,7 @@ begin
       begin
         Caption := FLang.GetString(LID_DATE_OF_DEACTIVATION);
         Width := 120;
-        Refresh(False);
+        Refresh(GetSelectedList(), False);
       end;  //of with
 end;
 
@@ -2617,7 +2614,7 @@ end;
 
 procedure TMain.mmRefreshClick(Sender: TObject);
 begin
-  Refresh();
+  Refresh(GetSelectedList());
 end;
 
 { TMain.mmShowCaptionsClick
@@ -2625,11 +2622,12 @@ end;
   MainMenu entry to show captions instead of names. }
 
 procedure TMain.mmShowCaptionsClick(Sender: TObject);
+var
+  i: Integer;
+
 begin
-  FStartup.Refresh();
-  FContext.Refresh();
-  FService.Refresh();
-  FTasks.Refresh();
+  for i := 0 to PageControl.PageCount - 1 do
+    Refresh(GetListForIndex(i), False);
 end;
 
 { TMain.mmStandardClick
@@ -2811,7 +2809,7 @@ begin
 
   // Load items dynamically
   if (GetSelectedList().Count = 0) then
-    Refresh();
+    Refresh(GetSelectedList());
 
   // Only allow popup menu if item is focused
   PopupMenu.AutoPopup := Assigned(GetSelectedListView().ItemFocused);
