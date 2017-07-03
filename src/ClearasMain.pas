@@ -182,6 +182,7 @@ type
     function GetSelectedItem(): TRootItem;
     function GetSelectedList(): TRootList<TRootItem>;
     function GetSelectedListView(): TListView;
+    function GetItemText(AItem: TRootItem): string; inline;
     procedure Refresh(ATotal: Boolean = True);
     procedure OnContextSearchStart(Sender: TObject);
     procedure OnContextSearchEnd(Sender: TObject);
@@ -368,6 +369,14 @@ begin
   end;  //of begin
 end;
 
+function TMain.GetItemText(AItem: TRootItem): string;
+begin
+  if ((AItem.Caption <> '') and mmShowCaptions.Checked) then
+    Result := AItem.Caption
+  else
+    Result := AItem.Name;
+end;
+
 function TMain.GetListForIndex(AIndex: Integer): TRootList<TRootItem>;
 begin
   case AIndex of
@@ -524,7 +533,7 @@ end;
 procedure TMain.OnContextSearchEnd(Sender: TObject);
 var
   i: Integer;
-  Text: string;
+  ItemText: string;
 
 begin
   // Clear all visual data
@@ -533,20 +542,16 @@ begin
   // Print all information about context menu entries
   for i := 0 to FContext.Count - 1 do
   begin
-    // Show name or caption of item?
-    if ((FContext.Items[i].Caption <> '') and mmShowCaptions.Checked) then
-      Text := FContext[i].Caption
-    else
-      Text := FContext[i].Name;
+    ItemText := GetItemText(FContext[i]);
 
     // Filter items
     if ((eContextSearch.Text = '') or
-      (Text.ToLower().Contains(LowerCase(eContextSearch.Text)) or
+      (ItemText.ToLower().Contains(LowerCase(eContextSearch.Text)) or
       FContext[i].LocationRoot.ToLower().Contains(LowerCase(eContextSearch.Text)))) then
       with lwContext.Items.Add do
       begin
         Caption := FContext[i].GetStatusText(FLang);
-        SubItems.AddObject(Text, FContext[i]);
+        SubItems.AddObject(ItemText, FContext[i]);
         SubItems.Append(FContext[i].LocationRoot);
         SubItems.Append(FContext[i].ToString());
       end; //of with
@@ -699,7 +704,7 @@ procedure TMain.OnStartupSearchEnd(Sender: TObject);
 var
   Icon: TIcon;
   i: Integer;
-  Text: string;
+  ItemText: string;
 
 begin
   // Clear all visual data
@@ -711,16 +716,13 @@ begin
     // Print all information about startup entires
     for i := 0 to FStartup.Count - 1 do
     begin
-      if ((FStartup[i].Caption <> '') and mmShowCaptions.Checked) then
-        Text := FStartup[i].Caption
-      else
-        Text := FStartup[i].Name;
+      ItemText := GetItemText(FStartup[i]);
 
-      if ((eStartupSearch.Text = '') or (Text.ToLower().Contains(LowerCase(eStartupSearch.Text)))) then
+      if ((eStartupSearch.Text = '') or (ItemText.ToLower().Contains(LowerCase(eStartupSearch.Text)))) then
         with lwStartup.Items.Add do
         begin
           Caption := FStartup[i].GetStatusText(FLang);
-          SubItems.AddObject(Text, FStartup[i]);
+          SubItems.AddObject(ItemText, FStartup[i]);
           SubItems.Append(FStartup[i].FileName);
           SubItems.Append(FStartup[i].ToString());
 
@@ -796,7 +798,7 @@ end;
 procedure TMain.OnServiceSearchEnd(Sender: TObject);
 var
   i: Integer;
-  Text: string;
+  ItemText: string;
 
 begin
   // Clear all visual data
@@ -805,18 +807,14 @@ begin
   // Print all information about service items
   for i := 0 to FService.Count - 1 do
   begin
-    // Show name or caption of item?
-    if ((FService[i].Caption <> '') and mmShowCaptions.Checked) then
-      Text := FService[i].Caption
-    else
-      Text := FService[i].Name;
+    ItemText := GetItemText(FService[i]);
 
     // Filter items
-    if ((eServiceSearch.Text = '') or (Text.ToLower().Contains(LowerCase(eServiceSearch.Text)))) then
+    if ((eServiceSearch.Text = '') or (ItemText.ToLower().Contains(LowerCase(eServiceSearch.Text)))) then
       with lwService.Items.Add do
       begin
         Caption := FService[i].GetStatusText(FLang);
-        SubItems.AddObject(Text, FService[i]);
+        SubItems.AddObject(ItemText, FService[i]);
         SubItems.Append(FService[i].FileName);
         SubItems.Append(FService[i].Start.ToString(FLang));
 
@@ -875,7 +873,7 @@ end;
 procedure TMain.OnTaskSearchEnd(Sender: TObject);
 var
   i: Integer;
-  Text: string;
+  ItemText: string;
 
 begin
   // Clear all visual data
@@ -884,15 +882,15 @@ begin
   // Print all information about task items
   for i := 0 to FTasks.Count - 1 do
   begin
-    Text := FTasks[i].Name;
+    ItemText := FTasks[i].Name;
 
     // Filter items
-    if ((eTaskSearch.Text = '') or (Text.ToLower().Contains(LowerCase(eTaskSearch.Text)))) then
+    if ((eTaskSearch.Text = '') or (ItemText.ToLower().Contains(LowerCase(eTaskSearch.Text)))) then
     begin
       with lwTasks.Items.Add do
       begin
         Caption := FTasks[i].GetStatusText(FLang);
-        SubItems.AddObject(Text, FTasks[i]);
+        SubItems.AddObject(ItemText, FTasks[i]);
         SubItems.Append(FTasks[i].FileName);
         SubItems.Append(FTasks[i].Location);
       end; //of with
