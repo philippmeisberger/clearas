@@ -42,7 +42,6 @@ type
     N4: TMenuItem;
     mmDate: TMenuItem;
     mmImport: TMenuItem;
-    mmDefault: TMenuItem;
     N7: TMenuItem;
     N6: TMenuItem;
     mmLang: TMenuItem;
@@ -142,7 +141,6 @@ type
     procedure mmExportClick(Sender: TObject);
     procedure mmImportClick(Sender: TObject);
     procedure mmRefreshClick(Sender: TObject);
-    procedure mmDefaultClick(Sender: TObject);
     procedure mmAboutClick(Sender: TObject);
     procedure mmUpdateClick(Sender: TObject);
     procedure mmInstallCertificateClick(Sender: TObject);
@@ -955,7 +953,6 @@ begin
     // View menu labels
     mmView.Caption := GetString(LID_VIEW);
     mmRefresh.Caption := GetString(LID_REFRESH);
-    mmDefault.Caption := GetString(LID_COLUMN_DEFAULT_SIZE);
     mmShowCaptions.Caption := GetString(LID_DESCRIPTION_SHOW);
     mmDate.Caption := GetString(LID_DATE_OF_DEACTIVATION);
     cbRunOnce.Caption := GetString(LID_STARTUP_RUNONCE);
@@ -2614,39 +2611,6 @@ var
 begin
   for i := 0 to PageControl.PageCount - 1 do
     Refresh(GetListForIndex(i), False);
-end;
-
-{ TMain.mmStandardClick
-
-  MainMenu entry to resize all columns to standard size. }
-
-procedure TMain.mmDefaultClick(Sender: TObject);
-begin
-  case PageControl.ActivePageIndex of
-    0: begin
-         lwStartup.Columns[1].Width := 125;
-         lwStartup.Columns[2].Width := 122;
-         lwStartup.Columns[3].Width := 75;
-       end;
-
-    1: begin
-         lwContext.Columns[1].Width := 150;
-         lwContext.Columns[2].Width := 107;
-         lwContext.Columns[3].Width := 65;
-       end;
-
-    2: begin
-         lwService.Columns[1].Width := 125;
-         lwService.Columns[2].Width := 122;
-         lwService.Columns[3].Width := 75;
-       end;
-
-    3: begin
-         lwTasks.Columns[1].Width := 125;
-         lwTasks.Columns[2].Width := 122;
-         lwTasks.Columns[3].Width := 75;
-       end;
-  end;  //of case
 end;
 
 { TMain.mmInstallCertificateClick

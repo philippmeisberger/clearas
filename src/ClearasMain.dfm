@@ -784,10 +784,6 @@ object Main: TMain
       object N7: TMenuItem
         Caption = '-'
       end
-      object mmDefault: TMenuItem
-        Caption = 'Default column width'
-        OnClick = mmDefaultClick
-      end
       object mmShowCaptions: TMenuItem
         AutoCheck = True
         Caption = 'Show description'

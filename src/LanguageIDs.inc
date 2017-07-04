@@ -34,7 +34,6 @@ const
   LID_RECYCLEBIN_ENTRY                  = LID_LAST + 35;
   LID_DESCRIPTION_SHOW                  = LID_LAST + 36;
   LID_REFRESH                           = LID_LAST + 37;
-  LID_COLUMN_DEFAULT_SIZE               = LID_LAST + 38;
   LID_DATE_OF_DEACTIVATION              = LID_LAST + 40;
   LID_STARTUP_RUNONCE                   = LID_LAST + 41;
   LID_STARTUP_HEADLINE                  = LID_LAST + 42;
