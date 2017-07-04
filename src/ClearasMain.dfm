@@ -2,10 +2,10 @@ object Main: TMain
   Left = 371
   Top = 165
   Caption = 'Clearas'
-  ClientHeight = 313
+  ClientHeight = 291
   ClientWidth = 543
   Color = clBtnFace
-  Constraints.MinHeight = 372
+  Constraints.MinHeight = 350
   Constraints.MinWidth = 559
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clBlack
@@ -24,7 +24,7 @@ object Main: TMain
     Left = 0
     Top = 0
     Width = 543
-    Height = 313
+    Height = 291
     ActivePage = tsStartup
     Align = alClient
     TabOrder = 0
@@ -33,17 +33,17 @@ object Main: TMain
       Caption = 'Startup'
       DesignSize = (
         535
-        284)
+        262)
       object lStartup: TLabel
-        Left = 21
-        Top = 32
+        Left = 22
+        Top = 14
         Width = 235
         Height = 14
         Caption = 'The following programs are run at every startup.'
       end
       object lCopy1: TLabel
         Left = 223
-        Top = 261
+        Top = 239
         Width = 88
         Height = 14
         Hint = 'Go to website'
@@ -60,18 +60,12 @@ object Main: TMain
         OnClick = lCopy1Click
         OnMouseEnter = lCopy1MouseEnter
         OnMouseLeave = lCopy1MouseLeave
-      end
-      object lWindows: TLabel
-        Left = 21
-        Top = 4
-        Width = 46
-        Height = 14
-        Caption = 'Windows'
+        ExplicitTop = 261
       end
       object lwStartup: TListView
-        Left = 21
-        Top = 56
-        Width = 396
+        Left = 22
+        Top = 34
+        Width = 400
         Height = 193
         Anchors = [akLeft, akTop, akRight, akBottom]
         Columns = <
@@ -81,11 +75,11 @@ object Main: TMain
           end
           item
             Caption = 'Program (0/0)'
-            Width = 125
+            Width = 130
           end
           item
             Caption = 'File'
-            Width = 122
+            Width = 121
           end
           item
             Caption = 'Key'
@@ -107,7 +101,7 @@ object Main: TMain
       end
       object bCloseStartup: TButton
         Left = 428
-        Top = 216
+        Top = 194
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
@@ -117,7 +111,7 @@ object Main: TMain
       end
       object bDisableStartupItem: TButton
         Left = 428
-        Top = 96
+        Top = 74
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
@@ -128,7 +122,7 @@ object Main: TMain
       end
       object bDeleteStartupItem: TButton
         Left = 428
-        Top = 176
+        Top = 154
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
@@ -139,7 +133,7 @@ object Main: TMain
       end
       object bExportStartupItem: TButton
         Left = 428
-        Top = 136
+        Top = 114
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
@@ -150,7 +144,7 @@ object Main: TMain
       end
       object bEnableStartupItem: TButton
         Left = 428
-        Top = 56
+        Top = 34
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
@@ -161,7 +155,7 @@ object Main: TMain
       end
       object cbRunOnce: TCheckBox
         Left = 414
-        Top = 258
+        Top = 236
         Width = 105
         Height = 17
         Anchors = [akRight, akBottom]
@@ -170,8 +164,8 @@ object Main: TMain
         OnClick = mmRefreshClick
       end
       object eStartupSearch: TButtonedEdit
-        Left = 21
-        Top = 255
+        Left = 22
+        Top = 233
         Width = 148
         Height = 22
         Anchors = [akLeft, akBottom]
@@ -192,24 +186,17 @@ object Main: TMain
       ImageIndex = 1
       DesignSize = (
         535
-        284)
+        262)
       object lContext: TLabel
-        Left = 21
-        Top = 32
+        Left = 22
+        Top = 14
         Width = 287
         Height = 14
         Caption = 'The following items are included in different context menus.'
       end
-      object lWindows2: TLabel
-        Left = 21
-        Top = 4
-        Width = 46
-        Height = 14
-        Caption = 'Windows'
-      end
       object lCopy2: TLabel
         Left = 223
-        Top = 261
+        Top = 239
         Width = 88
         Height = 14
         Hint = 'Go to website'
@@ -230,10 +217,11 @@ object Main: TMain
         OnClick = lCopy1Click
         OnMouseEnter = lCopy1MouseEnter
         OnMouseLeave = lCopy1MouseLeave
+        ExplicitTop = 261
       end
       object bExportContextItem: TButton
         Left = 428
-        Top = 136
+        Top = 114
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
@@ -244,7 +232,7 @@ object Main: TMain
       end
       object bDeleteContextItem: TButton
         Left = 428
-        Top = 176
+        Top = 154
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
@@ -255,7 +243,7 @@ object Main: TMain
       end
       object bCloseContext: TButton
         Left = 428
-        Top = 216
+        Top = 194
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
@@ -265,7 +253,7 @@ object Main: TMain
       end
       object bDisableContextItem: TButton
         Left = 428
-        Top = 96
+        Top = 74
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
@@ -276,7 +264,7 @@ object Main: TMain
       end
       object bEnableContextItem: TButton
         Left = 428
-        Top = 56
+        Top = 34
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
@@ -286,9 +274,9 @@ object Main: TMain
         OnClick = bEnableItemClick
       end
       object lwContext: TListView
-        Left = 21
-        Top = 56
-        Width = 396
+        Left = 22
+        Top = 34
+        Width = 400
         Height = 193
         Anchors = [akLeft, akTop, akRight, akBottom]
         Columns = <
@@ -298,15 +286,15 @@ object Main: TMain
           end
           item
             Caption = 'Item (0/0)'
-            Width = 150
+            Width = 161
           end
           item
             Caption = 'Location'
-            Width = 107
+            Width = 95
           end
           item
             Caption = 'Key'
-            Width = 65
+            Width = 70
           end>
         ReadOnly = True
         RowSelect = True
@@ -321,8 +309,8 @@ object Main: TMain
         OnSelectItem = lwContextSelectItem
       end
       object pbContextProgress: TProgressBar
-        Left = 21
-        Top = 255
+        Left = 22
+        Top = 233
         Width = 148
         Height = 18
         Anchors = [akLeft, akBottom]
@@ -332,7 +320,7 @@ object Main: TMain
       end
       object cbContextExpert: TCheckBox
         Left = 414
-        Top = 258
+        Top = 236
         Width = 105
         Height = 17
         Anchors = [akRight, akBottom]
@@ -341,8 +329,8 @@ object Main: TMain
         OnClick = mmRefreshClick
       end
       object eContextSearch: TButtonedEdit
-        Left = 21
-        Top = 255
+        Left = 22
+        Top = 233
         Width = 148
         Height = 22
         Anchors = [akLeft, akBottom]
@@ -363,24 +351,17 @@ object Main: TMain
       ImageIndex = 2
       DesignSize = (
         535
-        284)
-      object lWindows3: TLabel
-        Left = 21
-        Top = 4
-        Width = 46
-        Height = 14
-        Caption = 'Windows'
-      end
+        262)
       object lService: TLabel
-        Left = 21
-        Top = 32
+        Left = 22
+        Top = 14
         Width = 235
         Height = 14
         Caption = 'The following programs are run at every startup.'
       end
       object lCopy3: TLabel
         Left = 223
-        Top = 261
+        Top = 239
         Width = 88
         Height = 14
         Hint = 'Go to website'
@@ -397,10 +378,11 @@ object Main: TMain
         OnClick = lCopy1Click
         OnMouseEnter = lCopy1MouseEnter
         OnMouseLeave = lCopy1MouseLeave
+        ExplicitTop = 261
       end
       object pbServiceProgress: TProgressBar
-        Left = 21
-        Top = 255
+        Left = 22
+        Top = 233
         Width = 148
         Height = 18
         Anchors = [akLeft, akBottom]
@@ -409,9 +391,9 @@ object Main: TMain
         Visible = False
       end
       object lwService: TListView
-        Left = 21
-        Top = 56
-        Width = 396
+        Left = 22
+        Top = 34
+        Width = 400
         Height = 193
         Anchors = [akLeft, akTop, akRight, akBottom]
         Columns = <
@@ -421,11 +403,11 @@ object Main: TMain
           end
           item
             Caption = 'Service (0/0)'
-            Width = 125
+            Width = 128
           end
           item
             Caption = 'File'
-            Width = 122
+            Width = 123
           end
           item
             Caption = 'Type'
@@ -445,7 +427,7 @@ object Main: TMain
       end
       object bExportServiceItem: TButton
         Left = 428
-        Top = 136
+        Top = 114
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
@@ -456,7 +438,7 @@ object Main: TMain
       end
       object bDeleteServiceItem: TButton
         Left = 428
-        Top = 176
+        Top = 154
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
@@ -467,7 +449,7 @@ object Main: TMain
       end
       object bCloseService: TButton
         Left = 428
-        Top = 216
+        Top = 194
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
@@ -477,7 +459,7 @@ object Main: TMain
       end
       object bDisableServiceItem: TButton
         Left = 428
-        Top = 96
+        Top = 74
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
@@ -488,7 +470,7 @@ object Main: TMain
       end
       object bEnableServiceItem: TButton
         Left = 428
-        Top = 56
+        Top = 34
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
@@ -499,7 +481,7 @@ object Main: TMain
       end
       object cbServiceExpert: TCheckBox
         Left = 414
-        Top = 258
+        Top = 236
         Width = 105
         Height = 17
         Anchors = [akRight, akBottom]
@@ -508,8 +490,8 @@ object Main: TMain
         OnClick = mmRefreshClick
       end
       object eServiceSearch: TButtonedEdit
-        Left = 21
-        Top = 255
+        Left = 22
+        Top = 233
         Width = 148
         Height = 22
         Anchors = [akLeft, akBottom]
@@ -530,24 +512,17 @@ object Main: TMain
       ImageIndex = 3
       DesignSize = (
         535
-        284)
+        262)
       object lTasks: TLabel
-        Left = 21
-        Top = 32
+        Left = 22
+        Top = 14
         Width = 232
         Height = 14
         Caption = 'The following tasks are executed as scheduled.'
       end
-      object lWindows4: TLabel
-        Left = 21
-        Top = 4
-        Width = 46
-        Height = 14
-        Caption = 'Windows'
-      end
       object lCopy4: TLabel
         Left = 223
-        Top = 261
+        Top = 239
         Width = 88
         Height = 14
         Hint = 'Go to website'
@@ -564,10 +539,11 @@ object Main: TMain
         OnClick = lCopy1Click
         OnMouseEnter = lCopy1MouseEnter
         OnMouseLeave = lCopy1MouseLeave
+        ExplicitTop = 261
       end
       object pbTaskProgress: TProgressBar
-        Left = 21
-        Top = 255
+        Left = 22
+        Top = 233
         Width = 148
         Height = 18
         Anchors = [akLeft, akBottom]
@@ -577,7 +553,7 @@ object Main: TMain
       end
       object bCloseTasks: TButton
         Left = 428
-        Top = 216
+        Top = 194
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
@@ -587,7 +563,7 @@ object Main: TMain
       end
       object bDeleteTaskItem: TButton
         Left = 428
-        Top = 176
+        Top = 154
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
@@ -598,7 +574,7 @@ object Main: TMain
       end
       object bDisableTaskitem: TButton
         Left = 428
-        Top = 96
+        Top = 74
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
@@ -609,7 +585,7 @@ object Main: TMain
       end
       object bEnableTaskItem: TButton
         Left = 428
-        Top = 56
+        Top = 34
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
@@ -620,7 +596,7 @@ object Main: TMain
       end
       object bExportTaskItem: TButton
         Left = 428
-        Top = 136
+        Top = 114
         Width = 91
         Height = 33
         Anchors = [akTop, akRight]
@@ -631,7 +607,7 @@ object Main: TMain
       end
       object cbTaskExpert: TCheckBox
         Left = 414
-        Top = 258
+        Top = 236
         Width = 105
         Height = 17
         Anchors = [akRight, akBottom]
@@ -640,8 +616,8 @@ object Main: TMain
         OnClick = mmRefreshClick
       end
       object eTaskSearch: TButtonedEdit
-        Left = 21
-        Top = 255
+        Left = 22
+        Top = 233
         Width = 148
         Height = 22
         Anchors = [akLeft, akBottom]
@@ -657,9 +633,9 @@ object Main: TMain
         OnRightButtonClick = eSearchRightButtonClick
       end
       object lwTasks: TListView
-        Left = 21
-        Top = 56
-        Width = 396
+        Left = 22
+        Top = 34
+        Width = 400
         Height = 193
         Anchors = [akLeft, akTop, akRight, akBottom]
         Columns = <
@@ -669,11 +645,11 @@ object Main: TMain
           end
           item
             Caption = 'Task (0/0)'
-            Width = 125
+            Width = 128
           end
           item
             Caption = 'File'
-            Width = 122
+            Width = 123
           end
           item
             Caption = 'Location'
@@ -863,7 +839,7 @@ object Main: TMain
   object QuickSearchIconList: TImageList
     Left = 256
     Bitmap = {
-      494C010103000800600210001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C0101030008006C0210001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000001000000001002000000000000010
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000

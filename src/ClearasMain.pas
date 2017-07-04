@@ -65,8 +65,6 @@ type
     lContext: TLabel;
     pbContextProgress: TProgressBar;
     cbContextExpert: TCheckBox;
-    lWindows2: TLabel;
-    lWindows: TLabel;
     mmUpdate: TMenuItem;
     N9: TMenuItem;
     mmInstallCertificate: TMenuItem;
@@ -78,7 +76,6 @@ type
     IconList: TImageList;
     tsService: TTabSheet;
     lwService: TListView;
-    lWindows3: TLabel;
     lService: TLabel;
     bExportServiceItem: TButton;
     bDeleteServiceItem: TButton;
@@ -101,7 +98,6 @@ type
     cbTaskExpert: TCheckBox;
     eTaskSearch: TButtonedEdit;
     lTasks: TLabel;
-    lWindows4: TLabel;
     lwTasks: TListView;
     pbTaskProgress: TProgressBar;
     pmRename: TMenuItem;
@@ -310,16 +306,6 @@ end;
 
 procedure TMain.FormShow(Sender: TObject);
 begin
-  // Get version of Windows including service pack
-  if CheckWin32Version(10) then
-    lWindows.Caption := Format('Windows %d %s', [Win32MajorVersion, Win32CSDVersion])
-  else
-    lWindows.Caption := TOSVersion.Name +' '+ Win32CSDVersion;
-
-  lWindows2.Caption := lWindows.Caption;
-  lWindows3.Caption := lWindows.Caption;
-  lWindows4.Caption := lWindows.Caption;
-
   // Update Clearas recycle bin context menu entry
   mmContext.Checked := UpdateContextPath();
 
