@@ -138,6 +138,46 @@ type
   end;
 
   /// <summary>
+  ///   Executable command that contains at least a filename and optional
+  ///   arguments.
+  /// </summary>
+  TCommandString = type string;
+
+  TCommandStringHelper = record helper for TCommandString
+    /// <summary>
+    ///   Creates a new <see cref="TCommandString"/>.
+    /// </summary>
+    /// <param name="AFileName">
+    ///   A filename.
+    /// </param>
+    /// <param name="AArguments">
+    ///   Optional: Arguments.
+    /// </param>
+    class function Create(const AFileName: string; const AArguments: string = ''): string; inline; static;
+
+    /// <summary>
+    ///   Executes the command.
+    /// </summary>
+    procedure Execute(); inline;
+
+    /// <summary>
+    ///   Extracts the optional arguments.
+    /// </summary>
+    /// <returns>
+    ///   The arguments.
+    /// </returns>
+    function ExtractArguments(): string;
+
+    /// <summary>
+    ///   Extracts the filename.
+    /// </summary>
+    /// <returns>
+    ///   The filename.
+    /// </returns>
+    function ExtractFileName(): string;
+  end;
+
+  /// <summary>
   ///   Raised when no item is selected.
   /// </summary>
   EInvalidItem = class(EAccessViolation);
@@ -2493,6 +2533,90 @@ begin
   finally
     CoUninitialize();
   end;  //of try
+end;
+
+
+{ TCommandStringHelper }
+
+class function TCommandStringHelper.Create(const AFileName: string;
+  const AArguments: string = ''): string;
+begin
+  if (AArguments = '') then
+    Result := AFileName
+  else
+    Result := AFileName.QuotedString('"') +' '+ AArguments.DeQuotedString('"');
+end;
+
+procedure TCommandStringHelper.Execute();
+begin
+  ExecuteProgram(ExtractFileName, ExtractArguments);
+end;
+
+function TCommandStringHelper.ExtractArguments(): string;
+var
+  ExtWithArguments: string;
+  Ext, SpaceDelimiter: Integer;
+
+begin
+  if (Self = '') then
+    Exit;
+
+  // Cut path from extension until end
+  // Note: Garbage in worst case if a folder name contains a '.'!
+  Ext := string(Self).IndexOf('.');
+
+  if (Ext >= 0) then
+    ExtWithArguments := string(Self).SubString(Ext)
+  else
+    ExtWithArguments := ExtractFileExt(Self);
+
+  // Find space delimter between extension and arguments
+  SpaceDelimiter := ExtWithArguments.IndexOf(' ');
+
+  // No space char after extension: no arguments!
+  if (SpaceDelimiter = -1) then
+    Exit;
+
+  // Copy arguments without entension and space char at front and end
+  Result := ExtWithArguments.Substring(SpaceDelimiter).Trim;
+end;
+
+function TCommandStringHelper.ExtractFileName(): string;
+var
+  Parts: TArray<string>;
+  i: Integer;
+  Line, ExtWithArguments: string;
+
+begin
+  if (Self = '') then
+    Exit;
+
+  if string(Self).StartsWith('"') then
+  begin
+    Parts := string(Self).Split(['"']);
+
+    for i := Low(Parts) to High(Parts) do
+    begin
+      Line := Parts[i].Trim;
+
+      if (Line <> '') then
+      begin
+        Result := Line.DeQuotedString('"');
+        Break;
+      end;  //of begin
+    end;  //of for
+  end  //of begin
+  else
+  begin
+    if (string(Self).CountChar('.') = 1) then
+      i := string(Self).LastDelimiter(PathDelim +'.')
+    else
+      i := string(Self).LastDelimiter(PathDelim);
+
+    ExtWithArguments := string(Self).SubString(i + 1);
+    Parts := ExtWithArguments.Split([' ']);
+    Result := string(Self).Substring(0, string(Self).IndexOf(ExtWithArguments) + Length(Parts[0]));
+  end;  //of if
 end;
 
 
