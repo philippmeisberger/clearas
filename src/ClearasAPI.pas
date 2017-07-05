@@ -4378,7 +4378,7 @@ begin
         Reg.WriteString(ACaption, FullPath);
 
         // Adds item to list
-        Result := (Add(TStartupItem.Create(ACaption, AFileName, TStartupItem.StartupRunKey,
+        Result := (Add(TStartupItem.Create(ACaption, FullPath, TStartupItem.StartupRunKey,
           rkHKCU, True, False, False)) <> -1);
 
         // Windows 8?

@@ -3,7 +3,7 @@ Clearas
 
 An open-source project by PM Code Works
 
-Version 4.4 [*??.??.17*]
+Version 4.4 [*??.08.17*]
 -----------
 
 * Added automatic search for invalid items
@@ -28,6 +28,7 @@ Version 4.4 [*??.??.17*]
   * Wrong listview was refreshed when switching the tab during a search
   * Column "Deactivation time" did not have correct caption after changing language
   * Caption was not refreshed after editing the path
+  * Arguments are missing after adding a .bat file to autostart
 * Removed support for Windows 2000 and XP
 * Updater v3.1
   * Removed dependency to "indy" components library
