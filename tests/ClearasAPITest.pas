@@ -43,6 +43,8 @@ type
     procedure CleanUp; virtual;
   published
     procedure AddEnabledTestItems; virtual; abstract;
+    // TODO: Test adding new item
+    //procedure TestAddItem; virtual; abstract;
     procedure TestDisableItems;
     procedure TestEnableItems;
     procedure TestRenameItems; virtual;
@@ -60,7 +62,7 @@ type
     procedure DeleteTestItem(ALocation: TStartupLocation);
     function GetItemName(ALocation: TStartupLocation;
       AErasable: Boolean = False): string;
-    procedure ImportDuplicate;
+    procedure ImportUserBackup;
   protected
     procedure LoadItems(); override;
   public
@@ -217,7 +219,7 @@ begin
   Result := GetItemForName(AItemName);
   CheckEqualsString(AExpectedFilePath, Result.FileNameOnly, 'FileName of "'+ AItemName +'" does not match before changing file path');
   FRootList.ChangeItemFilePath(Result, ANewFilePath);
-  CheckEqualsString(ANewFilePath, Result.FileName, 'FileName of "'+ AItemName +'" does not match after changing file path');
+  CheckEqualsString(ANewFilePath, Result.Command, 'FileName of "'+ AItemName +'" does not match after changing file path');
 end;
 
 procedure TRootListTest.TestChangeItemFilePaths;
@@ -231,7 +233,7 @@ begin
   for i := 0 to FTestItems.Count - 1 do
   begin
     SelectedItem := TestChangeFilePath(FTestItems[i], cTestExe, cNewTestFileName);
-    CheckEqualsString(cNewTestArgument, SelectedItem.Arguments, 'Arguments of "'+ FTestItems[i] +'" does not match after changing file path');
+    CheckEqualsString(cNewTestArgument, SelectedItem.Command.ExtractArguments, 'Arguments of "'+ FTestItems[i] +'" does not match after changing file path');
     CheckEqualsString(cNewTestExe, SelectedItem.FileNameOnly, 'FileNameOnly of "'+ FTestItems[i] +'" does not match after changing file path');
   end;  //of for
 
@@ -242,7 +244,7 @@ begin
   for i := 0 to FErasableTestItems.Count - 1 do
   begin
     SelectedItem := TestChangeFilePath(FErasableTestItems[i], cTestExeErasable, cNewTestFileName);
-    CheckEqualsString(cNewTestArgument, SelectedItem.Arguments, 'Arguments of "'+ FErasableTestItems[i] +'" does not match after changing file path');
+    CheckEqualsString(cNewTestArgument, SelectedItem.Command.ExtractArguments, 'Arguments of "'+ FErasableTestItems[i] +'" does not match after changing file path');
     CheckEqualsString(cNewTestExe, SelectedItem.FileNameOnly, 'FileNameOnly of "'+ FErasableTestItems[i] +'" does not match after changing file path');
   end;  //of for
 
@@ -487,15 +489,15 @@ begin
   end;  //of for
 end;
 
-procedure TStartupListTest.ImportDuplicate;
+procedure TStartupListTest.ImportUserBackup;
 begin
-  TStartupList(FRootList).ImportBackup('..\..\data\'+ GetItemName(slStartupUser) + TStartupUserItem.FileExtensionStartupUser);
+  Check(TStartupList(FRootList).ImportBackup('..\..\data\'+ GetItemName(slStartupUser) +  TStartupUserItem.FileExtensionStartupUser), 'Startup User file already exists!');
 end;
 
 procedure TStartupListTest.TestImportBackup;
 begin
-  Check(TStartupList(FRootList).ImportBackup('..\..\data\'+ GetItemName(slStartupUser) +  TStartupUserItem.FileExtensionStartupUser), 'Startup User file already exists!');
-  CheckException(ImportDuplicate, EAlreadyExists, 'Startup User file already exists so it must not be possible to import it again!');
+  ImportUserBackup;
+  CheckException(ImportUserBackup, EAlreadyExists, 'Startup User file already exists so it must not be possible to import it again!');
 {$IFNDEF DEBUG}
   Check(TStartupList(FRootList).ImportBackup('..\..\data\'+ GetItemName(slCommonStartup) + TStartupUserItem.FileExtensionStartupCommon), 'Startup Common file already exists!');
   CheckEquals(2, FRootList.Count, 'After importing 2 startup backup files there should be 2 items in the list');

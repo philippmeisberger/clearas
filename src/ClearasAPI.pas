@@ -207,56 +207,33 @@ type
   /// </remarks>
   TRootItem = class abstract(TObject)
   private
-    function GetArguments(): string;
     function GetFileNameOnly(): string;
     function GetErasable(): Boolean;
   protected
     FEnabled,
     FErasable,
     FInvalid: Boolean;
-    FFileName: string;
-    FName: string;
-    FLocation: string;
+    FCommand: TCommandString;
+    FName,
+    FLocation,
     FCaption: string;
     FIcon: HICON;
 
     /// <summary>
-    ///   Changes the file path.
+    ///   Changes the command.
     /// </summary>
-    /// <param name="ANewFileName">
-    ///   The new file name.
+    /// <param name="ACommand">
+    ///   The new command.
     /// </param>
-    procedure ChangeFilePath(const ANewFileName: string); virtual;
+    procedure SetCommand(const ACommand: TCommandString); virtual;
 
     /// <summary>
     ///   Changes the status.
     /// </summary>
-    /// <param name="ANewStatus">
+    /// <param name="AEnabled">
     ///   The new status.
     /// </param>
-    procedure ChangeStatus(const ANewStatus: Boolean); virtual;
-
-    /// <summary>
-    ///   Extracts the arguments from a file name.
-    /// </summary>
-    /// <param name="AFileName">
-    ///   The file name.
-    /// </param>
-    /// <returns>
-    ///   The arguments.
-    /// </returns>
-    function ExtractArguments(const AFileName: string): string;
-
-    /// <summary>
-    ///   Extracts the path to a file (without arguments).
-    /// </summary>
-    /// <param name="AFileName">
-    ///   The file name.
-    /// </param>
-    /// <returns>
-    ///   The path.
-    /// </returns>
-    function ExtractPathToFile(const AFileName: string): string;
+    procedure SetEnabled(const AEnabled: Boolean); virtual;
 
     /// <summary>
     ///   Frees the cached icon handle.
@@ -326,8 +303,8 @@ type
     /// <param name="ACaption">
     ///   The display name.
     /// </param>
-    /// <param name="AFileName">
-    ///   The filename to an .exe file.
+    /// <param name="ACommand">
+    ///   The command.
     /// </param>
     /// <param name="ALocation">
     ///   The location where the item can be found.
@@ -335,8 +312,8 @@ type
     /// <param name="AEnabled">
     ///   The status.
     /// </param>
-    constructor Create(const AName, ACaption, AFileName, ALocation: string;
-      AEnabled: Boolean); reintroduce;
+    constructor Create(const AName, ACaption: string; const ACommand: TCommandString;
+      const ALocation: string; AEnabled: Boolean); reintroduce;
 
     /// <summary>
     ///   Destructor for destroying a <c>TRootItem</c> instance.
@@ -413,29 +390,24 @@ type
     procedure OpenInExplorer();
 
     /// <summary>
-    ///   Extracts the arguments to the .exe file in <see cref="FileName"/>.
-    /// </summary>
-    property Arguments: string read GetArguments;
-
-    /// <summary>
     ///   Gets the display name.
     /// </summary>
     property Caption: string read FCaption;
 
     /// <summary>
+    ///   Gets or sets the filename including arguments.
+    /// </summary>
+    property Command: TCommandString read FCommand write SetCommand;
+
+    /// <summary>
     ///   Gets or sets the enabled status.
     /// </summary>
-    property Enabled: Boolean read FEnabled write ChangeStatus;
+    property Enabled: Boolean read FEnabled write SetEnabled;
 
     /// <summary>
     ///   Determines if the item is invalid and can be deleted.
     /// </summary>
     property Erasable: Boolean read GetErasable;
-
-    /// <summary>
-    ///   Gets or sets the filename including arguments.
-    /// </summary>
-    property FileName: string read FFileName write ChangeFilePath;
 
     /// <summary>
     ///   Gets the filename without arguments.
@@ -515,8 +487,8 @@ type
     /// <param name="ACaption">
     ///   The display name.
     /// </param>
-    /// <param name="AFileName">
-    ///   The filename to an .exe file.
+    /// <param name="ACommand">
+    ///   The command.
     /// </param>
     /// <param name="ALocation">
     ///   The location where the item can be found.
@@ -527,8 +499,8 @@ type
     /// <param name="AWow64">
     ///   Use the WOW64 technology.
     /// </param>
-    constructor Create(const AName, ACaption, AFileName, ALocation: string;
-      AEnabled, AWow64: Boolean);
+    constructor Create(const AName, ACaption: string;
+      const ACommand: TCommandString; const ALocation: string; AEnabled, AWow64: Boolean);
 
     /// <summary>
     ///   Gets the file extension for backup files.
@@ -667,7 +639,7 @@ type
     /// <param name="AItem">
     ///   The item.
     /// </param>
-    /// <param name="ANewStatus">
+    /// <param name="AEnabled">
     ///   The new status.
     /// </param>
     /// <exception>
@@ -675,7 +647,7 @@ type
     ///   <c>EInvalidItem</c> if no item is selected.
     ///   <c>EWarning</c> if new status is equal to current.
     /// </exception>
-    procedure ChangeItemStatus(AItem: T; const ANewStatus: Boolean);
+    procedure ChangeItemStatus(AItem: T; const AEnabled: Boolean);
 
     /// <summary>
     ///   Deletes an item.
@@ -1031,8 +1003,8 @@ type
   protected
     FTime: TDateTime;
     FRootKey: TRootKey;
-    procedure ChangeFilePath(const ANewFileName: string); override;
-    procedure ChangeStatus(const ANewStatus: Boolean); override;
+    procedure SetCommand(const ACommand: TCommandString); override;
+    procedure SetEnabled(const AEnabled: Boolean); override;
     function Disable(): Boolean; virtual; deprecated 'Since Windows 8'; abstract;
     function Enable(): Boolean; virtual; deprecated 'Since Windows 8'; abstract;
     function DeleteValue(const AKeyPath: string; AReallyWow64: Boolean = True): Boolean;
@@ -1058,8 +1030,8 @@ type
     /// <param name="AName">
     ///   The internal name.
     /// </param>
-    /// <param name="AFileName">
-    ///   The filename to an .exe file.
+    /// <param name="ACommand">
+    ///   The command.
     /// </param>
     /// <param name="ALocation">
     ///   The location where the item can be found.
@@ -1073,8 +1045,8 @@ type
     /// <param name="AWow64">
     ///   Use the WOW64 technology.
     /// </param>
-    constructor Create(const AName, AFileName, ALocation: string;
-      ARootKey: TRootKey; AEnabled, AWow64: Boolean);
+    constructor Create(const AName: string; const ACommand: TCommandString;
+      const ALocation: string; ARootKey: TRootKey; AEnabled, AWow64: Boolean);
 
     /// <summary>
     ///   Deletes the item.
@@ -1203,8 +1175,8 @@ type
     /// <param name="AName">
     ///   The internal name.
     /// </param>
-    /// <param name="AFileName">
-    ///   The filename to an .exe file.
+    /// <param name="ACommand">
+    ///   The command.
     /// </param>
     /// <param name="ALocation">
     ///   The location where the item can be found.
@@ -1221,8 +1193,8 @@ type
     /// <param name="ARunOnce">
     ///   Item is a RunOnce item and so located in a RunOnce Registry key.
     /// </param>
-    constructor Create(const AName, AFileName, ALocation: string;
-      ARootKey: TRootKey; AEnabled, AWow64, ARunOnce: Boolean);
+    constructor Create(const AName: string; const ACommand: TCommandString;
+      const ALocation: string; ARootKey: TRootKey; AEnabled, AWow64, ARunOnce: Boolean);
 
     /// <summary>
     ///   Deletes the item.
@@ -1264,7 +1236,7 @@ type
     function GetBackupDir(): string; deprecated 'Since Windows 8';
     function GetBackupLnk(): string; deprecated 'Since Windows 8';
   protected
-    procedure ChangeFilePath(const ANewFileName: string); override;
+    procedure SetCommand(const ACommand: TCommandString); override;
     function Disable(): Boolean; override;
     function Enable(): Boolean; override;
     function GetApprovedLocation(): string; override;
@@ -1304,8 +1276,8 @@ type
     /// <param name="AName">
     ///   The internal name.
     /// </param>
-    /// <param name="AFileName">
-    ///   The filename to an .exe file.
+    /// <param name="ACommand">
+    ///   The command.
     /// </param>
     /// <param name="ALocation">
     ///   The location where the item can be found.
@@ -1319,8 +1291,8 @@ type
     /// <param name="ALnkFile">
     ///   The corresponding .lnk file.
     /// </param>
-    constructor Create(const AName, AFileName, ALocation: string;
-      AEnabled, AStartupUser: Boolean; ALnkFile: TLnkFile);
+    constructor Create(const AName: string; const ACommand: TCommandString;
+      const ALocation: string; AEnabled, AStartupUser: Boolean; ALnkFile: TLnkFile);
 
     /// <summary>
     ///   Destructor for destroying a <c>TStartupUserItem</c> instance.
@@ -1624,8 +1596,8 @@ type
   private
     FExtended: Boolean;
   protected
-    procedure ChangeFilePath(const ANewFileName: string); override;
-    procedure ChangeStatus(const ANewStatus: Boolean); override;
+    procedure SetCommand(const ACommand: TCommandString); override;
+    procedure SetEnabled(const AEnabled: Boolean); override;
     function GetIcon(): HICON; override;
     function GetIcon(const AFileName: TFileName): HICON; override;
     function GetIconFileName(): string;
@@ -1697,7 +1669,7 @@ type
   private
     procedure GetSubCommands(ASubCommands: TStrings);
   protected
-    procedure ChangeFilePath(const ANewFileName: string); override;
+    procedure SetCommand(const ACommand: TCommandString); override;
     procedure Rename(const ANewName: string); override;
   public
     const
@@ -1767,8 +1739,8 @@ type
   TContextMenuShellExItem = class(TContextMenuListItem)
   protected
     function GetIcon(): HICON; override;
-    procedure ChangeFilePath(const ANewFileName: string); override;
-    procedure ChangeStatus(const ANewStatus: Boolean); override;
+    procedure SetCommand(const ACommand: TCommandString); override;
+    procedure SetEnabled(const AEnabled: Boolean); override;
     function GetLocation(): string; override;
     procedure Rename(const ANewName: string); override;
   public
@@ -1808,8 +1780,8 @@ type
   TContextMenuShellNewItem = class(TContextMenuListItem)
   protected
     function GetIcon(): HICON; override;
-    procedure ChangeFilePath(const ANewFileName: string); override;
-    procedure ChangeStatus(const ANewStatus: Boolean); override;
+    procedure SetCommand(const ACommand: TCommandString); override;
+    procedure SetEnabled(const AEnabled: Boolean); override;
     function GetLocation(): string; override;
     procedure Rename(const ANewName: string); override;
   public
@@ -2042,8 +2014,8 @@ type
     FServiceStart: TServiceStart;
     function GetHandle(AAccess: DWORD): SC_HANDLE;
   protected
-    procedure ChangeFilePath(const ANewFileName: string); override;
-    procedure ChangeStatus(const ANewStatus: Boolean); override;
+    procedure SetCommand(const ACommand: TCommandString); override;
+    procedure SetEnabled(const AEnabled: Boolean); override;
     function GetLocation(): string; override;
     function GetRootKey(): TRootKey; override;
     procedure Rename(const ANewName: string); override;
@@ -2057,8 +2029,8 @@ type
     /// <param name="ACaption">
     ///   The display name.
     /// </param>
-    /// <param name="AFileName">
-    ///   The filename to an .exe file.
+    /// <param name="ACommand">
+    ///   The command.
     /// </param>
     /// <param name="AEnabled">
     ///   The status.
@@ -2069,8 +2041,8 @@ type
     /// <param name="AServiceManager">
     ///   The handle to a service manager.
     /// </param>
-    constructor Create(const AName, ACaption, AFileName: string; AEnabled: Boolean;
-      AServiceStart: TServiceStart; AServiceManager: SC_HANDLE);
+    constructor Create(const AName, ACaption: string; const ACommand: TCommandString;
+      AEnabled: Boolean; AServiceStart: TServiceStart; AServiceManager: SC_HANDLE);
 
     /// <summary>
     ///   Deletes the item.
@@ -2209,8 +2181,8 @@ type
     function GetTaskDefinition(): ITaskDefinition;
     function GetZipLocation(): string;
   protected
-    procedure ChangeFilePath(const ANewFilePath: string); override;
-    procedure ChangeStatus(const ANewStatus: Boolean); override;
+    procedure SetCommand(const ACommand: TCommandString); override;
+    procedure SetEnabled(const AEnabled: Boolean); override;
     function GetFullLocation(): string; override;
     procedure Rename(const ANewName: string); override;
   public
@@ -2220,8 +2192,8 @@ type
     /// <param name="AName">
     ///   The internal name.
     /// </param>
-    /// <param name="AFileName">
-    ///   The filename to an .exe file.
+    /// <param name="ACommand">
+    ///   The command.
     /// </param>
     /// <param name="ALocation">
     ///   The location where the item can be found.
@@ -2235,8 +2207,9 @@ type
     /// <param name="ATaskService">
     ///   A <c>ITaskService</c> object.
     /// </param>
-    constructor Create(const AName, AFileName, ALocation: string; AEnabled: Boolean;
-      const ATask: IRegisteredTask; const ATaskService: ITaskService);
+    constructor Create(const AName: string; const ACommand: TCommandString;
+      const ALocation: string; AEnabled: Boolean; const ATask: IRegisteredTask;
+      const ATaskService: ITaskService);
 
     /// <summary>
     ///   Deletes the item.
@@ -2601,7 +2574,7 @@ begin
 
       if (Line <> '') then
       begin
-        Result := Line.DeQuotedString('"');
+        Result := Line;
         Break;
       end;  //of begin
     end;  //of for
@@ -2622,22 +2595,17 @@ end;
 
 { TRootItem }
 
-constructor TRootItem.Create(const AName, ACaption, AFileName, ALocation: string;
-  AEnabled: Boolean);
+constructor TRootItem.Create(const AName, ACaption: string;
+  const ACommand: TCommandString; const ALocation: string; AEnabled: Boolean);
 begin
   inherited Create;
   FName := AName;
   FCaption := ACaption;
-  FFileName := AFileName;
+  FCommand := ACommand;
   FLocation := ALocation;
   FEnabled := AEnabled;
   FIcon := 0;
   FErasable := not FileExists();
-end;
-
-function TRootItem.GetArguments(): string;
-begin
-  Result := ExtractArguments(FFileName).DeQuotedString('"');
 end;
 
 function TRootItem.GetErasable(): Boolean;
@@ -2654,19 +2622,19 @@ var
   Index: Integer;
 
 begin
-  if (FFileName = '') then
+  if (FCommand = '') then
     Exit;
 
-  Index := FFileName.ToLower.IndexOf(RUNDLL32);
+  Index := string(FCommand).ToLower.IndexOf(RUNDLL32);
 
   if (Index <> -1) then
   begin
     Index := Index + Length(RUNDLL32) + 1;
-    Path := FFileName.Substring(Index);
+    Path := string(FCommand).Substring(Index);
     Path := Path.Substring(0, Path.IndexOf(',')).TrimLeft;
   end  //of begin
   else
-    Path := ExtractPathToFile(FFileName);
+    Path := FCommand.ExtractFileName();
 
   Path := Path.DeQuotedString('"');
 
@@ -2722,9 +2690,9 @@ begin
   end;  //of begin
 end;
 
-procedure TRootItem.ChangeFilePath(const ANewFileName: string);
+procedure TRootItem.SetCommand(const ACommand: TCommandString);
 begin
-  FFileName := ANewFileName;
+  FCommand := ACommand;
   FErasable := not FileExists();
 end;
 
@@ -2745,74 +2713,7 @@ end;
 
 procedure TRootItem.Execute();
 begin
-  ExecuteProgram(FileNameOnly, Arguments);
-end;
-
-function TRootItem.ExtractArguments(const AFileName: string): string;
-var
-  ExtWithArguments: string;
-  Ext, SpaceDelimiter: Integer;
-
-begin
-  if (AFileName = '') then
-    Exit;
-
-  // Cut path from extension until end
-  // Note: Garbage in worst case if a folder name contains a '.'!
-  Ext := AFileName.IndexOf('.');
-
-  if (Ext >= 0) then
-    ExtWithArguments := AFileName.SubString(Ext)
-  else
-    ExtWithArguments := ExtractFileExt(AFileName);
-
-  // Find space delimter between extension and arguments
-  SpaceDelimiter := ExtWithArguments.IndexOf(' ');
-
-  // No space char after extension: no arguments!
-  if (SpaceDelimiter = -1) then
-    Exit;
-
-  // Copy arguments without entension and space char at front and end
-  Result := ExtWithArguments.Substring(SpaceDelimiter).Trim;
-end;
-
-function TRootItem.ExtractPathToFile(const AFileName: string): string;
-var
-  Parts: TArray<string>;
-  i: Integer;
-  Line, ExtWithArguments: string;
-
-begin
-  if (Length(AFileName) = 0) then
-    Exit;
-
-  if AFileName.StartsWith('"') then
-  begin
-    Parts := AFileName.Split(['"']);
-
-    for i := Low(Parts) to High(Parts) do
-    begin
-      Line := Parts[i].Trim;
-
-      if (Line <> '') then
-      begin
-        Result := Line;
-        Break;
-      end;  //of begin
-    end;  //of for
-  end  //of begin
-  else
-  begin
-    if (AFileName.CountChar('.') = 1) then
-      i := AFileName.LastDelimiter(PathDelim +'.')
-    else
-      i := AFileName.LastDelimiter(PathDelim);
-
-    ExtWithArguments := AFileName.SubString(i + 1);
-    Parts := ExtWithArguments.Split([' ']);
-    Result := AFileName.Substring(0, AFileName.IndexOf(ExtWithArguments) + Length(Parts[0]));
-  end;  //of if
+  FCommand.Execute();
 end;
 
 function TRootItem.GetIcon(): HICON;
@@ -2851,9 +2752,9 @@ begin
   Result := FLocation;
 end;
 
-procedure TRootItem.ChangeStatus(const ANewStatus: Boolean);
+procedure TRootItem.SetEnabled(const AEnabled: Boolean);
 begin
-  FEnabled := ANewStatus;
+  FEnabled := AEnabled;
 end;
 
 function TRootItem.FileExists(): Boolean;
@@ -2914,10 +2815,10 @@ end;
 
 { TRegistryItem }
 
-constructor TRegistryItem.Create(const AName, ACaption, AFileName, ALocation: string;
-  AEnabled, AWow64: Boolean);
+constructor TRegistryItem.Create(const AName, ACaption: string;
+  const ACommand: TCommandString; const ALocation: string; AEnabled, AWow64: Boolean);
 begin
-  inherited Create(AName, ACaption, AFileName, ALocation, AEnabled);
+  inherited Create(AName, ACaption, ACommand, ALocation, AEnabled);
   FWow64 := AWow64;
 end;
 
@@ -3120,7 +3021,7 @@ begin
 
     // Change item file path
     ItemErasable := AItem.Erasable;
-    AItem.ChangeFilePath(ANewFilePath);
+    AItem.SetCommand(ANewFilePath);
 
     // Update erasable count
     if (ItemErasable and not AItem.Erasable) then
@@ -3134,7 +3035,7 @@ begin
   end;  //of try
 end;
 
-procedure TRootList<T>.ChangeItemStatus(AItem: T; const ANewStatus: Boolean);
+procedure TRootList<T>.ChangeItemStatus(AItem: T; const AEnabled: Boolean);
 begin
   // List locked?
   if not FLock.TryEnter() then
@@ -3144,13 +3045,13 @@ begin
     if (not Assigned(AItem) or (IndexOf(AItem) = -1)) then
       raise EInvalidItem.Create('No item selected!');
 
-    if ANewStatus then
+    if AEnabled then
     begin
       if AItem.Enabled then
         raise EWarning.Create('Item already enabled!');
 
       // Enable item
-      AItem.ChangeStatus(ANewStatus);
+      AItem.SetEnabled(AEnabled);
       Inc(FEnabledItemsCount);
       NotifyOnCounterUpdate();
     end  //of begin
@@ -3160,7 +3061,7 @@ begin
         raise EWarning.Create('Item already disabled!');
 
       // Disable item
-      AItem.ChangeStatus(ANewStatus);
+      AItem.SetEnabled(AEnabled);
 
       // Update active counter
       if (FEnabledItemsCount > 0) then
@@ -3496,10 +3397,10 @@ end;
 
 { TStartupListItem }
 
-constructor TStartupListItem.Create(const AName, AFileName, ALocation: string;
-  ARootKey: TRootKey; AEnabled, AWow64: Boolean);
+constructor TStartupListItem.Create(const AName: string; const ACommand: TCommandString;
+  const ALocation: string; ARootKey: TRootKey; AEnabled, AWow64: Boolean);
 begin
-  inherited Create(AName, AName, AFileName, ALocation, AEnabled, AWow64);
+  inherited Create(AName, AName, ACommand, ALocation, AEnabled, AWow64);
   FRootKey := ARootKey;
   FCaption := GetFileDescription(FileNameOnly);
   FTime := 0;
@@ -3513,7 +3414,7 @@ begin
     Result := FLocation;
 end;
 
-procedure TStartupListItem.ChangeStatus(const ANewStatus: Boolean);
+procedure TStartupListItem.SetEnabled(const AEnabled: Boolean);
 var
   Reg: TRegistry;
   ItemStatus: TStartupItemStatus;
@@ -3521,19 +3422,19 @@ var
 begin
   if not CheckWin32Version(6, 2) then
   begin
-    if (FEnabled and not ANewStatus) then
+    if (FEnabled and not AEnabled) then
     begin
       if not Disable() then
         raise Exception.Create('Unknown error!');
     end  //of begin
     else
-      if (not FEnabled and ANewStatus) then
+      if (not FEnabled and AEnabled) then
       begin
         if not Enable() then
           raise Exception.Create('Unknown error!');
       end;  //of if
 
-    inherited ChangeStatus(ANewStatus);
+    inherited SetEnabled(AEnabled);
   end  //of begin
   else
   begin
@@ -3543,10 +3444,10 @@ begin
     try
       Reg.RootKey := FRootKey.ToHKey();
       Reg.OpenKey(GetApprovedLocation(), True);
-      ItemStatus.SetEnabled(ANewStatus);
+      ItemStatus.SetEnabled(AEnabled);
       Reg.WriteBinaryData(Name, ItemStatus, SizeOf(TStartupItemStatus));
       FTime := ItemStatus.GetDeactivationTime();
-      inherited ChangeStatus(ANewStatus);
+      inherited SetEnabled(AEnabled);
 
     finally
       Reg.CloseKey();
@@ -3612,7 +3513,7 @@ begin
       raise EStartupException.Create(Reg.LastErrorMsg);
 
     if not Reg.ValueExists(Name) then
-      ChangeStatus(True);
+      SetEnabled(True);
 
     Reg.RenameValue(Name, ANewName);
 
@@ -3627,7 +3528,7 @@ begin
   end;  //of try
 end;
 
-procedure TStartupListItem.ChangeFilePath(const ANewFileName: string);
+procedure TStartupListItem.SetCommand(const ACommand: TCommandString);
 var
   Reg: TRegistry;
   ItemName: string;
@@ -3655,8 +3556,8 @@ begin
       raise EStartupException.Create('Value '''+ ItemName +''' does not exist!');
 
     // Change path
-    Reg.WriteString(ItemName, ANewFileName);
-    inherited ChangeFilePath(ANewFileName);
+    Reg.WriteString(ItemName, ACommand);
+    inherited SetCommand(ACommand);
 
     // Update caption
     FCaption := GetFileDescription(FileNameOnly);
@@ -3747,10 +3648,10 @@ end;
 
 { TStartupItem }
 
-constructor TStartupItem.Create(const AName, AFileName, ALocation: string;
-  ARootKey: TRootKey; AEnabled, AWow64, ARunOnce: Boolean);
+constructor TStartupItem.Create(const AName: string; const ACommand: TCommandString;
+  const ALocation: string; ARootKey: TRootKey; AEnabled, AWow64, ARunOnce: Boolean);
 begin
-  inherited Create(AName, AFileName, ALocation, ARootKey, AEnabled, AWow64);
+  inherited Create(AName, ACommand, ALocation, ARootKey, AEnabled, AWow64);
   FRunOnce := ARunOnce;
 end;
 
@@ -3788,7 +3689,7 @@ begin
     Reg.WriteString('hkey', RootKey.ToString(False));
     Reg.WriteString('key', GetWow64Key());
     Reg.WriteString('item', Name);
-    Reg.WriteString('command', FileName);
+    Reg.WriteString('command', Command);
     Reg.WriteString('inimapping', '0');
 
     // Windows >= Vista?
@@ -3875,7 +3776,7 @@ begin
       raise EStartupException.Create('Could not create startup key: '+ Reg.LastErrorMsg);
 
     // Write startup entry
-    Reg.WriteString(Name, FileName);
+    Reg.WriteString(Name, Command);
 
     // Delete old key
     Reg.CloseKey();
@@ -3996,8 +3897,8 @@ end;
 
 { TStartupUserItem }
 
-constructor TStartupUserItem.Create(const AName, AFileName, ALocation: string;
-  AEnabled, AStartupUser: Boolean; ALnkFile: TLnkFile);
+constructor TStartupUserItem.Create(const AName: string; const ACommand: TCommandString;
+  const ALocation: string; AEnabled, AStartupUser: Boolean; ALnkFile: TLnkFile);
 const
   cCurrentUser: array[Boolean] of TRootKey = (rkHKLM, rkHKCU);
 
@@ -4011,7 +3912,7 @@ begin
   else
     RootKey := rkUnknown;
 
-  inherited Create(AName, AFileName, ALocation, RootKey, AEnabled, False);
+  inherited Create(AName, ACommand, ALocation, RootKey, AEnabled, False);
   FStartupUser := AStartupUser;
   FLnkFile := ALnkFile;
 end;
@@ -4042,7 +3943,7 @@ begin
   if CheckWin32Version(6, 2) then
     Exit;
 
-  if not CopyFile(PChar(FFileName), PChar(GetBackupLnk()), False) then
+  if not CopyFile(PChar(FCommand), PChar(GetBackupLnk()), False) then
     raise EStartupException.Create('Backup could not be created!');
 end;
 
@@ -4088,7 +3989,7 @@ begin
   if CheckWin32Version(6, 2) then
     Exit;
 
-  Result := GetBackupDir() + ExtractFileName(FFileName) + GetBackupExtension();
+  Result := GetBackupDir() + ExtractFileName(FCommand) + GetBackupExtension();
 end;
 
 function TStartupUserItem.GetExportFilter(ALanguageFile: TLanguageFile): string;
@@ -4096,14 +3997,14 @@ begin
   Result := ToString() +'|*'+ GetBackupExtension();
 end;
 
-procedure TStartupUserItem.ChangeFilePath(const ANewFileName: string);
+procedure TStartupUserItem.SetCommand(const ACommand: TCommandString);
 begin
   if (not Enabled and not CheckWin32Version(6, 2)) then
-    inherited ChangeFilePath(ANewFileName);
+    inherited SetCommand(ACommand);
 
-  FLnkFile.ExeFileName := ExtractPathToFile(ANewFileName);
-  FLnkFile.Arguments := ExtractArguments(ANewFileName).DeQuotedString('"');
-  FFileName := ANewFileName;
+  FLnkFile.ExeFileName := ACommand.ExtractFileName();
+  FLnkFile.Arguments := ACommand.ExtractArguments();
+  FCommand := ACommand;
   FErasable := not FileExists();
 
   // Update caption
@@ -4182,7 +4083,7 @@ begin
 
     Reg.WriteString('path', FLocation);
     Reg.WriteString('item', ChangeFileExt(ExtractFileName(Name), ''));
-    Reg.WriteString('command', FileName);
+    Reg.WriteString('command', Command);
     Reg.WriteString('backup', GetBackupLnk());
 
     // Special Registry entries only for Windows >= Vista
@@ -4427,7 +4328,7 @@ begin
   // File path already exists in another item?
   for i := 0 to Count - 1 do
   begin
-    if Items[i].FileName.Contains(AFileName) then
+    if string(Items[i].Command).Contains(AFileName) then
       raise EAlreadyExists.Create('Item already exists!');
   end;  //of for
 
@@ -4457,7 +4358,8 @@ end;
 
 function TStartupList.Add(const AFileName, AArguments, ACaption: string): Boolean;
 var
-  Name, Ext, FullPath: string;
+  Name, Ext: string;
+  Command: TCommandString;
   Reg: TRegistry;
 
 begin
@@ -4487,22 +4389,16 @@ begin
       try
         Reg.RootKey := HKEY_CURRENT_USER;
         Reg.OpenKey(TStartupItem.StartupRunKey, True);
-
-        // Escape space chars using quotes
-        FullPath := '"'+ AFileName +'"';
-
-        // Append arguments if used
-        if (AArguments <> '') then
-          FullPath := FullPath +' '+ AArguments;
+        Command := TCommandString.Create(AFileName, AArguments);
 
         // Item already exists?
         if Reg.ValueExists(ACaption) then
           raise EAlreadyExists.Create('Item already exists!');
 
-        Reg.WriteString(ACaption, FullPath);
+        Reg.WriteString(ACaption, Command);
 
         // Adds item to list
-        Result := (Add(TStartupItem.Create(ACaption, FullPath, TStartupItem.StartupRunKey,
+        Result := (Add(TStartupItem.Create(ACaption, Command, TStartupItem.StartupRunKey,
           rkHKCU, True, False, False)) <> -1);
 
         // Windows 8?
@@ -4669,7 +4565,7 @@ begin
         with TStartupUserItem(Item).LnkFile do
         begin
           ExeFileName := Item.FileNameOnly;
-          Arguments := Item.Arguments;
+          Arguments := Item.Command.ExtractArguments;
         end;  //of with
       end;  //of if
 
@@ -4948,7 +4844,7 @@ begin
   end;  //of try
 end;
 
-procedure TContextMenuShellItem.ChangeFilePath(const ANewFileName: string);
+procedure TContextMenuShellItem.SetCommand(const ACommand: TCommandString);
 var
   Reg: TRegistry;
 
@@ -4965,12 +4861,12 @@ begin
     // Change path
     // TODO: May use SHRegSetPath()
     case Reg.GetDataType('') of
-      rdExpandString: Reg.WriteExpandString('', ANewFileName);
-      rdString:       Reg.WriteString('', ANewFileName);
+      rdExpandString: Reg.WriteExpandString('', ACommand);
+      rdString:       Reg.WriteString('', ACommand);
       else            raise EContextMenuException.Create('Invalid data type!');
     end;  //of case
 
-    inherited ChangeFilePath(ANewFileName);
+    inherited SetCommand(ACommand);
 
   finally
     Reg.CloseKey();
@@ -5019,7 +4915,7 @@ begin
   end;  //of try
 end;
 
-procedure TContextMenuShellItem.ChangeStatus(const ANewStatus: Boolean);
+procedure TContextMenuShellItem.SetEnabled(const AEnabled: Boolean);
 var
   Reg: TRegistry;
 
@@ -5033,7 +4929,7 @@ begin
     if not Reg.OpenKey(GetLocation(), False) then
       raise EContextMenuException.Create(Reg.LastErrorMsg);
 
-    if ANewStatus then
+    if AEnabled then
     begin
       // Delete disable value, but do not fail if value does not exist!
       if (Reg.ValueExists(DisableValueName) and not Reg.DeleteValue(DisableValueName)) then
@@ -5043,7 +4939,7 @@ begin
       Reg.WriteString(DisableValueName, '');
 
     // Update status
-    inherited ChangeStatus(ANewStatus);
+    inherited SetEnabled(AEnabled);
 
   finally
     Reg.CloseKey();
@@ -5112,7 +5008,7 @@ begin
   end;  //of try
 end;
 
-procedure TContextMenuShellCascadingItem.ChangeFilePath(const ANewFileName: string);
+procedure TContextMenuShellCascadingItem.SetCommand(const ACommand: TCommandString);
 begin
   raise EAbstractError.Create('It is impossible to change the filename of a '
     + ToString() +' item!');
@@ -5177,7 +5073,7 @@ end;
 
 { TContextMenuShellExItem }
 
-procedure TContextMenuShellExItem.ChangeStatus(const ANewStatus: Boolean);
+procedure TContextMenuShellExItem.SetEnabled(const AEnabled: Boolean);
 var
   Reg: TRegistry;
   OldValue: string;
@@ -5202,7 +5098,7 @@ begin
       raise EContextMenuException.Create('Value must not be empty!');
 
     // Item disabled?
-    if (ANewStatus and not OldValue.StartsWith('{')) then
+    if (AEnabled and not OldValue.StartsWith('{')) then
       Reg.WriteString('', OldValue.Substring(OldValue.IndexOf('{')))
     else
       // Item enabled?
@@ -5210,7 +5106,7 @@ begin
         Reg.WriteString('', OldValue.Insert(0, '-'));
 
     // Update status
-    inherited ChangeStatus(ANewStatus);
+    inherited SetEnabled(AEnabled);
 
   finally
     Reg.CloseKey();
@@ -5229,7 +5125,7 @@ begin
   Result := inherited GetLocation() +'\'+ HandlersKey +'\'+ Name;
 end;
 
-procedure TContextMenuShellExItem.ChangeFilePath(const ANewFileName: string);
+procedure TContextMenuShellExItem.SetCommand(const ACommand: TCommandString);
 var
   Reg: TRegistry;
   ProgramKeyPath: string;
@@ -5258,13 +5154,13 @@ begin
     // Change path
     // TODO: May use SHRegSetPath()
     case Reg.GetDataType('') of
-      rdExpandString: Reg.WriteExpandString('', ANewFileName);
-      rdString:       Reg.WriteString('', ANewFileName);
+      rdExpandString: Reg.WriteExpandString('', ACommand);
+      rdString:       Reg.WriteString('', ACommand);
       else            raise EContextMenuException.Create('Invalid data type!');
     end;  //of case
 
     // Update path
-    inherited ChangeFilePath(ANewFileName);
+    inherited SetCommand(ACommand);
     SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, nil, nil);
 
   finally
@@ -5330,7 +5226,7 @@ begin
   FErasable := False;
 end;
 
-procedure TContextMenuShellNewItem.ChangeStatus(const ANewStatus: Boolean);
+procedure TContextMenuShellNewItem.SetEnabled(const AEnabled: Boolean);
 var
   Reg: TRegistry;
   OldKeyName, NewKeyName: string;
@@ -5345,7 +5241,7 @@ begin
     if not Reg.OpenKey(FLocation, False) then
       raise EContextMenuException.Create(Reg.LastErrorMsg);
 
-    if ANewStatus then
+    if AEnabled then
     begin
       OldKeyName := CanonicalNameDisabled;
       NewKeyName := CanonicalName;
@@ -5368,7 +5264,7 @@ begin
     Reg.MoveKey(OldKeyName, NewKeyName, True);
 
     // Update status
-    inherited ChangeStatus(ANewStatus);
+    inherited SetEnabled(AEnabled);
 
   finally
     Reg.CloseKey();
@@ -5389,7 +5285,7 @@ begin
     Result := inherited GetLocation() +'\'+ CanonicalNameDisabled;
 end;
 
-procedure TContextMenuShellNewItem.ChangeFilePath(const ANewFileName: string);
+procedure TContextMenuShellNewItem.SetCommand(const ACommand: TCommandString);
 begin
   raise EAbstractError.Create('It is impossible to change the filename of a '
     + ToString() +' item!');
@@ -5921,10 +5817,11 @@ end;
 
 { TServiceListItem }
 
-constructor TServiceListItem.Create(const AName, ACaption, AFileName: string;
-  AEnabled: Boolean; AServiceStart: TServiceStart; AServiceManager: SC_HANDLE);
+constructor TServiceListItem.Create(const AName, ACaption: string;
+  const ACommand: TCommandString; AEnabled: Boolean; AServiceStart: TServiceStart;
+  AServiceManager: SC_HANDLE);
 begin
-  inherited Create(AName, ACaption, AFileName, '', AEnabled, False);
+  inherited Create(AName, ACaption, ACommand, '', AEnabled, False);
   FServiceStart := AServiceStart;
   FServiceManager := AServiceManager;
   FTime := 0;
@@ -5955,7 +5852,7 @@ begin
   Result := rkHKLM;
 end;
 
-procedure TServiceListItem.ChangeFilePath(const ANewFileName: string);
+procedure TServiceListItem.SetCommand(const ACommand: TCommandString);
 var
   Service: SC_HANDLE;
 
@@ -5965,17 +5862,17 @@ begin
   try
     // Change path
     if not ChangeServiceConfig(Service, SERVICE_NO_CHANGE, SERVICE_NO_CHANGE,
-      SERVICE_NO_CHANGE, PChar(ANewFileName), nil, nil, nil, nil, nil, nil) then
+      SERVICE_NO_CHANGE, PChar(ACommand), nil, nil, nil, nil, nil, nil) then
       raise EServiceException.Create(SysErrorMessage(GetLastError()));
 
-    inherited ChangeFilePath(ANewFileName);
+    inherited SetCommand(ACommand);
 
   finally
     CloseServiceHandle(Service);
   end;  //of try
 end;
 
-procedure TServiceListItem.ChangeStatus(const ANewStatus: Boolean);
+procedure TServiceListItem.SetEnabled(const AEnabled: Boolean);
 var
   Service: SC_HANDLE;
   Reg: TRegistry;
@@ -5987,7 +5884,7 @@ begin
   try
     Reg.RootKey := HKEY_LOCAL_MACHINE;
 
-    if ANewStatus then
+    if AEnabled then
     begin
       // Windows >= Vista?
       if CheckWin32Version(6) then
@@ -6054,7 +5951,7 @@ begin
       Reg.WriteInteger(Name, Ord(Start));
     end;  //of if
 
-    inherited ChangeStatus(ANewStatus);
+    inherited SetEnabled(AEnabled);
 
   finally
     Reg.CloseKey();
@@ -6411,19 +6308,20 @@ end;
 
 { TTaskListItem }
 
-constructor TTaskListItem.Create(const AName, AFileName, ALocation: string;
-  AEnabled: Boolean; const ATask: IRegisteredTask; const ATaskService: ITaskService);
+constructor TTaskListItem.Create(const AName: string; const ACommand: TCommandString;
+  const ALocation: string; AEnabled: Boolean; const ATask: IRegisteredTask;
+  const ATaskService: ITaskService);
 begin
-  inherited Create(AName, '', AFileName, ALocation, AEnabled);
+  inherited Create(AName, '', ACommand, ALocation, AEnabled);
   FTask := ATask;
   FTaskService := ATaskService;
   FErasable := False;
 end;
 
-procedure TTaskListItem.ChangeStatus(const ANewStatus: Boolean);
+procedure TTaskListItem.SetEnabled(const AEnabled: Boolean);
 begin
-  FTask.Enabled := ANewStatus;
-  inherited ChangeStatus(ANewStatus);
+  FTask.Enabled := AEnabled;
+  inherited SetEnabled(AEnabled);
 end;
 
 function TTaskListItem.GetTaskDefinition(): ITaskDefinition;
@@ -6445,7 +6343,7 @@ begin
     Result := IncludeTrailingPathDelimiter(Result +'Tasks'+ GetLocation()) + Name;
 end;
 
-procedure TTaskListItem.ChangeFilePath(const ANewFilePath: string);
+procedure TTaskListItem.SetCommand(const ACommand: TCommandString);
 var
   Actions: IEnumVariant;
   Action: IAction;
@@ -6470,15 +6368,15 @@ begin
     if (Action.ActionType = TASK_ACTION_EXEC) then
     begin
       ExecAction := (Action as IExecAction);
-      ExecAction.Path := PChar(ExtractPathToFile(ANewFilePath));
-      ExecAction.Arguments := PChar(ExtractArguments(ANewFilePath));
+      ExecAction.Path := PChar(ACommand.ExtractFileName());
+      ExecAction.Arguments := PChar(ACommand.ExtractArguments());
 
       OleCheck(FTaskService.GetFolder(PChar(Location), TaskFolder));
       OleCheck(TaskFolder.RegisterTaskDefinition(FTask.Name, NewDefinition,
         TASK_UPDATE, Null, Null, TASK_LOGON_NONE, Null, NewTask));
 
       FTask := NewTask;
-      inherited ChangeFilePath(ANewFilePath);
+      inherited SetCommand(ACommand);
     end;  //of begin
   end;  //of while
 end;

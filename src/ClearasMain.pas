@@ -707,7 +707,7 @@ begin
         begin
           Caption := FStartup[i].GetStatusText(FLang);
           SubItems.AddObject(ItemText, FStartup[i]);
-          SubItems.Append(FStartup[i].FileName);
+          SubItems.Append(FStartup[i].Command);
           SubItems.Append(FStartup[i].ToString());
 
           // Show deactivation timestamp?
@@ -799,7 +799,7 @@ begin
       begin
         Caption := FService[i].GetStatusText(FLang);
         SubItems.AddObject(ItemText, FService[i]);
-        SubItems.Append(FService[i].FileName);
+        SubItems.Append(FService[i].Command);
         SubItems.Append(FService[i].Start.ToString(FLang));
 
         // Show deactivation timestamp?
@@ -875,7 +875,7 @@ begin
       begin
         Caption := FTasks[i].GetStatusText(FLang);
         SubItems.AddObject(ItemText, FTasks[i]);
-        SubItems.Append(FTasks[i].FileName);
+        SubItems.Append(FTasks[i].Command);
         SubItems.Append(FTasks[i].Location);
       end; //of with
     end;  //of begin
@@ -2159,7 +2159,7 @@ begin
         // Only icon of Shell contextmenu items can be changed
         pmChangeIcon.Visible := pmRename.Enabled;
         pmDeleteIcon.Visible := (pmRename.Enabled and (SelectedItem.Icon <> 0));
-        pmEditPath.Enabled := (SelectedItem.FileName <> '');
+        pmEditPath.Enabled := (SelectedItem.Command <> '');
 
         // Context menu items cannot be executed
         pmExecute.Enabled := False;
@@ -2172,7 +2172,7 @@ begin
         pmRename.Enabled := True;
         pmDeleteIcon.Visible := False;
         pmChangeIcon.Visible := False;
-        pmEditPath.Enabled := (SelectedItem.FileName <> '');
+        pmEditPath.Enabled := (SelectedItem.Command <> '');
         pmExecute.Enabled := not SelectedItem.Erasable;
       end;
 
@@ -2183,7 +2183,7 @@ begin
         pmRename.Enabled := True;
         pmDeleteIcon.Visible := False;
         pmChangeIcon.Visible := False;
-        pmEditPath.Enabled := (SelectedItem.FileName <> '');
+        pmEditPath.Enabled := (SelectedItem.Command <> '');
 
         // Tasks cannot be executed when they are disabled
         pmExecute.Enabled := SelectedItem.Enabled;
@@ -2235,7 +2235,7 @@ begin
   try
     SelectedListView := GetSelectedListView();
     SelectedItem := GetSelectedItem();
-    Path := SelectedItem.FileName;
+    Path := SelectedItem.Command;
 
     // Show input box for editing path
     EnteredPath := InputBox(FLang.GetString(LID_PATH_EDIT),
