@@ -153,7 +153,7 @@ type
     /// <param name="AArguments">
     ///   Optional: Arguments.
     /// </param>
-    class function Create(const AFileName: string; const AArguments: string = ''): string; inline; static;
+    class function Create(const AFileName: string; const AArguments: string = ''): TCommandString; inline; static;
 
     /// <summary>
     ///   Executes the command.
@@ -2512,7 +2512,7 @@ end;
 { TCommandStringHelper }
 
 class function TCommandStringHelper.Create(const AFileName: string;
-  const AArguments: string = ''): string;
+  const AArguments: string = ''): TCommandString;
 begin
   if (AArguments = '') then
     Result := AFileName
