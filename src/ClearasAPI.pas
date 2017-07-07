@@ -625,13 +625,19 @@ type
     destructor Destroy; override;
 
     /// <summary>
-    ///   Changes the file path of the current selected item.
+    ///   Changes the command of the specified item.
     /// </summary>
+    /// <param name="AItem">
+    ///   The item.
+    /// </param>
+    /// <param name="ACommand">
+    ///   The new command.
+    /// </param>
     /// <exception>
     ///   <c>EListBlocked</c> if another operation is pending on the list.
     ///   <c>EInvalidItem</c> if no item is selected.
     /// </exception>
-    procedure ChangeItemFilePath(AItem: T; const ANewFilePath: string);
+    procedure ChangeCommand(AItem: T; const ACommand: TCommandString);
 
     /// <summary>
     ///   Changes the enabled status of an item.
@@ -3005,7 +3011,7 @@ begin
   Result := -1;
 end;
 
-procedure TRootList<T>.ChangeItemFilePath(AItem: T; const ANewFilePath: string);
+procedure TRootList<T>.ChangeCommand(AItem: T; const ACommand: TCommandString);
 var
   ItemErasable: Boolean;
 
@@ -3021,7 +3027,7 @@ begin
 
     // Change item file path
     ItemErasable := AItem.Erasable;
-    AItem.SetCommand(ANewFilePath);
+    AItem.Command := ACommand;
 
     // Update erasable count
     if (ItemErasable and not AItem.Erasable) then
@@ -3051,7 +3057,7 @@ begin
         raise EWarning.Create('Item already enabled!');
 
       // Enable item
-      AItem.SetEnabled(AEnabled);
+      AItem.Enabled := AEnabled;
       Inc(FEnabledItemsCount);
       NotifyOnCounterUpdate();
     end  //of begin
@@ -3061,7 +3067,7 @@ begin
         raise EWarning.Create('Item already disabled!');
 
       // Disable item
-      AItem.SetEnabled(AEnabled);
+      AItem.Enabled := AEnabled;
 
       // Update active counter
       if (FEnabledItemsCount > 0) then

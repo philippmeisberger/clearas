@@ -2246,7 +2246,7 @@ begin
       Exit;
 
     // Try to change the file path
-    GetSelectedList().ChangeItemFilePath(SelectedItem, EnteredPath);
+    GetSelectedList().ChangeCommand(SelectedItem, EnteredPath);
 
     // Update icon
     if (PageControl.ActivePageIndex = 0) then
