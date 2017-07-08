@@ -6,7 +6,7 @@ Ideas:
   --> Disable ShellNew again (but first remove _ShellNew)
 - Add support for more shell extension types like "property sheets"
 - Show icons of contextmenu items
-- Add caption for ShellNew items
+- Add support for editing file path of ShellNew items
 - Add support for editing file paths of Shell Cascading items
 - Two execution modes
   - Admin: Read and edit all items (like now)

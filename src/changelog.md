@@ -17,7 +17,7 @@ Version 5.0 [*??.08.17*]
 * Added "Quick-Search" to Autostart tab
 * Added "Execute" to popup menu
 * Improved "Open in Explorer"
-* Added loading description of ShellEx items
+* Added loading description of ShellEx and ShellNew items
 * Closed potential Handle-Leak
 * Closed memory leak during export
 * Closed memory leak when importing a task
