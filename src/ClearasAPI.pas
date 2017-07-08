@@ -220,22 +220,6 @@ type
     FIcon: HICON;
 
     /// <summary>
-    ///   Changes the command.
-    /// </summary>
-    /// <param name="ACommand">
-    ///   The new command.
-    /// </param>
-    procedure SetCommand(const ACommand: TCommandString); virtual;
-
-    /// <summary>
-    ///   Changes the status.
-    /// </summary>
-    /// <param name="AEnabled">
-    ///   The new status.
-    /// </param>
-    procedure SetEnabled(const AEnabled: Boolean); virtual;
-
-    /// <summary>
     ///   Frees the cached icon handle.
     /// </summary>
     procedure DestroyIconHandle();
@@ -293,6 +277,22 @@ type
     ///   The new name.
     /// </param>
     procedure Rename(const ANewName: string); virtual;
+
+    /// <summary>
+    ///   Changes the command.
+    /// </summary>
+    /// <param name="ACommand">
+    ///   The new command.
+    /// </param>
+    procedure SetCommand(const ACommand: TCommandString); virtual;
+
+    /// <summary>
+    ///   Changes the status.
+    /// </summary>
+    /// <param name="AEnabled">
+    ///   The new status.
+    /// </param>
+    procedure SetEnabled(const AEnabled: Boolean); virtual;
   public
     /// <summary>
     ///   Constructor for creating a <c>TRootItem</c> instance.
@@ -1009,8 +1009,6 @@ type
   protected
     FTime: TDateTime;
     FRootKey: TRootKey;
-    procedure SetCommand(const ACommand: TCommandString); override;
-    procedure SetEnabled(const AEnabled: Boolean); override;
     function Disable(): Boolean; virtual; deprecated 'Since Windows 8'; abstract;
     function Enable(): Boolean; virtual; deprecated 'Since Windows 8'; abstract;
     function DeleteValue(const AKeyPath: string; AReallyWow64: Boolean = True): Boolean;
@@ -1020,6 +1018,8 @@ type
     procedure Rename(const ANewName: string); overload; override;
     function Rename(const AKeyPath, ANewName: string;
       AReallyWow64: Boolean = True): Boolean; reintroduce; overload;
+    procedure SetCommand(const ACommand: TCommandString); override;
+    procedure SetEnabled(const AEnabled: Boolean); override;
   public
     const
       /// <summary>
@@ -1242,12 +1242,12 @@ type
     function GetBackupDir(): string; deprecated 'Since Windows 8';
     function GetBackupLnk(): string; deprecated 'Since Windows 8';
   protected
-    procedure SetCommand(const ACommand: TCommandString); override;
     function Disable(): Boolean; override;
     function Enable(): Boolean; override;
     function GetApprovedLocation(): string; override;
     function GetFullLocation(): string; override;
     procedure Rename(const ANewName: string); override;
+    procedure SetCommand(const ACommand: TCommandString); override;
   public
     const
       /// <summary>
@@ -1602,14 +1602,14 @@ type
   private
     FExtended: Boolean;
   protected
-    procedure SetCommand(const ACommand: TCommandString); override;
-    procedure SetEnabled(const AEnabled: Boolean); override;
     function GetIcon(): HICON; override;
     function GetIcon(const AFileName: TFileName): HICON; override;
     function GetIconFileName(): string;
     function GetLocation(): string; override;
     procedure Rename(const AValueName, ANewCaption: string); reintroduce; overload;
     procedure Rename(const ANewName: string); overload; override;
+    procedure SetCommand(const ACommand: TCommandString); override;
+    procedure SetEnabled(const AEnabled: Boolean); override;
   public
     const
       /// <summary>
@@ -1675,8 +1675,8 @@ type
   private
     procedure GetSubCommands(ASubCommands: TStrings);
   protected
-    procedure SetCommand(const ACommand: TCommandString); override;
     procedure Rename(const ANewName: string); override;
+    procedure SetCommand(const ACommand: TCommandString); override;
   public
     const
       /// <summary>
@@ -1745,10 +1745,10 @@ type
   TContextMenuShellExItem = class(TContextMenuListItem)
   protected
     function GetIcon(): HICON; override;
-    procedure SetCommand(const ACommand: TCommandString); override;
-    procedure SetEnabled(const AEnabled: Boolean); override;
     function GetLocation(): string; override;
     procedure Rename(const ANewName: string); override;
+    procedure SetCommand(const ACommand: TCommandString); override;
+    procedure SetEnabled(const AEnabled: Boolean); override;
   public
     const
       /// <summary>
@@ -1786,10 +1786,10 @@ type
   TContextMenuShellNewItem = class(TContextMenuListItem)
   protected
     function GetIcon(): HICON; override;
-    procedure SetCommand(const ACommand: TCommandString); override;
-    procedure SetEnabled(const AEnabled: Boolean); override;
     function GetLocation(): string; override;
     procedure Rename(const ANewName: string); override;
+    procedure SetCommand(const ACommand: TCommandString); override;
+    procedure SetEnabled(const AEnabled: Boolean); override;
   public
     const
       /// <summary>
@@ -2020,11 +2020,11 @@ type
     FServiceStart: TServiceStart;
     function GetHandle(AAccess: DWORD): SC_HANDLE;
   protected
-    procedure SetCommand(const ACommand: TCommandString); override;
-    procedure SetEnabled(const AEnabled: Boolean); override;
     function GetLocation(): string; override;
     function GetRootKey(): TRootKey; override;
     procedure Rename(const ANewName: string); override;
+    procedure SetCommand(const ACommand: TCommandString); override;
+    procedure SetEnabled(const AEnabled: Boolean); override;
   public
     /// <summary>
     ///   Constructor for creating a <c>TServiceListItem</c> instance.
@@ -2187,10 +2187,10 @@ type
     function GetTaskDefinition(): ITaskDefinition;
     function GetZipLocation(): string;
   protected
-    procedure SetCommand(const ACommand: TCommandString); override;
-    procedure SetEnabled(const AEnabled: Boolean); override;
     function GetFullLocation(): string; override;
     procedure Rename(const ANewName: string); override;
+    procedure SetCommand(const ACommand: TCommandString); override;
+    procedure SetEnabled(const AEnabled: Boolean); override;
   public
     /// <summary>
     ///   Constructor for creating a <c>TTaskListItem</c> instance.
@@ -2614,6 +2614,12 @@ begin
   FErasable := not FileExists();
 end;
 
+destructor TRootItem.Destroy;
+begin
+  DestroyIconHandle();
+  inherited Destroy;
+end;
+
 function TRootItem.GetErasable(): Boolean;
 begin
   Result := not FInvalid and FErasable;
@@ -2696,18 +2702,6 @@ begin
   end;  //of begin
 end;
 
-procedure TRootItem.SetCommand(const ACommand: TCommandString);
-begin
-  FCommand := ACommand;
-  FErasable := not FileExists();
-end;
-
-destructor TRootItem.Destroy;
-begin
-  DestroyIconHandle();
-  inherited Destroy;
-end;
-
 procedure TRootItem.DestroyIconHandle();
 begin
   if (FIcon <> 0) then
@@ -2756,11 +2750,6 @@ end;
 function TRootItem.GetLocation(): string;
 begin
   Result := FLocation;
-end;
-
-procedure TRootItem.SetEnabled(const AEnabled: Boolean);
-begin
-  FEnabled := AEnabled;
 end;
 
 function TRootItem.FileExists(): Boolean;
@@ -2816,6 +2805,17 @@ end;
 procedure TRootItem.Rename(const ANewName: string);
 begin
   FName := ANewName;
+end;
+
+procedure TRootItem.SetCommand(const ACommand: TCommandString);
+begin
+  FCommand := ACommand;
+  FErasable := not FileExists();
+end;
+
+procedure TRootItem.SetEnabled(const AEnabled: Boolean);
+begin
+  FEnabled := AEnabled;
 end;
 
 
@@ -5014,12 +5014,6 @@ begin
   end;  //of try
 end;
 
-procedure TContextMenuShellCascadingItem.SetCommand(const ACommand: TCommandString);
-begin
-  raise EAbstractError.Create('It is impossible to change the filename of a '
-    + ToString() +' item!');
-end;
-
 function TContextMenuShellCascadingItem.Delete(): Boolean;
 var
   i: Integer;
@@ -5069,6 +5063,12 @@ end;
 procedure TContextMenuShellCascadingItem.Rename(const ANewName: string);
 begin
   Rename(CaptionValueName, ANewName);
+end;
+
+procedure TContextMenuShellCascadingItem.SetCommand(const ACommand: TCommandString);
+begin
+  raise EAbstractError.Create('It is impossible to change the filename of a '
+    + ToString() +' item!');
 end;
 
 function TContextMenuShellCascadingItem.ToString(): string;
