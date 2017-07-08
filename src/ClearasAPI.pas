@@ -4570,8 +4570,8 @@ begin
 
         with TStartupUserItem(Item).LnkFile do
         begin
-          ExeFileName := Item.FileNameOnly;
-          Arguments := Item.Command.ExtractArguments;
+          ExeFileName := Item.Command.ExtractFileName();
+          Arguments := Item.Command.ExtractArguments();
         end;  //of with
       end;  //of if
 
