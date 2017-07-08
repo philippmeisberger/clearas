@@ -1440,7 +1440,7 @@ type
       AStartupLocation: TStartupLocation): TStartupItemStatus;
   public
     /// <summary>
-    ///   Adds an item to the list.
+    ///   Adds a new item to the list.
     /// </summary>
     /// <param name="AFileName">
     ///   The absolute .exe filename.
@@ -1884,7 +1884,7 @@ type
       DefaultLocations = 'Directory, Folder, *, Drive';
 
     /// <summary>
-    ///   Adds an item to the list.
+    ///   Adds a new item to the list.
     /// </summary>
     /// <param name="AFileName">
     ///   The absolute .exe filename.
@@ -2107,7 +2107,7 @@ type
     destructor Destroy(); override;
 
     /// <summary>
-    ///   Adds an item to the list.
+    ///   Adds a new item to the list.
     /// </summary>
     /// <param name="AFileName">
     ///   The absolute .exe filename.
@@ -2394,9 +2394,9 @@ end;
 function TLnkFile.GetFullPathEscaped(): string;
 begin
   if HasArguments() then
-    Result := '"'+ FFileName +'" '+ FArguments
+    Result := string(FFileName).QuotedString('"') + FArguments
   else
-    Result := '"'+ FFileName +'"';
+    Result := string(FFileName).QuotedString('"');
 end;
 
 procedure TLnkFile.SetArguments(const AArguments: string);
