@@ -4,6 +4,7 @@ Ideas:
   - Add popup menu like in Windows Explorer to show or hide them
 - When disabling ShellNew item and updating related software ShellNew item gets usually registered again (ShellNew and _ShellNew exist in same key)
   --> Disable ShellNew again (but first remove _ShellNew)
+- Add menu item "properties" that shows file properties of selected item
 - Add support for more shell extension types like "property sheets"
 - Show icons of contextmenu items
 - Add support for editing file path of ShellNew items
