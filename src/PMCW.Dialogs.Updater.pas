@@ -11,36 +11,19 @@ unit PMCW.Dialogs.Updater;
 interface
 
 uses
-{$IFDEF MSWINDOWS}
-  Winapi.Windows, System.Classes, Vcl.Dialogs, Vcl.Forms,
+  Winapi.Windows, System.SysUtils, System.Classes, Vcl.Dialogs, Vcl.Forms,
+  Vcl.StdCtrls, Vcl.ComCtrls, System.UITypes, Vcl.Consts, System.Net.HttpClient,
+  System.NetConsts, System.Net.URLClient, PMCW.SysUtils, PMCW.CA, PMCW.LanguageFile,
 {$WARN UNIT_PLATFORM OFF}
-  Vcl.FileCtrl,
+  Vcl.FileCtrl;
 {$WARN UNIT_PLATFORM ON}
-  Vcl.StdCtrls, Vcl.ComCtrls, System.UITypes, Vcl.Consts, System.Win.Registry,
-  System.Net.HttpClient, System.NetConsts, System.Net.URLClient, PMCW.SysUtils,
-  PMCW.LanguageFile, PMCW.CA,
-{$ELSE}
-  Process, StrUtils,
-{$ENDIF}
-  SysUtils;
 
 const
-  /// <summary>
-  ///   URL to the website.
-  /// </summary>
-  URL_BASE                     = 'http://www.pm-codeworks.de/';
-
   /// <summary>
   ///   URL to the download (base) directory on website.
   /// </summary>
   URL_DIR                      = URL_BASE +'media/';
 
-  /// <summary>
-  ///   URL to the report bug formular on the website.
-  /// </summary>
-  URL_CONTACT                  = URL_BASE +'kontakt.html';
-
-{$IFDEF MSWINDOWS}
   /// <summary>
   ///   Error saying that something went wrong with server certificate validation.
   /// </summary>
@@ -327,6 +310,11 @@ type
     procedure LaunchSetup();
 
     /// <summary>
+    ///   The downloaded file.
+    /// </summary>
+    property DownloadedFile: string read FFileName;
+
+    /// <summary>
     ///   Download the file into this directory.
     /// </summary>
     property DownloadDirectory: string read FDownloadDirectory write FDownloadDirectory;
@@ -351,53 +339,9 @@ type
     /// </summary>
     property Title: string read GetTitle write SetTitle;
   end;
-{$ENDIF}
-
-/// <summary>
-///   Opens a given HTTP URL in the default web browser.
-/// </summary>
-/// <param name="AUrl">
-///    The HTTP URL that should be opened.
-/// </param>
-/// <returns>
-///   <c>True</c> if the HTTP URL was successfully opened or <c>False</c> otherwise.
-/// </returns>
-function OpenUrl(const AUrl: string): Boolean;
 
 implementation
 
-function OpenUrl(const AUrl: string): Boolean;
-{$IFNDEF MSWINDOWS}
-var
-  Process: TProcess;
-
-begin
-  if (not AnsiStartsText('http://', AUrl) and not AnsiStartsText('https://', AUrl)) then
-    Exit(False);
-
-  Process := TProcess.Create(nil);
-
-  try
-    Process.Executable := '/usr/bin/xdg-open';
-    Process.Parameters.Append(AUrl);
-    Process.Options := Process.Options + [poWaitOnExit];
-    Process.Execute();
-    Result := (Process.ExitStatus = 0);
-
-  finally
-    Process.Free;
-  end;  //of try
-end;
-{$ELSE}
-begin
-  if (AUrl.StartsWith('http://') or AUrl.StartsWith('https://')) then
-    Result := ExecuteProgram(AUrl)
-  else
-    Result := False;
-end;
-{$ENDIF}
-
-{$IFDEF MSWINDOWS}
 { THttpThread }
 
 constructor THttpThread.Create(const AUrl: string);
@@ -930,6 +874,5 @@ begin
   else
     CanClose := True;
 end;
-{$ENDIF}
 
 end.
