@@ -198,7 +198,7 @@ Version 2.1 [*22.11.12*]
 * New manifest
 * Minor bug fixes for 64 bit systems
 
-Version 2.0 [*08.02.11*]
+Version 2.0 [*08.02.12*]
 -----------
 
 * Source code cleanup
