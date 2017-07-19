@@ -1,6 +1,6 @@
 PROJECTNAME=Clearas
-WIN32EXE=bin\Win32\$(PROJECTNAME).exe
-WIN64EXE=bin\Win64\$(PROJECTNAME).exe
+WIN32EXE=bin\Win32\Release\$(PROJECTNAME).exe
+WIN64EXE=bin\Win64\Release\$(PROJECTNAME).exe
 
 BDSDIR=C:\Program Files (x86)\Embarcadero\Studio\16.0
 MSBUILD=C:\Windows\Microsoft.NET\Framework\v3.5\MSBUILD.exe

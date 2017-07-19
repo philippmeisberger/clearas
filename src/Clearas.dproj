@@ -65,7 +65,7 @@
         <VerInfo_IncludeVerInfo>true</VerInfo_IncludeVerInfo>
         <VerInfo_MajorVer>4</VerInfo_MajorVer>
         <VerInfo_Build>1847</VerInfo_Build>
-        <DCC_DcuOutput>lib\$(Platform)\$(Config)</DCC_DcuOutput>
+        <DCC_DcuOutput>..\bin\$(Platform)\$(Config)</DCC_DcuOutput>
         <DCC_ExeOutput>..\bin\$(Platform)\$(Config)</DCC_ExeOutput>
         <DCC_N>false</DCC_N>
         <SanitizedProjectName>Clearas</SanitizedProjectName>
@@ -77,17 +77,9 @@
         <DCC_K>false</DCC_K>
         <DCC_E>false</DCC_E>
     </PropertyGroup>
-    <PropertyGroup Condition="'$(Base_Win32)'!=''">
-        <Manifest_File>$(BDS)\bin\default_app.manifest</Manifest_File>
-        <VerInfo_AutoIncVersion>false</VerInfo_AutoIncVersion>
-    </PropertyGroup>
-    <PropertyGroup Condition="'$(Base_Win64)'!=''">
-        <Manifest_File>$(BDS)\bin\default_app.manifest</Manifest_File>
-        <VerInfo_AutoIncVersion>false</VerInfo_AutoIncVersion>
-    </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1)'!=''">
+        <Icon_MainIcon>clearas.ico</Icon_MainIcon>
         <Manifest_File>PMCW.Admin.manifest</Manifest_File>
-        <DCC_ExeOutput>..\bin\$(Platform)</DCC_ExeOutput>
         <DCC_Define>RELEASE;$(DCC_Define)</DCC_Define>
         <DCC_SymbolReferenceInfo>0</DCC_SymbolReferenceInfo>
         <DCC_LocalDebugSymbols>false</DCC_LocalDebugSymbols>
@@ -95,7 +87,6 @@
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1_Win32)'!=''">
         <VerInfo_AutoIncVersion>false</VerInfo_AutoIncVersion>
-        <DCC_ExeOutput>..\bin\$(Platform)\</DCC_ExeOutput>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_1_Win64)'!=''">
         <VerInfo_AutoIncVersion>false</VerInfo_AutoIncVersion>
@@ -109,7 +100,6 @@
         <DCC_DebugInformation>2</DCC_DebugInformation>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2_Win32)'!=''">
-        <Manifest_File>$(BDS)\bin\default_app.manifest</Manifest_File>
         <VerInfo_AutoIncVersion>false</VerInfo_AutoIncVersion>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Cfg_2_Win64)'!=''">
@@ -164,18 +154,6 @@
             <Deployment Version="2">
                 <DeployFile LocalName="..\bin\Win64\Debug\Clearas.exe" Configuration="Debug" Class="ProjectOutput">
                     <Platform Name="Win64">
-                        <RemoteName>Clearas.exe</RemoteName>
-                        <Overwrite>true</Overwrite>
-                    </Platform>
-                </DeployFile>
-                <DeployFile LocalName="..\bin\Win64\Clearas.exe" Configuration="Release" Class="ProjectOutput">
-                    <Platform Name="Win64">
-                        <RemoteName>Clearas.exe</RemoteName>
-                        <Overwrite>true</Overwrite>
-                    </Platform>
-                </DeployFile>
-                <DeployFile LocalName="..\bin\Win32\Clearas.exe" Configuration="Release" Class="ProjectOutput">
-                    <Platform Name="Win32">
                         <RemoteName>Clearas.exe</RemoteName>
                         <Overwrite>true</Overwrite>
                     </Platform>
