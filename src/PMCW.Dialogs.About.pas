@@ -8,7 +8,7 @@
 
 unit PMCW.Dialogs.About;
 
-{$IFDEF FPC}{$mode delphi}{$ENDIF}
+{$IFDEF FPC}{$MODE Delphi}{$ENDIF}
 
 interface
 
@@ -17,7 +17,7 @@ uses
   Winapi.Windows,
 {$ENDIF}
   SysUtils, Classes, Controls, Forms, StdCtrls, ExtCtrls, ComCtrls, Dialogs,
-  PMCW.SysUtils;
+  Graphics, PMCW.SysUtils;
 
 const
   /// <summary>
@@ -40,7 +40,7 @@ type
   ///   <see cref="Changelog"/> and <see cref="Description"/> properties. The
   ///   version information are retrieved automatically. The main application
   ///   icon is retrieved automatically only on Windows. On Linux this icon must
-  ///   be manually set through <see cref="ImageFile"/> property.
+  ///   be manually set through <see cref="Icon"/> property.
   /// </remarks>
   TAboutDialog = class(TCommonDialog)
   private
@@ -54,17 +54,15 @@ type
     FCloseButton2: TButton;
     FCopying,
     FChangelog: TMemo;
-  {$IFDEF LINUX}
-    FImageFile: string;
-  {$ENDIF}
     function GetChangelog(): TStrings;
     function GetDescription(): TStrings;
-    function GetTitle(): string;
+    function GetIcon: TIcon;
+    function GetTitle(): TCaption;
     function GetChangelogCaption(): TCaption;
     function GetDescriptionCaption(): TCaption;
     procedure SetChangelogCaption(const AChangelogCaption: TCaption);
     procedure SetDescriptionCaption(const ADescriptionCaption: TCaption);
-    procedure SetTitle(const ATitle: string);
+    procedure SetTitle(const ATitle: TCaption);
   public
     /// <summary>
     ///   Constructor for creating a <c>TAboutDialog</c> instance.
@@ -73,7 +71,15 @@ type
     ///   The owner.
     /// </param>
     constructor Create(AOwner: TComponent); override;
-
+  {$IFDEF FPC}
+    /// <summary>
+    ///   Executes the dialog.
+    /// </summary>
+    /// <returns>
+    ///   Always <c>True</c>.
+    /// </returns>
+    function Execute(): Boolean; override;
+  {$ELSE}
     /// <summary>
     ///   Executes the dialog.
     /// </summary>
@@ -83,8 +89,8 @@ type
     /// <returns>
     ///   Always <c>True</c>.
     /// </returns>
-    function Execute({$IFNDEF FPC}AParentHwnd: HWND{$ENDIF}): Boolean; override;
-
+    function Execute(AParentHwnd: HWND): Boolean; override;
+  {$ENDIF}
     /// <summary>
     ///   Gets or sets the changelog.
     /// </summary>
@@ -104,20 +110,20 @@ type
     ///   Gets or set the caption of the description tab.
     /// </summary>
     property DescriptionCaption: TCaption read GetDescriptionCaption write SetDescriptionCaption;
-  {$IFDEF LINUX}
+
     /// <summary>
-    ///   Gets or sets the absolute path to the application icon that will be
-    ///   displayed on the left side.
+    ///   Changes the icon that will be displayed on the left side.
     /// </summary>
     /// <remarks>
-    ///   Icon dimensions must be 48x48!
+    ///   Icon dimensions must be 48x48! If no icon is set the application icon
+    ///   is used on Windows.
     /// </remarks>
-    property ImageFile: string read FImageFile write FImageFile;
-  {$ENDIF}
+    property Icon: TIcon read GetIcon;
+
     /// <summary>
     ///   Gets or sets the dialog title.
     /// </summary>
-    property Title: string read GetTitle write SetTitle;
+    property Title: TCaption read GetTitle write SetTitle;
   end;
 
 implementation
@@ -293,12 +299,13 @@ begin
     end;  //of if
   end;  //of begin
 
-  // Load application icon into TImage
 {$IFDEF MSWINDOWS}
-  FImage.Picture.Icon.Handle := LoadImage(HInstance, 'MAINICON', IMAGE_ICON,
-    FImage.Width, FImage.Height, LR_DEFAULTCOLOR);
-{$ELSE}
-  FImage.Picture.Icon.LoadFromFile(FImageFile);
+  // Load application icon into TImage
+  if (FImage.Picture.Icon.Handle = 0) then
+  begin
+    FImage.Picture.Icon.Handle := LoadImage(HInstance, 'MAINICON', IMAGE_ICON,
+      FImage.Width, FImage.Height, LR_DEFAULTCOLOR);
+  end;  //of begin
 {$ENDIF}
   FForm.ShowModal();
   Result := True;
@@ -319,12 +326,17 @@ begin
   Result := FCopying.Lines;
 end;
 
+function TAboutDialog.GetIcon(): TIcon;
+begin
+  Result := FImage.Picture.Icon;
+end;
+
 function TAboutDialog.GetDescriptionCaption(): TCaption;
 begin
   Result := FDescriptionTab.Caption;
 end;
 
-function TAboutDialog.GetTitle(): string;
+function TAboutDialog.GetTitle(): TCaption;
 begin
   Result := FForm.Caption;
 end;
@@ -339,7 +351,7 @@ begin
   FDescriptionTab.Caption := ADescriptionCaption;
 end;
 
-procedure TAboutDialog.SetTitle(const ATitle: string);
+procedure TAboutDialog.SetTitle(const ATitle: TCaption);
 begin
   FForm.Caption := ATitle;
 end;
