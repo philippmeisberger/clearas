@@ -2528,7 +2528,7 @@ end;
 
 procedure TCommandStringHelper.Execute();
 begin
-  ExecuteProgram(ExtractFileName, ExtractArguments);
+  ShellExec('open', ExtractFileName, ExtractArguments);
 end;
 
 function TCommandStringHelper.ExtractArguments(): string;
@@ -2873,12 +2873,12 @@ begin
     // Redirected 32-Bit item?
     if AWow64 then
       // Execute 32-Bit RegEdit
-      ExecuteProgram({$IFDEF WIN64}GetSystemWow64Directory() +{$ENDIF}'regedit.exe')
+      ShellExec('open', {$IFDEF WIN64}GetSystemWow64Directory() +{$ENDIF}'regedit.exe')
     else
     begin
       // Execute 64 bit RegEdit
       OldValue := DisableWow64FsRedirection();
-      ExecuteProgram('regedit.exe');
+      ShellExec('open', 'regedit.exe');
       RevertWow64FsRedirection(OldValue);
     end;  //of if
 

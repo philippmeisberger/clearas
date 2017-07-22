@@ -80,45 +80,38 @@ type
   end;
 
 /// <summary>
-///   Opens a given HTTP URL in the default web browser.
+///   Opens a given URL.
 /// </summary>
 /// <param name="AUrl">
-///    The HTTP URL that should be opened.
+///    The URL that should be opened.
 /// </param>
 /// <returns>
-///   <c>True</c> if the HTTP URL was successfully opened or <c>False</c> otherwise.
+///   <c>True</c> if the URL was successfully opened or <c>False</c> otherwise.
 /// </returns>
 function OpenUrl(const AUrl: string): Boolean;
 
 {$IFDEF MSWINDOWS}
 /// <summary>
-///   Executes a program using ShellExecuteEx.
+///   Performs an operation on a specified file.
 /// </summary>
-/// <param name="AProgram">
-///   The program to execute.
+/// <param name="AOperation">
+///   The operation to perform.
+/// </param>
+/// <param name="AFileName">
+///   Object on which to execute the specified operation.
 /// </param>
 /// <param name="AArguments">
 ///   Optional arguments passed to the program.
 /// </param>
 /// <param name="AShow">
-///   The show mode. Default is <c>SW_SHOWNORMAL</c>.
-/// </param>
-/// <param name="ARunAsAdmin">
-///   If set to <c>True</c> execute the program with admin access rights
-///   otherwise with normal user access rights.
-/// </param>
-/// <param name="AWait">
-///   If set to <c>True</c> wait until the program has finished. Otherwise
-///   continue directly. NOTE: Can freeze the main program if this function
-///   is called by the main thread.
+///   Optional: The show mode.
 /// </param>
 /// <returns>
-///   <c>True</c> if the program was successfully launched or <c>False</c>
+///   <c>True</c> if the operation was successfully executed or <c>False</c>
 ///   otherwise.
 /// </returns>
-function ExecuteProgram(const AProgram: string; const AArguments: string = '';
-  AShow: Integer = SW_SHOWNORMAL; ARunAsAdmin: Boolean = False;
-  AWait: Boolean = False): Boolean;
+function ShellExec(const AOperation, AFileName: string; const AArguments: string = '';
+  AShow: Integer = SW_SHOWNORMAL): Boolean;
 
 /// <summary>
 ///   Expands an environment variable.
@@ -237,43 +230,11 @@ begin
 {$ENDIF}
 end;
 
-function ExecuteProgram(const AProgram: string; const AArguments: string = '';
-  AShow: Integer = SW_SHOWNORMAL; ARunAsAdmin: Boolean = False;
-  AWait: Boolean = False): Boolean;
-var
-  Info: TShellExecuteInfo;
-  ProcessExitCode: Cardinal;
-
+function ShellExec(const AOperation, AFileName: string; const AArguments: string = '';
+  AShow: Integer = SW_SHOWNORMAL): Boolean;
 begin
-  ZeroMemory(@Info, SizeOf(TShellExecuteInfo));
-
-  with Info do
-  begin
-    cbSize := SizeOf(TShellExecuteInfo);
-    fMask := SEE_MASK_NOCLOSEPROCESS;
-
-    if ARunAsAdmin then
-      lpVerb := 'runas'
-    else
-      lpVerb := 'open';
-
-    lpFile := PChar(AProgram);
-    lpParameters := PChar(AArguments);
-    nShow := AShow;
-  end;  //of with
-
-  Result := ShellExecuteEx(@Info);
-
-  if (Result and AWait) then
-  begin
-    while (WaitForSingleObject(Info.hProcess, 100) = WAIT_TIMEOUT) do
-      Application.ProcessMessages;
-
-    if GetExitCodeProcess(Info.hProcess, ProcessExitCode) then
-      Result := (ProcessExitCode = 0)
-    else
-      Result := False;
-  end;  //of begin
+  Result := (ShellExecute(0, PChar(AOperation), PChar(AFileName), PChar(AArguments),
+    nil, AShow) > 32);
 end;
 
 function ExpandEnvironmentVar(var AVariable: string): Boolean;
@@ -350,9 +311,6 @@ var
   Process: TProcess;
 
 begin
-  if (not AnsiStartsText('http://', AUrl) and not AnsiStartsText('https://', AUrl)) then
-    Exit(False);
-
   Process := TProcess.Create(nil);
 
   try
@@ -368,10 +326,7 @@ begin
 end;
 {$ELSE}
 begin
-  if (AUrl.StartsWith('http://') or AUrl.StartsWith('https://')) then
-    Result := ExecuteProgram(AUrl)
-  else
-    Result := False;
+  Result := ShellExec('open', AUrl, '', SW_SHOWNORMAL);
 end;
 {$ENDIF}
 

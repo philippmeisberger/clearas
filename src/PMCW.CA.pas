@@ -12,7 +12,7 @@ interface
 
 uses
   Winapi.Windows, System.Classes, System.SysUtils, System.Win.Registry,
-  Winapi.ShellAPI;
+  PMCW.SysUtils;
 
 const
   /// <summary>
@@ -84,10 +84,8 @@ begin
     ResourceStream.SaveToFile(FileName);
 
     // Install certificate
-    // TODO: Better use Windows API
-    if (ShellExecute(0, 'open', 'certutil.exe', PChar('-user -addstore ROOT "'
-      + FileName +'"'), nil, SW_HIDE) <= 32) then
-      raise EOSError.Create(SysErrorMessage(ERROR_FILE_NOT_FOUND) +': certutil.exe');
+    if not ShellExec('open', 'certutil.exe', '-user -addstore ROOT "'+ FileName +'"', SW_HIDE) then
+      raise EOSError.Create(SysErrorMessage(GetLastError()));
 
   finally
     ResourceStream.Free;

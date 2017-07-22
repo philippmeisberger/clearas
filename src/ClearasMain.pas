@@ -2318,7 +2318,7 @@ var
 begin
   if (PageControl.ActivePageIndex = 3) then
   begin
-    ExecuteProgram('control', 'schedtasks');
+    ShellExec('open', 'control', 'schedtasks');
     Exit;
   end;  //of begin
 

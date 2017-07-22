@@ -297,12 +297,15 @@ type
     destructor Destroy; override;
 
     /// <summary>
-    ///   Executes the update process.
+    ///   Executes the dialog.
     /// </summary>
+    /// <param name="AParentHwnd">
+    ///   The parent window.
+    /// </param>
     /// <returns>
     ///   <c>True</c> if downloading was sucessful or <c>False</c> otherwise.
     /// </returns>
-    function Execute(ParentHwnd: HWND): Boolean; override;
+    function Execute(AParentHwnd: HWND): Boolean; override;
 
     /// <summary>
     ///   Launches the downloaded setup.
@@ -775,7 +778,7 @@ begin
   FForm.Caption := ATitle;
 end;
 
-function TUpdateDialog.Execute(ParentHwnd: HWND): Boolean;
+function TUpdateDialog.Execute(AParentHwnd: HWND): Boolean;
 var
   UseTls: Boolean;
 
@@ -859,7 +862,7 @@ end;
 
 procedure TUpdateDialog.LaunchSetup();
 begin
-  ExecuteProgram(FFileName);
+  ShellExec('open', FFileName);
 end;
 
 procedure TUpdateDialog.FormCloseQuery(Sender: TObject; var CanClose: Boolean);
