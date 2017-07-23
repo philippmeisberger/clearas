@@ -15,13 +15,6 @@ program ClearasTests;
 {$ENDIF}
 
 uses
-{$IFDEF madExcept}
-  madExcept,
-  madLinkDisAsm,
-  madListHardware,
-  madListProcesses,
-  madListModules,
-{$ENDIF}
   DUnitTestRunner,
   ClearasAPITest in 'ClearasAPITest.pas',
   ClearasAPI in '..\src\ClearasAPI.pas';
@@ -29,10 +22,7 @@ uses
 {$R *.RES}
 
 begin
-{$IFDEF WIN64}
-  // madExcept leak checking does not seems to work in 64 bit builds
   ReportMemoryLeaksOnShutdown := True;
-{$ENDIF}
   DUnitTestRunner.RunRegisteredTests;
 end.
 
