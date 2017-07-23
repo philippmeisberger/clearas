@@ -2435,6 +2435,7 @@ end;
 
 function TLnkFile.GetFullPath(): string;
 begin
+  // TODO: Use TCommandString
   if HasArguments() then
     Result := FExeFileName +' '+ FArguments
   else
@@ -2443,6 +2444,7 @@ end;
 
 function TLnkFile.GetFullPathEscaped(): string;
 begin
+  // TODO: Use TCommandString
   if HasArguments() then
     Result := string(FFileName).QuotedString('"') + FArguments
   else
@@ -2452,12 +2454,16 @@ end;
 procedure TLnkFile.SetArguments(const AArguments: string);
 begin
   FArguments := AArguments;
+
+  // TODO: No save!
   Save();
 end;
 
 procedure TLnkFile.SetExeFileName(const AExeFileName: TFileName);
 begin
   FExeFileName := AExeFileName;
+
+  // TODO: No save!
   Save();
 end;
 
@@ -4009,8 +4015,8 @@ begin
   if CheckWin32Version(6, 2) then
     Exit;
 
-  if not CopyFile(PChar(FCommand), PChar(GetBackupLnk()), False) then
-    raise EStartupException.Create('Backup could not be created!');
+  if not CopyFile(PChar(FCommand.ExtractFileName()), PChar(GetBackupLnk()), False) then
+    raise EStartupException.Create(Format('Backup could not be created in "%s"!', [GetBackupLnk()]));
 end;
 
 function TStartupUserItem.GetFullLocation(): string;
@@ -4055,7 +4061,7 @@ begin
   if CheckWin32Version(6, 2) then
     Exit;
 
-  Result := GetBackupDir() + ExtractFileName(FCommand) + GetBackupExtension();
+  Result := GetBackupDir() + ExtractFileName(FCommand.ExtractFileName()) + GetBackupExtension();
 end;
 
 function TStartupUserItem.GetExportFilter(ALanguageFile: TLanguageFile): string;
