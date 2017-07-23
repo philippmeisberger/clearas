@@ -6066,8 +6066,7 @@ end;
 constructor TServiceList.Create();
 begin
   inherited Create;
-  FManager := OpenSCManager(nil, SERVICES_ACTIVE_DATABASE,
-    SC_MANAGER_ENUMERATE_SERVICE {$IFNDEF DEBUG}or SC_MANAGER_CREATE_SERVICE{$ENDIF});
+  FManager := OpenSCManager(nil, SERVICES_ACTIVE_DATABASE, SC_MANAGER_ENUMERATE_SERVICE);
 end;
 
 destructor TServiceList.Destroy();
@@ -6081,6 +6080,7 @@ var
   Name, FullPath: string;
   Service: SC_Handle;
   LastError: DWORD;
+  Manager: SC_HANDLE;
 
 begin
   Result := False;
@@ -6093,6 +6093,13 @@ begin
   if not FLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
 
+  // To create a new service SC_MANAGER_CREATE_SERVICE access right is required
+  Manager := OpenSCManager(nil, SERVICES_ACTIVE_DATABASE, SC_MANAGER_CREATE_SERVICE);
+
+  // Error occured?
+  if (Manager = 0) then
+    raise EServiceException.Create(SysErrorMessage(GetLastError()));
+
   try
     // Escape path using quotes
     FullPath := '"'+ AFileName +'"';
@@ -6104,7 +6111,7 @@ begin
     Name := ChangeFileExt(Name, '');
 
     // Create a new service
-    Service := CreateService(FManager, PChar(Name), PChar(ACaption),
+    Service := CreateService(Manager, PChar(Name), PChar(ACaption),
       STANDARD_RIGHTS_READ, SERVICE_WIN32_OWN_PROCESS, SERVICE_AUTO_START,
       SERVICE_ERROR_NORMAL, PChar(FullPath), nil, nil, nil, nil, nil);
 
@@ -6127,6 +6134,7 @@ begin
       ssAutomatic, FManager)) <> -1);
 
   finally
+    CloseServiceHandle(Manager);
     FLock.Release();
 
     if Result then
