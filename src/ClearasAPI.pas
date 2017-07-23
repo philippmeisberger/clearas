@@ -165,6 +165,18 @@ type
     procedure Execute(); inline;
 
     /// <summary>
+    ///   Expands the command.
+    /// </summary>
+    /// <remarks>
+    ///   Substitution expressions like %PATH% are resolved and relative paths
+    ///   are converted to absolute ones.
+    /// </remarks>
+    /// <returns>
+    ///   The expanded command if successfully expanded or empty string otherwise.
+    /// </returns>
+    function Expand(): TCommandString;
+
+    /// <summary>
     ///   Extracts the optional arguments.
     /// </summary>
     /// <returns>
@@ -211,12 +223,9 @@ type
   /// </remarks>
   TRootItem = class abstract(TObject)
   private
-    function GetFileNameOnly(): string;
-    function GetErasable(): Boolean;
+    FErasable: Boolean;
   protected
-    FEnabled,
-    FErasable,
-    FInvalid: Boolean;
+    FEnabled: Boolean;
     FCommand: TCommandString;
     FName,
     FLocation,
@@ -273,6 +282,17 @@ type
     ///   The store location.
     /// </returns>
     function GetLocation(): string; virtual;
+
+    /// <summary>
+    ///   Checks if the item can be deleted.
+    /// </summary>
+    /// <remarks>
+    ///   <see cref="UpdateErasable"/> calls this method and caches the return
+    ///   value in <see cref="Erasable"/>. An item is erasable if filename is empty
+    ///   or does not exist. Override this method in derived class to implement
+    ///   custom behaviour.
+    /// </remarks>
+    function IsErasable(): Boolean; virtual;
 
     /// <summary>
     ///   Renames the item.
@@ -394,6 +414,11 @@ type
     procedure OpenInExplorer();
 
     /// <summary>
+    ///   Updates the cached <see cref="Erasable"/> property.
+    /// </summary>
+    procedure UpdateErasable(); inline;
+
+    /// <summary>
     ///   Gets the display name.
     /// </summary>
     property Caption: string read FCaption;
@@ -409,14 +434,9 @@ type
     property Enabled: Boolean read FEnabled write SetEnabled;
 
     /// <summary>
-    ///   Determines if the item is invalid and can be deleted.
+    ///   Determines if the item can be deleted.
     /// </summary>
-    property Erasable: Boolean read GetErasable;
-
-    /// <summary>
-    ///   Gets the filename without arguments.
-    /// </summary>
-    property FileNameOnly: string read GetFileNameOnly;
+    property Erasable: Boolean read FErasable;
 
     /// <summary>
     ///   Gets the icon of the .exe file.
@@ -1679,6 +1699,7 @@ type
   private
     procedure GetSubCommands(ASubCommands: TStrings);
   protected
+    function IsErasable(): Boolean; override;
     procedure Rename(const ANewName: string); override;
     procedure SetCommand(const ACommand: TCommandString); override;
   public
@@ -1791,6 +1812,7 @@ type
   protected
     function GetIcon(): HICON; override;
     function GetLocation(): string; override;
+    function IsErasable(): Boolean; override;
     procedure Rename(const ANewName: string); override;
     procedure SetCommand(const ACommand: TCommandString); override;
     procedure SetEnabled(const AEnabled: Boolean); override;
@@ -2188,10 +2210,12 @@ type
   private
     FTask: IRegisteredTask;
     FTaskService: ITaskService;
+    FInvalid: Boolean;
     function GetTaskDefinition(): ITaskDefinition;
     function GetZipLocation(): string;
   protected
     function GetFullLocation(): string; override;
+    function IsErasable(): Boolean; override;
     procedure Rename(const ANewName: string); override;
     procedure SetCommand(const ACommand: TCommandString); override;
     procedure SetEnabled(const AEnabled: Boolean); override;
@@ -2217,9 +2241,12 @@ type
     /// <param name="ATaskService">
     ///   A <c>ITaskService</c> object.
     /// </param>
+    /// <param name="AInvalid">
+    ///   Optional: Set to <c>True</c> if task could not be read.
+    /// </param>
     constructor Create(const AName: string; const ACommand: TCommandString;
       const ALocation: string; AEnabled: Boolean; const ATask: IRegisteredTask;
-      const ATaskService: ITaskService);
+      const ATaskService: ITaskService; AInvalid: Boolean = False);
 
     /// <summary>
     ///   Deletes the item.
@@ -2375,6 +2402,25 @@ type
 implementation
 
 {$I LanguageIDs.inc}
+
+/// <summary>
+///   Checks if specified file exists without WOW64 redirection.
+/// </summary>
+/// <returns>
+///   <c>True</c> if the file exists or <c>False</c> otherwise.
+/// </returns>
+function FileExistsWow64(const AFileName: TFileName): Boolean;
+var
+  OldValue: Boolean;
+
+begin
+  if (AFileName = '') then
+    Exit(False);
+
+  OldValue := DisableWow64FsRedirection();
+  Result := System.SysUtils.FileExists(AFileName);
+  RevertWow64FsRedirection(OldValue);
+end;
 
 { TLnkFile }
 
@@ -2541,6 +2587,42 @@ begin
   ShellExec('open', ExtractFileName, ExtractArguments);
 end;
 
+function TCommandStringHelper.Expand(): TCommandString;
+const
+  RUNDLL32 = 'rundll32.exe';
+
+var
+  Path: string;
+  Index: Integer;
+
+begin
+  if (Self = '') then
+    Exit;
+
+  Index := string(Self).ToLower.IndexOf(RUNDLL32);
+
+  if (Index <> -1) then
+  begin
+    Index := Index + Length(RUNDLL32) + 1;
+    Path := string(Self).Substring(Index);
+    Path := Path.Substring(0, Path.IndexOf(',')).TrimLeft;
+  end  //of begin
+  else
+    Path := Self.ExtractFileName();
+
+  Path := Path.DeQuotedString('"');
+
+  // Path has to be expanded?
+  if Path.StartsWith('%') then
+    ExpandEnvironmentVar(Path);
+
+  // File in system search path?
+  if ((ExtractFileExt(Path) <> '') and IsRelativePath(Path)) then
+    Path := FileSearch(Path, GetEnvironmentVariable('Path'));
+
+  Result := Path;
+end;
+
 function TCommandStringHelper.ExtractArguments(): string;
 var
   ExtWithArguments: string;
@@ -2621,59 +2703,13 @@ begin
   FLocation := ALocation;
   FEnabled := AEnabled;
   FIcon := 0;
-  FErasable := not FileExists();
+  UpdateErasable();
 end;
 
 destructor TRootItem.Destroy;
 begin
   DestroyIconHandle();
   inherited Destroy;
-end;
-
-function TRootItem.GetErasable(): Boolean;
-begin
-  Result := not FInvalid and FErasable;
-end;
-
-function TRootItem.GetFileNameOnly(): string;
-const
-  RUNDLL32 = 'rundll32.exe';
-
-var
-  Path: string;
-  Index: Integer;
-
-begin
-  if (FCommand = '') then
-    Exit;
-
-  Index := string(FCommand).ToLower.IndexOf(RUNDLL32);
-
-  if (Index <> -1) then
-  begin
-    Index := Index + Length(RUNDLL32) + 1;
-    Path := string(FCommand).Substring(Index);
-    Path := Path.Substring(0, Path.IndexOf(',')).TrimLeft;
-  end  //of begin
-  else
-    Path := FCommand.ExtractFileName();
-
-  Path := Path.DeQuotedString('"');
-
-  // Path has to be expanded?
-  if Path.StartsWith('%') then
-    ExpandEnvironmentVar(Path);
-
-  FInvalid := (ExtractFileExt(Path) = '');
-
-  // File in system search path?
-  if (not FInvalid and IsRelativePath(Path)) then
-  begin
-    Path := FileSearch(Path, GetEnvironmentVariable('Path'));
-    FInvalid := (Path = '');
-  end;  //of begin
-
-  Result := Path;
 end;
 
 function TRootItem.GetFileDescription(const AFileName: TFileName): string;
@@ -2728,7 +2764,7 @@ end;
 
 function TRootItem.GetIcon(): HICON;
 begin
-  Result := GetIcon(GetFileNameOnly());
+  Result := GetIcon(FCommand.Expand());
 end;
 
 function TRootItem.GetIcon(const AExeFileName: TFileName): HICON;
@@ -2763,19 +2799,8 @@ begin
 end;
 
 function TRootItem.FileExists(): Boolean;
-var
-  FileName: string;
-  OldValue: Boolean;
-
 begin
-  FileName := GetFileNameOnly();
-
-  if (FileName = '') then
-    Exit(False);
-
-  OldValue := DisableWow64FsRedirection();
-  Result := System.SysUtils.FileExists(FileName);
-  RevertWow64FsRedirection(OldValue);
+  Result := FileExistsWow64(FCommand.Expand());
 end;
 
 function TRootItem.GetStatusText(ALanguageFile: TLanguageFile): string;
@@ -2786,6 +2811,23 @@ begin
     Result := ALanguageFile.GetString(LID_NO);
 end;
 
+function TRootItem.IsErasable(): Boolean;
+var
+  ExpandedCommand: string;
+
+begin
+  if (FCommand = '') then
+    Exit(True);
+
+  ExpandedCommand := FCommand.Expand();
+
+  // Something went wrong: Item is not erasable!
+  if ((ExpandedCommand = '') or (ExtractFileExt(ExpandedCommand) = '')) then
+    Exit(False);
+
+  Result := not FileExistsWow64(ExpandedCommand);
+end;
+
 procedure TRootItem.OpenInExplorer();
 var
   PreparedFileName: string;
@@ -2793,7 +2835,7 @@ var
 
 begin
   // Extract the file path only (without arguments and quote chars)
-  PreparedFileName := GetFileNameOnly();
+  PreparedFileName := FCommand.Expand();
 
   if (PreparedFileName <> '') then
   begin
@@ -2820,12 +2862,17 @@ end;
 procedure TRootItem.SetCommand(const ACommand: TCommandString);
 begin
   FCommand := ACommand;
-  FErasable := not FileExists();
+  UpdateErasable();
 end;
 
 procedure TRootItem.SetEnabled(const AEnabled: Boolean);
 begin
   FEnabled := AEnabled;
+end;
+
+procedure TRootItem.UpdateErasable();
+begin
+  FErasable := IsErasable();
 end;
 
 
@@ -2868,6 +2915,9 @@ begin
 end;
 
 procedure TRegistryItem.OpenInRegEdit(AWow64: Boolean);
+const
+  REGISTRY_EDITOR = 'regedit.exe';
+
 var
   Reg: TRegistry;
   OldValue: Boolean;
@@ -2880,15 +2930,15 @@ begin
     Reg.OpenKey('SOFTWARE\Microsoft\Windows\CurrentVersion\Applets\Regedit', True);
     Reg.WriteString('LastKey', 'Computer\'+ GetFullLocation());
 
-    // Redirected 32-Bit item?
+    // Redirected 32 bit item?
     if AWow64 then
-      // Execute 32-Bit RegEdit
-      ShellExec('open', {$IFDEF WIN64}GetSystemWow64Directory() +{$ENDIF}'regedit.exe')
+      // Execute 32 bit RegEdit
+      ShellExec('open', {$IFDEF WIN64}GetSystemWow64Directory() +{$ENDIF}REGISTRY_EDITOR)
     else
     begin
       // Execute 64 bit RegEdit
       OldValue := DisableWow64FsRedirection();
-      ShellExec('open', 'regedit.exe');
+      ShellExec('open', REGISTRY_EDITOR);
       RevertWow64FsRedirection(OldValue);
     end;  //of if
 
@@ -3418,7 +3468,7 @@ constructor TStartupListItem.Create(const AName: string; const ACommand: TComman
 begin
   inherited Create(AName, AName, ACommand, ALocation, AEnabled, AWow64);
   FRootKey := ARootKey;
-  FCaption := GetFileDescription(FileNameOnly);
+  FCaption := GetFileDescription(FCommand.Expand());
   FTime := 0;
 end;
 
@@ -3576,7 +3626,7 @@ begin
     inherited SetCommand(ACommand);
 
     // Update caption
-    FCaption := GetFileDescription(FileNameOnly);
+    FCaption := GetFileDescription(FCommand.Expand());
 
   finally
     Reg.CloseKey();
@@ -4021,10 +4071,10 @@ begin
   FLnkFile.ExeFileName := ACommand.ExtractFileName();
   FLnkFile.Arguments := ACommand.ExtractArguments();
   FCommand := ACommand;
-  FErasable := not FileExists();
+  UpdateErasable();
 
   // Update caption
-  FCaption := GetFileDescription(FileNameOnly);
+  FCaption := GetFileDescription(ACommand.Expand());
 
   // Rewrite backup prior to Windows 7
   if not FEnabled then
@@ -5000,7 +5050,6 @@ constructor TContextMenuShellCascadingItem.Create(const AName, ACaption, ALocati
   AEnabled, AExtended: Boolean);
 begin
   inherited Create(AName, ACaption, '', ALocation, AEnabled, AExtended);
-  FErasable := False;
 end;
 
 procedure TContextMenuShellCascadingItem.GetSubCommands(ASubCommands: TStrings);
@@ -5073,6 +5122,12 @@ end;
 procedure TContextMenuShellCascadingItem.Rename(const ANewName: string);
 begin
   Rename(CaptionValueName, ANewName);
+end;
+
+function TContextMenuShellCascadingItem.IsErasable(): Boolean;
+begin
+  // Cannot be erasable since multiple commands are used
+  Result := False;
 end;
 
 procedure TContextMenuShellCascadingItem.SetCommand(const ACommand: TCommandString);
@@ -5239,7 +5294,6 @@ constructor TContextMenuShellNewItem.Create(const AName, ACaption, ALocation: st
   AEnabled: Boolean);
 begin
   inherited Create(AName, ACaption, '', ALocation, AEnabled, False);
-  FErasable := False;
 end;
 
 procedure TContextMenuShellNewItem.SetEnabled(const AEnabled: Boolean);
@@ -5299,6 +5353,15 @@ begin
     Result := inherited GetLocation() +'\'+ CanonicalName
   else
     Result := inherited GetLocation() +'\'+ CanonicalNameDisabled;
+end;
+
+function TContextMenuShellNewItem.IsErasable(): Boolean;
+begin
+  // Command is not always used: Item is not erasable!
+  if (FCommand = '') then
+    Exit(False);
+
+  Result := inherited IsErasable();
 end;
 
 procedure TContextMenuShellNewItem.SetCommand(const ACommand: TCommandString);
@@ -6325,12 +6388,13 @@ end;
 
 constructor TTaskListItem.Create(const AName: string; const ACommand: TCommandString;
   const ALocation: string; AEnabled: Boolean; const ATask: IRegisteredTask;
-  const ATaskService: ITaskService);
+  const ATaskService: ITaskService; AInvalid: Boolean = False);
 begin
   inherited Create(AName, '', ACommand, ALocation, AEnabled);
   FTask := ATask;
   FTaskService := ATaskService;
-  FErasable := False;
+  FInvalid := AInvalid;
+  UpdateErasable();
 end;
 
 procedure TTaskListItem.SetEnabled(const AEnabled: Boolean);
@@ -6348,6 +6412,19 @@ function TTaskListItem.GetZipLocation(): string;
 begin
   Result := IncludeTrailingPathDelimiter(Location).Substring(1) + Name;
   Result := Result.Replace('\', '/');
+end;
+
+function TTaskListItem.IsErasable(): Boolean;
+begin
+  // Invalid tasks can be deleted
+  if FInvalid then
+    Exit(True);
+
+  // Command is not always used: Item is not erasable!
+  if (FCommand = '') then
+    Exit(False);
+
+  Result := inherited IsErasable();
 end;
 
 function TTaskListItem.GetFullLocation(): string;
@@ -6533,8 +6610,7 @@ begin
   end;  //of try
 
   Item := TTaskListItem.Create(ATask.Name, Command, ExtractFileDir(ATask.Path),
-    Enabled, ATask, FTaskService);
-  Item.FErasable := Invalid;
+    Enabled, ATask, FTaskService, Invalid);
   Result := Add(Item);
 end;
 

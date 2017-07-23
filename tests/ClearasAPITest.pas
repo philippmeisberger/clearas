@@ -235,7 +235,7 @@ function TRootListTest.TestChangeFilePath(const AItemName, AExpectedFilePath,
   ANewFilePath: string): TRootItem;
 begin
   Result := GetItemForName(AItemName);
-  CheckEqualsString(AExpectedFilePath, Result.FileNameOnly, 'FileName of "'+ AItemName +'" does not match before changing file path');
+  CheckEqualsString(AExpectedFilePath, Result.Command.Expand(), 'FileName of "'+ AItemName +'" does not match before changing file path');
   FRootList.ChangeCommand(Result, ANewFilePath);
   CheckEqualsString(ANewFilePath, Result.Command, 'FileName of "'+ AItemName +'" does not match after changing file path');
 end;
@@ -252,7 +252,7 @@ begin
   begin
     SelectedItem := TestChangeFilePath(FTestItems[i], cTestExe, cNewTestFileName);
     CheckEqualsString(cNewTestArgument, SelectedItem.Command.ExtractArguments, 'Arguments of "'+ FTestItems[i] +'" does not match after changing file path');
-    CheckEqualsString(cNewTestExe, SelectedItem.FileNameOnly, 'FileNameOnly of "'+ FTestItems[i] +'" does not match after changing file path');
+    CheckEqualsString(cNewTestExe, SelectedItem.Command.Expand(), 'Expanding of "'+ FTestItems[i] +'" does not match after changing file path');
   end;  //of for
 
   // Turn erasable items to normal items
@@ -263,7 +263,7 @@ begin
   begin
     SelectedItem := TestChangeFilePath(FErasableTestItems[i], cTestExeErasable, cNewTestFileName);
     CheckEqualsString(cNewTestArgument, SelectedItem.Command.ExtractArguments, 'Arguments of "'+ FErasableTestItems[i] +'" does not match after changing file path');
-    CheckEqualsString(cNewTestExe, SelectedItem.FileNameOnly, 'FileNameOnly of "'+ FErasableTestItems[i] +'" does not match after changing file path');
+    CheckEqualsString(cNewTestExe, SelectedItem.Command.Expand(), 'Expanding of "'+ FErasableTestItems[i] +'" does not match after changing file path');
   end;  //of for
 
   CheckEquals(0, FRootList.ErasableItemsCount, 'After changing file paths of erasable items to a valid path ErasableItemsCount differs from expected');
@@ -308,7 +308,7 @@ begin
 
   DeletedItems := 0;
 
-  // Delete eraseble items
+  // Delete erasable items
   for i := FRootList.Count - 1 downto 0 do
   begin
     if (FRootList[i].Erasable and FRootList[i].Delete()) then
