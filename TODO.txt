@@ -17,5 +17,6 @@ Ideas:
 - Visual grouping
 - Context menu: support cascading shell submenus (ExtendedSubCommandsKey)
 - Receive notifications about registry changes
+- Receive notifications about service changes by using NotifyServiceStatusChange()
 - New feature: shell bags cleaning
 - "Import backup" supports merging existing items (especially scheduled tasks)
