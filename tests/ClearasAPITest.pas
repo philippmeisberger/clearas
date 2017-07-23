@@ -138,7 +138,7 @@ type
   // Helper class needed becaue UpdateActions() is protected
   TMyCustomForm = class(TCustomForm);
 
-function GetTickCount64(): UInt64; stdcall; external kernel32 name 'GetTickCount64' delayed;
+function GetTickCount64(): UInt64; stdcall; external kernel32 name 'GetTickCount64';
 
 procedure Delay(AMilliseconds: Cardinal);
 var
@@ -162,6 +162,24 @@ begin
       CheckSynchronize();
     end;  //of if
   end;  //of while
+end;
+
+function HasAdminAccessRights(): Boolean;
+var
+  TokenHandle: THandle;
+  Token: TTokenElevation;
+  Size: DWORD;
+
+begin
+  Result := False;
+
+  if OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, TokenHandle) then
+  begin
+    if GetTokenInformation(TokenHandle, TokenElevation, @Token, SizeOf(TTokenElevation), Size) then
+      Result := (Token.TokenIsElevated <> 0);
+
+    CloseHandle(TokenHandle);
+  end;  //of try
 end;
 
 procedure ImportRegistryFile(const AFileName: TFileName);
@@ -217,7 +235,7 @@ function TRootListTest.TestChangeFilePath(const AItemName, AExpectedFilePath,
   ANewFilePath: string): TRootItem;
 begin
   Result := GetItemForName(AItemName);
-  CheckEqualsString(AExpectedFilePath, Result.Command.Expand(), 'FileName of "'+ AItemName +'" does not match before changing file path');
+  CheckEqualsString(AExpectedFilePath, Result.FileNameOnly, 'FileName of "'+ AItemName +'" does not match before changing file path');
   FRootList.ChangeCommand(Result, ANewFilePath);
   CheckEqualsString(ANewFilePath, Result.Command, 'FileName of "'+ AItemName +'" does not match after changing file path');
 end;
@@ -234,7 +252,7 @@ begin
   begin
     SelectedItem := TestChangeFilePath(FTestItems[i], cTestExe, cNewTestFileName);
     CheckEqualsString(cNewTestArgument, SelectedItem.Command.ExtractArguments, 'Arguments of "'+ FTestItems[i] +'" does not match after changing file path');
-    CheckEqualsString(cNewTestExe, SelectedItem.Command.Expand(), 'FileNameOnly of "'+ FTestItems[i] +'" does not match after changing file path');
+    CheckEqualsString(cNewTestExe, SelectedItem.FileNameOnly, 'FileNameOnly of "'+ FTestItems[i] +'" does not match after changing file path');
   end;  //of for
 
   // Turn erasable items to normal items
@@ -245,7 +263,7 @@ begin
   begin
     SelectedItem := TestChangeFilePath(FErasableTestItems[i], cTestExeErasable, cNewTestFileName);
     CheckEqualsString(cNewTestArgument, SelectedItem.Command.ExtractArguments, 'Arguments of "'+ FErasableTestItems[i] +'" does not match after changing file path');
-    CheckEqualsString(cNewTestExe, SelectedItem.Command.Expand(), 'FileNameOnly of "'+ FErasableTestItems[i] +'" does not match after changing file path');
+    CheckEqualsString(cNewTestExe, SelectedItem.FileNameOnly, 'FileNameOnly of "'+ FErasableTestItems[i] +'" does not match after changing file path');
   end;  //of for
 
   CheckEquals(0, FRootList.ErasableItemsCount, 'After changing file paths of erasable items to a valid path ErasableItemsCount differs from expected');
@@ -476,10 +494,10 @@ begin
 
   for Location := Low(TStartupLocation) to High(TStartupLocation) do
   begin
-  {$IFDEF DEBUG}
-    if not (Location in [slHkcuRun, slHkcuRunOnce, slStartupUser]) then
+    // Skip startup locations that need admin access rights
+    if (not HasAdminAccessRights() and not (Location in [slHkcuRun, slHkcuRunOnce, slStartupUser])) then
       Continue;
-  {$ENDIF}
+
     // 32 bit OS
     if (TOSVersion.Architecture = arIntelX86) and (Location in [slHklmRun32, slHklmRunOnce32]) then
       Continue;
@@ -498,13 +516,17 @@ procedure TStartupListTest.TestImportBackup;
 begin
   ImportUserBackup;
   CheckException(ImportUserBackup, EAlreadyExists, 'Startup User file already exists so it must not be possible to import it again!');
-{$IFNDEF DEBUG}
-  Check(TStartupList(FRootList).ImportBackup('..\..\data\'+ GetItemName(slCommonStartup) + TStartupUserItem.FileExtensionStartupCommon), 'Startup Common file already exists!');
-  CheckEquals(2, FRootList.Count, 'After importing 2 startup backup files there should be 2 items in the list');
-  TestDelete(GetItemName(slCommonStartup));
-{$ELSE}
-  CheckEquals(1, FRootList.Count, 'After importing 1 startup backup file there should be 1 items in the list');
-{$ENDIF}
+
+  // Admin access rights are needed when importing into all users location
+  if HasAdminAccessRights() then
+  begin
+    Check(TStartupList(FRootList).ImportBackup('..\..\data\'+ GetItemName(slCommonStartup) + TStartupUserItem.FileExtensionStartupCommon), 'Startup Common file already exists!');
+    CheckEquals(2, FRootList.Count, 'After importing 2 startup backup files there should be 2 items in the list');
+    TestDelete(GetItemName(slCommonStartup));
+  end  //of begin
+  else
+    CheckEquals(1, FRootList.Count, 'After importing 1 startup backup file there should be 1 items in the list');
+
   TestDelete(GetItemName(slStartupUser));
 end;
 
@@ -528,11 +550,10 @@ var
   ItemName, ExeName: string;
 
 begin
-{$IFDEF DEBUG}
-  // Skip startup locations that need admin access rights in debug configuration only
-  if (ALocation in [slHklmRun..slHklmRunOnce32, slCommonStartup]) then
+  // Skip startup locations that need admin access rights
+  if (not HasAdminAccessRights() and (ALocation in [slHklmRun..slHklmRunOnce32, slCommonStartup])) then
     Exit;
-{$ENDIF}
+
   ItemName := GetItemName(ALocation);
 
   if AErasable then
@@ -721,11 +742,7 @@ end;
 
 procedure TContextListTest.AddEnabledTestItems;
 begin
-{$IFDEF DEBUG}
-  // Skip test in debug configuration because it needs admin access rights
-  Check(False, 'Test must be run with admin access rights!');
-{$ENDIF}
-
+  Check(HasAdminAccessRights(), 'Test must be run with admin access rights!');
   AddShellCMTestItem(cShellFileExt, cShellCMItem, cShellCMItem, cTestExe, cTestExe);
   AddShellCascadingCMTestItem(cShellFileExt, cShellCMItemCascading, cShellCMItemCascading,
     cTestExe, cTestExe);
@@ -763,10 +780,9 @@ var
   end;
 
 begin
-{$IFDEF DEBUG}
-  // Skip test in debug configuration because it needs admin access rights
-  Exit;
-{$ENDIF}
+  // Admin access rights are required!
+  if not HasAdminAccessRights() then
+    Exit;
 
   Check(AFileExt.StartsWith('.'), 'FileExt must start with a "."!');
   CheckNotEqualsString('', AName, 'Name must not be empty');
@@ -800,10 +816,9 @@ var
   Reg: TRegistry;
 
 begin
-{$IFDEF DEBUG}
-  // Skip test in debug configuration because it needs admin access rights
-  Exit;
-{$ENDIF}
+  // Admin access rights are required!
+  if not HasAdminAccessRights() then
+    Exit;
 
   Check(AFileExt.StartsWith('.'), 'FileExt must start with a "."!');;
   CheckNotEqualsString('', AName, 'Name must not be empty!');
@@ -838,10 +853,9 @@ var
   Reg: TRegistry;
 
 begin
-{$IFDEF DEBUG}
-  // Skip test in debug configuration because it needs admin access rights
-  Exit;
-{$ENDIF}
+  // Admin access rights are required!
+  if not HasAdminAccessRights() then
+    Exit;
 
   Check(AFileExt.StartsWith('.'), 'FileExt must start with a "."!');
   CheckNotEqualsString('', AName, 'Name must not be empty');
@@ -882,10 +896,9 @@ var
   Reg: TRegistry;
 
 begin
-{$IFDEF DEBUG}
-  // Skip test in debug configuration because it needs admin access rights
-  Exit;
-{$ENDIF}
+  // Admin access rights are required!
+  if not HasAdminAccessRights() then
+    Exit;
 
   Check(AFileExt.StartsWith('.'), 'FileExt must start with a "."!');
   CheckNotEqualsString('', AFileName, 'FileName must not be empty');
@@ -930,6 +943,7 @@ end;
 
 procedure TContextListTest.LoadItems();
 begin
+  Check(HasAdminAccessRights(), 'Test must be run with admin access rights!');
   TContextMenuList(FRootList).LoadContextmenu(cShellFileExt, False);
   TContextMenuList(FRootList).LoadContextmenu(cShellFileExtErasable, False);
   CheckEquals(FErasableTestItems.Count, FRootList.ErasableItemsCount, 'Count of erasable items differs from expected');
@@ -972,11 +986,7 @@ var
   Reg: TRegistry;
 
 begin
-{$IFDEF DEBUG}
-  // Skip test in debug configuration because it needs admin access rights
-  Check(False, 'Test must be run with admin access rights!');
-{$ENDIF}
-
+  Check(HasAdminAccessRights(), 'Test must be run with admin access rights!');
   Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
 
   try
@@ -1010,10 +1020,7 @@ end;
 
 procedure TServiceListTest.AddEnabledTestItems;
 begin
-{$IFDEF DEBUG}
-  // Skip test in debug configuration because it needs admin access rights
-  Check(False, 'Test must be run with admin access rights!');
-{$ENDIF}
+  Check(HasAdminAccessRights(), 'Test must be run with admin access rights!');
   Check(TServiceList(FRootList).Add(cTestExe, '', cService), 'Service already exists!');
   Check(TServiceList(FRootList).Add(cTestExeErasable, '', cServiceErasable), 'Service already exists!');
   CheckEquals(2, FRootList.Count, 'Actual item count differs from expected count');
@@ -1021,10 +1028,7 @@ end;
 
 procedure TServiceListTest.LoadItems();
 begin
-{$IFDEF DEBUG}
-  // Skip test in debug configuration because it needs admin access rights
-  Check(False, 'Test must be run with admin access rights!');
-{$ENDIF}
+  Check(HasAdminAccessRights(), 'Test must be run with admin access rights!');
   LoadService(ChangeFileExt(ExtractFileName(cTestExe), ''));
   LoadService(ChangeFileExt(ExtractFileName(cTestExeErasable), ''));
   CheckEquals(FErasableTestItems.Count, FRootList.ErasableItemsCount, 'Count of erasable items differs from expected');
@@ -1072,10 +1076,7 @@ var
   TaskFileName: string;
 
 begin
-{$IFDEF DEBUG}
-  // Skip test in debug configuration because it needs admin access rights
-  Check(False, 'Test must be run with admin access rights!');
-{$ENDIF}
+  Check(HasAdminAccessRights(), 'Test must be run with admin access rights!');
   TaskFileName := IncludeTrailingBackslash(ExtractFileDir(ExtractFileDir(GetCurrentDir()))) +'data\'+ FTestItems[0] +'.zip';
   Check(FileExists(TaskFileName), 'Task backup file "'+ TaskFileName +'" does not exist!');
   Check(TTaskList(FRootList).ImportBackup(TaskFileName), 'Task already exists!');
@@ -1085,10 +1086,7 @@ end;
 
 procedure TTaskListTest.LoadItems();
 begin
-{$IFDEF DEBUG}
-  // Skip test in debug configuration because it needs admin access rights
-  Check(False, 'Test must be run with admin access rights!');
-{$ENDIF}
+  Check(HasAdminAccessRights(), 'Test must be run with admin access rights!');
   TTaskList(FRootList).Search(False);
   CheckEquals(FErasableTestItems.Count, FRootList.ErasableItemsCount, 'Count of erasable items differs from expected');
 end;
