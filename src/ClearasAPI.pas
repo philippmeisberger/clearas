@@ -153,7 +153,11 @@ type
     /// <param name="AArguments">
     ///   Optional: Arguments.
     /// </param>
-    class function Create(const AFileName: string; const AArguments: string = ''): TCommandString; inline; static;
+    /// <param name="AAddQuotes">
+    ///  Optional: Add missing quotes if filename contains white spaces.
+    /// </param>
+    class function Create(const AFileName: string; const AArguments: string = '';
+      AAddQuotes: Boolean = False): TCommandString; inline; static;
 
     /// <summary>
     ///   Executes the command.
@@ -2518,12 +2522,18 @@ end;
 { TCommandStringHelper }
 
 class function TCommandStringHelper.Create(const AFileName: string;
-  const AArguments: string = ''): TCommandString;
+  const AArguments: string = ''; AAddQuotes: Boolean = False): TCommandString;
 begin
-  if (AArguments = '') then
-    Result := AFileName
+  if (AArguments <> '') then
+  begin
+    // File names contains white space?
+    if (AAddQuotes and not AFileName.StartsWith('"') and AFileName.Contains(' ')) then
+      Result := AFileName.QuotedString('"') +' '+ AArguments.DeQuotedString('"')
+    else
+      Result := AFileName +' '+ AArguments;
+  end  //of begin
   else
-    Result := AFileName.QuotedString('"') +' '+ AArguments.DeQuotedString('"');
+    Result := AFileName;
 end;
 
 procedure TCommandStringHelper.Execute();
@@ -4395,7 +4405,7 @@ begin
       try
         Reg.RootKey := HKEY_CURRENT_USER;
         Reg.OpenKey(TStartupItem.StartupRunKey, True);
-        Command := TCommandString.Create(AFileName, AArguments);
+        Command := TCommandString.Create(AFileName, AArguments, True);
 
         // Item already exists?
         if Reg.ValueExists(ACaption) then
@@ -5337,7 +5347,8 @@ end;
 function TContextMenuList.Add(const AFileName, AArguments, ALocationRoot,
   ACaption: string; AExtended: Boolean = False): Boolean;
 var
-  Name, Ext, FullPath, LocationRoot, FileType, KeyPath: string;
+  Name, Ext, LocationRoot, FileType, KeyPath: string;
+  Command: TCommandString;
   Reg: TRegistry;
 
 begin
@@ -5365,12 +5376,7 @@ begin
     if (IndexOf(Name, LocationRoot) <> -1) then
       raise EAlreadyExists.Create('Item already exists!');
 
-    // Escape space char using quotes
-    FullPath := '"'+ AFileName +'"';
-
-    // Append arguments if used
-    if (AArguments <> '') then
-      FullPath := FullPath +' '+ AArguments;
+    Command := TCommandString.Create(AFileName, AArguments, True);
 
     // Init Registry access
     Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_WRITE);
@@ -5423,10 +5429,10 @@ begin
           + Reg.LastErrorMsg);
 
       // Write command of item
-      Reg.WriteString('', FullPath);
+      Reg.WriteString('', Command);
 
       // Adds item to list
-      Result := (Add(TContextMenuShellItem.Create(Name, ACaption, FullPath, FileType, True,
+      Result := (Add(TContextMenuShellItem.Create(Name, ACaption, Command, FileType, True,
         AExtended)) <> -1);
       SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, nil, nil);
 
@@ -6077,8 +6083,9 @@ end;
 
 function TServiceList.Add(const AFileName, AArguments, ACaption: string): Boolean;
 var
-  Name, FullPath: string;
-  Service: SC_Handle;
+  Name: string;
+  Command: TCommandString;
+  Service: SC_HANDLE;
   LastError: DWORD;
   Manager: SC_HANDLE;
 
@@ -6101,19 +6108,13 @@ begin
     raise EServiceException.Create(SysErrorMessage(GetLastError()));
 
   try
-    // Escape path using quotes
-    FullPath := '"'+ AFileName +'"';
-
-    // Append arguments if used
-    if (AArguments <> '') then
-      FullPath := FullPath +' '+ AArguments;
-
+    Command := TCommandString.Create(AFileName, AArguments, True);
     Name := ChangeFileExt(Name, '');
 
     // Create a new service
     Service := CreateService(Manager, PChar(Name), PChar(ACaption),
       STANDARD_RIGHTS_READ, SERVICE_WIN32_OWN_PROCESS, SERVICE_AUTO_START,
-      SERVICE_ERROR_NORMAL, PChar(FullPath), nil, nil, nil, nil, nil);
+      SERVICE_ERROR_NORMAL, PChar(Command), nil, nil, nil, nil, nil);
 
     // Error occured?
     if (Service = 0) then
@@ -6130,7 +6131,7 @@ begin
     CloseServiceHandle(Service);
 
     // Adds service to list
-    Result := (Add(TServiceListItem.Create(Name, ACaption, FullPath, True,
+    Result := (Add(TServiceListItem.Create(Name, ACaption, Command, True,
       ssAutomatic, FManager)) <> -1);
 
   finally
@@ -6500,12 +6501,12 @@ var
   Actions: IEnumVariant;
   ActionItem: OleVariant;
   Fetched: DWORD;
-  FileName: string;
-  Enabled, Erasable: Boolean;
+  Command: TCommandString;
+  Enabled, Invalid: Boolean;
 
 begin
   Enabled := False;
-  Erasable := False;
+  Invalid := False;
 
   // Try to read task definition
   try
@@ -6519,11 +6520,7 @@ begin
       if (Action.ActionType = TASK_ACTION_EXEC) then
       begin
         ExecAction := (Action as IExecAction);
-        FileName := ExecAction.Path;
-
-        // Append arguments?
-        if (ExecAction.Arguments <> '') then
-          FileName := FileName +' '+ ExecAction.Arguments;
+        Command := TCommandString.Create(ExecAction.Path, ExecAction.Arguments);
       end;  //of begin
     end;  //of while
 
@@ -6532,12 +6529,12 @@ begin
   except
     // Mark task as erasable if something went wrong
     on EOleSysError do
-      Erasable := True;
+      Invalid := True;
   end;  //of try
 
-  Item := TTaskListItem.Create(ATask.Name, FileName, ExtractFileDir(ATask.Path),
+  Item := TTaskListItem.Create(ATask.Name, Command, ExtractFileDir(ATask.Path),
     Enabled, ATask, FTaskService);
-  Item.FErasable := Erasable;
+  Item.FErasable := Invalid;
   Result := Add(Item);
 end;
 
