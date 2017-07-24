@@ -3509,11 +3509,11 @@ begin
     Reg.RootKey := FRootKey.ToHKey();
 
     if not Reg.OpenKey(AKeyPath, False) then
-      raise ERegistryException.Create('Could not open key '''+ Reg.RootKeyName +'\'+ AKeyPath +''': '+ Reg.LastErrorMsg);
+      raise ERegistryException.CreateFmt('Could not open key "%s\%s": %s', [Reg.RootKeyName, AKeyPath, Reg.LastErrorMsg]);
 
     // Try to delete value
     if (Reg.ValueExists(Name) and not Reg.DeleteValue(Name)) then
-      raise ERegistryException.Create('Could not delete value '''+ Name +''': '+ Reg.LastErrorMsg);
+      raise ERegistryException.CreateFmt('Could not delete value "%s": %s', [Name, Reg.LastErrorMsg]);
 
     // Deleted or does not exist
     Result := True;
@@ -3589,7 +3589,7 @@ begin
 
     // Value must exist!
     if not Reg.ValueExists(ItemName) then
-      raise EStartupException.Create('Value '''+ ItemName +''' does not exist!');
+      raise EStartupException.CreateFmt('Value "%s" does not exist!', [ItemName]);
 
     // Change path
     Reg.WriteString(ItemName, ACommand);
@@ -3718,7 +3718,7 @@ begin
 
     // Failed to create new key?
     if not Reg.OpenKey(DisabledKey + Name, True) then
-      raise EStartupException.Create('Could not create key: '+ Reg.LastErrorMsg);
+      raise EStartupException.CreateFmt('Could not create key "%s": %s', [DisabledKey + Name, Reg.LastErrorMsg]);
 
     // Write values
     RootKey.FromHKey(RootKey.ToHKey());
@@ -3745,7 +3745,7 @@ begin
 
     // Delete old value, but do not fail if old value does not exist!
     if (Reg.ValueExists(Name) and not Reg.DeleteValue(Name)) then
-      raise EStartupException.Create('Could not delete value: '+ Reg.LastErrorMsg);
+      raise EStartupException.CreateFmt('Could not delete value "%s" in key "%s": %s', [Name, FLocation, Reg.LastErrorMsg]);
 
     // Update information
     FRootKey := rkHKLM;
@@ -3778,16 +3778,14 @@ begin
       raise EStartupException.Create(Reg.LastErrorMsg);
 
     if (not Reg.ValueExists('hkey') or not Reg.ValueExists('key')) then
-      raise EStartupException.Create('Missing destination Registry values '
-        +'''hkey'' or ''key''!');
+      raise EStartupException.Create('Missing destination Registry values ''hkey'' or ''key''!');
 
     // Set new values
     NewHKey.FromString(Reg.ReadString('hkey'));
     NewKeyPath := Reg.ReadString('key');
 
     if ((NewKeyPath = '') or (NewHKey = rkUnknown)) then
-      raise EStartupException.Create('Invalid destination Registry values for '
-        +'''hkey'' or ''key''!');
+      raise EStartupException.Create('Invalid destination Registry values for ''hkey'' or ''key''!');
 
     Reg.CloseKey;
 
@@ -3809,7 +3807,7 @@ begin
 
     // Failed to create new key?
     if not Reg.OpenKey(NewKeyPath, True) then
-      raise EStartupException.Create('Could not create startup key: '+ Reg.LastErrorMsg);
+      raise EStartupException.CreateFmt('Could not create key "%s": %s', [NewKeyPath, Reg.LastErrorMsg]);
 
     // Write startup entry
     Reg.WriteString(Name, Command);
@@ -3820,11 +3818,11 @@ begin
     Reg.RootKey := HKEY_LOCAL_MACHINE;
 
     if not Reg.OpenKey(DisabledKey, True) then
-      raise EStartupException.Create('Could not open Key '''+ DisabledKey +''': '+ Reg.LastErrorMsg);
+      raise EStartupException.CreateFmt('Could not open key "%s": %s', [DisabledKey, Reg.LastErrorMsg]);
 
     // Do not abort if old key does not exist!
     if (Reg.KeyExists(Name) and not Reg.DeleteKey(Name)) then
-      raise EStartupException.Create('Could not delete old key '''+ Name +''': '+ Reg.LastErrorMsg);
+      raise EStartupException.CreateFmt('Could not delete old key "%s": %s', [Name, Reg.LastErrorMsg]);
 
     // Update information
     FRootKey := NewHKey;
@@ -3980,7 +3978,7 @@ begin
     Exit;
 
   if not CopyFile(PChar(FLnkFile.FileName), PChar(GetBackupLnk()), False) then
-    raise EStartupException.Create(Format('Backup could not be created in "%s"!', [GetBackupLnk()]));
+    raise EStartupException.CreateFmt('Backup could not be created in "%s"!', [GetBackupLnk()]);
 end;
 
 function TStartupUserItem.GetFullLocation(): string;
@@ -4062,7 +4060,7 @@ begin
   begin
     // Could not delete .lnk?
     if not FLnkFile.Delete() then
-      raise EStartupException.Create('Could not delete .lnk file!');
+      raise EStartupException.CreateFmt('Could not delete "%s"!', [FLnkFile.FileName]);
 
     if Win8 then
       Result := inherited Delete()
@@ -4102,7 +4100,7 @@ begin
 
   // .lnk does not exist
   if not FLnkFile.Exists() then
-    raise EStartupException.Create('Lnk file '''+ FLnkFile.FileName +''' does not exist!');
+    raise EStartupException.CreateFmt('"%s" does not exist!', [FLnkFile.FileName]);
 
   // Create backup by copying original .lnk
   CreateBackup();
@@ -4114,8 +4112,7 @@ begin
     KeyName := AddCircumflex(FLocation);
 
     if not Reg.OpenKey(DisabledKey + KeyName, True) then
-      raise EStartupException.Create('Could not create key '''+ DisabledKey
-        + KeyName +''': '+ Reg.LastErrorMsg);
+      raise EStartupException.CreateFmt('Could not create key "%s": %s', [DisabledKey + KeyName, Reg.LastErrorMsg]);
 
     Reg.WriteString('path', FLocation);
     Reg.WriteString('item', ChangeFileExt(ExtractFileName(Name), ''));
@@ -4134,7 +4131,7 @@ begin
 
     // Delete original .lnk
     if not FLnkFile.Delete() then
-      raise EStartupException.Create('Could not delete .lnk file '''+ FLnkFile.FileName +'''!');
+      raise EStartupException.CreateFmt('Could not delete "%s"!', [FLnkFile.FileName]);
 
     // Update information
     FLocation := DisabledKey + KeyName;
@@ -4155,13 +4152,13 @@ begin
   begin
     // Failed to restore backup file?
     if not CopyFile(PChar(GetBackupLnk()), PChar(FLnkFile.FileName), True) then
-      raise EStartupException.Create('Could not restore backup .lnk file!');
+      raise EStartupException.CreateFmt('Could not restore backup "%s"!', [GetBackupLnk()]);
   end  //of begin
   else
   begin
     // Failed to create new .lnk file?
     if not FLnkFile.Save() then
-      raise EStartupException.Create('Could not create .lnk file!');
+      raise EStartupException.CreateFmt('Could not create "%s"!', [FLnkFile.FileName]);
   end;  //of if
 
   // Do not abort if old key could not be deleted
@@ -4223,16 +4220,16 @@ begin
       NewKeyName := AddCircumflex(NewFileName);
 
       if not Reg.KeyExists(OldKeyName) then
-        raise EStartupException.Create('Key does not exist!');
+        raise EStartupException.CreateFmt('Key "%s" does not exist!', [DisabledKey + OldKeyName]);
 
       if Reg.KeyExists(NewKeyName) then
-        raise EStartupException.Create('Key already exists!');
+        raise EStartupException.CreateFmt('Key "%s" already exists!', [DisabledKey + NewKeyName]);
 
       // Rename key and delete old key
       Reg.MoveKey(OldKeyName, NewKeyName, True);
 
       if not Reg.KeyExists(NewKeyName) then
-        raise EStartupException.Create('Key was not renamed!');
+        raise EStartupException.CreateFmt('Key "%s" was not renamed!', [DisabledKey + OldKeyName]);
 
       FLocation := DisabledKey + NewKeyName;
 
@@ -4365,7 +4362,7 @@ begin
   for i := 0 to Count - 1 do
   begin
     if string(Items[i].Command).Contains(AFileName) then
-      raise EAlreadyExists.Create('Item already exists!');
+      raise EAlreadyExists.CreateFmt('Item "%s" already exists!', [AFileName]);
   end;  //of for
 
   // Prepare .lnk file
@@ -4380,7 +4377,7 @@ begin
 
   // Link file created successfully?
   if not LnkFile.Save() then
-    raise EStartupException.Create('Could not create .lnk file '''+ LnkFile.FileName +'''!');
+    raise EStartupException.CreateFmt('Could not create "%s"!', [LnkFile.FileName]);
 
   // Add item to list
   Result := (Add(TStartupUserItem.Create(ExtractFileName(LnkFile.FileName),
@@ -4429,7 +4426,7 @@ begin
 
         // Item already exists?
         if Reg.ValueExists(ACaption) then
-          raise EAlreadyExists.Create('Item already exists!');
+          raise EAlreadyExists.CreateFmt('Item "%s" already exists!', [ACaption]);
 
         Reg.WriteString(ACaption, Command);
 
@@ -4508,9 +4505,8 @@ begin
   // Check invalid extension
   if ((Ext <> TStartupUserItem.FileExtensionStartupCommon) and
     (Ext <> TStartupUserItem.FileExtensionStartupUser)) then
-    raise EAssertionFailed.Create('Invalid backup file extension! Must '+
-      'be '''+ TStartupUserItem.FileExtensionStartupCommon +''' or '''+
-      TStartupUserItem.FileExtensionStartupUser +'''!');
+    raise EAssertionFailed.CreateFmt('Invalid backup file extension! Must be "%s" or "%s"!',
+      [TStartupUserItem.FileExtensionStartupCommon, TStartupUserItem.FileExtensionStartupUser]);
 
   // List locked?
   if not FLock.TryEnter() then
@@ -4970,7 +4966,7 @@ begin
     begin
       // Delete disable value, but do not fail if value does not exist!
       if (Reg.ValueExists(DisableValueName) and not Reg.DeleteValue(DisableValueName)) then
-        raise EStartupException.Create('Could not delete value '''+ DisableValueName +'''!');
+        raise EStartupException.CreateFmt('Could not delete value "%s"!', [DisableValueName]);
     end  //of begin
     else
       Reg.WriteString(DisableValueName, '');
@@ -5295,11 +5291,11 @@ begin
 
     // Old key does not exist?
     if not Reg.KeyExists(OldKeyName) then
-      raise EContextMenuException.Create('Key '''+ OldKeyName +''' does not exist!');
+      raise EContextMenuException.CreateFmt('Key "%s" does not exist!', [OldKeyName]);
 
     // New key already exists?
     if Reg.KeyExists(NewKeyName) and not Reg.DeleteKey(NewKeyName) then
-      raise EContextMenuException.Create('Key '''+ NewKeyName +''' already exists!');
+      raise EContextMenuException.CreateFmt('Key "%s" already exists!', [NewKeyName]);
 
     // Rename key
     Reg.MoveKey(OldKeyName, NewKeyName, True);
@@ -5408,7 +5404,7 @@ begin
 
     // File path already exists in another item?
     if (IndexOf(Name, LocationRoot) <> -1) then
-      raise EAlreadyExists.Create('Item already exists!');
+      raise EAlreadyExists.CreateFmt('Item "%s" already exists in "%s"!', [Name, LocationRoot]);
 
     Command := TCommandString.Create(AFileName, AArguments, True);
 
@@ -5419,8 +5415,7 @@ begin
       Reg.RootKey := HKEY_CLASSES_ROOT;
 
       if not Reg.OpenKey(LocationRoot, True) then
-        raise EContextMenuException.Create('Could not create key '''+ LocationRoot
-          +''': '+ Reg.LastErrorMsg);
+        raise EContextMenuException.CreateFmt('Could not create key "%s": %s', [LocationRoot, Reg.LastErrorMsg]);
 
       // Location is a file extension?
       if LocationRoot.StartsWith('.') then
@@ -5444,8 +5439,7 @@ begin
 
       // Adds new context item to Registry
       if not Reg.OpenKey(KeyPath, True) then
-        raise EContextMenuException.Create('Could not open key '''+ KeyPath
-          +''': '+ Reg.LastErrorMsg);
+        raise EContextMenuException.CreateFmt('Could not open key "%s": %s', [KeyPath, Reg.LastErrorMsg]);
 
       // Set caption of item
       if (Trim(ACaption) <> '') then
@@ -5459,8 +5453,7 @@ begin
       KeyPath := KeyPath +'\command';
 
       if not Reg.OpenKey(KeyPath, True) then
-        raise EContextMenuException.Create('Could not create key '''+ KeyPath +''': '
-          + Reg.LastErrorMsg);
+        raise EContextMenuException.CreateFmt('Could not create key "%s": %s', [KeyPath, Reg.LastErrorMsg]);
 
       // Write command of item
       Reg.WriteString('', Command);
@@ -6157,7 +6150,7 @@ begin
 
       // Service already exists?
       if (LastError = ERROR_SERVICE_EXISTS) then
-        raise EAlreadyExists.Create('Item already exists!');
+        raise EAlreadyExists.CreateFmt('Item "%s" already exists!', [Name]);
 
       raise EServiceException.Create('Could not create new service: '+ SysErrorMessage(LastError));
     end;  //of begin
@@ -6642,7 +6635,7 @@ begin
 
   // Check invalid extension
   if (ExtractFileExt(AFileName) <> GetBackupExtension()) then
-    raise EAssertionFailed.Create('Invalid backup file extension! Must be '''+ GetBackupExtension() +'''!');
+    raise EAssertionFailed.CreateFmt('Invalid backup file extension! Must be "%s"!', [GetBackupExtension()]);
 
   // List locked?
   if not FLock.TryEnter() then
