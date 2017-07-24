@@ -1,7 +1,5 @@
 unit ClearasAPITest;
 
-{$WARN SYMBOL_PLATFORM OFF}
-
 interface
 
 uses
@@ -735,7 +733,6 @@ procedure TContextListTest.SetUp;
 begin
   inherited SetUp;
   FRootList := TRootList<TRootItem>(TContextMenuList.Create);
-  FRootList.Duplicates := True;
 
   FTestItems.Append(cShellCMItem);
   FTestItems.Append(cShellCMItemCascading);

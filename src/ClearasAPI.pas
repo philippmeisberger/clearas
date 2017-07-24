@@ -1902,6 +1902,11 @@ type
       DefaultLocations = 'Directory, Folder, *, Drive';
 
     /// <summary>
+    ///   Constructor for creating a <c>TContextMenuList</c> instance.
+    /// </summary>
+    constructor Create;
+
+    /// <summary>
     ///   Adds a new item to the list.
     /// </summary>
     /// <param name="AFileName">
@@ -5374,6 +5379,12 @@ end;
 
 
 { TContextMenuList }
+
+constructor TContextMenuList.Create;
+begin
+  inherited Create;
+  Duplicates := True;
+end;
 
 function TContextMenuList.Add(const AFileName, AArguments, ALocationRoot,
   ACaption: string; AExtended: Boolean = False): Boolean;

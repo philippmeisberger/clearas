@@ -260,7 +260,6 @@ begin
   // Link search events
   with FContext do
   begin
-    Duplicates := True;
     OnCounterUpdate := OnContextCounterUpdate;
     OnRefresh := OnContextSearchEnd;
   end;  //of with
