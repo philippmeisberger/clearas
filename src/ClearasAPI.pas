@@ -4575,14 +4575,15 @@ begin
         Wow64 := OriginKey.Contains('Wow6432Node');
         RunOnce := (ExtractFileName(OriginKey) = 'RunOnce');
         Name := Items[i];
-
-        Item := TStartupItem.Create(Name, Command, Location, rkHKLM, False,
-          Wow64, RunOnce);
+        Item := TStartupItem.Create(Name, Command, Location, rkHKLM, False, Wow64, RunOnce);
       end  //of begin
       else
       begin
         Name := ExtractFileName(Location.Replace('^', '\'));
-        LnkFileName := ExtractFileName(Reg.ReadString('path'));
+        LnkFileName := Reg.ReadString('path');
+
+        if (LnkFileName = '') then
+          LnkFileName := Location.Replace('^', '\');
 
         // Windows >= Vista?
         if CheckWin32Version(6) then
