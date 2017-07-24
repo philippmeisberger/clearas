@@ -4,9 +4,8 @@ WIN64EXE=bin\Win64\Release\$(PROJECTNAME).exe
 
 BDSDIR=C:\Program Files (x86)\Embarcadero\Studio\16.0
 MSBUILD=C:\Windows\Microsoft.NET\Framework\v3.5\MSBUILD.exe
-CERTSHA1=A9A273A222A5DD3ED9EC2F46232AAD8E087EA4ED
 SIGNTOOL="C:\Program Files (x86)\Windows Kits\10\bin\x64\signtool.exe"
-SIGN=$(SIGNTOOL) sign /v /sha1 $(CERTSHA1) /tr http://timestamp.globalsign.com/scripts/timstamp.dll /td SHA256 /fd SHA256
+SIGN=$(SIGNTOOL) sign /v /n "PM Code Works" /tr http://timestamp.globalsign.com/scripts/timstamp.dll /td SHA256 /fd SHA256
 INNOSETUP="C:\Program Files (x86)\Inno Setup 5\Compil32.exe"
 
 build: win32 win64
