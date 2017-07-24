@@ -21,6 +21,62 @@ uses
 
 type
   /// <summary>
+  ///   Executable command that contains at least a filename and optional
+  ///   arguments.
+  /// </summary>
+  TCommandString = type string;
+
+  TCommandStringHelper = record helper for TCommandString
+    /// <summary>
+    ///   Creates a new <see cref="TCommandString"/>.
+    /// </summary>
+    /// <param name="AFileName">
+    ///   A filename.
+    /// </param>
+    /// <param name="AArguments">
+    ///   Optional: Arguments.
+    /// </param>
+    /// <param name="AAddQuotes">
+    ///  Optional: Add missing quotes if filename contains white spaces.
+    /// </param>
+    class function Create(const AFileName: string; const AArguments: string = '';
+      AAddQuotes: Boolean = False): TCommandString; inline; static;
+
+    /// <summary>
+    ///   Executes the command.
+    /// </summary>
+    procedure Execute(); inline;
+
+    /// <summary>
+    ///   Expands the command.
+    /// </summary>
+    /// <remarks>
+    ///   Substitution expressions like %PATH% are resolved and relative paths
+    ///   are converted to absolute ones.
+    /// </remarks>
+    /// <returns>
+    ///   The expanded command if successfully expanded or empty string otherwise.
+    /// </returns>
+    function Expand(): TCommandString;
+
+    /// <summary>
+    ///   Extracts the optional arguments.
+    /// </summary>
+    /// <returns>
+    ///   The arguments.
+    /// </returns>
+    function ExtractArguments(): string;
+
+    /// <summary>
+    ///   Extracts the filename.
+    /// </summary>
+    /// <returns>
+    ///   The filename.
+    /// </returns>
+    function ExtractFileName(): string;
+  end;
+
+  /// <summary>
   ///   A <c>TLnkFile</c> represents a symbolic link file.
   /// </summary>
   TLnkFile = class(TObject)
@@ -28,10 +84,7 @@ type
     FFileName,
     FExeFileName: TFileName;
     FArguments: string;
-    function GetFullPath(): string;
-    function GetFullPathEscaped(): string;
-    procedure SetArguments(const AArguments: string);
-    procedure SetExeFileName(const AExeFileName: TFileName);
+    function GetCommand(): TCommandString;
     procedure SetFileName(const AFileName: TFileName);
   protected
     /// <summary>
@@ -90,7 +143,7 @@ type
     /// <returns>
     ///   <c>True</c> if arguments are specified or <c>False</c> otherwise.
     /// </returns>
-    function HasArguments(): Boolean;
+    function HasArguments(): Boolean; inline;
 
     /// <summary>
     ///    Reads the contents from a .lnk file. Only after all properties can be
@@ -114,83 +167,22 @@ type
     /// <summary>
     ///   Gets or sets the command line arguments to the target .exe file.
     /// </summary>
-    property Arguments: string read FArguments write SetArguments;
+    property Arguments: string read FArguments write FArguments;
+
+    /// <summary>
+    ///   Returns the concatenation of filename and arguments.
+    /// </summary>
+    property Command: TCommandString read GetCommand;
 
     /// <summary>
     ///   Gets or sets the filename to the .exe file.
     /// </summary>
-    property ExeFileName: TFileName read FExeFileName write SetExeFileName;
+    property ExeFileName: TFileName read FExeFileName write FExeFileName;
 
     /// <summary>
     ///   Gets or sets the filename to the .lnk file.
     /// </summary>
     property FileName: TFileName read FFileName write SetFileName;
-
-    /// <summary>
-    ///   Returns the concatenation of filename and arguments.
-    /// </summary>
-    property FullPath: string read GetFullPath;
-
-    /// <summary>
-    ///   Returns the concatenation of file name and arguments escaped in quotes.
-    /// </summary>
-    property FullPathEscaped: string read GetFullPathEscaped;
-  end;
-
-  /// <summary>
-  ///   Executable command that contains at least a filename and optional
-  ///   arguments.
-  /// </summary>
-  TCommandString = type string;
-
-  TCommandStringHelper = record helper for TCommandString
-    /// <summary>
-    ///   Creates a new <see cref="TCommandString"/>.
-    /// </summary>
-    /// <param name="AFileName">
-    ///   A filename.
-    /// </param>
-    /// <param name="AArguments">
-    ///   Optional: Arguments.
-    /// </param>
-    /// <param name="AAddQuotes">
-    ///  Optional: Add missing quotes if filename contains white spaces.
-    /// </param>
-    class function Create(const AFileName: string; const AArguments: string = '';
-      AAddQuotes: Boolean = False): TCommandString; inline; static;
-
-    /// <summary>
-    ///   Executes the command.
-    /// </summary>
-    procedure Execute(); inline;
-
-    /// <summary>
-    ///   Expands the command.
-    /// </summary>
-    /// <remarks>
-    ///   Substitution expressions like %PATH% are resolved and relative paths
-    ///   are converted to absolute ones.
-    /// </remarks>
-    /// <returns>
-    ///   The expanded command if successfully expanded or empty string otherwise.
-    /// </returns>
-    function Expand(): TCommandString;
-
-    /// <summary>
-    ///   Extracts the optional arguments.
-    /// </summary>
-    /// <returns>
-    ///   The arguments.
-    /// </returns>
-    function ExtractArguments(): string;
-
-    /// <summary>
-    ///   Extracts the filename.
-    /// </summary>
-    /// <returns>
-    ///   The filename.
-    /// </returns>
-    function ExtractFileName(): string;
   end;
 
   /// <summary>
@@ -2422,154 +2414,6 @@ begin
   RevertWow64FsRedirection(OldValue);
 end;
 
-{ TLnkFile }
-
-constructor TLnkFile.Create(const AFileName: TFileName);
-begin
-  inherited Create;
-  FFileName := AFileName;
-
-  if Exists() then
-    Read();
-end;
-
-function TLnkFile.GetFullPath(): string;
-begin
-  // TODO: Use TCommandString
-  if HasArguments() then
-    Result := FExeFileName +' '+ FArguments
-  else
-    Result := FExeFileName;
-end;
-
-function TLnkFile.GetFullPathEscaped(): string;
-begin
-  // TODO: Use TCommandString
-  if HasArguments() then
-    Result := string(FFileName).QuotedString('"') + FArguments
-  else
-    Result := string(FFileName).QuotedString('"');
-end;
-
-procedure TLnkFile.SetArguments(const AArguments: string);
-begin
-  FArguments := AArguments;
-
-  // TODO: No save!
-  Save();
-end;
-
-procedure TLnkFile.SetExeFileName(const AExeFileName: TFileName);
-begin
-  FExeFileName := AExeFileName;
-
-  // TODO: No save!
-  Save();
-end;
-
-procedure TLnkFile.SetFileName(const AFileName: TFileName);
-begin
-  if (Exists() and not RenameFile(FFileName, AFileName)) then
-    raise Exception.Create(SysErrorMessage(GetLastError()));
-
-  FFileName := AFileName;
-end;
-
-function TLnkFile.Delete(): Boolean;
-begin
-  Result := DeleteFile(FFileName);
-end;
-
-function TLnkFile.Exists(): Boolean;
-begin
-  Result := FileExists(FFileName);
-end;
-
-function TLnkFile.HasArguments(): Boolean;
-begin
-  Result := (FArguments <> '');
-end;
-
-function TLnkFile.Read(): Boolean;
-var
-  ShellLink: IShellLink;
-  PersistFile: IPersistFile;
-  FileInfo: TWin32FindData;
-  Path, Arguments: string;
-
-begin
-  Result := False;
-  CoInitialize(nil);
-
-  try
-    if Succeeded(CoCreateInstance(CLSID_ShellLink, nil, CLSCTX_INPROC_SERVER,
-      IID_IShellLink, ShellLink)) then
-    begin
-      PersistFile := (ShellLink as IPersistFile);
-
-      // Try to read .lnk file
-      OleCheck(PersistFile.Load(PChar(FFileName), STGM_READ));
-      SetLength(Path, MAX_PATH + 1);
-
-      // Try to read path from .lnk
-      OleCheck(ShellLink.GetPath(PChar(Path), MAX_PATH, FileInfo, SLR_ANY_MATCH));
-
-      FExeFileName := PChar(Path);
-      SetLength(Arguments, MAX_PATH + 1);
-
-      // Try to read arguments from .lnk file
-      if Succeeded(ShellLink.GetArguments(PChar(Arguments), MAX_PATH)) then
-        FArguments := PChar(Arguments);
-
-      Result := True;
-    end;  //of begin
-
-  finally
-    CoUninitialize();
-  end;  //of try
-end;
-
-function TLnkFile.Save(): Boolean;
-begin
-  Result := Save(FFileName, FExeFileName, FArguments);
-end;
-
-function TLnkFile.Save(const AFileName, AExeFileName: TFileName;
-  const AArguments: string = ''): Boolean;
-var
-  ShellLink: IShellLink;
-  PersistFile: IPersistFile;
-
-begin
-  Result := False;
-  Assert(AFileName <> '', 'File name for .lnk file must not be empty!');
-  Assert(AExeFileName <> '', 'File path to .exe must not be empty!');
-  CoInitialize(nil);
-
-  try
-    if Succeeded(CoCreateInstance(CLSID_ShellLink, nil, CLSCTX_INPROC_SERVER,
-      IID_IShellLink, ShellLink)) then
-    begin
-      // Set path to .exe
-      OleCheck(ShellLink.SetPath(PChar(AExeFileName)));
-
-      // Set arguments if specified
-      if (AArguments <> '') then
-        OleCheck(ShellLink.SetArguments(PChar(AArguments)));
-
-      // Set working directory
-      ShellLink.SetWorkingDirectory(PChar(ExtractFilePath(AExeFileName)));
-
-      // Save .lnk
-      OleCheck(ShellLink.QueryInterface(IPersistFile, PersistFile));
-      Result := Succeeded(PersistFile.Save(PChar(AFileName), True));
-    end; //of begin
-
-  finally
-    CoUninitialize();
-  end;  //of try
-end;
-
 
 { TCommandStringHelper }
 
@@ -2694,6 +2538,126 @@ begin
     Parts := ExtWithArguments.Split([' ']);
     Result := string(Self).Substring(0, string(Self).IndexOf(ExtWithArguments) + Length(Parts[0]));
   end;  //of if
+end;
+
+
+{ TLnkFile }
+
+constructor TLnkFile.Create(const AFileName: TFileName);
+begin
+  inherited Create;
+  FFileName := AFileName;
+
+  if Exists() then
+    Read();
+end;
+
+function TLnkFile.GetCommand(): TCommandString;
+begin
+  Result := TCommandString.Create(FExeFileName, FArguments);
+end;
+
+procedure TLnkFile.SetFileName(const AFileName: TFileName);
+begin
+  if (Exists() and not RenameFile(FFileName, AFileName)) then
+    raise Exception.Create(SysErrorMessage(GetLastError()));
+
+  FFileName := AFileName;
+end;
+
+function TLnkFile.Delete(): Boolean;
+begin
+  Result := DeleteFile(FFileName);
+end;
+
+function TLnkFile.Exists(): Boolean;
+begin
+  Result := FileExists(FFileName);
+end;
+
+function TLnkFile.HasArguments(): Boolean;
+begin
+  Result := (FArguments <> '');
+end;
+
+function TLnkFile.Read(): Boolean;
+var
+  ShellLink: IShellLink;
+  PersistFile: IPersistFile;
+  FileInfo: TWin32FindData;
+  Path, Arguments: string;
+
+begin
+  Result := False;
+  CoInitialize(nil);
+
+  try
+    if Succeeded(CoCreateInstance(CLSID_ShellLink, nil, CLSCTX_INPROC_SERVER,
+      IID_IShellLink, ShellLink)) then
+    begin
+      PersistFile := (ShellLink as IPersistFile);
+
+      // Try to read .lnk file
+      OleCheck(PersistFile.Load(PChar(FFileName), STGM_READ));
+      SetLength(Path, MAX_PATH + 1);
+
+      // Try to read path from .lnk
+      OleCheck(ShellLink.GetPath(PChar(Path), MAX_PATH, FileInfo, SLR_ANY_MATCH));
+
+      FExeFileName := PChar(Path);
+      SetLength(Arguments, MAX_PATH + 1);
+
+      // Try to read arguments from .lnk file
+      if Succeeded(ShellLink.GetArguments(PChar(Arguments), MAX_PATH)) then
+        FArguments := PChar(Arguments);
+
+      Result := True;
+    end;  //of begin
+
+  finally
+    CoUninitialize();
+  end;  //of try
+end;
+
+function TLnkFile.Save(): Boolean;
+begin
+  Result := Save(FFileName, FExeFileName, FArguments);
+end;
+
+function TLnkFile.Save(const AFileName, AExeFileName: TFileName;
+  const AArguments: string = ''): Boolean;
+var
+  ShellLink: IShellLink;
+  PersistFile: IPersistFile;
+
+begin
+  Result := False;
+  Assert(AFileName <> '', 'File name for .lnk file must not be empty!');
+  Assert(AExeFileName <> '', 'File path to .exe must not be empty!');
+  CoInitialize(nil);
+
+  try
+    if Succeeded(CoCreateInstance(CLSID_ShellLink, nil, CLSCTX_INPROC_SERVER,
+      IID_IShellLink, ShellLink)) then
+    begin
+      // Set path to .exe
+      OleCheck(ShellLink.SetPath(PChar(AExeFileName)));
+
+      // Set arguments if specified
+      if (AArguments <> '') then
+        OleCheck(ShellLink.SetArguments(PChar(AArguments)));
+
+      // Set working directory
+      ShellLink.SetWorkingDirectory(PChar(ExtractFilePath(AExeFileName)));
+
+      // Save .lnk
+      OleCheck(ShellLink.QueryInterface(IPersistFile, PersistFile));
+      Result := Succeeded(PersistFile.Save(PChar(AFileName), True));
+    end; //of begin
+
+  finally
+    CoUninitialize();
+  end;  //of try
 end;
 
 
@@ -4420,7 +4384,7 @@ begin
 
   // Add item to list
   Result := (Add(TStartupUserItem.Create(ExtractFileName(LnkFile.FileName),
-    LnkFile.FullPath, LnkFile.FileName, True, AStartupUser, LnkFile)) <> -1);
+    LnkFile.Command, LnkFile.FileName, True, AStartupUser, LnkFile)) <> -1);
 
   // Windows 8?
   if (Result and CheckWin32Version(6, 2)) then
@@ -4580,7 +4544,8 @@ var
   i: Integer;
   Item: TStartupListItem;
   Wow64, RunOnce, StartupUser: Boolean;
-  Location, Name, FileName, LnkFileName, KeyPath, OriginKey: string;
+  Location, Name, LnkFileName, KeyPath, OriginKey: string;
+  Command: TCommandString;
 
 begin
   // Deprecated since Windows 8!
@@ -4606,7 +4571,7 @@ begin
       Reg.CloseKey();
       Reg.OpenKey(KeyPath + Items[i], False);
       Location := Reg.CurrentPath;
-      FileName := Reg.ReadString('command');
+      Command := Reg.ReadString('command');
 
       if not AStartupUser then
       begin
@@ -4615,7 +4580,7 @@ begin
         RunOnce := (ExtractFileName(OriginKey) = 'RunOnce');
         Name := Items[i];
 
-        Item := TStartupItem.Create(Name, FileName, Location, rkHKLM, False,
+        Item := TStartupItem.Create(Name, Command, Location, rkHKLM, False,
           Wow64, RunOnce);
       end  //of begin
       else
@@ -4629,7 +4594,7 @@ begin
         else
           StartupUser := AnsiSameText(Reg.ReadString('location'), 'Startup');
 
-        Item := TStartupUserItem.Create(Name, FileName, Location, False, StartupUser, nil);
+        Item := TStartupUserItem.Create(Name, Command, Location, False, StartupUser, nil);
 
         // Setup .lnk file
         TStartupUserItem(Item).LnkFile := TLnkFile.Create(LnkFileName);
@@ -4711,7 +4676,7 @@ begin
         // TODO: EOleSysError can be raised if .lnk is invalid
         LnkFile := TLnkFile.Create(AStartupLocation.GetLocation().Value + Name);
 
-        Item := TStartupUserItem.Create(Name, LnkFile.FullPath, LnkFile.FileName,
+        Item := TStartupUserItem.Create(Name, LnkFile.Command, LnkFile.FileName,
           Status.GetEnabled(), StartupUser, LnkFile);
         Item.Time := Status.GetDeactivationTime();
         Add(Item);
