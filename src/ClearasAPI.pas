@@ -3979,7 +3979,7 @@ begin
   if CheckWin32Version(6, 2) then
     Exit;
 
-  if not CopyFile(PChar(FCommand.ExtractFileName()), PChar(GetBackupLnk()), False) then
+  if not CopyFile(PChar(FLnkFile.FileName), PChar(GetBackupLnk()), False) then
     raise EStartupException.Create(Format('Backup could not be created in "%s"!', [GetBackupLnk()]));
 end;
 
@@ -4025,7 +4025,7 @@ begin
   if CheckWin32Version(6, 2) then
     Exit;
 
-  Result := GetBackupDir() + ExtractFileName(FCommand.ExtractFileName()) + GetBackupExtension();
+  Result := GetBackupDir() + Name + GetBackupExtension();
 end;
 
 function TStartupUserItem.GetExportFilter(ALanguageFile: TLanguageFile): string;
