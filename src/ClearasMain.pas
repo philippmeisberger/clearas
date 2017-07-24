@@ -1179,9 +1179,9 @@ begin
         Continue;
 
       // Confirm deletion of every erasable item
-      Answer := TaskMessageDlg(FLang.Format([LID_DELETE_ERASABLE_CONFIRM],
-        [SelectedListView.Items[i].SubItems[0]]), FLang.GetString([LID_ITEM_DELETE_CONFIRM1,
-        LID_ITEM_DELETE_CONFIRM2]), mtConfirmation, mbYesNoCancel, 0);
+      Answer := TaskMessageDlg(FLang.Format([LID_ITEM_DELETE],
+        [SelectedListView.Items[i].SubItems[0]]), FLang.GetString([LID_FILE_DOES_NOT_EXIST,
+        LID_ITEM_ERASABLE]), mtWarning, mbYesNoCancel, 0);
 
       case Answer of
         mrCancel:
@@ -1279,7 +1279,6 @@ var
   SelectedListView: TListView;
   SelectedList: TRootList<TRootItem>;
   SelectedItem: TRootItem;
-  ConfirmMessage: TLanguageId;
 
 begin
   try
@@ -1287,17 +1286,8 @@ begin
     SelectedList := GetSelectedList();
     SelectedItem := GetSelectedItem();
 
-    // Different message per tab
-    case PageControl.ActivePageIndex of
-      0:   ConfirmMessage := LID_STARTUP_DELETE_CONFIRM;
-      1:   ConfirmMessage := LID_CONTEXT_MENU_DELETE_CONFIRM;
-      2:   ConfirmMessage := LID_SERVICE_DELETE_CONFIRM;
-      3:   ConfirmMessage := LID_TASKS_DELETE_CONFIRM;
-      else ConfirmMessage := LID_STARTUP_DELETE_CONFIRM;
-    end;  //of case
-
     // Confirm deletion of item
-    if (TaskMessageDlg(FLang.Format([ConfirmMessage], [SelectedListView.ItemFocused.SubItems[0]]),
+    if (TaskMessageDlg(FLang.Format([LID_ITEM_DELETE], [SelectedListView.ItemFocused.SubItems[0]]),
       FLang.GetString([LID_ITEM_DELETE_CONFIRM1, LID_ITEM_DELETE_CONFIRM2]),
       mtWarning, mbYesNo, 0, mbNo) = idYes) then
     begin
@@ -1441,7 +1431,7 @@ begin
     if SelectedItem.Erasable then
     begin
       TaskMessageDlg(FLang.GetString(LID_FILE_DOES_NOT_EXIST),
-        FLang.GetString(LID_ENTRY_CAN_DE_DELETED), mtWarning, [mbOK], 0);
+        FLang.GetString(LID_ITEM_ERASABLE), mtWarning, [mbOK], 0);
     end;  //of begin
 
   except
@@ -1530,7 +1520,7 @@ begin
     if SelectedItem.Erasable then
     begin
       TaskMessageDlg(FLang.GetString(LID_FILE_DOES_NOT_EXIST),
-        FLang.GetString(LID_ENTRY_CAN_DE_DELETED), mtWarning, [mbOK], 0);
+        FLang.GetString(LID_ITEM_ERASABLE), mtWarning, [mbOK], 0);
     end;  //of begin
 
   except
@@ -2020,7 +2010,7 @@ begin
     on E: EWarning do
     begin
       TaskMessageDlg(FLang.GetString(LID_FILE_DOES_NOT_EXIST),
-        FLang.GetString(LID_ENTRY_CAN_DE_DELETED), mtWarning, [mbOK], 0);
+        FLang.GetString(LID_ITEM_ERASABLE), mtWarning, [mbOK], 0);
     end;
 
     on E: EInvalidItem do
@@ -2102,7 +2092,7 @@ begin
     on E: EWarning do
     begin
       TaskMessageDlg(FLang.GetString([LID_RENAME, LID_IMPOSSIBLE]),
-        FLang.GetString(LID_ENTRY_ALREADY_EXISTS), mtWarning, [mbOK], 0);
+        FLang.GetString(LID_ITEM_ALREADY_EXISTS), mtWarning, [mbOK], 0);
     end;
 
     on E: Exception do
@@ -2401,7 +2391,7 @@ begin
     on E: EAlreadyExists do
     begin
       TaskMessageDlg(StripHotKey(mmAdd.Caption) + FLang.GetString(LID_IMPOSSIBLE),
-        FLang.GetString(LID_ENTRY_ALREADY_EXISTS), mtWarning, [mbOK], 0);
+        FLang.GetString(LID_ITEM_ALREADY_EXISTS), mtWarning, [mbOK], 0);
     end;
 
     on E: EAssertionFailed do
@@ -2516,7 +2506,7 @@ begin
     if PromptForFileName(FileName, Filter, '', StripHotkey(mmImport.Caption)) then
     begin
       if not ImportableList.ImportBackup(FileName) then
-        raise EWarning.Create(FLang.GetString(LID_ENTRY_ALREADY_EXISTS));
+        raise EWarning.Create(FLang.GetString(LID_ITEM_ALREADY_EXISTS));
     end;  //of begin
 
   except

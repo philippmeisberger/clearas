@@ -1,12 +1,11 @@
 const
-  LID_ENTRY_ALREADY_EXISTS              = LID_LAST + 1;
+  LID_ITEM_ALREADY_EXISTS               = LID_LAST + 1;
   LID_DELETE_ERASABLE                   = LID_LAST + 2;
   LID_DELETE_ERASABLE_NO_ITEMS          = LID_LAST + 3;
-  LID_DELETE_ERASABLE_CONFIRM           = LID_LAST + 4;
   LID_FILE_DOES_NOT_EXIST               = LID_LAST + 5;
-  LID_ENTRY_CAN_DE_DELETED              = LID_LAST + 6;
+  LID_ITEM_ERASABLE                     = LID_LAST + 6;
   LID_DELETE_ERASABLE_SUCCESS           = LID_LAST + 7;
-  LID_STARTUP_DELETE_CONFIRM            = LID_LAST + 8;
+  LID_ITEM_DELETE                       = LID_LAST + 8;
   LID_ITEM_DELETE_CONFIRM1              = LID_LAST + 9;
   LID_ITEM_DELETE_CONFIRM2              = LID_LAST + 10;
   LID_OPEN_IN_EXPLORER                  = LID_LAST + 11;
@@ -16,7 +15,6 @@ const
   LID_RENAME                            = LID_LAST + 15;
   LID_SERVICE_COUNTER                   = LID_LAST + 16;
   LID_SERVICE_ADD                       = LID_LAST + 17;
-  LID_SERVICE_DELETE_CONFIRM            = LID_LAST + 18;
   LID_SERVICE_START                     = LID_LAST + 19;
   LID_SERVICES                          = LID_LAST + 20;
   LID_AUTOMATICALLY                     = LID_LAST + 21;
@@ -39,7 +37,6 @@ const
   LID_STARTUP_HEADLINE                  = LID_LAST + 42;
   LID_STARTUP                           = LID_LAST + 43;
   LID_CONTEXT_MENU                      = LID_LAST + 44;
-  LID_CONTEXT_MENU_DELETE_CONFIRM       = LID_LAST + 45;
   LID_CONTEXT_MENU_HEADLINE             = LID_LAST + 46;
   LID_CONTEXT_MENU_COUNTER              = LID_LAST + 47;
   LID_PROGRAM_COUNTER                   = LID_LAST + 48;
@@ -71,7 +68,6 @@ const
   LID_TASKS_COUNTER                     = LID_LAST + 76;
   LID_TASKS_ADD                         = LID_LAST + 77;
   LID_FILTER_ZIP_FILES                  = LID_LAST + 79;
-  LID_TASKS_DELETE_CONFIRM              = LID_LAST + 80;
   LID_CONTEXT_MENU_ICON_CHANGE          = LID_LAST + 81;
   LID_CONTEXT_MENU_ICON_DELETE          = LID_LAST + 82;
   LID_CONTEXT_MENU_ICON_DELETE_CONFIRM  = LID_LAST + 83;
