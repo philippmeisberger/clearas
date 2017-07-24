@@ -1,0 +1,1 @@
+echo Autostart Test

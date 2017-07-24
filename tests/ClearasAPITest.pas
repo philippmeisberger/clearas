@@ -11,6 +11,7 @@ uses
 const
   cTestExe         = 'C:\Windows\regedit.exe';
   cTestExeErasable = 'C:\X.exe';
+  cTestFilesDir    = '..\..\data\';
 
 type
   TRootListTest = class(TTestCase)
@@ -43,8 +44,6 @@ type
     procedure CleanUp; virtual;
   published
     procedure AddEnabledTestItems; virtual; abstract;
-    // TODO: Test adding new item
-    //procedure TestAddItem; virtual; abstract;
     procedure TestDisableItems;
     procedure TestEnableItems;
     procedure TestRenameItems; virtual;
@@ -69,6 +68,7 @@ type
     procedure SetUp; override;
     procedure CleanUp; override;
   published
+    procedure TestAddNewItem;
     procedure TestImportBackup;
     procedure AddEnabledTestItems; override;
   end;
@@ -104,6 +104,7 @@ type
     procedure CleanUp; override;
   published
     procedure AddEnabledTestItems; override;
+    procedure TestAddNewItem;
     procedure TestChangeItemCommands; override;
     procedure TestRenameItems; override;
   end;
@@ -501,9 +502,25 @@ begin
   end;  //of for
 end;
 
+procedure TStartupListTest.TestAddNewItem;
+begin
+  // Add .exe to autostart
+  CheckTrue(TStartupList(FRootList).Add(cNewTestExe, cNewTestArgument, GetItemName(slStartupUser)), 'Item could not be added');
+  Check(TStartupList(FRootList).Last is TStartupUserItem, '.exe must be added as TStartupUserItem');
+  Check((TStartupList(FRootList).Last as TStartupUserItem).StartupUser, 'New item must be added to current user startup and not common startup');
+  CheckEquals(1, FRootList.Count, 'Count was not increased');
+  TestDelete(GetItemName(slStartupUser));
+
+  // Add .bat to autostart
+  CheckTrue(TStartupList(FRootList).Add(cTestFilesDir +'HKCU.bat', cNewTestArgument, GetItemName(slHkcuRun)), 'Item could not be added');
+  Check(TStartupList(FRootList).Last is TStartupItem, '.bat must be added as TStartupItem');
+  CheckEquals(1, FRootList.Count, 'Count was not increased');
+  TestDelete(GetItemName(slHkcuRun));
+end;
+
 procedure TStartupListTest.ImportUserBackup;
 begin
-  Check(TStartupList(FRootList).ImportBackup('..\..\data\'+ GetItemName(slStartupUser) +  TStartupUserItem.FileExtensionStartupUser), 'Startup User file already exists!');
+  Check(TStartupList(FRootList).ImportBackup(cTestFilesDir + GetItemName(slStartupUser) +  TStartupUserItem.FileExtensionStartupUser), 'Startup User file already exists!');
 end;
 
 procedure TStartupListTest.TestImportBackup;
@@ -514,7 +531,7 @@ begin
   // Admin access rights are needed when importing into all users location
   if HasAdminAccessRights() then
   begin
-    Check(TStartupList(FRootList).ImportBackup('..\..\data\'+ GetItemName(slCommonStartup) + TStartupUserItem.FileExtensionStartupCommon), 'Startup Common file already exists!');
+    Check(TStartupList(FRootList).ImportBackup(cTestFilesDir + GetItemName(slCommonStartup) + TStartupUserItem.FileExtensionStartupCommon), 'Startup Common file already exists!');
     CheckEquals(2, FRootList.Count, 'After importing 2 startup backup files there should be 2 items in the list');
     TestDelete(GetItemName(slCommonStartup));
   end  //of begin
@@ -936,6 +953,18 @@ begin
   TContextMenuList(FRootList).LoadContextmenu(cShellFileExt, False);
   TContextMenuList(FRootList).LoadContextmenu(cShellFileExtErasable, False);
   CheckEquals(FErasableTestItems.Count, FRootList.ErasableItemsCount, 'Count of erasable items differs from expected');
+end;
+
+procedure TContextListTest.TestAddNewItem;
+const
+  NEW_SHELL_ITEM_CAPTION = 'Edit with notepad';
+
+begin
+  Check(HasAdminAccessRights(), 'Test must be run with admin access rights!');
+  CheckTrue(TContextMenuList(FRootList).Add(cNewTestExe, '"%1"', '.txt', NEW_SHELL_ITEM_CAPTION), 'Item could not be added');
+  CheckEquals(1, FRootList.Count, 'Count was not increased');
+  Check(TContextMenuList(FRootList).Last is TContextMenuShellItem, 'Context menu item must be added as TContextMenuShellItem');
+  TestDelete(NEW_SHELL_ITEM_CAPTION);
 end;
 
 procedure TContextListTest.TestChangeItemCommands;
