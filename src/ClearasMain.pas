@@ -1178,6 +1178,11 @@ begin
       if not SelectedItem.Erasable then
         Continue;
 
+      // Select and show item in TListView
+      SelectedListView.ItemFocused := SelectedListView.Items[i];
+      SelectedListView.Selected := SelectedListView.Items[i];
+      SelectedListView.Items[i].MakeVisible(False);
+
       // Confirm deletion of every erasable item
       Answer := TaskMessageDlg(FLang.Format([LID_ITEM_DELETE],
         [SelectedListView.Items[i].SubItems[0]]), FLang.GetString([LID_FILE_DOES_NOT_EXIST,
