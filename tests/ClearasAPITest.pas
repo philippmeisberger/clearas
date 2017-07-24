@@ -35,7 +35,7 @@ type
     procedure TestDelete(const AItemName: string);
     procedure TestExport(const AItemName: string);
     procedure TestRename(const AItemName: string); virtual;
-    function TestChangeFilePath(const AItemName, AExpectedFilePath,
+    function TestChangeCommand(const AItemName, AExpectedFilePath,
       ANewFilePath: string): TRootItem;
   public
     procedure SetUp; override;
@@ -48,7 +48,7 @@ type
     procedure TestDisableItems;
     procedure TestEnableItems;
     procedure TestRenameItems; virtual;
-    procedure TestChangeItemFilePaths; virtual;
+    procedure TestChangeItemCommands; virtual;
     procedure TestExportBackup;
     procedure TestExportItems;
     procedure TestDeleteItems;
@@ -104,7 +104,7 @@ type
     procedure CleanUp; override;
   published
     procedure AddEnabledTestItems; override;
-    procedure TestChangeItemFilePaths; override;
+    procedure TestChangeItemCommands; override;
     procedure TestRenameItems; override;
   end;
 
@@ -231,16 +231,16 @@ begin
   Result := FRootList[Index];
 end;
 
-function TRootListTest.TestChangeFilePath(const AItemName, AExpectedFilePath,
+function TRootListTest.TestChangeCommand(const AItemName, AExpectedFilePath,
   ANewFilePath: string): TRootItem;
 begin
   Result := GetItemForName(AItemName);
-  CheckEqualsString(AExpectedFilePath, Result.Command.Expand(), 'FileName of "'+ AItemName +'" does not match before changing file path');
+  CheckEqualsString(AExpectedFilePath, Result.Command.Expand(), 'FileName of "'+ AItemName +'" does not match before changing command');
   FRootList.ChangeCommand(Result, ANewFilePath);
-  CheckEqualsString(ANewFilePath, Result.Command, 'FileName of "'+ AItemName +'" does not match after changing file path');
+  CheckEqualsString(ANewFilePath, Result.Command, 'FileName of "'+ AItemName +'" does not match after changing command');
 end;
 
-procedure TRootListTest.TestChangeItemFilePaths;
+procedure TRootListTest.TestChangeItemCommands;
 var
   i, ErasableItems: Integer;
   SelectedItem: TRootItem;
@@ -250,9 +250,9 @@ begin
 
   for i := 0 to FTestItems.Count - 1 do
   begin
-    SelectedItem := TestChangeFilePath(FTestItems[i], cTestExe, cNewTestFileName);
-    CheckEqualsString(cNewTestArgument, SelectedItem.Command.ExtractArguments, 'Arguments of "'+ FTestItems[i] +'" does not match after changing file path');
-    CheckEqualsString(cNewTestExe, SelectedItem.Command.Expand(), 'Expanding of "'+ FTestItems[i] +'" does not match after changing file path');
+    SelectedItem := TestChangeCommand(FTestItems[i], cTestExe, cNewTestFileName);
+    CheckEqualsString(cNewTestArgument, SelectedItem.Command.ExtractArguments, 'Arguments of "'+ FTestItems[i] +'" does not match after changing command');
+    CheckEqualsString(cNewTestExe, SelectedItem.Command.Expand(), 'Expanding of "'+ FTestItems[i] +'" does not match after changing command');
   end;  //of for
 
   // Turn erasable items to normal items
@@ -261,18 +261,18 @@ begin
 
   for i := 0 to FErasableTestItems.Count - 1 do
   begin
-    SelectedItem := TestChangeFilePath(FErasableTestItems[i], cTestExeErasable, cNewTestFileName);
-    CheckEqualsString(cNewTestArgument, SelectedItem.Command.ExtractArguments, 'Arguments of "'+ FErasableTestItems[i] +'" does not match after changing file path');
-    CheckEqualsString(cNewTestExe, SelectedItem.Command.Expand(), 'Expanding of "'+ FErasableTestItems[i] +'" does not match after changing file path');
+    SelectedItem := TestChangeCommand(FErasableTestItems[i], cTestExeErasable, cNewTestFileName);
+    CheckEqualsString(cNewTestArgument, SelectedItem.Command.ExtractArguments, 'Arguments of "'+ FErasableTestItems[i] +'" does not match after changing command');
+    CheckEqualsString(cNewTestExe, SelectedItem.Command.Expand(), 'Expanding of "'+ FErasableTestItems[i] +'" does not match after changing command');
   end;  //of for
 
-  CheckEquals(0, FRootList.ErasableItemsCount, 'After changing file paths of erasable items to a valid path ErasableItemsCount differs from expected');
+  CheckEquals(0, FRootList.ErasableItemsCount, 'After changing commands of erasable items to a valid path ErasableItemsCount differs from expected');
 
   // Turn normal items to erasable items back
   for i := 0 to ErasableItems - 1 do
-    TestChangeFilePath(FErasableTestItems[i], cNewTestExe, cTestExeErasable);
+    TestChangeCommand(FErasableTestItems[i], cNewTestExe, cTestExeErasable);
 
-  CheckEquals(ErasableItems, FRootList.ErasableItemsCount, 'After changing file paths of normal items back to erasable ErasableItemsCount differs from expected');
+  CheckEquals(ErasableItems, FRootList.ErasableItemsCount, 'After changing commands of normal items back to erasable ErasableItemsCount differs from expected');
 end;
 
 procedure TRootListTest.TestDelete(const AItemName: string);
@@ -938,13 +938,13 @@ begin
   CheckEquals(FErasableTestItems.Count, FRootList.ErasableItemsCount, 'Count of erasable items differs from expected');
 end;
 
-procedure TContextListTest.TestChangeItemFilePaths;
+procedure TContextListTest.TestChangeItemCommands;
 begin
   // NOTE: Changing the filename of a cascading shell and shell new items is not possible!
   FTestItems.Clear;
   FTestItems.Append(cShellCMItem);
   FTestItems.Append(cShellExCMItem);
-  inherited TestChangeItemFilePaths;
+  inherited TestChangeItemCommands;
 end;
 
 procedure TContextListTest.TestRename(const AItemName: string);
