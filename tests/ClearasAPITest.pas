@@ -375,12 +375,6 @@ var
 begin
   LoadItems();
 
-  if not CheckWin32Version(6, 2) then
-  begin
-    TStartupList(FRootList).LoadDisabled(False);
-    TStartupList(FRootList).LoadDisabled(True);
-  end;  //of begin
-
   for i := 0 to FTestItems.Count - 1 do
     TestEnable(FTestItems[i]);
 end;
@@ -610,13 +604,8 @@ begin
 end;
 
 procedure TStartupListTest.LoadItems();
-var
-  Location: TStartupLocation;
-
 begin
-  for Location := Low(TStartupLocation) to High(TStartupLocation) do
-    TStartupList(FRootList).Load(Location);
-
+  TStartupList(FRootList).Search(True);
   CheckEquals(FErasableTestItems.Count, FRootList.ErasableItemsCount, 'Count of erasable items differs from expected');
 end;
 
