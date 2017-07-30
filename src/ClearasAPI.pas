@@ -387,18 +387,6 @@ type
     function GetExportFilter(ALanguageFile: TLanguageFile): string; virtual; abstract;
 
     /// <summary>
-    ///   Gets the item status as translated text.
-    /// </summary>
-    /// <param name="ALanguageFile">
-    ///   A <c>TLanguageFile</c> that contains the translations.
-    /// </param>
-    /// <returns>
-    ///   The status as text.
-    /// </returns>
-    // TODO: GetStatusText() is called too often: Remove GetStatusText() and use cached text
-    function GetStatusText(ALanguageFile: TLanguageFile): string;
-
-    /// <summary>
     ///   Opens the folder that contains the .exe file in Windows Explorer and
     ///   selects this file. If the file does not exist a <see cref="EWarning"/>
     ///   is raised.
@@ -2776,14 +2764,6 @@ end;
 function TRootItem.FileExists(): Boolean;
 begin
   Result := FileExistsWow64(FCommand.Expand());
-end;
-
-function TRootItem.GetStatusText(ALanguageFile: TLanguageFile): string;
-begin
-  if FEnabled then
-    Result := ALanguageFile.GetString(LID_YES)
-  else
-    Result := ALanguageFile.GetString(LID_NO);
 end;
 
 function TRootItem.IsErasable(): Boolean;

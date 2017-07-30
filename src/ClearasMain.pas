@@ -172,6 +172,7 @@ type
     FTasks: TTaskList;
     FLang: TLanguageFile;
     FUpdateCheck: TUpdateCheck;
+    FStatusText: array[Boolean] of string;
     function GetListForIndex(AIndex: Integer): TRootList<TRootItem>;
     function GetSelectedItem(): TRootItem;
     function GetSelectedList(): TRootList<TRootItem>;
@@ -533,7 +534,7 @@ begin
       FContext[i].LocationRoot.ToLower().Contains(LowerCase(eContextSearch.Text)))) then
       with lwContext.Items.Add do
       begin
-        Caption := FContext[i].GetStatusText(FLang);
+        Caption := FStatusText[FContext[i].Enabled];
         SubItems.AddObject(ItemText, FContext[i]);
         SubItems.Append(FContext[i].LocationRoot);
         SubItems.Append(FContext[i].ToString());
@@ -704,7 +705,7 @@ begin
       if ((eStartupSearch.Text = '') or (ItemText.ToLower().Contains(LowerCase(eStartupSearch.Text)))) then
         with lwStartup.Items.Add do
         begin
-          Caption := FStartup[i].GetStatusText(FLang);
+          Caption := FStatusText[FStartup[i].Enabled];
           SubItems.AddObject(ItemText, FStartup[i]);
           SubItems.Append(FStartup[i].Command);
           SubItems.Append(FStartup[i].ToString());
@@ -796,7 +797,7 @@ begin
     if ((eServiceSearch.Text = '') or (ItemText.ToLower().Contains(LowerCase(eServiceSearch.Text)))) then
       with lwService.Items.Add do
       begin
-        Caption := FService[i].GetStatusText(FLang);
+        Caption := FStatusText[FService[i].Enabled];
         SubItems.AddObject(ItemText, FService[i]);
         SubItems.Append(FService[i].Command);
         SubItems.Append(FService[i].Start.ToString(FLang));
@@ -872,7 +873,7 @@ begin
     begin
       with lwTasks.Items.Add do
       begin
-        Caption := FTasks[i].GetStatusText(FLang);
+        Caption := FStatusText[FTasks[i].Enabled];
         SubItems.AddObject(ItemText, FTasks[i]);
         SubItems.Append(FTasks[i].Command);
         SubItems.Append(FTasks[i].Location);
@@ -931,6 +932,10 @@ var
 begin
   with FLang do
   begin
+    // Cache status text
+    FStatusText[False] := FLang.GetString(LID_NO);
+    FStatusText[True] := FLang.GetString(LID_YES);
+
     // File menu labels
     mmFile.Caption := GetString(LID_FILE);
 
@@ -1430,7 +1435,7 @@ begin
     end;  //of case
 
     // Change item visual status
-    SelectedListView.ItemFocused.Caption := SelectedItem.GetStatusText(FLang);
+    SelectedListView.ItemFocused.Caption := FStatusText[SelectedItem.Enabled];
 
     // Item is erasable?
     if SelectedItem.Erasable then
@@ -1519,7 +1524,7 @@ begin
     end;  //of case
 
     // Change item visual status
-    SelectedListView.ItemFocused.Caption := SelectedItem.GetStatusText(FLang);
+    SelectedListView.ItemFocused.Caption := FStatusText[SelectedItem.Enabled];
 
     // Item is erasable?
     if SelectedItem.Erasable then
