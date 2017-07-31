@@ -123,6 +123,9 @@ type
   end;
 
   TTaskListTest = class(TRootListTest)
+  const
+    cTask         = 'TestTask';
+    cTaskErasable = 'ErasableTask';
   protected
     procedure LoadItems(); override;
   public
@@ -1104,20 +1107,28 @@ procedure TTaskListTest.SetUp;
 begin
   inherited SetUp;
   FRootList := TRootList<TRootItem>(TTaskList.Create);
-  FTestItems.Append('TestTask');
+  FTestItems.Append(cTask);
+  FErasableTestItems.Append(cTaskErasable);
 end;
 
 procedure TTaskListTest.AddEnabledTestItems;
-var
-  TaskFileName: string;
+
+  procedure ImportTask(const AName: string);
+  var
+    TaskFileName: string;
+
+  begin
+    TaskFileName := cTestFilesDir + AName +'.zip';
+    Check(FileExists(TaskFileName), 'Task backup file "'+ TaskFileName +'" does not exist!');
+    Check(TTaskList(FRootList).ImportBackup(TaskFileName), 'Task already exists!');
+    CheckFalse(TTaskList(FRootList).ImportBackup(TaskFileName), 'Task already exists so it must not be imported again!');
+  end;
 
 begin
   Check(HasAdminAccessRights(), 'Test must be run with admin access rights!');
-  TaskFileName := IncludeTrailingPathDelimiter(ExtractFileDir(ExtractFileDir(GetCurrentDir()))) +'data\'+ FTestItems[0] +'.zip';
-  Check(FileExists(TaskFileName), 'Task backup file "'+ TaskFileName +'" does not exist!');
-  Check(TTaskList(FRootList).ImportBackup(TaskFileName), 'Task already exists!');
-  CheckFalse(TTaskList(FRootList).ImportBackup(TaskFileName), 'Task already exists so it must not be imported again!');
-  CheckEquals(FTestItems.Count, FRootList.Count, 'Actual item count differs from expected count');
+  ImportTask(cTask);
+  ImportTask(cTaskErasable);
+  CheckEquals(2, FRootList.Count, 'Actual item count differs from expected count');
 end;
 
 procedure TTaskListTest.LoadItems();
