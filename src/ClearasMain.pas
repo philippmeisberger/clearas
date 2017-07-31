@@ -936,29 +936,24 @@ end;
 procedure TMain.OnTaskListNotify(Sender: TObject; const AItem: TTaskListItem;
   AAction: TCollectionNotification);
 var
-  i: Integer;
   Text: string;
 
 begin
   if (AAction = cnAdded) then
   begin
-    // Print all information about task items
-    for i := 0 to FTasks.Count - 1 do
-    begin
-      Text := FTasks[i].Name;
+    Text := AItem.Name;
 
-      // Filter items
-      if ((eTaskSearch.Text = '') or (Text.ToLower().Contains(LowerCase(eTaskSearch.Text)))) then
+    // Filter items
+    if ((eTaskSearch.Text = '') or (Text.ToLower().Contains(LowerCase(eTaskSearch.Text)))) then
+    begin
+      with lwTasks.Items.Add do
       begin
-        with lwTasks.Items.Add do
-        begin
-          Caption := FTasks[i].GetStatusText(FLang);
-          SubItems.AddObject(Text, FTasks[i]);
-          SubItems.Append(FTasks[i].FileName);
-          SubItems.Append(FTasks[i].Location);
-        end; //of with
-      end;  //of begin
-    end;  //of for
+        Caption := AItem.GetStatusText(FLang);
+        SubItems.AddObject(Text, AItem);
+        SubItems.Append(AItem.FileName);
+        SubItems.Append(AItem.Location);
+      end; //of with
+    end;  //of begin
   end;  //of begin
 end;
 
