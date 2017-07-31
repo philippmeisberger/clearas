@@ -79,6 +79,17 @@ type
     /// </returns>
     function ExtractValue(const AKeyValuePair: string): string;
   public
+    const
+      /// <summary>
+      ///   The file extension.
+      /// </summary>
+      FileExtension = '.ini';
+
+      /// <summary>
+      ///   File filter for an open or save dialog.
+      /// </summary>
+      FileFilter    = 'INI file *.ini|*.ini';
+
     /// <summary>
     ///   Constructor for creating a <c>TIniFile</c> instance.
     /// </summary>
@@ -450,6 +461,17 @@ type
     procedure WriteBinary(const ASection, AIdent: string; ARegBinary: Boolean;
       ABytes: array of Byte); overload;
   public
+    const
+      /// <summary>
+      ///   The file extension.
+      /// </summary>
+      FileExtension = '.reg';
+
+      /// <summary>
+      ///   File filter for an open or save dialog.
+      /// </summary>
+      FileFilter    = 'Registry file *.reg|*.reg';
+
     /// <summary>
     ///   Constructor for creating a <c>TRegistryFile</c> instance.
     /// </summary>
@@ -1372,7 +1394,7 @@ end;
 constructor TRegistryFile.Create(const AFileName: string;
   AOverwriteIfExists: Boolean = False; ASaveOnDestroy: Boolean = False);
 begin
-  if (ExtractFileExt(AFileName) <> '.reg') then
+  if (ExtractFileExt(AFileName) <> FileExtension) then
     raise EArgumentException.Create('The specified file is no .reg file!');
 
   inherited Create(AFileName, AOverwriteIfExists, ASaveOnDestroy);
