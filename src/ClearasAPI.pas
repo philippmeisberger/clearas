@@ -4325,8 +4325,7 @@ end;
 function TStartupList.GetImportFilter(ALanguageFile: TLanguageFile): string;
 begin
   Result := Format(ALanguageFile.GetString(LID_FILTER_STARTUP_FILES),
-    [TStartupUserItem.FileExtensionStartupUser, TStartupUserItem.FileExtensionStartupUser,
-    TStartupUserItem.FileExtensionStartupCommon, TStartupUserItem.FileExtensionStartupCommon]);
+    [TStartupUserItem.FileExtensionStartupUser, TStartupUserItem.FileExtensionStartupCommon]);
 end;
 
 function TStartupList.AddNewStartupUserItem(const AName: string;
