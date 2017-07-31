@@ -63,6 +63,7 @@ object Main: TMain
         ExplicitTop = 261
       end
       object lwStartup: TListView
+        Tag = -1
         Left = 22
         Top = 34
         Width = 400
@@ -274,6 +275,7 @@ object Main: TMain
         OnClick = bEnableItemClick
       end
       object lwContext: TListView
+        Tag = -1
         Left = 22
         Top = 34
         Width = 400
@@ -391,6 +393,7 @@ object Main: TMain
         Visible = False
       end
       object lwService: TListView
+        Tag = -1
         Left = 22
         Top = 34
         Width = 400
@@ -633,6 +636,7 @@ object Main: TMain
         OnRightButtonClick = eSearchRightButtonClick
       end
       object lwTasks: TListView
+        Tag = -1
         Left = 22
         Top = 34
         Width = 400
@@ -835,7 +839,7 @@ object Main: TMain
   object QuickSearchIconList: TImageList
     Left = 256
     Bitmap = {
-      494C0101030008006C0210001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C010103000800700210001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000001000000001002000000000000010
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000

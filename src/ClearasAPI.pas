@@ -628,13 +628,13 @@ type
   strict private
     // TODO: Better use TDuplicates
     FDuplicates: Boolean;
-    FOnCounterUpdate,
-    FOnRefresh: TNotifyEvent;
+    FOnCounterUpdate: TNotifyEvent;
     FEnabledItemsCount,
     FErasableItemsCount: Integer;
     procedure NotifyOnCounterUpdate();
   protected
-    FLock: TCriticalSection;
+    FSearchLock,
+    FExportLock: TCriticalSection;
     procedure Notify(const Item: T; Action: TCollectionNotification); override;
 
     { IInterface }
@@ -803,11 +803,6 @@ type
     function IsLocked(): Boolean;
 
     /// <summary>
-    ///   Notifies that the list needs a visual update.
-    /// </summary>
-    procedure Refresh();
-
-    /// <summary>
     ///   Renames an item.
     /// </summary>
     /// <param name="AItem">
@@ -851,11 +846,6 @@ type
     property ErasableItemsCount: Integer read FErasableItemsCount;
 
     /// <summary>
-    ///   Occurs when the list needs a visual update.
-    /// </summary>
-    property OnRefresh: TNotifyEvent read FOnRefresh write FOnRefresh;
-
-    /// <summary>
     ///   Occurs when counter is updated.
     /// </summary>
     property OnCounterUpdate: TNotifyEvent read FOnCounterUpdate write FOnCounterUpdate;
@@ -870,11 +860,12 @@ type
   /// </remarks>
   TRootListThread = class abstract(TThread)
   strict private
-    FOnStart: TNotifyEvent;
+    FOnStart,
+    FOnListLocked: TNotifyEvent;
     FOnError: TErrorEvent;
     FErrorMessage: string;
-    FLock: TCriticalSection;
     procedure DoNotifyOnError();
+    procedure DoNotifyOnListLocked();
     procedure DoNotifyOnStart();
   protected
     FSelectedList: TRootList<TRootItem>;
@@ -893,6 +884,11 @@ type
     ///   Occurs when something went wrong.
     /// </summary>
     property OnError: TErrorEvent read FOnError write FOnError;
+
+    /// <summary>
+    ///   Occurs when another operation is pending on the list and therefore locked.
+    /// </summary>
+    property OnListLocked: TNotifyEvent read FOnListLocked write FOnListLocked;
 
     /// <summary>
     ///   Occurs when thread has started.
@@ -935,7 +931,6 @@ type
   /// </summary>
   TExportListThread = class(TRootListThread)
   private
-    FSelectedList: TRootList<TRootItem>;
     FFileName: string;
     FPageControlIndex: Integer;
   protected
@@ -3016,13 +3011,15 @@ begin
   FEnabledItemsCount := 0;
   FErasableItemsCount := 0;
   FDuplicates := False;
-  FLock := TCriticalSection.Create;
+  FSearchLock := TCriticalSection.Create;
+  FExportLock := TCriticalSection.Create;
 end;
 
 destructor TRootList<T>.Destroy;
 begin
   Clear();
-  FreeAndNil(FLock);
+  FreeAndNil(FExportLock);
+  FreeAndNil(FSearchLock);
   inherited Destroy;
 end;
 
@@ -3051,8 +3048,8 @@ var
   ItemErasable: Boolean;
 
 begin
-  // List locked?
-  if not FLock.TryEnter() then
+  // Export is pending?
+  if not FExportLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
 
   try
@@ -3072,14 +3069,14 @@ begin
         Inc(FErasableItemsCount);
 
   finally
-    FLock.Release();
+    FExportLock.Release();
   end;  //of try
 end;
 
 procedure TRootList<T>.ChangeItemStatus(AItem: T; const AEnabled: Boolean);
 begin
-  // List locked?
-  if not FLock.TryEnter() then
+  // Export is pending?
+  if not FExportLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
 
   try
@@ -3113,7 +3110,7 @@ begin
     end;  //of if
 
   finally
-    FLock.Release();
+    FExportLock.Release();
   end;  //of try
 end;
 
@@ -3122,8 +3119,8 @@ var
   Deleted: Boolean;
 
 begin
-  // List locked?
-  if not FLock.TryEnter() then
+  // Export is pending?
+  if not FExportLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
 
   try
@@ -3139,7 +3136,7 @@ begin
       Remove(AItem);
 
   finally
-    FLock.Release();
+    FExportLock.Release();
     Result := Deleted;
   end;  //of try
 end;
@@ -3147,12 +3144,6 @@ end;
 procedure TRootList<T>.DisableItem(AItem: T);
 begin
   ChangeItemStatus(AItem, False);
-end;
-
-procedure TRootList<T>.Refresh();
-begin
-  if Assigned(FOnRefresh) then
-    FOnRefresh(Self);
 end;
 
 procedure TRootList<T>.EnableItem(AItem: T);
@@ -3163,7 +3154,7 @@ end;
 procedure TRootList<T>.ExportItem(AItem: T; const AFileName: string);
 begin
   // List locked?
-  if not FLock.TryEnter() then
+  if not FExportLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
 
   try
@@ -3173,7 +3164,7 @@ begin
     AItem.ExportItem(AFileName);
 
   finally
-    FLock.Release();
+    FExportLock.Release();
   end;  //of try
 end;
 
@@ -3233,44 +3224,48 @@ var
   Entered: Boolean;
 
 begin
-  Entered := FLock.TryEnter();
+  Entered := FExportLock.TryEnter();
 
   if Entered then
-    FLock.Release();
+    FExportLock.Release();
 
   Result := not Entered;
 end;
 
 procedure TRootList<T>.Notify(const Item: T; Action: TCollectionNotification);
 begin
-  inherited Notify(Item, Action);
+  TThread.Synchronize(nil,
+    procedure
+    begin
+      inherited Notify(Item, Action);
 
-  case Action of
-    cnAdded:
-      begin
-        if Item.Enabled then
-          Inc(FEnabledItemsCount);
+      case Action of
+        cnAdded:
+          begin
+            if Item.Enabled then
+              Inc(FEnabledItemsCount);
 
-        if Item.Erasable then
-          Inc(FErasableItemsCount);
+            if Item.Erasable then
+              Inc(FErasableItemsCount);
 
-        NotifyOnCounterUpdate();
-      end;
+            NotifyOnCounterUpdate();
+          end;
 
-    cnRemoved:
-      begin
-        // Item was enabled
-        if (Item.Enabled and (FEnabledItemsCount > 0)) then
-          // Update active counter
-          Dec(FEnabledItemsCount);
+        cnRemoved:
+          begin
+            // Item was enabled
+            if (Item.Enabled and (FEnabledItemsCount > 0)) then
+              // Update active counter
+              Dec(FEnabledItemsCount);
 
-        // Update erasable count
-        if (Item.Erasable and (FErasableItemsCount > 0)) then
-          Dec(FErasableItemsCount);
+            // Update erasable count
+            if (Item.Erasable and (FErasableItemsCount > 0)) then
+              Dec(FErasableItemsCount);
 
-        NotifyOnCounterUpdate();
-      end;
-  end;  //of case
+            NotifyOnCounterUpdate();
+          end;
+      end;  //of case
+  end);
 end;
 
 procedure TRootList<T>.NotifyOnCounterUpdate();
@@ -3284,8 +3279,8 @@ var
   i: Integer;
 
 begin
-  // List locked?
-  if not FLock.TryEnter() then
+  // Export is pending?
+  if not FExportLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
 
   try
@@ -3303,7 +3298,7 @@ begin
     AItem.Name := ANewName;
 
   finally
-    FLock.Release();
+    FExportLock.Release();
   end;  //of try
 end;
 
@@ -3315,13 +3310,18 @@ begin
   inherited Create(True);
   FreeOnTerminate := True;
   FSelectedList := ASelectedList;
-  FLock := FSelectedList.FLock;
 end;
 
 procedure TRootListThread.DoNotifyOnError();
 begin
   if Assigned(FOnError) then
     FOnError(Self, FErrorMessage);
+end;
+
+procedure TRootListThread.DoNotifyOnListLocked();
+begin
+  if Assigned(FOnListLocked) then
+    FOnListLocked(Self);
 end;
 
 procedure TRootListThread.DoNotifyOnStart();
@@ -3331,19 +3331,30 @@ begin
 end;
 
 procedure TRootListThread.Execute();
-begin
-  FLock.Acquire();
-  Synchronize(DoNotifyOnStart);
+var
+  SearchLock: TCriticalSection;
 
+begin
   try
+    Assert(Assigned(FSelectedList));
+    SearchLock := FSelectedList.FSearchLock;
+
+    // Search is pending?
+    if not SearchLock.TryEnter() then
+      raise EListBlocked.Create('Another operation is pending. Please wait!');
+
     try
+      Synchronize(DoNotifyOnStart);
       DoExecute();
 
     finally
-      FLock.Release();
+      SearchLock.Release();
     end;  //of try
 
   except
+    on E: EListBlocked do
+      Synchronize(DoNotifyOnListLocked);
+
     on E: Exception do
     begin
       FErrorMessage := Format('%s: %s', [ClassName, E.Message]);
@@ -3359,15 +3370,12 @@ constructor TSearchThread.Create(ASelectedList: TRootList<TRootItem>);
 begin
   inherited Create(ASelectedList);
   FreeOnTerminate := True;
-  FSelectedList := ASelectedList;
   FExpertMode := False;
   FWin64 := (TOSVersion.Architecture = arIntelX64);
-  OnTerminate := FSelectedList.OnRefresh;
 end;
 
 procedure TSearchThread.DoExecute();
 begin
-  Assert(Assigned(FSelectedList));
   FSelectedList.Clear();
   FSelectedList.Search(FExpertMode, FWin64);
 end;
@@ -3380,14 +3388,27 @@ constructor TExportListThread.Create(ASelectedList: TRootList<TRootItem>;
 begin
   inherited Create(ASelectedList);
   FreeOnTerminate := True;
-  FSelectedList := ASelectedList;
   FFileName := AFileName;
   FPageControlIndex := APageControlIndex;
 end;
 
 procedure TExportListThread.DoExecute();
+var
+  ExportLock: TCriticalSection;
+
 begin
-  FSelectedList.ExportList(FFileName);
+  ExportLock := FSelectedList.FExportLock;
+
+  // Export is pending?
+  if not ExportLock.TryEnter() then
+    raise EListBlocked.Create('Another operation is pending. Please wait!');
+
+  try
+    FSelectedList.ExportList(FFileName);
+
+  finally
+    ExportLock.Release();
+  end;  //of try
 end;
 
 
@@ -4409,51 +4430,57 @@ begin
   if ((Ext <> '.exe') and (Ext <> '.bat')) then
     raise EAssertionFailed.Create('Invalid program extension! Must be ''.exe'' or ''.bat''!');
 
-  // List locked?
-  if not FLock.TryEnter() then
+  // Search is pending?
+  if not FSearchLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
 
   try
-    // Add new startup user item?
-    if (Ext = '.exe') then
-      Result := AddNewStartupUserItem(ACaption, AFileName, AArguments)
-    else
-    begin
-      // No WOW64 redirection on HKCU!
-      Reg := TRegistry.Create(KEY_READ or KEY_WRITE);
+    // Export is pending?
+    if not FExportLock.TryEnter() then
+      raise EListBlocked.Create('Another operation is pending. Please wait!');
 
-      // Try to add new startup item to Registry
-      try
-        Reg.RootKey := HKEY_CURRENT_USER;
-        Reg.OpenKey(TStartupItem.StartupRunKey, True);
-        Command := TCommandString.Create(AFileName, AArguments, True);
+    try
+      // Add new startup user item?
+      if (Ext = '.exe') then
+        Result := AddNewStartupUserItem(ACaption, AFileName, AArguments)
+      else
+      begin
+        // No WOW64 redirection on HKCU!
+        Reg := TRegistry.Create(KEY_READ or KEY_WRITE);
 
-        // Item already exists?
-        if Reg.ValueExists(ACaption) then
-          raise EAlreadyExists.CreateFmt('Item "%s" already exists!', [ACaption]);
+        // Try to add new startup item to Registry
+        try
+          Reg.RootKey := HKEY_CURRENT_USER;
+          Reg.OpenKey(TStartupItem.StartupRunKey, True);
+          Command := TCommandString.Create(AFileName, AArguments, True);
 
-        Reg.WriteString(ACaption, Command);
+          // Item already exists?
+          if Reg.ValueExists(ACaption) then
+            raise EAlreadyExists.CreateFmt('Item "%s" already exists!', [ACaption]);
 
-        // Adds item to list
-        Result := (Add(TStartupItem.Create(ACaption, Command, TStartupItem.StartupRunKey,
-          rkHKCU, True, False, False)) <> -1);
+          Reg.WriteString(ACaption, Command);
 
-        // Windows 8?
-        if (Result and CheckWin32Version(6, 2)) then
-          // Write the StartupApproved value
-          Last.Enabled := True;
+          // Adds item to list
+          Result := (Add(TStartupItem.Create(ACaption, Command, TStartupItem.StartupRunKey,
+            rkHKCU, True, False, False)) <> -1);
 
-      finally
-        Reg.CloseKey();
-        Reg.Free;
-      end;  //of try
-    end;  //of begin
+          // Windows 8?
+          if (Result and CheckWin32Version(6, 2)) then
+            // Write the StartupApproved value
+            Last.Enabled := True;
+
+        finally
+          Reg.CloseKey();
+          Reg.Free;
+        end;  //of try
+      end;  //of begin
+
+    finally
+      FExportLock.Release();
+    end;  //of try
 
   finally
-    FLock.Release();
-
-    if Result then
-      Refresh();
+    FSearchLock.Release();
   end;  //of try
 end;
 
@@ -4512,29 +4539,39 @@ begin
     raise EAssertionFailed.CreateFmt('Invalid backup file extension! Must be "%s" or "%s"!',
       [TStartupUserItem.FileExtensionStartupCommon, TStartupUserItem.FileExtensionStartupUser]);
 
-  // List locked?
-  if not FLock.TryEnter() then
+  // Search is pending?
+  if not FSearchLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
 
-  // Init new .lnk file
-  LnkFile := TLnkFile.Create(AFileName);
-
-  // Set the name of item
-  Name := ExtractFileName(ChangeFileExt(AFileName, ''));
-  Name := ChangeFileExt(Name, TLnkFile.FileExtension);
-
   try
-    // Create .lnk file and add it to list
-    Result := AddNewStartupUserItem(Name, LnkFile.ExeFileName, LnkFile.Arguments,
-      (Ext = TStartupUserItem.FileExtensionStartupUser));
+    // Export is pending?
+    if not FExportLock.TryEnter() then
+      raise EListBlocked.Create('Another operation is pending. Please wait!');
+
+    try
+      // Init new .lnk file
+      LnkFile := TLnkFile.Create(AFileName);
+
+      // Set the name of item
+      Name := ExtractFileName(ChangeFileExt(AFileName, ''));
+      Name := ChangeFileExt(Name, TLnkFile.FileExtension);
+
+      try
+        // Create .lnk file and add it to list
+        Result := AddNewStartupUserItem(Name, LnkFile.ExeFileName, LnkFile.Arguments,
+          (Ext = TStartupUserItem.FileExtensionStartupUser));
+
+      finally
+        LnkFile.Free;
+      end;  //of try
+
+    finally
+      FExportLock.Release();
+    end;  //of try
 
   finally
-    LnkFile.Free;
-    FLock.Release();
-
-    if Result then
-      Refresh();
-  end;  //of try
+    FSearchLock.Release();
+  end;
 end;
 
 procedure TStartupList.LoadDisabled(AStartupUser: Boolean);
@@ -5406,84 +5443,90 @@ begin
   if ((Ext <> '.exe') and (Ext <> '.bat')) then
     raise EAssertionFailed.Create('Invalid program extension! Must be ''.exe'' or ''.bat''!');
 
-  // List locked?
-  if not FLock.TryEnter() then
+  // Search is pending?
+  if not FSearchLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
 
   try
-    Name := ChangeFileExt(ExtractFileName(AFileName), '');
-
-    // File path already exists in another item?
-    if (IndexOf(Name, LocationRoot) <> -1) then
-      raise EAlreadyExists.CreateFmt('Item "%s" already exists in "%s"!', [Name, LocationRoot]);
-
-    Command := TCommandString.Create(AFileName, AArguments, True);
-
-    // Init Registry access
-    Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_WRITE);
+    // Export is pending?
+    if not FExportLock.TryEnter() then
+      raise EListBlocked.Create('Another operation is pending. Please wait!');
 
     try
-      Reg.RootKey := HKEY_CLASSES_ROOT;
+      Name := ChangeFileExt(ExtractFileName(AFileName), '');
 
-      if not Reg.OpenKey(LocationRoot, True) then
-        raise EContextMenuException.CreateFmt('Could not create key "%s": %s', [LocationRoot, Reg.LastErrorMsg]);
+      // File path already exists in another item?
+      if (IndexOf(Name, LocationRoot) <> -1) then
+        raise EAlreadyExists.CreateFmt('Item "%s" already exists in "%s"!', [Name, LocationRoot]);
 
-      // Location is a file extension?
-      if LocationRoot.StartsWith('.') then
-      begin
-        // Read default associated file type
-        FileType := Reg.ReadString('');
+      Command := TCommandString.Create(AFileName, AArguments, True);
 
-        // Associated file type not found?
-        if (FileType = '') then
+      // Init Registry access
+      Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_WRITE);
+
+      try
+        Reg.RootKey := HKEY_CLASSES_ROOT;
+
+        if not Reg.OpenKey(LocationRoot, True) then
+          raise EContextMenuException.CreateFmt('Could not create key "%s": %s', [LocationRoot, Reg.LastErrorMsg]);
+
+        // Location is a file extension?
+        if LocationRoot.StartsWith('.') then
         begin
-          // Add new file association
-          FileType := LocationRoot.Substring(1) +'file';
-          Reg.WriteString('', FileType);
-        end;  //of begin
-      end  //of begin
-      else
-        FileType := LocationRoot;
+          // Read default associated file type
+          FileType := Reg.ReadString('');
 
-      Reg.CloseKey();
-      KeyPath := FileType +'\'+ TContextMenuShellItem.CanonicalName +'\'+ Name;
+          // Associated file type not found?
+          if (FileType = '') then
+          begin
+            // Add new file association
+            FileType := LocationRoot.Substring(1) +'file';
+            Reg.WriteString('', FileType);
+          end;  //of begin
+        end  //of begin
+        else
+          FileType := LocationRoot;
 
-      // Adds new context item to Registry
-      if not Reg.OpenKey(KeyPath, True) then
-        raise EContextMenuException.CreateFmt('Could not open key "%s": %s', [KeyPath, Reg.LastErrorMsg]);
+        Reg.CloseKey();
+        KeyPath := FileType +'\'+ TContextMenuShellItem.CanonicalName +'\'+ Name;
 
-      // Set caption of item
-      if (Trim(ACaption) <> '') then
-        Reg.WriteString('', ACaption);
+        // Adds new context item to Registry
+        if not Reg.OpenKey(KeyPath, True) then
+          raise EContextMenuException.CreateFmt('Could not open key "%s": %s', [KeyPath, Reg.LastErrorMsg]);
 
-      // Extended: Item is only visible with shift + right click
-      if AExtended then
-        Reg.WriteString('Extended', '');
+        // Set caption of item
+        if (Trim(ACaption) <> '') then
+          Reg.WriteString('', ACaption);
 
-      Reg.CloseKey();
-      KeyPath := KeyPath +'\command';
+        // Extended: Item is only visible with shift + right click
+        if AExtended then
+          Reg.WriteString('Extended', '');
 
-      if not Reg.OpenKey(KeyPath, True) then
-        raise EContextMenuException.CreateFmt('Could not create key "%s": %s', [KeyPath, Reg.LastErrorMsg]);
+        Reg.CloseKey();
+        KeyPath := KeyPath +'\command';
 
-      // Write command of item
-      Reg.WriteString('', Command);
+        if not Reg.OpenKey(KeyPath, True) then
+          raise EContextMenuException.CreateFmt('Could not create key "%s": %s', [KeyPath, Reg.LastErrorMsg]);
 
-      // Adds item to list
-      Result := (Add(TContextMenuShellItem.Create(Name, ACaption, Command, FileType, True,
-        AExtended)) <> -1);
-      SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, nil, nil);
+        // Write command of item
+        Reg.WriteString('', Command);
+
+        // Adds item to list
+        Result := (Add(TContextMenuShellItem.Create(Name, ACaption, Command, FileType, True,
+          AExtended)) <> -1);
+        SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, nil, nil);
+
+      finally
+        Reg.CloseKey();
+        Reg.Free;
+      end;  //of try
 
     finally
-      Reg.CloseKey();
-      Reg.Free;
+      FExportLock.Release();
     end;  //of try
 
   finally
-    FLock.Release();
-
-    if Result then
-      Refresh();
+    FSearchLock.Release();
   end;  //of try
 end;
 
@@ -6134,50 +6177,60 @@ begin
   // Check invalid extension
   Assert(ExtractFileExt(Name) = '.exe', 'Invalid program extension! Must be ''.exe''!');
 
-  // List locked?
-  if not FLock.TryEnter() then
+  // Search is pending?
+  if not FSearchLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
 
-  // To create a new service SC_MANAGER_CREATE_SERVICE access right is required
-  Manager := OpenSCManager(nil, SERVICES_ACTIVE_DATABASE, SC_MANAGER_CREATE_SERVICE);
-
-  // Error occured?
-  if (Manager = 0) then
-    raise EServiceException.Create(SysErrorMessage(GetLastError()));
-
   try
-    Command := TCommandString.Create(AFileName, AArguments, True);
-    Name := ChangeFileExt(Name, '');
+    // Export is pending?
+    if not FExportLock.TryEnter() then
+      raise EListBlocked.Create('Another operation is pending. Please wait!');
 
-    // Create a new service
-    Service := CreateService(Manager, PChar(Name), PChar(ACaption),
-      STANDARD_RIGHTS_READ, SERVICE_WIN32_OWN_PROCESS, SERVICE_AUTO_START,
-      SERVICE_ERROR_NORMAL, PChar(Command), nil, nil, nil, nil, nil);
+    try
+      // To create a new service SC_MANAGER_CREATE_SERVICE access right is required
+      Manager := OpenSCManager(nil, SERVICES_ACTIVE_DATABASE, SC_MANAGER_CREATE_SERVICE);
 
-    // Error occured?
-    if (Service = 0) then
-    begin
-      LastError := GetLastError();
+      // Error occured?
+      if (Manager = 0) then
+        raise EServiceException.Create(SysErrorMessage(GetLastError()));
 
-      // Service already exists?
-      if (LastError = ERROR_SERVICE_EXISTS) then
-        raise EAlreadyExists.CreateFmt('Item "%s" already exists!', [Name]);
+      try
+        Command := TCommandString.Create(AFileName, AArguments, True);
+        Name := ChangeFileExt(Name, '');
 
-      raise EServiceException.Create('Could not create new service: '+ SysErrorMessage(LastError));
-    end;  //of begin
+        // Create a new service
+        Service := CreateService(Manager, PChar(Name), PChar(ACaption),
+          STANDARD_RIGHTS_READ, SERVICE_WIN32_OWN_PROCESS, SERVICE_AUTO_START,
+          SERVICE_ERROR_NORMAL, PChar(Command), nil, nil, nil, nil, nil);
 
-    CloseServiceHandle(Service);
+        // Error occured?
+        if (Service = 0) then
+        begin
+          LastError := GetLastError();
 
-    // Adds service to list
-    Result := (Add(TServiceListItem.Create(Name, ACaption, Command, True,
-      ssAutomatic, FManager)) <> -1);
+          // Service already exists?
+          if (LastError = ERROR_SERVICE_EXISTS) then
+            raise EAlreadyExists.CreateFmt('Item "%s" already exists!', [Name]);
+
+          raise EServiceException.Create('Could not create new service: '+ SysErrorMessage(LastError));
+        end;  //of begin
+
+        CloseServiceHandle(Service);
+
+        // Adds service to list
+        Result := (Add(TServiceListItem.Create(Name, ACaption, Command, True,
+          ssAutomatic, FManager)) <> -1);
+
+      finally
+        CloseServiceHandle(Manager);
+      end;  //of try
+
+    finally
+      FExportLock.Release();
+    end;  //of try
 
   finally
-    CloseServiceHandle(Manager);
-    FLock.Release();
-
-    if Result then
-      Refresh();
+    FSearchLock.Release();
   end;  //of try
 end;
 
@@ -6653,69 +6706,75 @@ begin
   if (ExtractFileExt(AFileName) <> GetBackupExtension()) then
     raise EAssertionFailed.CreateFmt('Invalid backup file extension! Must be "%s"!', [GetBackupExtension()]);
 
-  // List locked?
-  if not FLock.TryEnter() then
+  // Search is pending?
+  if not FSearchLock.TryEnter() then
     raise EListBlocked.Create('Another operation is pending. Please wait!');
 
-  OldValue := DisableWow64FsRedirection();
-
   try
-    XmlTask := TStringList.Create;
-    ZipFile := TZipFile.Create;
+    // Export is pending?
+    if not FExportLock.TryEnter() then
+      raise EListBlocked.Create('Another operation is pending. Please wait!');
+
+    OldValue := DisableWow64FsRedirection();
 
     try
-      ZipFile.Open(AFileName, zmRead);
+      XmlTask := TStringList.Create;
+      ZipFile := TZipFile.Create;
 
-      // For validation purposes: "Clearas" is the comment
-      if (ZipFile.Comment <> 'Clearas') then
-        raise ETaskException.Create(SysErrorMessage(SCHED_E_INVALID_TASK_HASH));
+      try
+        ZipFile.Open(AFileName, zmRead);
 
-      ExtractDir := GetKnownFolderPath(FOLDERID_LocalAppData) +'Temp\Clearas';
+        // For validation purposes: "Clearas" is the comment
+        if (ZipFile.Comment <> 'Clearas') then
+          raise ETaskException.Create(SysErrorMessage(SCHED_E_INVALID_TASK_HASH));
 
-      // Extract all files inside the ZIP in a temporary directory
-      for i := 0 to ZipFile.FileCount - 1 do
-      begin
-        NewTask := nil;
-        TaskFolder := nil;
-        FileName := ZipFile.FileName[i];
-        ZipFile.Extract(FileName, ExtractDir);
-        FileName := FileName.Replace('/', '\');
-        OleCheck(FTaskService.GetFolder(PChar('\'+ ExtractFileDir(FileName)), TaskFolder));
+        ExtractDir := GetKnownFolderPath(FOLDERID_LocalAppData) +'Temp\Clearas';
 
-        // Task exists?
-        if Succeeded(TaskFolder.GetTask(PChar('\'+ ExtractFileName(FileName)), NewTask)) then
-          Continue;
+        // Extract all files inside the ZIP in a temporary directory
+        for i := 0 to ZipFile.FileCount - 1 do
+        begin
+          NewTask := nil;
+          TaskFolder := nil;
+          FileName := ZipFile.FileName[i];
+          ZipFile.Extract(FileName, ExtractDir);
+          FileName := FileName.Replace('/', '\');
+          OleCheck(FTaskService.GetFolder(PChar('\'+ ExtractFileDir(FileName)), TaskFolder));
 
-        XmlTask.LoadFromFile(ExtractDir +'\'+ FileName, TEncoding.Unicode);
+          // Task exists?
+          if Succeeded(TaskFolder.GetTask(PChar('\'+ ExtractFileName(FileName)), NewTask)) then
+            Continue;
 
-        // Register the task
-        OleCheck(TaskFolder.RegisterTask(PChar(ExtractFileName(FileName)),
-          PChar(XmlTask.Text), TASK_CREATE, Null, Null, TASK_LOGON_INTERACTIVE_TOKEN,
-          Null, NewTask));
+          XmlTask.LoadFromFile(ExtractDir +'\'+ FileName, TEncoding.Unicode);
 
-        // Add new task to list
-        if (AddTaskItem(NewTask) = -1) then
-          raise ETaskException.Create('Task could not be added!');
+          // Register the task
+          OleCheck(TaskFolder.RegisterTask(PChar(ExtractFileName(FileName)),
+            PChar(XmlTask.Text), TASK_CREATE, Null, Null, TASK_LOGON_INTERACTIVE_TOKEN,
+            Null, NewTask));
 
-        Result := True;
-      end;  //of for
+          // Add new task to list
+          if (AddTaskItem(NewTask) = -1) then
+            raise ETaskException.Create('Task could not be added!');
 
-      ZipFile.Close();
+          Result := True;
+        end;  //of for
 
-      // Delete the temporary folder
-      TDirectory.Delete(ExtractDir, True);
+        ZipFile.Close();
+
+        // Delete the temporary folder
+        TDirectory.Delete(ExtractDir, True);
+
+      finally
+        ZipFile.Free;
+        XmlTask.Free;
+      end;  //of try
 
     finally
-      ZipFile.Free;
-      XmlTask.Free;
+      FExportLock.Release();
+      RevertWow64FsRedirection(OldValue);
     end;  //of try
 
   finally
-    FLock.Release();
-    RevertWow64FsRedirection(OldValue);
-
-    if Result then
-      Refresh();
+    FSearchLock.Release();
   end;  //of try
 end;
 

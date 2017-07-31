@@ -14,8 +14,9 @@ uses
   Winapi.Windows, System.SysUtils, System.Classes, Vcl.Controls, Vcl.Forms,
   Vcl.ComCtrls, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Dialogs, Vcl.Menus, Vcl.Graphics,
   Vcl.ClipBrd, Registry, System.ImageList, Winapi.CommCtrl, System.UITypes,
-  ClearasAPI, PMCW.Dialogs.About, PMCW.LanguageFile, PMCW.SysUtils, PMCW.CA,
-  PMCW.Dialogs.Updater, ClearasDialogs, Vcl.ImgList, Winapi.Messages, PMCW.Registry;
+  System.Generics.Collections, ClearasAPI, PMCW.Dialogs.About, PMCW.LanguageFile,
+  PMCW.SysUtils, PMCW.CA, PMCW.Dialogs.Updater, ClearasDialogs, Vcl.ImgList,
+  Winapi.Messages, PMCW.Registry;
 
 type
   { TMain }
@@ -174,26 +175,36 @@ type
     FUpdateCheck: TUpdateCheck;
     FStatusText: array[Boolean] of string;
     function GetListForIndex(AIndex: Integer): TRootList<TRootItem>;
+    function GetListViewForIndex(AIndex: Integer): TListView;
     function GetSelectedItem(): TRootItem;
     function GetSelectedList(): TRootList<TRootItem>;
     function GetSelectedListView(): TListView;
     function GetItemText(AItem: TRootItem): string; inline;
-    procedure Refresh(AList: TRootList<TRootItem>; ATotal: Boolean = True);
+    procedure Refresh(AIndex: Integer; ATotal: Boolean = True);
     procedure OnContextSearchStart(Sender: TObject);
     procedure OnContextSearchEnd(Sender: TObject);
+    procedure OnContextListNotify(Sender: TObject; const AItem: TContextMenuListItem;
+      AAction: TCollectionNotification);
     procedure OnContextCounterUpdate(Sender: TObject);
     procedure OnExportListStart(Sender: TObject);
     procedure OnExportListEnd(Sender: TObject);
     procedure OnExportListError(Sender: TObject; const AErrorMessage: string);
     procedure OnSearchError(Sender: TObject; const AErrorMessage: string);
+    procedure OnListLocked(Sender: TObject);
     procedure OnStartupSearchStart(Sender: TObject);
     procedure OnStartupSearchEnd(Sender: TObject);
+    procedure OnStartupListNotify(Sender: TObject; const AItem: TStartupListItem;
+      AAction: TCollectionNotification);
     procedure OnStartupCounterUpdate(Sender: TObject);
     procedure OnServiceSearchStart(Sender: TObject);
     procedure OnServiceSearchEnd(Sender: TObject);
+    procedure OnServiceListNotify(Sender: TObject; const AItem: TServiceListItem;
+      AAction: TCollectionNotification);
     procedure OnServiceCounterUpdate(Sender: TObject);
     procedure OnTaskSearchStart(Sender: TObject);
     procedure OnTaskSearchEnd(Sender: TObject);
+    procedure OnTaskListNotify(Sender: TObject; const AItem: TTaskListItem;
+      AAction: TCollectionNotification);
     procedure OnTaskCounterUpdate(Sender: TObject);
     function ShowExportItemDialog(AItem: TRootItem): Boolean;
     procedure ShowColumnDate(AListView: TListView; AShow: Boolean = True);
@@ -253,7 +264,7 @@ begin
   with FStartup do
   begin
     OnCounterUpdate := OnStartupCounterUpdate;
-    OnRefresh := OnStartupSearchEnd;
+    OnNotify := OnStartupListNotify;
   end;  //of with
 
   FContext := TContextMenuList.Create;
@@ -262,7 +273,7 @@ begin
   with FContext do
   begin
     OnCounterUpdate := OnContextCounterUpdate;
-    OnRefresh := OnContextSearchEnd;
+    OnNotify := OnContextListNotify;
   end;  //of with
 
   FService := TServiceList.Create;
@@ -271,7 +282,7 @@ begin
   with FService do
   begin
     OnCounterUpdate := OnServiceCounterUpdate;
-    OnRefresh := OnServiceSearchEnd;
+    OnNotify := OnServiceListNotify;
   end;  //of with
 
   FTasks := TTaskList.Create;
@@ -280,7 +291,7 @@ begin
   with FTasks do
   begin
     OnCounterUpdate := OnTaskCounterUpdate;
-    OnRefresh := OnTaskSearchEnd;
+    OnNotify := OnTaskListNotify;
   end;  //of with
 end;
 
@@ -375,6 +386,20 @@ begin
     raise EInvalidItem.CreateFmt('No list at index %d!', [AIndex]);
 end;
 
+function TMain.GetListViewForIndex(AIndex: Integer): TListView;
+begin
+  case AIndex of
+    0:   Result := lwStartup;
+    1:   Result := lwContext;
+    2:   Result := lwService;
+    3:   Result := lwTasks;
+    else Result := nil;
+  end;  //of case
+
+  if not Assigned(Result) then
+    raise EInvalidItem.CreateFmt('No ListView at index %d!', [AIndex]);
+end;
+
 { private TMain.GetSelectedItem
 
   Returns the current selected TRootItem. }
@@ -410,41 +435,33 @@ end;
 
 function TMain.GetSelectedListView(): TListView;
 begin
-  case PageControl.ActivePageIndex of
-    0:   Result := lwStartup;
-    1:   Result := lwContext;
-    2:   Result := lwService;
-    3:   Result := lwTasks;
-    else Result := nil;
-  end;  //of case
-
-  if not Assigned(Result) then
-    raise EInvalidItem.Create('No ListView selected!');
+  Result := GetListViewForIndex(PageControl.ActivePageIndex);
 end;
 
 { private TMain.Refresh
 
   Loads items and brings them into a TListView. }
 
-procedure TMain.Refresh(AList: TRootList<TRootItem>; ATotal: Boolean = True);
+procedure TMain.Refresh(AIndex: Integer; ATotal: Boolean = True);
 var
-  SearchThread: TSearchThread;
+  i: Integer;
+  RootList: TRootList<TRootItem>;
+  ListView: TListView;
 
 begin
   try
-    if not Assigned(AList) then
-      raise EInvalidItem.Create('No list assigned!');
+    RootList := GetListForIndex(AIndex);
+    ListView := GetListViewForIndex(AIndex);
 
     // Make a total refresh or just use cached items
     if ATotal then
     begin
-      SearchThread := TSearchThread.Create(AList);
-
-      with SearchThread do
+      with TSearchThread.Create(RootList) do
       begin
         OnError := OnSearchError;
+        OnListLocked := Self.OnListLocked;
 
-        case PageControl.ActivePageIndex of
+        case AIndex of
           0:
             begin
               OnStart := OnStartupSearchStart;
@@ -480,13 +497,24 @@ begin
       end;  //of with
     end  //of begin
     else
-      AList.Refresh();
+    begin
+      ListView.Clear();
+
+      for i := 0 to RootList.Count - 1 do
+        RootList.OnNotify(Self, RootList[i], cnAdded);
+    end;  //of if
 
   except
     on E: EInvalidItem do
     begin
       TaskMessageDlg(FLang.GetString([LID_REFRESH, LID_IMPOSSIBLE]),
         FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
+    end;
+
+    on E: EListBlocked do
+    begin
+      MessageDlg(FLang.GetString([LID_OPERATION_PENDING1, LID_OPERATION_PENDING2]),
+        mtWarning, [mbOK], 0);
     end;
   end;  //of try
 end;
@@ -508,6 +536,11 @@ begin
     eContextSearch.Visible := False;
     pbContextProgress.Visible := True;
   end;  //of begin
+
+  bEnableContextItem.Enabled := False;
+  bDisableContextItem.Enabled := False;
+  bDeleteContextItem.Enabled := False;
+  bExportContextItem.Enabled := False;
 end;
 
 { private TMain.OnContextSearchEnd
@@ -515,39 +548,9 @@ end;
   Event that is called when search ends. }
 
 procedure TMain.OnContextSearchEnd(Sender: TObject);
-var
-  i: Integer;
-  ItemText: string;
-
 begin
-  // Clear all visual data
-  lwContext.Clear;
-
-  // Print all information about context menu entries
-  for i := 0 to FContext.Count - 1 do
-  begin
-    ItemText := GetItemText(FContext[i]);
-
-    // Filter items
-    if ((eContextSearch.Text = '') or
-      (ItemText.ToLower().Contains(LowerCase(eContextSearch.Text)) or
-      FContext[i].LocationRoot.ToLower().Contains(LowerCase(eContextSearch.Text)))) then
-      with lwContext.Items.Add do
-      begin
-        Caption := FStatusText[FContext[i].Enabled];
-        SubItems.AddObject(ItemText, FContext[i]);
-        SubItems.Append(FContext[i].LocationRoot);
-        SubItems.Append(FContext[i].ToString());
-      end; //of with
-  end;  //of for
-
   mmLang.Enabled := True;
   cbContextExpert.Enabled := True;
-  lwContext.Cursor := crDefault;
-  bEnableContextItem.Enabled := False;
-  bDisableContextItem.Enabled := False;
-  bDeleteContextItem.Enabled := False;
-  bExportContextItem.Enabled := False;
 
   // Hide progress bar
   if cbContextExpert.Checked then
@@ -556,8 +559,17 @@ begin
     eContextSearch.Visible := True;
   end;  //of begin
 
-  // Sort!
-  lwContext.AlphaSort();
+  // Sort?
+  if (lwContext.Tag >= 0) then
+  begin
+    lwContext.AlphaSort();
+
+    // Show selected item again after sorting
+    if Assigned(lwContext.ItemFocused) then
+      lwContext.ItemFocused.MakeVisible(False);
+  end;  //of begin
+
+  lwContext.Cursor := crDefault;
 end;
 
 { private TMain.OnContextCounterUpdate
@@ -571,6 +583,32 @@ begin
   begin
     lwContext.Columns[1].Caption := FLang.Format(LID_CONTEXT_MENU_COUNTER,
       [FContext.EnabledItemsCount, FContext.Count]);
+  end;  //of begin
+end;
+
+procedure TMain.OnContextListNotify(Sender: TObject; const AItem: TContextMenuListItem;
+  AAction: TCollectionNotification);
+var
+  Text: string;
+
+begin
+  if (AAction = cnAdded) then
+  begin
+    Text := GetItemText(AItem);
+
+    // Filter items
+    if ((eContextSearch.Text = '') or
+      (Text.ToLower().Contains(LowerCase(eContextSearch.Text)) or
+      AItem.LocationRoot.ToLower().Contains(LowerCase(eContextSearch.Text)))) then
+    begin
+      with lwContext.Items.Add do
+      begin
+        Caption := FStatusText[AItem.Enabled];
+        SubItems.AddObject(Text, AItem);
+        SubItems.Append(AItem.LocationRoot);
+        SubItems.Append(AItem.ToString());
+      end; //of with
+    end;  //of begin
   end;  //of begin
 end;
 
@@ -607,6 +645,12 @@ begin
          lwTasks.Cursor := crHourGlass;
        end;
   end;  //of case
+end;
+
+procedure TMain.OnListLocked(Sender: TObject);
+begin
+  MessageDlg(FLang.GetString([LID_OPERATION_PENDING1, LID_OPERATION_PENDING2]),
+    mtWarning, [mbOK], 0);
 end;
 
 { private TMain.OnExportListEnd
@@ -667,6 +711,49 @@ begin
   end;  //of begin
 end;
 
+procedure TMain.OnStartupListNotify(Sender: TObject; const AItem: TStartupListItem;
+  AAction: TCollectionNotification);
+var
+  Icon: TIcon;
+  Text: string;
+
+begin
+  if (AAction = cnAdded) then
+  begin
+    Text := GetItemText(AItem);
+    Icon := TIcon.Create;
+
+    try
+      if ((eStartupSearch.Text = '') or (Text.ToLower().Contains(LowerCase(eStartupSearch.Text)))) then
+      begin
+        with lwStartup.Items.Add do
+        begin
+          Caption := FStatusText[AItem.Enabled];
+          SubItems.AddObject(Text, AItem);
+          SubItems.Append(AItem.Command);
+          SubItems.Append(AItem.ToString());
+
+          // Show deactivation timestamp?
+          if mmDate.Checked then
+          begin
+            if (AItem.Time <> 0) then
+              SubItems.Append(DateTimeToStr(AItem.Time))
+            else
+              SubItems.Append('');
+          end;  //of begin
+
+          // Get icon of program
+          Icon.Handle := AItem.Icon;
+          ImageIndex := IconList.AddIcon(Icon);
+        end;  //of with
+      end;  //of begin
+
+    finally
+      Icon.Free;
+    end;  //of try
+  end;  //of begin
+end;
+
 { private TMain.OnStartupSearchStart
 
   Event that is called when search starts. }
@@ -674,10 +761,13 @@ end;
 procedure TMain.OnStartupSearchStart(Sender: TObject);
 begin
   lwStartup.Clear();
-  mmLang.Enabled := False;
-  mmImport.Enabled := False;
-  cbRunOnce.Enabled := False;
   lwStartup.Cursor := crHourGlass;
+  mmLang.Enabled := False;
+  cbRunOnce.Enabled := False;
+  bEnableStartupItem.Enabled := False;
+  bDisableStartupItem.Enabled := False;
+  bDeleteStartupItem.Enabled := False;
+  bExportStartupItem.Enabled := False;
 end;
 
 { private TMain.OnStartupSearchEnd
@@ -685,61 +775,22 @@ end;
   Event that is called when search ends. }
 
 procedure TMain.OnStartupSearchEnd(Sender: TObject);
-var
-  Icon: TIcon;
-  i: Integer;
-  ItemText: string;
-
 begin
-  // Clear all visual data
-  lwStartup.Clear;
-  IconList.Clear;
-  Icon := TIcon.Create;
-
-  try
-    // Print all information about startup entires
-    for i := 0 to FStartup.Count - 1 do
-    begin
-      ItemText := GetItemText(FStartup[i]);
-
-      if ((eStartupSearch.Text = '') or (ItemText.ToLower().Contains(LowerCase(eStartupSearch.Text)))) then
-        with lwStartup.Items.Add do
-        begin
-          Caption := FStatusText[FStartup[i].Enabled];
-          SubItems.AddObject(ItemText, FStartup[i]);
-          SubItems.Append(FStartup[i].Command);
-          SubItems.Append(FStartup[i].ToString());
-
-          // Show deactivation timestamp?
-          if mmDate.Checked then
-          begin
-            if (FStartup[i].Time <> 0) then
-              SubItems.Append(DateTimeToStr(FStartup[i].Time))
-            else
-              SubItems.Append('');
-          end;  //of begin
-
-          // Get icon of program
-          Icon.Handle := FStartup[i].Icon;
-          ImageIndex := IconList.AddIcon(Icon);
-        end;  //of with
-    end;  //of for
-
-  finally
-    Icon.Free;
-  end;  //of try
-
   mmImport.Enabled := True;
   mmLang.Enabled := True;
   cbRunOnce.Enabled := True;
-  lwStartup.Cursor := crDefault;
-  bEnableStartupItem.Enabled := False;
-  bDisableStartupItem.Enabled := False;
-  bDeleteStartupItem.Enabled := False;
-  bExportStartupItem.Enabled := False;
 
-  // Sort!
-  lwStartup.AlphaSort();
+  // Sort?
+  if (lwStartup.Tag >= 0) then
+  begin
+    lwStartup.AlphaSort();
+
+    // Show selected item again after sorting
+    if Assigned(lwStartup.ItemFocused) then
+      lwStartup.ItemFocused.MakeVisible(False);
+  end;  //of begin
+
+  lwStartup.Cursor := crDefault;
 end;
 
 { private TMain.OnServiceCounterUpdate
@@ -756,6 +807,34 @@ begin
   end;  //of begin
 end;
 
+procedure TMain.OnServiceListNotify(Sender: TObject;
+  const AItem: TServiceListItem; AAction: TCollectionNotification);
+var
+  Text: string;
+
+begin
+  if (AAction = cnAdded) then
+  begin
+    Text := GetItemText(AItem);
+
+    // Filter items
+    if ((eServiceSearch.Text = '') or (Text.ToLower().Contains(LowerCase(eServiceSearch.Text)))) then
+    begin
+      with lwService.Items.Add do
+      begin
+        Caption := FStatusText[AItem.Enabled];
+        SubItems.AddObject(Text, AItem);
+        SubItems.Append(AItem.Command);
+        SubItems.Append(AItem.Start.ToString(FLang));
+
+        // Show deactivation timestamp?
+        if (mmDate.Checked and (AItem.Time <> 0)) then
+          SubItems.Append(DateTimeToStr(AItem.Time));
+      end;  //of with
+    end;  //of begin
+  end;  //of begin
+end;
+
 { private TMain.OnServiceSearchStart
 
   Event that is called when search starts. }
@@ -763,9 +842,9 @@ end;
 procedure TMain.OnServiceSearchStart(Sender: TObject);
 begin
   lwService.Clear();
+  lwService.Cursor := crHourGlass;
   mmLang.Enabled := False;
   cbServiceExpert.Enabled := False;
-  lwService.Cursor := crHourGlass;
 
   // Show progress bar
   if cbServiceExpert.Checked then
@@ -773,6 +852,11 @@ begin
     eServiceSearch.Visible := False;
     pbServiceProgress.Visible := True;
   end;  //of begin
+
+  bEnableServiceItem.Enabled := False;
+  bDisableServiceItem.Enabled := False;
+  bDeleteServiceItem.Enabled := False;
+  bExportServiceItem.Enabled := False;
 end;
 
 { private TMain.OnServiceSearchEnd
@@ -780,41 +864,9 @@ end;
   Event that is called when search ends. }
 
 procedure TMain.OnServiceSearchEnd(Sender: TObject);
-var
-  i: Integer;
-  ItemText: string;
-
 begin
-  // Clear all visual data
-  lwService.Clear;
-
-  // Print all information about service items
-  for i := 0 to FService.Count - 1 do
-  begin
-    ItemText := GetItemText(FService[i]);
-
-    // Filter items
-    if ((eServiceSearch.Text = '') or (ItemText.ToLower().Contains(LowerCase(eServiceSearch.Text)))) then
-      with lwService.Items.Add do
-      begin
-        Caption := FStatusText[FService[i].Enabled];
-        SubItems.AddObject(ItemText, FService[i]);
-        SubItems.Append(FService[i].Command);
-        SubItems.Append(FService[i].Start.ToString(FLang));
-
-        // Show deactivation timestamp?
-        if (mmDate.Checked and (FService[i].Time <> 0)) then
-          SubItems.Append(DateTimeToStr(FService[i].Time));
-      end;  //of with
-  end;  //of for
-
   mmLang.Enabled := True;
   cbServiceExpert.Enabled := True;
-  lwService.Cursor := crDefault;
-  bEnableServiceItem.Enabled := False;
-  bDisableServiceItem.Enabled := False;
-  bDeleteServiceItem.Enabled := False;
-  bExportServiceItem.Enabled := False;
 
   // Hide progress bar
   if cbServiceExpert.Checked then
@@ -823,8 +875,17 @@ begin
     eServiceSearch.Visible := True;
   end;  //of begin
 
-  // Sort!
-  lwService.AlphaSort();
+  // Sort?
+  if (lwService.Tag >= 0) then
+  begin
+    lwService.AlphaSort();
+
+    // Show selected item again after sorting
+    if Assigned(lwService.ItemFocused) then
+      lwService.ItemFocused.MakeVisible(False);
+  end;  //of begin
+
+  lwService.Cursor := crDefault;
 end;
 
 { private TMain.OnSearchError
@@ -850,45 +911,35 @@ begin
   end;  //of begin
 end;
 
-{ private TMain.OnTaskSearchEnd
-
-  Event that is called when export list ends. }
-
-procedure TMain.OnTaskSearchEnd(Sender: TObject);
+procedure TMain.OnTaskListNotify(Sender: TObject; const AItem: TTaskListItem;
+  AAction: TCollectionNotification);
 var
-  i: Integer;
-  ItemText: string;
+  Text: string;
 
 begin
-  // Clear all visual data
-  lwTasks.Clear;
-
-  // Print all information about task items
-  for i := 0 to FTasks.Count - 1 do
+  if (AAction = cnAdded) then
   begin
-    ItemText := FTasks[i].Name;
+    Text := AItem.Name;
 
     // Filter items
-    if ((eTaskSearch.Text = '') or (ItemText.ToLower().Contains(LowerCase(eTaskSearch.Text)))) then
+    if ((eTaskSearch.Text = '') or (Text.ToLower().Contains(LowerCase(eTaskSearch.Text)))) then
     begin
       with lwTasks.Items.Add do
       begin
-        Caption := FStatusText[FTasks[i].Enabled];
-        SubItems.AddObject(ItemText, FTasks[i]);
-        SubItems.Append(FTasks[i].Command);
-        SubItems.Append(FTasks[i].Location);
+        Caption := FStatusText[AItem.Enabled];
+        SubItems.AddObject(Text, AItem);
+        SubItems.Append(AItem.Command);
+        SubItems.Append(AItem.Location);
       end; //of with
     end;  //of begin
-  end;  //of for
+  end;  //of begin
+end;
 
+procedure TMain.OnTaskSearchEnd(Sender: TObject);
+begin
   mmImport.Enabled := True;
   mmLang.Enabled := True;
   cbTaskExpert.Enabled := True;
-  lwTasks.Cursor := crDefault;
-  bEnableTaskItem.Enabled := False;
-  bDisableTaskitem.Enabled := False;
-  bDeleteTaskItem.Enabled := False;
-  bExportTaskItem.Enabled := False;
 
   // Hide progress bar
   if cbTaskExpert.Checked then
@@ -897,8 +948,17 @@ begin
     eTaskSearch.Visible := True;
   end;  //of begin
 
-  // Sort!
-  lwTasks.AlphaSort();
+  // Sort?
+  if (lwTasks.Tag >= 0) then
+  begin
+    lwTasks.AlphaSort();
+
+    // Show selected item again after sorting
+    if Assigned(lwTasks.ItemFocused) then
+      lwTasks.ItemFocused.MakeVisible(False);
+  end;  //of begin
+
+  lwTasks.Cursor := crDefault;
 end;
 
 { private TMain.OnTaskSearchStart
@@ -909,7 +969,6 @@ procedure TMain.OnTaskSearchStart(Sender: TObject);
 begin
   lwTasks.Clear();
   mmLang.Enabled := False;
-  mmImport.Enabled := False;
   cbTaskExpert.Enabled := False;
   lwTasks.Cursor := crHourGlass;
 
@@ -919,6 +978,11 @@ begin
     eTaskSearch.Visible := False;
     pbTaskProgress.Visible := True;
   end;  //of begin
+
+  bEnableTaskItem.Enabled := False;
+  bDisableTaskitem.Enabled := False;
+  bDeleteTaskItem.Enabled := False;
+  bExportTaskItem.Enabled := False;
 end;
 
 { private TMain.SetLanguage
@@ -977,7 +1041,7 @@ begin
     bDeleteStartupItem.Caption := GetString(LID_DELETE);
     bCloseStartup.Caption := mmClose.Caption;
 
-    // "Startup" column captions
+    // "Startup" tab TListView labels
     lStartup.Caption := GetString(LID_STARTUP_HEADLINE);
     lwStartup.Columns[0].Caption := GetString(LID_ENABLED);
     lwStartup.Columns[2].Caption := StripHotkey(mmFile.Caption);
@@ -998,9 +1062,9 @@ begin
     bDeleteContextItem.Caption := bDeleteStartupItem.Caption;
     bCloseContext.Caption := bCloseStartup.Caption;
     cbContextExpert.Caption := GetString(LID_EXPERT_MODE);
-    eContextSearch.TextHint := eStartupSearch.TextHint;
+    eContextSearch.TextHint := GetString(LID_SEARCH);
 
-    // "Context menu" column captions
+    // "Context menu" tab TListView labels
     lContext.Caption := GetString(LID_CONTEXT_MENU_HEADLINE);
     lwContext.Columns[0].Caption := lwStartup.Columns[0].Caption;
     lwContext.Columns[2].Caption := GetString(LID_LOCATION);
@@ -1017,7 +1081,7 @@ begin
     bCloseService.Caption := bCloseStartup.Caption;
     cbServiceExpert.Caption := cbContextExpert.Caption;
 
-    // "Service" column captions
+    // "Service" tab TListView labels
     lwService.Columns[0].Caption := lwStartup.Columns[0].Caption;
     lwService.Columns[2].Caption := lwStartup.Columns[2].Caption;
     lwService.Columns[3].Caption := GetString(LID_SERVICE_START);
@@ -1027,7 +1091,7 @@ begin
       lwService.Columns[4].Caption := GetString(LID_DATE_OF_DEACTIVATION);
 
     lCopy3.Hint := lCopy1.Hint;
-    eServiceSearch.TextHint := eStartupSearch.TextHint;
+    eServiceSearch.TextHint := eContextSearch.TextHint;
 
     // "Tasks" tab TButton labels
     tsTasks.Caption := GetString(LID_TASKS);
@@ -1039,14 +1103,14 @@ begin
     bCloseTasks.Caption := bCloseStartup.Caption;
     cbTaskExpert.Caption := cbContextExpert.Caption;
 
-    // "Tasks" column captions
+    // "Tasks" tab TListView labels
     lwTasks.Columns[0].Caption := lwStartup.Columns[0].Caption;
     lwTasks.Columns[2].Caption := lwStartup.Columns[2].Caption;
     lwTasks.Columns[3].Caption := lwContext.Columns[2].Caption;
     lCopy4.Hint := lCopy1.Hint;
-    eTaskSearch.TextHint := eStartupSearch.TextHint;
+    eTaskSearch.TextHint := eContextSearch.TextHint;
 
-    // Popup menu captions
+    // Popup menu labels
     pmChangeStatus.Caption := bDisableStartupItem.Caption;
     pmExecute.Caption := GetString(LID_EXECUTE);
     pmOpenRegedit.Caption := GetString(LID_OPEN_IN_REGEDIT);
@@ -1064,7 +1128,7 @@ begin
   if Visible then
   begin
     for i := 0 to PageControl.PageCount - 1 do
-      Refresh(GetListForIndex(i), False);
+      Refresh(i, False);
   end;  //of begin
 end;
 
@@ -1086,7 +1150,7 @@ begin
       begin
         Caption := FLang.GetString(LID_DATE_OF_DEACTIVATION);
         Width := 120;
-        Refresh(GetSelectedList(), False);
+        Refresh(PageControl.ActivePageIndex, False);
       end;  //of with
 end;
 
@@ -1169,6 +1233,7 @@ begin
       Exit;
     end;  //of begin
 
+    // Export pending?
     if SelectedList.IsLocked() then
       raise EListBlocked.Create('Another operation is pending. Please wait!');
 
@@ -1277,7 +1342,7 @@ end;
 procedure TMain.WMTimer(var Message: TWMTimer);
 begin
   KillTimer(Handle, Message.TimerID);
-  GetListForIndex(Message.TimerID).Refresh();
+  Refresh(Message.TimerID, False);
 end;
 
 { TMain.bDeleteItemClick
@@ -1598,7 +1663,9 @@ end;
 procedure TMain.eSearchRightButtonClick(Sender: TObject);
 begin
   if ((Sender as TButtonedEdit).Text <> '') then
-    (Sender as TButtonedEdit).Clear;
+    (Sender as TButtonedEdit).Clear();
+
+  // TODO: Disable buttons
 end;
 
 { TMain.CustomDrawItem
@@ -1821,22 +1888,30 @@ begin
   List := (Sender as TListView);
   ColumnToSort := List.Tag;
 
+  // Nothing to sort
+  if (ColumnToSort < 0) then
+    Exit;
+
   // Status column?
   if (ColumnToSort = 0) then
+  begin
     case List.Columns[ColumnToSort].Tag of
       SORT_ASCENDING:  Compare := CompareText(Item1.Caption, Item2.Caption);
       SORT_DESCENDING: Compare := CompareText(Item2.Caption, Item1.Caption);
-    end  //of case
+    end;  //of case
+  end  //of begin
   else
   begin
     Data := ColumnToSort - 1;
 
-    if (Data < 3) then
+    if (Data < List.Columns.Count - 1) then
+    begin
       case List.Columns[ColumnToSort].Tag of
         SORT_ASCENDING:  Compare := CompareText(Item1.SubItems[Data], Item2.SubItems[Data]);
         SORT_DESCENDING: Compare := CompareText(Item2.SubItems[Data], Item1.SubItems[Data]);
       end;  //of case
-  end;  //of if
+    end;  //of begin
+  end;  //of begin
 end;
 
 { TMain.lwStartupDblClick
@@ -2596,7 +2671,7 @@ end;
 
 procedure TMain.mmRefreshClick(Sender: TObject);
 begin
-  Refresh(GetSelectedList());
+  Refresh(PageControl.ActivePageIndex);
 end;
 
 { TMain.mmShowCaptionsClick
@@ -2609,7 +2684,7 @@ var
 
 begin
   for i := 0 to PageControl.PageCount - 1 do
-    Refresh(GetListForIndex(i), False);
+    Refresh(i, False);
 end;
 
 { TMain.mmInstallCertificateClick
@@ -2758,7 +2833,7 @@ begin
 
   // Load items dynamically
   if (GetSelectedList().Count = 0) then
-    Refresh(GetSelectedList());
+    Refresh(PageControl.ActivePageIndex);
 
   // Only allow popup menu if item is focused
   PopupMenu.AutoPopup := Assigned(GetSelectedListView().ItemFocused);
