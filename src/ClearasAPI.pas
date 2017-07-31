@@ -448,9 +448,33 @@ type
   strict private
     FWow64: Boolean;
   protected
+    function GetFullLocation(): string; override;
+
+    /// <summary>
+    ///   Deletes a specified registry key.
+    /// </summary>
+    /// <param name="AHKey">
+    ///   The root key.
+    /// </param>
+    /// <param name="AKeyPath">
+    ///   The key which contains the key to be deleted.
+    /// </param>
+    /// <param name="AKeyName">
+    ///   The key to be deleted.
+    /// </param>
+    /// <param name="AFailIfNotExists">
+    ///   Optional: Set to <c>False</c> to avoid raising <c>EWarning</c> if the
+    ///   key does not exist.
+    /// </param>
+    /// <returns>
+    ///   <c>True</c> if key was successfully deleted or <c>False</c> otherwise.
+    /// </returns>
+    /// <exception>
+    ///   <c>Exception</c> if key does not exist.
+    ///   <c>EWarning</c> if key has already been deleted.
+    /// </exception>
     function DeleteKey(AHKey: HKEY; const AKeyPath, AKeyName: string;
       AFailIfNotExists: Boolean = True): Boolean;
-    function GetFullLocation(): string; override;
 
     /// <summary>
     ///   Gets the root Registry key.
@@ -2853,13 +2877,13 @@ begin
     Reg.RootKey := AHKey;
 
     if not Reg.OpenKey(AKeyPath, False) then
-      raise Exception.Create('Key does not exist!');
+      raise Exception.CreateFmt('Key "%s" does not exist!', [AKeyPath]);
 
     if Reg.KeyExists(AKeyName) then
       Result := Reg.DeleteKey(AKeyName)
     else
       if AFailIfNotExists then
-        raise EWarning.Create('Key already deleted!')
+        raise EWarning.CreateFmt('Key "%s" already deleted!', [AKeyPath])
       else
         Result := True;
 
