@@ -111,8 +111,6 @@ type
   const
     cService         = 'TestService';
     cServiceErasable = cService +' (erasable)';
-  private
-    procedure LoadService(const AName: string);
   protected
     procedure LoadItems(); override;
     procedure TestRename(const AItemName: string); override;
@@ -1044,22 +1042,9 @@ end;
 procedure TServiceListTest.LoadItems();
 begin
   Check(HasAdminAccessRights(), 'Test must be run with admin access rights!');
-  LoadService(ChangeFileExt(ExtractFileName(cTestExe), ''));
-  LoadService(ChangeFileExt(ExtractFileName(cTestExeErasable), ''));
+  TServiceList(FRootList).LoadService(ChangeFileExt(ExtractFileName(cTestExe), ''), False);
+  TServiceList(FRootList).LoadService(ChangeFileExt(ExtractFileName(cTestExeErasable), ''), False);
   CheckEquals(FErasableTestItems.Count, FRootList.ErasableItemsCount, 'Count of erasable items differs from expected');
-end;
-
-procedure TServiceListTest.LoadService(const AName: string);
-var
-  Service: SC_HANDLE;
-
-begin
-  // Add test service to list
-  CheckNotEquals(0, TServiceList(FRootList).Manager, 'Invalid service manager handle');
-  Service := OpenService(TServiceList(FRootList).Manager, PChar(AName), SERVICE_QUERY_CONFIG);
-  CheckNotEquals(0, Service, 'Invalid service handle');
-  TServiceList(FRootList).LoadService(AName, Service, False);
-  CloseServiceHandle(Service);
 end;
 
 procedure TServiceListTest.TestRename(const AItemName: string);
@@ -1092,7 +1077,7 @@ var
 
 begin
   Check(HasAdminAccessRights(), 'Test must be run with admin access rights!');
-  TaskFileName := IncludeTrailingBackslash(ExtractFileDir(ExtractFileDir(GetCurrentDir()))) +'data\'+ FTestItems[0] +'.zip';
+  TaskFileName := IncludeTrailingPathDelimiter(ExtractFileDir(ExtractFileDir(GetCurrentDir()))) +'data\'+ FTestItems[0] +'.zip';
   Check(FileExists(TaskFileName), 'Task backup file "'+ TaskFileName +'" does not exist!');
   Check(TTaskList(FRootList).ImportBackup(TaskFileName), 'Task already exists!');
   CheckFalse(TTaskList(FRootList).ImportBackup(TaskFileName), 'Task already exists so it must not be imported again!');

@@ -2176,17 +2176,13 @@ type
     /// <param name="AName">
     ///   The name of the service.
     /// </param>
-    /// <param name="AServiceHandle">
-    ///   The handle to the service.
-    /// </param>
     /// <param name="AIncludeDemand">
     ///   If set to <c>True</c> services that are started on demand are included.
     /// </param>
     /// <returns>
     ///   The index on which the item was added.
     /// </returns>
-    function LoadService(const AName: string; AServiceHandle: SC_HANDLE;
-      AIncludeDemand: Boolean = False): Integer;
+    function LoadService(const AName: string; AIncludeDemand: Boolean = False): Integer;
 
     /// <summary>
     ///   Searches for items and adds them to the list.
@@ -6214,9 +6210,9 @@ begin
   end;  //of try
 end;
 
-function TServiceList.LoadService(const AName: string; AServiceHandle: SC_HANDLE;
-  AIncludeDemand: Boolean = False): Integer;
+function TServiceList.LoadService(const AName: string; AIncludeDemand: Boolean = False): Integer;
 var
+  Service: SC_HANDLE;
   ServiceConfig: PQueryServiceConfig;
   BytesNeeded, LastError: DWORD;
   ServiceStart: TServiceStart;
@@ -6228,83 +6224,96 @@ var
 begin
   Result := -1;
   ServiceConfig := nil;
+  Service := OpenService(FManager, PChar(AName), SERVICE_QUERY_CONFIG);
 
-  // Determine the required size for buffer
-  QueryServiceConfig(AServiceHandle, ServiceConfig, 0, BytesNeeded);
-  LastError := GetLastError();
-
-  // ERROR_INSUFFICIENT_BUFFER will be fired normally
-  if (LastError <> ERROR_INSUFFICIENT_BUFFER) then
-    raise EServiceException.Create(SysErrorMessage(LastError));
-
-  GetMem(ServiceConfig, BytesNeeded);
+  // Skip corrupted service
+  if (Service = 0) then
+  {$IFDEF DEBUG}
+    raise EServiceException.Create(SysErrorMessage(GetLastError()));
+  {$ELSE}
+    Exit;
+  {$ENDIF}
 
   try
-    // Read service config
-    if not QueryServiceConfig(AServiceHandle, ServiceConfig, BytesNeeded, BytesNeeded) then
-      raise EServiceException.Create(SysErrorMessage(GetLastError()));
+    // Determine the required size for buffer
+    QueryServiceConfig(Service, ServiceConfig, 0, BytesNeeded);
+    LastError := GetLastError();
 
-    ServiceStart := TServiceStart(ServiceConfig^.dwStartType);
+    // ERROR_INSUFFICIENT_BUFFER will be fired normally
+    if (LastError <> ERROR_INSUFFICIENT_BUFFER) then
+      raise EServiceException.Create(SysErrorMessage(LastError));
 
-    // Filter important system services
-    if (ServiceStart in [ssBoot, ssSystem]) then
-      Exit;
+    GetMem(ServiceConfig, BytesNeeded);
 
-    // Skip services started manual when not in expert mode
-    if ((ServiceStart = ssManual) and not AIncludeDemand) then
-      Exit;
+    try
+      // Read service config
+      if not QueryServiceConfig(Service, ServiceConfig, BytesNeeded, BytesNeeded) then
+        raise EServiceException.Create(SysErrorMessage(GetLastError()));
 
-    Caption := ServiceConfig^.lpDisplayName;
-    FileName := ServiceConfig^.lpBinaryPathName;
+      ServiceStart := TServiceStart(ServiceConfig^.dwStartType);
 
-    // Read last status of disabled service
-    if (ServiceStart = ssDisabled) then
-    begin
-      Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ);
+      // Filter important system services
+      if (ServiceStart in [ssBoot, ssSystem]) then
+        Exit;
 
-      try
-        Reg.RootKey := HKEY_LOCAL_MACHINE;
+      // Skip services started manual when not in expert mode
+      if ((ServiceStart = ssManual) and not AIncludeDemand) then
+        Exit;
 
-        // Windows >= Vista?
-        if CheckWin32Version(6) then
-          Reg.OpenKey(KEY_SERVICE_DISABLED +'\'+ AName, False)
-        else
-          Reg.OpenKey(KEY_SERVICE_DISABLED, False);
+      Caption := ServiceConfig^.lpDisplayName;
+      FileName := ServiceConfig^.lpBinaryPathName;
 
-        // Last status exists?
-        if not Reg.ValueExists(AName) then
-          Exit;
+      // Read last status of disabled service
+      if (ServiceStart = ssDisabled) then
+      begin
+        Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ);
 
-        Start := TServiceStart(Reg.ReadInteger(AName));
+        try
+          Reg.RootKey := HKEY_LOCAL_MACHINE;
 
-        // Skip demand started services
-        if (not AIncludeDemand and (Start = ssManual)) then
-          Exit;
+          // Windows >= Vista?
+          if CheckWin32Version(6) then
+            Reg.OpenKey(KEY_SERVICE_DISABLED +'\'+ AName, False)
+          else
+            Reg.OpenKey(KEY_SERVICE_DISABLED, False);
 
-        Item := TServiceListItem.Create(AName, Caption, FileName, False, Start,
-          FManager);
-        Item.Time := Item.GetTimestamp(Reg);
+          // Last status exists?
+          if not Reg.ValueExists(AName) then
+            Exit;
 
-      finally
-        Reg.CloseKey();
-        Reg.Free;
-      end;  //of try
-    end  //of begin
-    else
-      Item := TServiceListItem.Create(AName, Caption, FileName, True,
-        ServiceStart, FManager);
+          Start := TServiceStart(Reg.ReadInteger(AName));
 
-    // Add service to list
-    Result := Add(Item);
+          // Skip demand started services
+          if (not AIncludeDemand and (Start = ssManual)) then
+            Exit;
+
+          Item := TServiceListItem.Create(AName, Caption, FileName, False, Start,
+            FManager);
+          Item.Time := Item.GetTimestamp(Reg);
+
+        finally
+          Reg.CloseKey();
+          Reg.Free;
+        end;  //of try
+      end  //of begin
+      else
+        Item := TServiceListItem.Create(AName, Caption, FileName, True,
+          ServiceStart, FManager);
+
+      // Add service to list
+      Result := Add(Item);
+
+    finally
+      FreeMem(ServiceConfig, BytesNeeded);
+    end;  //of try
 
   finally
-    FreeMem(ServiceConfig, BytesNeeded);
+    CloseServiceHandle(Service);
   end;  //of try
 end;
 
 procedure TServiceList.Search(AExpertMode: Boolean = False; AWin64: Boolean = True);
 var
-  Service: SC_HANDLE;
   Services, ServicesCopy: PEnumServiceStatus;
   BytesNeeded, ServicesReturned, ResumeHandle, LastError, ServiceType: DWORD;
   i: Integer;
@@ -6345,15 +6354,7 @@ begin
     // Add services to list
     for i := 0 to ServicesReturned - 1 do
     begin
-      Service := OpenService(FManager, ServicesCopy^.lpServiceName, SERVICE_QUERY_CONFIG);
-
-      // Skip corrupted service
-      if (Service <> 0) then
-      begin
-        LoadService(ServicesCopy^.lpServiceName, Service, AExpertMode);
-        CloseServiceHandle(Service);
-      end;  //of if
-
+      LoadService(ServicesCopy^.lpServiceName, AExpertMode);
       Inc(ServicesCopy);
     end;  //of for
 
