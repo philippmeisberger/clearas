@@ -75,6 +75,7 @@ type
   const
     cShellFileExt             = '.789';
     cShellFileExtErasable     = '.788';
+    cShellNotErasableFileExt  = '.787';
     cShellExGUID              = '{C9BD3A62-5743-4102-892C-62381FD93E3F}';
     cShellExGUIDErasable      = '{8AF5271C-9179-4703-8D88-9484739AC0C9}';
     cShellCMItem              = 'ShellTest';
@@ -105,6 +106,7 @@ type
     procedure TestAddNewItem;
     procedure TestChangeItemCommands; override;
     procedure TestRenameItems; override;
+    procedure TestNotErasableItems;
   end;
 
   TServiceListTest = class(TRootListTest)
@@ -994,6 +996,40 @@ begin
   inherited TestRenameItems;
 end;
 
+procedure TContextListTest.TestNotErasableItems;
+const
+  cNotErasableShellFilePaths: array[0..5] of string = (
+    'C:\Windows\regedit',
+    'explorer "ms-windows-store://search/?query=DVD"',
+    '"C:\Windows\System32\rundll32.exe" "C:\Windows\System32\dfshim.dll",ShOpenVerbShortcut %1|%2',
+    '%SystemRoot%\system32\rundll32.exe cryptext.dll,CryptExtOpenSTR %1',
+    '"%1" %*',
+    '"colorcpl.exe" "%1"'
+  );
+
+  cNotErasableShellExFilePaths: array[0..1] of string = (
+    '%SystemRoot%\system32\acppage.dll',
+    'explorerframe.dll'
+  );
+
+var
+  i: Integer;
+
+begin
+  Check(HasAdminAccessRights(), 'Test must be run with admin access rights!');
+
+  // Add Shell context menu items
+  for i := Low(cNotErasableShellFilePaths) to High(cNotErasableShellFilePaths) do
+    AddShellCMTestItem(cShellNotErasableFileExt, 'Shell not erasable ' + IntToStr(i), '', '', cNotErasableShellFilePaths[i]);
+
+  // Add ShellEx context menu items
+  for i := Low(cNotErasableShellExFilePaths) to High(cNotErasableShellExFilePaths) do
+    AddShellExCMTestItem(cShellNotErasableFileExt, 'ShellEx not erasable '+ IntToStr(i), '', cShellExGUID, cNotErasableShellExFilePaths[i]);
+
+  TContextMenuList(FRootList).LoadContextmenu(cShellNotErasableFileExt, False);
+  CheckEquals(0, FRootList.ErasableItemsCount, 'Count of erasable items differs from expected');
+end;
+
 procedure TContextListTest.CleanUp;
 var
   Reg: TRegistry;
@@ -1007,12 +1043,12 @@ begin
     Reg.DeleteKey(cShellFileExt);
     Reg.DeleteKey(cShellFileExtErasable);
     Reg.DeleteKey(cShellNewCMItem);
+    Reg.DeleteKey(cShellNotErasableFileExt);
     Reg.DeleteKey('CLSID\'+ cShellExGUID);
 
     Reg.RootKey := HKEY_LOCAL_MACHINE;
     Reg.DeleteKey(KEY_COMMAND_STORE +'\'+ cShellCMCascadingSubItem1);
     Reg.DeleteKey(KEY_COMMAND_STORE +'\'+ cShellCMCascadingSubItem2);
-    FCheckCalled := True;
 
   finally
     Reg.CloseKey();
