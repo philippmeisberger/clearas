@@ -10,6 +10,7 @@ const
   cTestExe         = 'C:\Windows\regedit.exe';
   cTestExeErasable = 'C:\X.exe';
   cTestFilesDir    = '..\..\data\';
+  cErasableSuffix  = ' (erasable)';
 
 type
   TRootListTest = class(TTestCase)
@@ -79,12 +80,12 @@ type
     cShellExGUID              = '{C9BD3A62-5743-4102-892C-62381FD93E3F}';
     cShellExGUIDErasable      = '{8AF5271C-9179-4703-8D88-9484739AC0C9}';
     cShellCMItem              = 'ShellTest';
-    cShellCMItemErasable      = cShellCMItem +' (erasable)';
+    cShellCMItemErasable      = cShellCMItem + cErasableSuffix;
     cShellCMItemCascading     = 'ShellCascadingTest';
     cShellCMCascadingSubItem1 = 'ShellCascadingItemTest1';
     cShellCMCascadingSubItem2 = 'ShellCascadingItemTest2';
     cShellExCMItem            = 'ShellExTest';
-    cShellExCMItemErasable    = cShellExCMItem +' (erasable)';
+    cShellExCMItemErasable    = cShellExCMItem + cErasableSuffix;
     cShellNewCMItem           = 'ShellNewTest';
   private
     procedure AddShellCMTestItem(const AFileExt, AName, ACaption, AIcon,
@@ -112,7 +113,7 @@ type
   TServiceListTest = class(TRootListTest)
   const
     cService         = 'TestService';
-    cServiceErasable = cService +' (erasable)';
+    cServiceErasable = cService + cErasableSuffix;
   protected
     procedure LoadItems(); override;
     procedure TestRename(const AItemName: string); override;
@@ -571,9 +572,9 @@ begin
   if AErasable then
   begin
     if (ALocation in [slStartupUser, slCommonStartup]) then
-      ItemName := ChangeFileExt(ItemName, '') +' (erasable)'+ ExtractFileExt(ItemName)
+      ItemName := ChangeFileExt(ItemName, '') + cErasableSuffix + ExtractFileExt(ItemName)
     else
-      ItemName := ItemName +' (erasable)';
+      ItemName := ItemName + cErasableSuffix;
 
     ExeName := cTestExeErasable
   end  //of begin
@@ -711,7 +712,7 @@ function TStartupListTest.GetItemName(ALocation: TStartupLocation;
   function GetName(const AName: string; AErasable: Boolean): string;
   begin
     if AErasable then
-      Result := AName +' (erasable)'
+      Result := AName + cErasableSuffix
     else
       Result := AName;
   end;
@@ -1118,7 +1119,7 @@ procedure TTaskListTest.AddEnabledTestItems;
     TaskFileName: string;
 
   begin
-    TaskFileName := cTestFilesDir + AName +'.zip';
+    TaskFileName := cTestFilesDir + AName + FRootList.GetBackupExtension();
     Check(FileExists(TaskFileName), 'Task backup file "'+ TaskFileName +'" does not exist!');
     Check(TTaskList(FRootList).ImportBackup(TaskFileName), 'Task already exists!');
     CheckFalse(TTaskList(FRootList).ImportBackup(TaskFileName), 'Task already exists so it must not be imported again!');
