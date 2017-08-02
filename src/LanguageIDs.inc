@@ -68,6 +68,7 @@ const
   LID_TASKS_COUNTER                     = LID_LAST + 76;
   LID_TASKS_ADD                         = LID_LAST + 77;
   LID_FILTER_ZIP_FILES                  = LID_LAST + 79;
+  LID_PROPERTIES                        = LID_LAST + 80;
   LID_CONTEXT_MENU_ICON_CHANGE          = LID_LAST + 81;
   LID_CONTEXT_MENU_ICON_DELETE          = LID_LAST + 82;
   LID_CONTEXT_MENU_ICON_DELETE_CONFIRM  = LID_LAST + 83;

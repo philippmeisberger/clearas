@@ -736,6 +736,13 @@ object Main: TMain
       Caption = 'Open in Explorer'
       OnClick = pmOpenExplorerClick
     end
+    object N8: TMenuItem
+      Caption = '-'
+    end
+    object pmProperties: TMenuItem
+      Caption = 'Properties'
+      OnClick = pmPropertiesClick
+    end
   end
   object MainMenu: TMainMenu
     Left = 440

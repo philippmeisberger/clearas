@@ -16,6 +16,7 @@ Version 5.0 [*??.08.17*]
 * Removed "Default column width" menu item
 * Added "Quick-Search" to Autostart tab
 * Added "Execute" to popup menu
+* Added "Properties" to popup menu
 * Improved "Open in Explorer"
 * Added loading description of ShellEx and ShellNew items
 * Closed potential Handle-Leak

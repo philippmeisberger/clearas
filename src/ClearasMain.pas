@@ -14,9 +14,9 @@ uses
   Winapi.Windows, System.SysUtils, System.Classes, Vcl.Controls, Vcl.Forms,
   Vcl.ComCtrls, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Dialogs, Vcl.Menus, Vcl.Graphics,
   Vcl.ClipBrd, Registry, System.ImageList, Winapi.CommCtrl, System.UITypes,
-  System.Generics.Collections, ClearasAPI, PMCW.Dialogs.About, PMCW.LanguageFile,
-  PMCW.SysUtils, PMCW.CA, PMCW.Dialogs.Updater, ClearasDialogs, Vcl.ImgList,
-  Winapi.Messages, PMCW.Registry;
+  System.Generics.Collections, Winapi.ShellAPI, Vcl.ImgList, ClearasAPI,
+  PMCW.Dialogs.About, PMCW.LanguageFile, PMCW.SysUtils, PMCW.CA, PMCW.Dialogs.Updater,
+  ClearasDialogs, Winapi.Messages, PMCW.Registry;
 
 type
   { TMain }
@@ -112,6 +112,8 @@ type
     mmDeleteErasable: TMenuItem;
     eStartupSearch: TButtonedEdit;
     pmExecute: TMenuItem;
+    N8: TMenuItem;
+    pmProperties: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -166,6 +168,7 @@ type
     procedure mmDeleteErasableClick(Sender: TObject);
     procedure PopupMenuPopup(Sender: TObject);
     procedure pmExecuteClick(Sender: TObject);
+    procedure pmPropertiesClick(Sender: TObject);
   private
     FStartup: TStartupList;
     FContext: TContextMenuList;
@@ -1122,6 +1125,7 @@ begin
     pmCopyLocation.Caption := GetString(LID_LOCATION_COPY);
     pmChangeIcon.Caption := GetString(LID_CONTEXT_MENU_ICON_CHANGE);
     pmDeleteIcon.Caption := GetString(LID_CONTEXT_MENU_ICON_DELETE);
+    pmProperties.Caption := GetString(LID_PROPERTIES);
   end;  //of with
 
   // Refresh list captions
@@ -2130,6 +2134,37 @@ begin
   end;  //of try
 end;
 
+procedure TMain.pmPropertiesClick(Sender: TObject);
+var
+  ShellExecuteInfo: TShellExecuteInfo;
+  SelectedItem: TRootItem;
+
+begin
+  try
+    SelectedItem := GetSelectedItem();
+
+    if (SelectedItem.Command <> '') then
+    begin
+      ZeroMemory(@ShellExecuteInfo, SizeOf(TShellExecuteInfo));
+
+      with ShellExecuteInfo do
+      begin
+        cbSize := SizeOf(TShellExecuteInfo);
+        lpVerb := 'properties';
+        lpFile := PChar(SelectedItem.Command.Expand());
+        nShow := SW_SHOWNORMAL;
+        fMask := SEE_MASK_INVOKEIDLIST;
+      end;  //of with
+
+      ShellExecuteEx(@ShellExecuteInfo);
+    end;  //of begin
+
+  except
+    on E: EInvalidItem do
+      TaskMessageDlg('', FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
+  end;  //of try
+end;
+
 { TMain.pmRenameClick
 
   Renames the current selected item. }
@@ -2203,6 +2238,9 @@ begin
     pmChangeStatus.Caption := bDisableStartupItem.Caption
   else
     pmChangeStatus.Caption := bEnableStartupItem.Caption;
+
+  // Disable properties if item is erasable or command is empty
+  pmProperties.Enabled := (not SelectedItem.Erasable and (SelectedItem.Command <> ''));
 
   // Update popup menu items
   case PageControl.ActivePageIndex of
