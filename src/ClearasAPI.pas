@@ -5534,20 +5534,14 @@ procedure TContextMenuList.ExportList(const AFileName: string);
 var
   i: Integer;
   RegFile: TRegistryFile;
-  Item: TContextMenuListItem;
 
 begin
-  // Init Reg file
   RegFile := TRegistryFile.Create(ChangeFileExt(AFileName, GetBackupExtension()), True);
 
   try
     for i := 0 to Count - 1 do
-    begin
-      Item := TContextMenuListItem(Items[i]);
-      RegFile.ExportKey(HKEY_CLASSES_ROOT, Item.Location, True);
-    end;  //of for
+      RegFile.ExportKey(HKEY_CLASSES_ROOT, Items[i].Location, True);
 
-    // Save file
     RegFile.Save();
 
   finally
