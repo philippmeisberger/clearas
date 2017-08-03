@@ -92,6 +92,24 @@ function OpenUrl(const AUrl: string): Boolean;
 
 {$IFDEF MSWINDOWS}
 /// <summary>
+///   Loads a string from a resource.
+/// </summary>
+/// <param name="AResource">
+///   Path to the resource.
+/// </param>
+/// <param name="AIdent">
+///   ID of the string.
+/// </param>
+/// <param name="ADefault">
+///   Optional: The default string to use if loading failed.
+/// </param>
+/// <returns>
+///   The string.
+/// </returns>
+function LoadResourceString(const AResource: string; const AIdent: Word;
+  const ADefault: string = ''): string;
+
+/// <summary>
 ///   Performs an operation on a specified file.
 /// </summary>
 /// <param name="AOperation">
@@ -302,6 +320,26 @@ begin
     Result := IncludeTrailingPathDelimiter(string(Path));
     CoTaskMemFree(Path);
   end;  //of begin
+end;
+
+function LoadResourceString(const AResource: string; const AIdent: Word;
+  const ADefault: string = ''): string;
+var
+  Module: HMODULE;
+  Buffer: array[0..255] of Char;
+
+begin
+  Module := GetModuleHandle(PChar(AResource));
+
+  try
+    if ((Module <> 0) and (LoadString(Module, AIdent, @Buffer[0], SizeOf(Buffer)) <> 0)) then
+      Result := Buffer
+    else
+      Result := ADefault;
+
+  finally
+    FreeLibrary(Module);
+  end;  //of try
 end;
 {$ENDIF}
 
