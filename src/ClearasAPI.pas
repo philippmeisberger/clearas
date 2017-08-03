@@ -213,7 +213,7 @@ type
   /// <remarks>
   ///   This class is intended to be only ancenstor for items.
   /// </remarks>
-  TRootItem = class abstract(TObject)
+  TRootItem = class(TObject)
   private
     FErasable: Boolean;
   protected
@@ -624,7 +624,7 @@ type
   /// <remarks>
   ///   This class is intended to be used only as ancestor for other classes.
   /// </remarks>
-  TRootList<T: TRootItem> = class abstract(TObjectList<T>, IInterface)
+  TRootList<T: TRootItem> = class(TObjectList<T>, IInterface)
   strict private
     // TODO: Better use TDuplicates
     FDuplicates: Boolean;
@@ -858,7 +858,7 @@ type
   /// <remarks>
   ///   Implement <c>DoExecute()</c> in the derived class.
   /// </remarks>
-  TRootListThread = class abstract(TThread)
+  TRootListThread = class(TThread)
   strict private
     FOnStart,
     FOnListLocked: TNotifyEvent;
@@ -1617,9 +1617,8 @@ type
   end;
 
   /// <summary>
-  ///   A <c>TContextMenuShellItem</c> represents a shell context menu item that
-  ///   can be added to a <see cref="TContextMenuList"/>. Those items are in
-  ///   plain-text.
+  ///   A <c>TContextMenuShellItem</c> is a verb for a file type that can be
+  ///   accessed through the shell context menu.
   /// </summary>
   TContextMenuShellItem = class(TContextMenuListItem)
   private
@@ -1690,9 +1689,8 @@ type
   end;
 
   /// <summary>
-  ///   A <c>TContextMenuShellCascadingItem</c> represents a cascading context
-  ///   menu item that can be added to a <see cref="TContextMenuList"/>. Those
-  ///   items contain a set of context menu items.
+  ///   A <c>TContextMenuShellCascadingItem</c> is a set of verbs for a file
+  ///   type that can be accessed through the shell context menu.
   /// </summary>
   TContextMenuShellCascadingItem = class(TContextMenuShellItem)
   private
@@ -1711,7 +1709,7 @@ type
       /// <summary>
       ///   Name of registry value that contains caption of item.
       /// </summary>
-      CaptionValueName    = 'MUIVerb';
+      CaptionValueName     = 'MUIVerb';
 
     /// <summary>
     ///   Constructor for creating a <c>TContextMenuShellCascadingItem</c> instance.
@@ -1762,9 +1760,8 @@ type
   end;
 
   /// <summary>
-  ///   A <c>TContextMenuShellExItem</c> represents a shell extension context
-  ///   menu item that can be added to a <see cref="TContextMenuList"/>. Those
-  ///   items are identified by a GUID.
+  ///   A <c>TContextMenuShellExItem</c> is a shell extension for a file type
+  ///   that can be accessed through the shell context menu.
   /// </summary>
   TContextMenuShellExItem = class(TContextMenuListItem)
   protected
@@ -1803,9 +1800,8 @@ type
   end;
 
   /// <summary>
-  ///   A <c>TContextMenuShellNewItem</c> represents a shell new context menu
-  ///   item that can be added to a <see cref="TContextMenuList"/>. Those items
-  ///   are shown in the background context menu "new".
+  ///   A <c>TContextMenuShellNewItem</c> is listed in the background context
+  ///   menu under "new".
   /// </summary>
   TContextMenuShellNewItem = class(TContextMenuListItem)
   protected
