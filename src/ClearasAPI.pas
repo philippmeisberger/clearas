@@ -3114,25 +3114,34 @@ var
   Deleted: Boolean;
 
 begin
-  // Export is pending?
-  if not FExportLock.TryEnter() then
+  // Search is pending?
+  if not FSearchLock.TryEnter() then
     raise EListBlocked.Create(SOperationPending);
 
   try
-    if (not Assigned(AItem) or (IndexOf(AItem) = -1)) then
-      raise EInvalidItem.Create('No item selected!');
+    // Export is pending?
+    if not FExportLock.TryEnter() then
+      raise EListBlocked.Create(SOperationPending);
 
-    // Delete item
-    Deleted := AItem.Delete();
+    try
+      if (not Assigned(AItem) or (IndexOf(AItem) = -1)) then
+        raise EInvalidItem.Create('No item selected!');
 
-    // Successful?
-    if Deleted then
-      // Remove item from list
-      Remove(AItem);
+      // Delete item
+      Deleted := AItem.Delete();
+
+      // Successful?
+      if Deleted then
+        // Remove item from list
+        Remove(AItem);
+
+    finally
+      FExportLock.Release();
+      Result := Deleted;
+    end;  //of try
 
   finally
-    FExportLock.Release();
-    Result := Deleted;
+    FSearchLock.Release();
   end;  //of try
 end;
 
