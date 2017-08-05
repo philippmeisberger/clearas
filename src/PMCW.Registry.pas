@@ -11,7 +11,8 @@ unit PMCW.Registry;
 interface
 
 uses
-  Winapi.Windows, System.SysUtils, System.Classes, System.Win.Registry;
+  Winapi.Windows, System.SysUtils, System.Classes, System.Win.Registry,
+  PMCW.SysUtils;
 
 type
   /// <summary>
@@ -86,6 +87,106 @@ type
     ///   The <c>HKEY</c>.
     /// </returns>
     function ToHKey(): HKEY;
+  end;
+
+  /// <summary>
+  ///   Extends the capabilities of <c>TRegistry</c>.
+  /// </summary>
+  TRegistryEx = class(TRegistry)
+  public
+    /// <summary>
+    ///   Reads a MUI string and loads its resource string.
+    /// </summary>
+    /// <param name="AName">
+    ///   The value name.
+    /// </param>
+    /// <returns>
+    ///   The resource string.
+    /// </returns>
+    function ReadMuiString(const AName: string): string;
+  end;
+
+  /// <summary>
+  ///   Multi-language user interface string.
+  /// </summary>
+  /// <remarks>
+  ///   Has the format <c>@path,-ID;comment</c> where comment is optional e.g.
+  ///   <c>@shell32.dll,-8773</c>.
+  /// </remarks>
+  TMuiString = type string;
+
+  TMuiStringHelper = record helper for TMuiString
+    /// <summary>
+    ///   Gets the path.
+    /// </summary>
+    /// <returns>
+    ///   The path.
+    /// </returns>
+    function Path(): string; inline;
+
+    /// <summary>
+    ///   Gets the ID.
+    /// </summary>
+    /// <returns>
+    ///   The ID if extracting succeeded or <c>0</c> otherwise.
+    /// </returns>
+    function Id(): Word; inline;
+
+    /// <summary>
+    ///   Gets the comment.
+    /// </summary>
+    /// <returns>
+    ///   The comment.
+    /// </returns>
+    function Comment(): string; inline;
+
+    /// <summary>
+    ///   Decodes the MUI string.
+    /// </summary>
+    /// <param name="APath">
+    ///   The path to a PE.
+    /// </param>
+    /// <param name="AId">
+    ///   The ID of the resource inside the PE.
+    /// </param>
+    /// <returns>
+    ///   <c>True</c> if successful or <c>False</c> otherwise.
+    /// </returns>
+    function Decode(var APath: string; var AId: Word): Boolean; overload; inline;
+
+    /// <summary>
+    ///   Decodes the MUI string.
+    /// </summary>
+    /// <param name="APath">
+    ///   The path to a PE.
+    /// </param>
+    /// <param name="AId">
+    ///   The ID of the resource inside the PE.
+    /// </param>
+    /// <param name="AComment">
+    ///   The comment.
+    /// </param>
+    /// <returns>
+    ///   <c>True</c> if successful or <c>False</c> otherwise.
+    /// </returns>
+    function Decode(var APath: string; var AId: Word; var AComment: string): Boolean; overload;
+
+    /// <summary>
+    ///   Creates a <c>TMuiString</c>.
+    /// </summary>
+    /// <param name="APath">
+    ///   The path to a PE.
+    /// </param>
+    /// <param name="AId">
+    ///   The ID of the resource.
+    /// </param>
+    /// <param name="AComment">
+    ///   Optional: A comment.
+    /// </param>
+    /// <returns>
+    ///   The MUI string.
+    /// </returns>
+    function Encode(const APath: string; const AId: Word; const AComment: string = ''): TMuiString; inline;
   end;
 
   /// <summary>
@@ -344,6 +445,11 @@ type
 
 implementation
 
+{$WARN SYMBOL_PLATFORM OFF}
+function RegLoadMUIString(hKey: HKEY; pszValue, pszOutBuf: PWideChar;
+  cbOutBuf: DWORD; out pcbData: DWORD; Flags: DWORD; pszDirectory: PWideChar): LONG; stdcall; external advapi32 name 'RegLoadMUIStringW' delayed;
+{$WARN SYMBOL_PLATFORM ON}
+
 { TRootKeyHelper }
 
 const
@@ -423,6 +529,116 @@ begin
     Result := cLongHKeys[Self]
   else
     Result := cShortHKeys[Self];
+end;
+
+
+{ TRegistryEx }
+
+function TRegistryEx.ReadMuiString(const AName: string): string;
+var
+  Size: DWORD;
+
+begin
+  // Get required buffer size
+  RegLoadMUIString(CurrentKey, PChar(AName), nil, 0, Size, 0, nil);
+
+  if (Size > 0) then
+  begin
+    SetString(Result, nil, Size div SizeOf(Char));
+
+    if not CheckResult(RegLoadMUIString(CurrentKey, PChar(AName), PChar(Result), Size, Size, 0, nil)) then
+      raise ERegistryException.Create(LastErrorMsg);
+
+    // Remove terminating null
+    SetLength(Result, (Size div SizeOf(Char)) - 1);
+  end  //of begin
+  else
+    Result := '';
+end;
+
+
+{ TMuiStringHelper }
+
+function TMuiStringHelper.Comment(): string;
+var
+  Path: string;
+  Id: Word;
+
+begin
+  Decode(Path, Id, Result);
+end;
+
+function TMuiStringHelper.Id(): Word;
+var
+  Path: string;
+
+begin
+  Decode(Path, Result);
+end;
+
+function TMuiStringHelper.Path(): string;
+var
+  Id: Word;
+
+begin
+  Decode(Result, Id);
+end;
+
+function TMuiStringHelper.Decode(var APath: string; var AId: Word): Boolean;
+var
+  Comment: string;
+
+begin
+  Result := Decode(APath, AId, Comment);
+end;
+
+function TMuiStringHelper.Decode(var APath: string; var AId: Word;
+  var AComment: string): Boolean;
+var
+  Parts: TArray<string>;
+  Id: Integer;
+
+begin
+  APath := '';
+  AId := 0;
+  AComment := '';
+  Parts := string(Self).Split([',', ';'], 3);
+
+  // Path and ID are required
+  if (Length(Parts) < 2)  then
+    Exit(False);
+
+  // Extract path
+  if Parts[0].StartsWith('@') then
+    APath := Parts[0].SubString(1)
+  else
+    APath := Parts[0];
+
+  // Extract ID
+  if not TryStrToInt(Parts[1], Id) then
+    Exit(False);
+
+  ExpandEnvironmentVar(APath);
+  AId := Abs(Id);
+
+  // Extract optional comment
+  if (Length(Parts) = 3) then
+    AComment := Parts[2];
+
+  Result := True;
+end;
+
+function TMuiStringHelper.Encode(const APath: string; const AId: Word;
+  const AComment: string = ''): TMuiString;
+const
+  FormatWithoutComment = '@%s,-%d';
+  FormatWithComment    = FormatWithoutComment +';%s';
+
+begin
+  if (AComment <> '') then
+    Result := Format(FormatWithComment, [APath, AId, AComment])
+  else
+    Result := Format(FormatWithoutComment, [APath, AId])
 end;
 
 
