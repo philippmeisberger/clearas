@@ -1030,7 +1030,7 @@ type
   /// </remarks>
   TStartupListItem = class(TRegistryItem)
   protected
-    FTime: TDateTime;
+    FDeactivationTime: TDateTime;
     FRootKey: TRootKey;
     function Disable(): Boolean; virtual; deprecated 'Since Windows 8'; abstract;
     function Enable(): Boolean; virtual; deprecated 'Since Windows 8'; abstract;
@@ -1118,7 +1118,7 @@ type
     /// <summary>
     ///   Gets or sets the deactivation timstamp.
     /// </summary>
-    property Time: TDateTime read FTime write FTime;
+    property DeactivationTime: TDateTime read FDeactivationTime write FDeactivationTime;
 
     /// <summary>
     ///   Gets the virtual Registry key redirected by WOW64.
@@ -2038,7 +2038,7 @@ type
   TServiceListItem = class(TRegistryItem)
   private
     FServiceManager: SC_HANDLE;
-    FTime: TDateTime;
+    FDeactivationTime: TDateTime;
     FServiceStart: TServiceStart;
     function GetHandle(AAccess: DWORD): SC_HANDLE;
   protected
@@ -2105,7 +2105,7 @@ type
     /// <summary>
     ///   Gets or sets the deactivation timestamp.
     /// </summary>
-    property Time: TDateTime read FTime write FTime;
+    property DeactivationTime: TDateTime read FDeactivationTime write FDeactivationTime;
   end;
 
   /// <summary>
@@ -3457,7 +3457,7 @@ begin
   inherited Create(AName, AName, ACommand, ALocation, AEnabled, AWow64);
   FRootKey := ARootKey;
   FCaption := GetFileDescription(FCommand.Expand());
-  FTime := 0;
+  FDeactivationTime := 0;
 end;
 
 function TStartupListItem.GetWow64Key(): string;
@@ -3500,7 +3500,7 @@ begin
       Reg.OpenKey(GetApprovedLocation(), True);
       ItemStatus.SetEnabled(AEnabled);
       Reg.WriteBinaryData(Name, ItemStatus, SizeOf(TStartupItemStatus));
-      FTime := ItemStatus.GetDeactivationTime();
+      FDeactivationTime := ItemStatus.GetDeactivationTime();
       inherited SetEnabled(AEnabled);
 
     finally
@@ -3749,7 +3749,7 @@ begin
     // Windows >= Vista?
     if CheckWin32Version(6) then
       // Save deactivation timestamp
-      FTime := WriteTimestamp(Reg);
+      FDeactivationTime := WriteTimestamp(Reg);
 
     // Open startup location
     Reg.CloseKey();
@@ -3846,7 +3846,7 @@ begin
     FRootKey := NewHKey;
     FLocation := NewKeyPath;
     FEnabled := True;
-    FTime := 0;
+    FDeactivationTime := 0;
     Result := True;
 
   finally
@@ -4142,7 +4142,7 @@ begin
     begin
       Reg.WriteString('backupExtension', GetBackupExtension());
       Reg.WriteString('location', ExtractFileDir(FLocation));
-      FTime := WriteTimestamp(Reg);
+      FDeactivationTime := WriteTimestamp(Reg);
     end  //of begin
     else
       Reg.WriteString('location', ToString());
@@ -4636,7 +4636,7 @@ begin
         end;  //of with
       end;  //of if
 
-      Item.Time := Item.GetTimestamp(Reg);
+      Item.DeactivationTime := Item.GetTimestamp(Reg);
       Add(Item);
     end;  //of for
 
@@ -4708,7 +4708,7 @@ begin
 
         Item := TStartupUserItem.Create(Name, LnkFile.Command, LnkFile.FileName,
           Status.GetEnabled(), StartupUser, LnkFile);
-        Item.Time := Status.GetDeactivationTime();
+        Item.DeactivationTime := Status.GetDeactivationTime();
         Add(Item);
       until FindNext(SearchResult) <> 0;
 
@@ -4745,7 +4745,7 @@ begin
         Status := LoadStatus(Name, AStartupLocation);
         Item := TStartupItem.Create(Name, Reg.ReadString(Name), Reg.CurrentPath,
           RootKey, Status.GetEnabled(), Wow64, RunOnce);
-        Item.Time := Status.GetDeactivationTime();
+        Item.DeactivationTime := Status.GetDeactivationTime();
         Add(Item);
       end;  //of for
 
@@ -5891,7 +5891,7 @@ begin
   inherited Create(AName, ACaption, ACommand, '', AEnabled, False);
   FServiceStart := AServiceStart;
   FServiceManager := AServiceManager;
-  FTime := 0;
+  FDeactivationTime := 0;
 end;
 
 function TServiceListItem.GetHandle(AAccess: DWORD): SC_HANDLE;
@@ -5988,7 +5988,7 @@ begin
           raise EServiceException.Create('Could not delete last status!');
       end;  //of if
 
-      FTime := 0;
+      FDeactivationTime := 0;
     end  //of begin
     else
     begin
@@ -6005,7 +6005,7 @@ begin
           raise EServiceException.Create('Could not create disable key: '+ Reg.LastErrorMsg);
 
         // Save deactivation timestamp
-        FTime := WriteTimestamp(Reg);
+        FDeactivationTime := WriteTimestamp(Reg);
       end  //of begin
       else
       begin
@@ -6316,7 +6316,7 @@ begin
 
           Item := TServiceListItem.Create(AName, Caption, FileName, False, Start,
             FManager);
-          Item.Time := Item.GetTimestamp(Reg);
+          Item.DeactivationTime := Item.GetTimestamp(Reg);
 
         finally
           Reg.CloseKey();

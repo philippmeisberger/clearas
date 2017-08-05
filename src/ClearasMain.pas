@@ -739,8 +739,8 @@ begin
           // Show deactivation timestamp?
           if mmDate.Checked then
           begin
-            if (AItem.Time <> 0) then
-              SubItems.Append(DateTimeToStr(AItem.Time))
+            if (AItem.DeactivationTime <> 0) then
+              SubItems.Append(DateTimeToStr(AItem.DeactivationTime))
             else
               SubItems.Append('');
           end;  //of begin
@@ -841,8 +841,8 @@ begin
         SubItems.Append(GetServiceStartCaption(AItem.Start));
 
         // Show deactivation timestamp?
-        if (mmDate.Checked and (AItem.Time <> 0)) then
-          SubItems.Append(DateTimeToStr(AItem.Time));
+        if (mmDate.Checked and (AItem.DeactivationTime <> 0)) then
+          SubItems.Append(DateTimeToStr(AItem.DeactivationTime));
       end;  //of with
     end;  //of begin
   end;  //of begin
@@ -1483,8 +1483,8 @@ begin
           pmChangeStatus.Caption := bEnableStartupItem.Caption;
 
           // Append deactivation timestamp if necassary
-          if (mmDate.Enabled and mmDate.Checked and ((SelectedItem as TStartupListItem).Time <> 0)) then
-            lwStartup.ItemFocused.SubItems[3] := DateTimeToStr((SelectedItem as TStartupListItem).Time);
+          if (mmDate.Enabled and mmDate.Checked and ((SelectedItem as TStartupListItem).DeactivationTime <> 0)) then
+            lwStartup.ItemFocused.SubItems[3] := DateTimeToStr((SelectedItem as TStartupListItem).DeactivationTime);
         end;
 
       1:
@@ -1501,8 +1501,8 @@ begin
           pmChangeStatus.Caption := bEnableServiceItem.Caption;
 
           // Append deactivation timestamp if necassary
-          if (mmDate.Enabled and mmDate.Checked and ((SelectedItem as TServiceListItem).Time <> 0)) then
-            lwService.ItemFocused.SubItems[3] := DateTimeToStr((SelectedItem as TServiceListItem).Time);
+          if (mmDate.Enabled and mmDate.Checked and ((SelectedItem as TServiceListItem).DeactivationTime <> 0)) then
+            lwService.ItemFocused.SubItems[3] := DateTimeToStr((SelectedItem as TServiceListItem).DeactivationTime);
         end;
 
       3:
