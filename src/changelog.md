@@ -19,6 +19,7 @@ Version 5.0 [*??.08.17*]
 * Added "Properties" to popup menu
 * Improved "Open in Explorer"
 * Added loading description of ShellEx and ShellNew items
+* Added loading of MUI strings
 * Closed potential Handle-Leak
 * Closed memory leak during export
 * Closed memory leak when importing a task

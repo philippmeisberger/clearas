@@ -5584,6 +5584,7 @@ var
   List: TStringList;
   ItemName, Key, FileName, GuID, Caption: string;
   Enabled, Wow64, Extended: Boolean;
+  MuiString: TMuiString;
 
 begin
   Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ);
@@ -5675,9 +5676,12 @@ begin
         begin
           Caption := Reg.ReadString('');
 
-          // Filter unreadable Shell items
+          // MUI string
           if Caption.StartsWith('@') then
-            Continue;
+          begin
+            MuiString := Caption;
+            Caption := LoadResourceString(MuiString.Path(), MuiString.Id);
+          end;  //of begin
 
           // Get status and caption of Shell item
           Enabled := not Reg.ValueExists(TContextMenuShellItem.DisableValueName);
@@ -5696,10 +5700,6 @@ begin
               Enabled, Extended));
             Continue;
           end;  //of begin
-
-          // Filter important Shell items
-          if Reg.ValueExists('DelegateExecute') then
-            Continue;
 
           // Get file path of command
           if not (Reg.GetDataType('') in [rdString, rdExpandString]) then
