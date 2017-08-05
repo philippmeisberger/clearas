@@ -812,6 +812,16 @@ end;
 
 procedure TMain.OnServiceListNotify(Sender: TObject;
   const AItem: TServiceListItem; AAction: TCollectionNotification);
+
+  function GetServiceStartCaption(AServiceStart: TServiceStart): string;
+  begin
+    case AServiceStart of
+      ssAutomatic: Result := FLang.GetString(LID_AUTOMATICALLY);
+      ssManual:    Result := FLang.GetString(LID_MANUALLY);
+      else         Result := 'Service';
+    end;  //of case
+  end;
+
 var
   Text: string;
 
@@ -828,7 +838,7 @@ begin
         Caption := FStatusText[AItem.Enabled];
         SubItems.AddObject(Text, AItem);
         SubItems.Append(AItem.Command);
-        SubItems.Append(AItem.Start.ToString(FLang));
+        SubItems.Append(GetServiceStartCaption(AItem.Start));
 
         // Show deactivation timestamp?
         if (mmDate.Checked and (AItem.Time <> 0)) then

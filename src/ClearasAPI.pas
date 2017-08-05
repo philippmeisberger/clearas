@@ -1775,12 +1775,12 @@ type
       /// <summary>
       ///   The registry sub key.
       /// </summary>
-      CanonicalName    = 'ShellEx';
+      CanonicalName = 'ShellEx';
 
       /// <summary>
       ///   The regitry sub key where shell extensions are located.
       /// </summary>
-      HandlersKey      = CanonicalName +'\ContextMenuHandlers';
+      HandlersKey   = CanonicalName +'\ContextMenuHandlers';
 
     /// <summary>
     ///   Exports the item as file.
@@ -2030,10 +2030,6 @@ type
     ssManual    = SERVICE_DEMAND_START,
     ssDisabled  = SERVICE_DISABLED
   );
-
-  TServiceStartHelper = record helper for TServiceStart
-    function ToString(ALangFile: TLanguageFile): string;
-  end;
 
   /// <summary>
   ///   A <c>TServiceListItem</c> represents a service item that can be added
@@ -5883,18 +5879,6 @@ begin
     Reg.Free;
     Locations.Free;
   end;  //of try
-end;
-
-
-{ TServiceStartHelper }
-
-function TServiceStartHelper.ToString(ALangFile: TLanguageFile): string;
-begin
-  case Self of
-    ssAutomatic: Result := ALangFile.GetString(LID_AUTOMATICALLY);
-    ssManual:    Result := ALangFile.GetString(LID_MANUALLY);
-    else         Result := 'Service';
-  end;  //of case
 end;
 
 
