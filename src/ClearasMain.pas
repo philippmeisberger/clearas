@@ -1248,8 +1248,8 @@ begin
     end;  //of begin
 
     // Export pending?
-    if SelectedList.IsLocked() then
-      raise EListBlocked.Create('Another operation is pending. Please wait!');
+    if SelectedList.IsExporting() then
+      raise EListBlocked.Create(SOperationPending);
 
     ItemsDeleted := 0;
 
@@ -2582,8 +2582,8 @@ begin
     SelectedList := TRootList<TRootItem>(GetSelectedList());
 
     // Operation pending?
-    if SelectedList.IsLocked() then
-      raise EListBlocked.Create('Another operation is pending. Please wait!');
+    if SelectedList.IsExporting() then
+      raise EListBlocked.Create(SOperationPending);
 
     Filter := SelectedList.GetExportFilter(FLang);
     DefaultExt := SelectedList.GetBackupExtension();

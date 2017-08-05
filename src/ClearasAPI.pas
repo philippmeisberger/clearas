@@ -2391,6 +2391,9 @@ type
     property TaskService: ITaskService read FTaskService;
   end;
 
+resourcestring
+  SOperationPending = 'Another operation is pending. Please wait!';
+
 implementation
 
 {$I LanguageIDs.inc}
@@ -3042,7 +3045,7 @@ var
 begin
   // Export is pending?
   if not FExportLock.TryEnter() then
-    raise EListBlocked.Create('Another operation is pending. Please wait!');
+    raise EListBlocked.Create(SOperationPending);
 
   try
     // Invalid item?
@@ -3069,7 +3072,7 @@ procedure TRootList<T>.ChangeItemStatus(AItem: T; const AEnabled: Boolean);
 begin
   // Export is pending?
   if not FExportLock.TryEnter() then
-    raise EListBlocked.Create('Another operation is pending. Please wait!');
+    raise EListBlocked.Create(SOperationPending);
 
   try
     if (not Assigned(AItem) or (IndexOf(AItem) = -1)) then
@@ -3113,7 +3116,7 @@ var
 begin
   // Export is pending?
   if not FExportLock.TryEnter() then
-    raise EListBlocked.Create('Another operation is pending. Please wait!');
+    raise EListBlocked.Create(SOperationPending);
 
   try
     if (not Assigned(AItem) or (IndexOf(AItem) = -1)) then
@@ -3147,7 +3150,7 @@ procedure TRootList<T>.ExportItem(AItem: T; const AFileName: string);
 begin
   // List locked?
   if not FExportLock.TryEnter() then
-    raise EListBlocked.Create('Another operation is pending. Please wait!');
+    raise EListBlocked.Create(SOperationPending);
 
   try
     if (not Assigned(AItem) or (IndexOf(AItem) = -1)) then
@@ -3273,7 +3276,7 @@ var
 begin
   // Export is pending?
   if not FExportLock.TryEnter() then
-    raise EListBlocked.Create('Another operation is pending. Please wait!');
+    raise EListBlocked.Create(SOperationPending);
 
   try
     if (not Assigned(AItem) or (IndexOf(AItem) = -1)) then
@@ -3333,7 +3336,7 @@ begin
 
     // Search is pending?
     if not SearchLock.TryEnter() then
-      raise EListBlocked.Create('Another operation is pending. Please wait!');
+      raise EListBlocked.Create(SOperationPending);
 
     try
       Synchronize(DoNotifyOnStart);
@@ -3393,7 +3396,7 @@ begin
 
   // Export is pending?
   if not ExportLock.TryEnter() then
-    raise EListBlocked.Create('Another operation is pending. Please wait!');
+    raise EListBlocked.Create(SOperationPending);
 
   try
     FSelectedList.ExportList(FFileName);
@@ -4424,12 +4427,12 @@ begin
 
   // Search is pending?
   if not FSearchLock.TryEnter() then
-    raise EListBlocked.Create('Another operation is pending. Please wait!');
+    raise EListBlocked.Create(SOperationPending);
 
   try
     // Export is pending?
     if not FExportLock.TryEnter() then
-      raise EListBlocked.Create('Another operation is pending. Please wait!');
+      raise EListBlocked.Create(SOperationPending);
 
     try
       // Add new startup user item?
@@ -4533,12 +4536,12 @@ begin
 
   // Search is pending?
   if not FSearchLock.TryEnter() then
-    raise EListBlocked.Create('Another operation is pending. Please wait!');
+    raise EListBlocked.Create(SOperationPending);
 
   try
     // Export is pending?
     if not FExportLock.TryEnter() then
-      raise EListBlocked.Create('Another operation is pending. Please wait!');
+      raise EListBlocked.Create(SOperationPending);
 
     try
       // Init new .lnk file
@@ -5437,12 +5440,12 @@ begin
 
   // Search is pending?
   if not FSearchLock.TryEnter() then
-    raise EListBlocked.Create('Another operation is pending. Please wait!');
+    raise EListBlocked.Create(SOperationPending);
 
   try
     // Export is pending?
     if not FExportLock.TryEnter() then
-      raise EListBlocked.Create('Another operation is pending. Please wait!');
+      raise EListBlocked.Create(SOperationPending);
 
     try
       Name := ChangeFileExt(ExtractFileName(AFileName), '');
@@ -6153,12 +6156,12 @@ begin
 
   // Search is pending?
   if not FSearchLock.TryEnter() then
-    raise EListBlocked.Create('Another operation is pending. Please wait!');
+    raise EListBlocked.Create(SOperationPending);
 
   try
     // Export is pending?
     if not FExportLock.TryEnter() then
-      raise EListBlocked.Create('Another operation is pending. Please wait!');
+      raise EListBlocked.Create(SOperationPending);
 
     try
       // To create a new service SC_MANAGER_CREATE_SERVICE access right is required
@@ -6682,12 +6685,12 @@ begin
 
   // Search is pending?
   if not FSearchLock.TryEnter() then
-    raise EListBlocked.Create('Another operation is pending. Please wait!');
+    raise EListBlocked.Create(SOperationPending);
 
   try
     // Export is pending?
     if not FExportLock.TryEnter() then
-      raise EListBlocked.Create('Another operation is pending. Please wait!');
+      raise EListBlocked.Create(SOperationPending);
 
     OldValue := DisableWow64FsRedirection();
 
