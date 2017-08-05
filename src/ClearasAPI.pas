@@ -795,12 +795,12 @@ type
     function IndexOf(const ANameOrCaption: string; AEnabled: Boolean): Integer; overload;
 
     /// <summary>
-    ///   Checks if the list is currently locked.
+    ///   Checks if the list is currently being exported.
     /// </summary>
     /// <returns>
     ///   <c>True</c> if the list is locked or <c>False</c> otherwise.
     /// </returns>
-    function IsLocked(): Boolean;
+    function IsExporting(): Boolean;
 
     /// <summary>
     ///   Renames an item.
@@ -2393,6 +2393,7 @@ type
 
 resourcestring
   SOperationPending = 'Another operation is pending. Please wait!';
+  SNoItemSelected   = 'No item selected!';
 
 implementation
 
@@ -3050,7 +3051,7 @@ begin
   try
     // Invalid item?
     if (not Assigned(AItem) or (IndexOf(AItem) = -1)) then
-      raise EInvalidItem.Create('No item selected!');
+      raise EInvalidItem.Create(SNoItemSelected);
 
     // Change item file path
     ItemErasable := AItem.Erasable;
@@ -3076,7 +3077,7 @@ begin
 
   try
     if (not Assigned(AItem) or (IndexOf(AItem) = -1)) then
-      raise EInvalidItem.Create('No item selected!');
+      raise EInvalidItem.Create(SNoItemSelected);
 
     if AEnabled then
     begin
@@ -3125,7 +3126,7 @@ begin
 
     try
       if (not Assigned(AItem) or (IndexOf(AItem) = -1)) then
-        raise EInvalidItem.Create('No item selected!');
+        raise EInvalidItem.Create(SNoItemSelected);
 
       // Delete item
       Deleted := AItem.Delete();
@@ -3163,7 +3164,7 @@ begin
 
   try
     if (not Assigned(AItem) or (IndexOf(AItem) = -1)) then
-      raise EInvalidItem.Create('No item selected!');
+      raise EInvalidItem.Create(SNoItemSelected);
 
     AItem.ExportItem(AFileName);
 
@@ -3223,7 +3224,7 @@ begin
   end;  //of for
 end;
 
-function TRootList<T>.IsLocked(): Boolean;
+function TRootList<T>.IsExporting(): Boolean;
 var
   Entered: Boolean;
 
@@ -3289,7 +3290,7 @@ begin
 
   try
     if (not Assigned(AItem) or (IndexOf(AItem) = -1)) then
-      raise EInvalidItem.Create('No item selected!');
+      raise EInvalidItem.Create(SNoItemSelected);
 
     if not FDuplicates then
     begin

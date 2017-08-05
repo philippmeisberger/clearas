@@ -415,7 +415,7 @@ begin
   SelectedListView := GetSelectedListView();
 
   if not Assigned(SelectedListView.ItemFocused) then
-    raise EInvalidItem.Create('No item selected!');
+    raise EInvalidItem.Create(SNoItemSelected);
 
   Result := TRootItem(SelectedListView.ItemFocused.SubItems.Objects[0]);
 
