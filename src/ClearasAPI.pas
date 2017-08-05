@@ -1902,7 +1902,7 @@ type
       /// <summary>
       ///   A comma separated list that contains the default context menu locations.
       /// </summary>
-      DefaultLocations = '*, AllFileSystemObjects, Folder, Directory, Drive, Network, Printers';
+      DefaultLocations = '*, AllFileSystemObjects, Folder, Directory, Directory\Background, Drive, Network, Printers';
 
     /// <summary>
     ///   Constructor for creating a <c>TContextMenuList</c> instance.
@@ -5793,6 +5793,9 @@ end;
 procedure TContextMenuList.Search(AExpertMode: Boolean = False; AWin64: Boolean = True);
 begin
   Search(AExpertMode, AWin64, '');
+
+  if AExpertMode then
+    Search(AExpertMode, AWin64, 'Directory');
 end;
 
 procedure TContextMenuList.Search(AExpertMode: Boolean; AWin64: Boolean;
