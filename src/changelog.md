@@ -20,6 +20,7 @@ Version 5.0 [*??.08.17*]
 * Improved "Open in Explorer"
 * Added loading description of ShellEx and ShellNew items
 * Added loading of MUI strings
+* Added loading context menu items from AllFileSystemObjects, Network and Printers per default
 * Closed potential Handle-Leak
 * Closed memory leak during export
 * Closed memory leak when importing a task

@@ -1902,7 +1902,7 @@ type
       /// <summary>
       ///   A comma separated list that contains the default context menu locations.
       /// </summary>
-      DefaultLocations = 'Directory, Folder, *, Drive';
+      DefaultLocations = '*, AllFileSystemObjects, Folder, Directory, Drive, Network, Printers';
 
     /// <summary>
     ///   Constructor for creating a <c>TContextMenuList</c> instance.
