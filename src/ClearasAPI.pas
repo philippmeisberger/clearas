@@ -734,7 +734,6 @@ type
     ///   The absolute filename to the file.
     /// </param>
     /// <exception>
-    ///   <c>EListBlocked</c> if another operation is pending on the list.
     ///   <c>EInvalidItem</c> if no item is selected.
     /// </exception>
     procedure ExportItem(AItem: T; const AFileName: string);
@@ -943,7 +942,7 @@ type
     ///   The <c>TRootList</c> which should be exported.
     /// </param>
     /// <param name="AFileName">
-    ///   The file.
+    ///   The filename of the exported file.
     /// </param>
     /// <param name="APageControlIndex">
     ///   The index of the <c>TPageControl</c> on which the export was invoked.
@@ -3160,19 +3159,10 @@ end;
 
 procedure TRootList<T>.ExportItem(AItem: T; const AFileName: string);
 begin
-  // List locked?
-  if not FExportLock.TryEnter() then
-    raise EListBlocked.Create(SOperationPending);
+  if (not Assigned(AItem) or (IndexOf(AItem) = -1)) then
+    raise EInvalidItem.Create(SNoItemSelected);
 
-  try
-    if (not Assigned(AItem) or (IndexOf(AItem) = -1)) then
-      raise EInvalidItem.Create(SNoItemSelected);
-
-    AItem.ExportItem(AFileName);
-
-  finally
-    FExportLock.Release();
-  end;  //of try
+  AItem.ExportItem(AFileName);
 end;
 
 function TRootList<T>.GetBackupExtension(): string;
