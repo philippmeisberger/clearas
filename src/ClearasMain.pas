@@ -1642,7 +1642,13 @@ end;
 
 procedure TMain.bExportItemClick(Sender: TObject);
 begin
-  ShowExportItemDialog(GetSelectedItem());
+  try
+    ShowExportItemDialog(GetSelectedItem());
+
+  except
+    on E: EInvalidItem do
+      MessageDlg(FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
+  end;  //of try
 end;
 
 { TMain.eSearchChange
