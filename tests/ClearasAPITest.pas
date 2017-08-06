@@ -281,47 +281,43 @@ end;
 procedure TRootListTest.TestDelete(const AItemName: string);
 var
   SelectedItem: TRootItem;
-  Counter, EnabledCounter: Integer;
+  Counter, EnabledCounter, ErasableCounter: Integer;
 
 begin
   SelectedItem := GetItemForName(AItemName);
   Counter := FRootList.Count;
+  ErasableCounter := FRootList.ErasableItemsCount;
   EnabledCounter := FRootList.EnabledItemsCount;
 
   if SelectedItem.Enabled then
     Dec(EnabledCounter);
 
+  if SelectedItem.Erasable then
+    Dec(ErasableCounter);
+
   CheckTrue(FRootList.DeleteItem(SelectedItem), 'Item "'+ AItemName +'" was not deleted!');
   Dec(Counter);
-  CheckEquals(EnabledCounter, FRootList.EnabledItemsCount, 'After deleting item "'+ AItemName +'" EnabledItemsCount should be equal to EnabledCounter');
-  CheckEquals(Counter, FRootList.Count, 'After deleting item "'+ AItemName +'" Count should be decreased by 1');
+  CheckEquals(EnabledCounter, FRootList.EnabledItemsCount, 'After deleting item "'+ AItemName +'" EnabledItemsCount should be decreased');
+  CheckEquals(ErasableCounter, FRootList.ErasableItemsCount, 'After deleting item "'+ AItemName +'" ErasableItemsCount should be decreased');
+  CheckEquals(Counter, FRootList.Count, 'After deleting item "'+ AItemName +'" Count should be decreased');
 end;
 
 procedure TRootListTest.TestDeleteItems;
 var
-  i, ErasableItems, DeletedItems: Integer;
+  i: Integer;
 
 begin
   LoadItems();
-  ErasableItems := FRootList.ErasableItemsCount;
-  CheckEquals(FErasableTestItems.Count, ErasableItems, 'ErasableItemsCount differs from expected');
+  CheckEquals(FErasableTestItems.Count, FRootList.ErasableItemsCount, 'ErasableItemsCount differs from expected');
 
+  // Delete valid test items
   for i := 0 to FTestItems.Count - 1 do
     TestDelete(FTestItems[i]);
 
-  DeletedItems := 0;
-
   // Delete erasable items
-  for i := FRootList.Count - 1 downto 0 do
-  begin
-    if (FRootList[i].Erasable and FRootList[i].Delete()) then
-    begin
-      FRootList.Delete(i);
-      Inc(DeletedItems);
-    end;  //of begin
-  end;  //of for
+  for i := 0 to FErasableTestItems.Count - 1 do
+    TestDelete(FErasableTestItems[i]);
 
-  CheckEquals(ErasableItems, DeletedItems, 'Count of erasable marked items differs from deleted items count');
   CheckEquals(0, FRootList.ErasableItemsCount, 'After deleting all erasable items ErasableItemsCount must be 0');
   CleanUp();
 end;
