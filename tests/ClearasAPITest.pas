@@ -3,7 +3,7 @@ unit ClearasAPITest;
 interface
 
 uses
-  TestFramework, Windows, Classes, Registry, SysUtils, ShellAPI, Forms, WinSvc,
+  TestFramework, Windows, Classes, Registry, SysUtils, ShellAPI, Forms,
   ClearasAPI;
 
 const
@@ -28,10 +28,10 @@ type
     FRootList: TRootList<TRootItem>;
     FTestItems,
     FErasableTestItems: TStringList;
-    procedure LoadItems(); virtual; abstract;
+    // TODO: Remove CleanUp as not needed
+    procedure CleanUp; virtual;
     function GetItemForName(const AItemName: string): TRootItem;
-    procedure TestDisable(const AItemName: string);
-    procedure TestEnable(const AItemName: string);
+    procedure TestChangeStatus(const AItemName: string);
     procedure TestDelete(const AItemName: string);
     procedure TestExport(const AItemName: string);
     procedure TestRename(const AItemName: string); virtual;
@@ -40,21 +40,21 @@ type
   public
     procedure SetUp; override;
     procedure TearDown; override;
-    procedure CleanUp; virtual;
+    procedure TestDeleteItems;
     // TODO: Fix TestLocking and enable it again
     procedure TestLocking;
   published
-    procedure AddEnabledTestItems; virtual; abstract;
-    procedure TestDisableItems;
-    procedure TestEnableItems;
+    procedure TestChangeItemStatus;
     procedure TestRenameItems; virtual;
     procedure TestChangeItemCommands; virtual;
     procedure TestExportBackup;
     procedure TestExportItems;
-    procedure TestDeleteItems;
   end;
 
   TStartupListTest = class(TRootListTest)
+  const
+    cStartupUserImported   = 'Startup User Backup.lnk';
+    cStartupCommonImported = 'Startup Common Backup.lnk';
   private
     procedure AddTestItemEnabled(ALocation: TStartupLocation;
       AErasable: Boolean = False);
@@ -62,15 +62,12 @@ type
     function GetItemName(ALocation: TStartupLocation;
       AErasable: Boolean = False): string;
     procedure ImportUserBackup;
-  protected
-    procedure LoadItems(); override;
   public
     procedure SetUp; override;
     procedure CleanUp; override;
   published
     procedure TestAddNewItem;
     procedure TestImportBackup;
-    procedure AddEnabledTestItems; override;
   end;
 
   TContextListTest = class(TRootListTest)
@@ -98,13 +95,11 @@ type
     procedure AddShellNewCMTestItem(const AFileExt, AName, ACaption, AIcon,
       AFileName: string);
   protected
-    procedure LoadItems(); override;
+    procedure CleanUp; override;
     procedure TestRename(const AItemName: string); override;
   public
     procedure SetUp; override;
-    procedure CleanUp; override;
   published
-    procedure AddEnabledTestItems; override;
     procedure TestAddNewItem;
     procedure TestChangeItemCommands; override;
     procedure TestRenameItems; override;
@@ -116,24 +111,17 @@ type
     cService         = 'TestService';
     cServiceErasable = cService + cErasableSuffix;
   protected
-    procedure LoadItems(); override;
     procedure TestRename(const AItemName: string); override;
   public
     procedure SetUp; override;
-  published
-    procedure AddEnabledTestItems; override;
   end;
 
   TTaskListTest = class(TRootListTest)
   const
     cTask         = 'TestTask';
     cTaskErasable = 'ErasableTask';
-  protected
-    procedure LoadItems(); override;
   public
     procedure SetUp; override;
-  published
-    procedure AddEnabledTestItems; override;
   end;
 
 implementation
@@ -202,10 +190,15 @@ end;
 
 procedure TRootListTest.TearDown;
 begin
-  FreeAndNil(FRootList);
-  FreeAndNil(FErasableTestItems);
-  FreeAndNil(FTestItems);
-  inherited TearDown;
+  try
+    TestDeleteItems();
+
+  finally
+    FreeAndNil(FRootList);
+    FreeAndNil(FErasableTestItems);
+    FreeAndNil(FTestItems);
+    inherited TearDown;
+  end;
 end;
 
 procedure TRootListTest.CleanUp;
@@ -250,8 +243,6 @@ var
   SelectedItem: TRootItem;
 
 begin
-  LoadItems();
-
   for i := 0 to FTestItems.Count - 1 do
   begin
     SelectedItem := TestChangeCommand(FTestItems[i], cTestExe, cNewTestFileName);
@@ -261,20 +252,24 @@ begin
 
   // Turn erasable items to normal items
   ErasableItems := FRootList.ErasableItemsCount;
-  CheckEquals(FErasableTestItems.Count, ErasableItems, 'ErasableItemsCount differs from erasable items list count');
+  Check(ErasableItems >= FErasableTestItems.Count, 'There must be at least '+ IntToStr(FErasableTestItems.Count) +' erasable items in the list');
 
   for i := 0 to FErasableTestItems.Count - 1 do
   begin
     SelectedItem := TestChangeCommand(FErasableTestItems[i], cTestExeErasable, cNewTestFileName);
     CheckEqualsString(cNewTestArgument, SelectedItem.Command.ExtractArguments, 'Arguments of "'+ FErasableTestItems[i] +'" does not match after changing command');
     CheckEqualsString(cNewTestExe, SelectedItem.Command.Expand(), 'Expanding of "'+ FErasableTestItems[i] +'" does not match after changing command');
+    Dec(ErasableItems);
   end;  //of for
 
-  CheckEquals(0, FRootList.ErasableItemsCount, 'After changing commands of erasable items to a valid path ErasableItemsCount differs from expected');
+  CheckEquals(ErasableItems, FRootList.ErasableItemsCount, 'After changing commands of erasable items to a valid path ErasableItemsCount differs from expected');
 
   // Turn normal items to erasable items back
   for i := 0 to ErasableItems - 1 do
+  begin
     TestChangeCommand(FErasableTestItems[i], cNewTestExe, cTestExeErasable);
+    Inc(ErasableItems);
+  end;
 
   CheckEquals(ErasableItems, FRootList.ErasableItemsCount, 'After changing commands of normal items back to erasable ErasableItemsCount differs from expected');
 end;
@@ -308,9 +303,6 @@ var
   i: Integer;
 
 begin
-  LoadItems();
-  CheckEquals(FErasableTestItems.Count, FRootList.ErasableItemsCount, 'ErasableItemsCount differs from expected');
-
   // Delete valid test items
   for i := 0 to FTestItems.Count - 1 do
     TestDelete(FTestItems[i]);
@@ -318,70 +310,54 @@ begin
   // Delete erasable items
   for i := 0 to FErasableTestItems.Count - 1 do
     TestDelete(FErasableTestItems[i]);
-
-  CheckEquals(0, FRootList.ErasableItemsCount, 'After deleting all erasable items ErasableItemsCount must be 0');
-  CleanUp();
 end;
 
-procedure TRootListTest.TestDisable(const AItemName: string);
+procedure TRootListTest.TestChangeStatus(const AItemName: string);
+
+  procedure ChangeStatus(ASelectedItem: TRootItem; AEnabled: Boolean);
+  var
+    ExpectedCount, ExpectedErasableCount, ExpectedEnabledCount: Integer;
+
+  begin
+    ExpectedCount := FRootList.Count;
+    ExpectedErasableCount := FRootList.ErasableItemsCount;
+    ExpectedEnabledCount := FRootList.EnabledItemsCount;
+
+    if AEnabled then
+      Inc(ExpectedEnabledCount)
+    else
+      Dec(ExpectedEnabledCount);
+
+    FRootList.ChangeItemStatus(ASelectedItem, AEnabled);
+    CheckEquals(AEnabled, ASelectedItem.Enabled, 'After enabling item "'+ AItemName +'" again Enabled was not updated');
+    CheckEquals(ExpectedEnabledCount, FRootList.EnabledItemsCount, 'After changing status of "'+ AItemName +'" EnabledItemsCount was not updated');
+    CheckEquals(ExpectedErasableCount, FRootList.ErasableItemsCount, 'After changing status of "'+ AItemName +'" ErasableItemsCount must not be changed');
+    CheckEquals(ExpectedCount, FRootList.Count, 'After changing status of "'+ AItemName +'" Count must not be changed');
+  end;
+
 var
   SelectedItem: TRootItem;
-  Counter, EnabledCounter: Integer;
 
 begin
   SelectedItem := GetItemForName(AItemName);
-  Counter := FRootList.Count;
-  EnabledCounter := FRootList.EnabledItemsCount;
-  CheckTrue(SelectedItem.Enabled, 'Before disabling item "'+ AItemName +'" Enabled must be True');
-  FRootList.DisableItem(SelectedItem);
-  CheckFalse(SelectedItem.Enabled, 'After disabling item "'+ AItemName +'" Enabled should also be False');
-  Dec(EnabledCounter);
-  CheckEquals(EnabledCounter, FRootList.EnabledItemsCount, 'After disabling item "'+ AItemName +'" EnabledItemsCount must be decreased by 1');
-  CheckEquals(Counter, FRootList.Count, 'After disabling item "'+ AItemName +'" Count must not be changed');
+  ChangeStatus(SelectedItem, False);
+  ChangeStatus(SelectedItem, True);
+
+  // Disable again to test deleting of disabled item
+  ChangeStatus(SelectedItem, False);
 end;
 
-procedure TRootListTest.TestDisableItems;
+procedure TRootListTest.TestChangeItemStatus;
 var
   i: Integer;
 
 begin
-  LoadItems();
-
   for i := 0 to FTestItems.Count - 1 do
-    TestDisable(FTestItems[i]);
-end;
-
-procedure TRootListTest.TestEnable(const AItemName: string);
-var
-  SelectedItem: TRootItem;
-  Counter, EnabledCounter: Integer;
-
-begin
-  SelectedItem := GetItemForName(AItemName);
-  Counter := FRootList.Count;
-  EnabledCounter := FRootList.EnabledItemsCount;
-  CheckFalse(SelectedItem.Enabled, 'Before enabling item "'+ AItemName +'" Enabled must be False');
-  FRootList.EnableItem(SelectedItem);
-  CheckTrue(SelectedItem.Enabled, 'After enabling item "'+ AItemName +'" Enabled should be True');
-  Inc(EnabledCounter);
-  CheckEquals(EnabledCounter, FRootList.EnabledItemsCount, 'After enabling item "'+ AItemName +'" EnabledItemsCount must be increased by 1');
-  CheckEquals(Counter, FRootList.Count, 'After enabling item "'+ AItemName +'" Count must not be changed');
-end;
-
-procedure TRootListTest.TestEnableItems;
-var
-  i: Integer;
-
-begin
-  LoadItems();
-
-  for i := 0 to FTestItems.Count - 1 do
-    TestEnable(FTestItems[i]);
+    TestChangeStatus(FTestItems[i]);
 end;
 
 procedure TRootListTest.TestExportBackup;
 begin
-  LoadItems();
   FRootList.ExportList(ClassName + FRootList.GetBackupExtension());
   EnsureFileExportedAndDelete(ClassName + FRootList.GetBackupExtension());
 end;
@@ -391,8 +367,6 @@ var
   i: Integer;
 
 begin
-  LoadItems();
-
   for i := 0 to FTestItems.Count - 1 do
     TestExport(FTestItems[i]);
 end;
@@ -469,8 +443,6 @@ var
   i: Integer;
 
 begin
-  LoadItems();
-
   for i := 0 to FTestItems.Count - 1 do
     TestRename(FTestItems[i]);
 end;
@@ -497,59 +469,64 @@ begin
       Continue;
 
     FTestItems.Append(GetItemName(Location));
+    AddTestItemEnabled(Location);
     FErasableTestItems.Append(GetItemName(Location, True));
+    AddTestItemEnabled(Location, True);
   end;  //of for
+
+  FRootList.Search(True);
 end;
 
 procedure TStartupListTest.TestAddNewItem;
+const
+  cNewStartupUserCaption = 'New Startup User item';
+  cNewStartupItemCaption = 'New Startup item';
+
+var
+  ExpectedCount: Integer;
+
 begin
   // Add .exe to autostart
-  CheckTrue(TStartupList(FRootList).Add(cNewTestExe, cNewTestArgument, GetItemName(slStartupUser)), 'Item could not be added');
+  ExpectedCount := FRootList.Count + 1;
+  CheckTrue(TStartupList(FRootList).Add('C:\Windows\explorer.exe', cNewTestArgument, cNewStartupUserCaption), 'Item could not be added');
   Check(TStartupList(FRootList).Last is TStartupUserItem, '.exe must be added as TStartupUserItem');
   Check((TStartupList(FRootList).Last as TStartupUserItem).StartupUser, 'New item must be added to current user startup and not common startup');
-  CheckEquals(1, FRootList.Count, 'Count was not increased');
-  TestDelete(GetItemName(slStartupUser));
+  CheckEquals(ExpectedCount, FRootList.Count, 'Count was not increased');
+  FTestItems.Add(cNewStartupUserCaption + TLnkFile.FileExtension);
 
   // Add .bat to autostart
-  CheckTrue(TStartupList(FRootList).Add(cTestFilesDir +'HKCU.bat', cNewTestArgument, GetItemName(slHkcuRun)), 'Item could not be added');
+  ExpectedCount := FRootList.Count + 1;
+  CheckTrue(TStartupList(FRootList).Add(cTestFilesDir +'HKCU.bat', cNewTestArgument, cNewStartupItemCaption), 'Item could not be added');
   Check(TStartupList(FRootList).Last is TStartupItem, '.bat must be added as TStartupItem');
-  CheckEquals(1, FRootList.Count, 'Count was not increased');
-  TestDelete(GetItemName(slHkcuRun));
+  CheckEquals(ExpectedCount, FRootList.Count, 'Count was not increased');
+  FTestItems.Add(cNewStartupItemCaption);
 end;
 
 procedure TStartupListTest.ImportUserBackup;
 begin
-  Check(TStartupList(FRootList).ImportBackup(cTestFilesDir + GetItemName(slStartupUser) +  TStartupUserItem.FileExtensionStartupUser), 'Startup User file already exists!');
+  Check(TStartupList(FRootList).ImportBackup(cTestFilesDir + cStartupUserImported + TStartupUserItem.FileExtensionStartupUser), 'Startup User file already exists!');
 end;
 
 procedure TStartupListTest.TestImportBackup;
+var
+  ExpectedCount: Integer;
+
 begin
+  ExpectedCount := FRootList.Count + 1;
   ImportUserBackup;
+  FTestItems.Add(cStartupUserImported);
   CheckException(ImportUserBackup, EAlreadyExists, 'Startup User file already exists so it must not be possible to import it again!');
 
   // Admin access rights are needed when importing into all users location
   if HasAdminAccessRights() then
   begin
-    Check(TStartupList(FRootList).ImportBackup(cTestFilesDir + GetItemName(slCommonStartup) + TStartupUserItem.FileExtensionStartupCommon), 'Startup Common file already exists!');
-    CheckEquals(2, FRootList.Count, 'After importing 2 startup backup files there should be 2 items in the list');
-    TestDelete(GetItemName(slCommonStartup));
+    Inc(ExpectedCount);
+    Check(TStartupList(FRootList).ImportBackup(cTestFilesDir + cStartupCommonImported + TStartupUserItem.FileExtensionStartupCommon), 'Startup Common file already exists!');
+    CheckEquals(ExpectedCount, FRootList.Count, 'After importing 2 startup backup files there should be 2 items in the list');
+    FTestItems.Add(cStartupCommonImported);
   end  //of begin
   else
-    CheckEquals(1, FRootList.Count, 'After importing 1 startup backup file there should be 1 items in the list');
-
-  TestDelete(GetItemName(slStartupUser));
-end;
-
-procedure TStartupListTest.AddEnabledTestItems();
-var
-  Location: TStartupLocation;
-
-begin
-  for Location := Low(TStartupLocation) to High(TStartupLocation) do
-  begin
-    AddTestItemEnabled(Location);
-    AddTestItemEnabled(Location, True);
-  end;  //of for
+    CheckEquals(ExpectedCount, FRootList.Count, 'After importing 1 startup backup file there should be 1 items in the list');
 end;
 
 procedure TStartupListTest.AddTestItemEnabled(ALocation: TStartupLocation;
@@ -617,12 +594,6 @@ begin
       Reg.Free;
     end;  //of try
   end;
-end;
-
-procedure TStartupListTest.LoadItems();
-begin
-  TStartupList(FRootList).Search(True);
-  CheckEquals(FErasableTestItems.Count, FRootList.ErasableItemsCount, 'Count of erasable items differs from expected');
 end;
 
 procedure TStartupListTest.CleanUp;
@@ -733,33 +704,32 @@ end;
 procedure TContextListTest.SetUp;
 begin
   inherited SetUp;
-  FRootList := TRootList<TRootItem>(TContextMenuList.Create);
-
-  FTestItems.Append(cShellCMItem);
-  FTestItems.Append(cShellCMItemCascading);
-  FTestItems.Append(cShellNewCMItem);
-  FTestItems.Append(cShellExCMItem);
-
-  FErasableTestItems.Append(cShellCMItemErasable);
-  FErasableTestItems.Append(cShellExCMItemErasable);
-end;
-
-procedure TContextListTest.AddEnabledTestItems;
-begin
   Check(HasAdminAccessRights(), 'Test must be run with admin access rights!');
+
+  FRootList := TRootList<TRootItem>(TContextMenuList.Create);
+  FTestItems.Append(cShellCMItem);
   AddShellCMTestItem(cShellFileExt, cShellCMItem, cShellCMItem, cTestExe, cTestExe);
+  FTestItems.Append(cShellCMItemCascading);
   AddShellCascadingCMTestItem(cShellFileExt, cShellCMItemCascading, cShellCMItemCascading,
     cTestExe, cTestExe);
+  FTestItems.Append(cShellNewCMItem);
   AddShellExCMTestItem(cShellFileExt, cShellExCMItem, cShellExCMItem,
     cShellExGUID, cTestExe);
+  FTestItems.Append(cShellExCMItem);
   AddShellNewCMTestItem(cShellFileExt, cShellNewCMItem, cShellNewCMItem, cTestExe, cTestExe);
+  TContextMenuList(FRootList).LoadContextmenu(cShellFileExt, False);
+  CheckEquals(FTestItems.Count, FRootList.Count, 'Count of items differs from expected');
 
   // Erasable items do not have a corresponding file
   // NOTE: Only Shell and ShellEx can be erasable!
+  FErasableTestItems.Append(cShellCMItemErasable);
   AddShellCMTestItem(cShellFileExtErasable, cShellCMItemErasable, cShellCMItemErasable,
     cTestExeErasable, cTestExeErasable);
+  FErasableTestItems.Append(cShellExCMItemErasable);
   AddShellExCMTestItem(cShellFileExtErasable, cShellExCMItemErasable, cShellExCMItemErasable,
     cShellExGUIDErasable, cTestExeErasable);
+  TContextMenuList(FRootList).LoadContextmenu(cShellFileExtErasable, False);
+  CheckEquals(FErasableTestItems.Count, FRootList.ErasableItemsCount, 'Count of erasable items differs from expected');
 end;
 
 procedure TContextListTest.AddShellCascadingCMTestItem(const AFileExt, AName,
@@ -945,24 +915,19 @@ begin
   end;  //of try
 end;
 
-procedure TContextListTest.LoadItems();
-begin
-  Check(HasAdminAccessRights(), 'Test must be run with admin access rights!');
-  TContextMenuList(FRootList).LoadContextmenu(cShellFileExt, False);
-  TContextMenuList(FRootList).LoadContextmenu(cShellFileExtErasable, False);
-  CheckEquals(FErasableTestItems.Count, FRootList.ErasableItemsCount, 'Count of erasable items differs from expected');
-end;
-
 procedure TContextListTest.TestAddNewItem;
 const
-  NEW_SHELL_ITEM_CAPTION = 'Edit with notepad';
+  cNewShellItemCaption = 'Edit with notepad';
+
+var
+  ExpectedCount: Integer;
 
 begin
-  Check(HasAdminAccessRights(), 'Test must be run with admin access rights!');
-  CheckTrue(TContextMenuList(FRootList).Add(cNewTestExe, '"%1"', '.txt', NEW_SHELL_ITEM_CAPTION), 'Item could not be added');
-  CheckEquals(1, FRootList.Count, 'Count was not increased');
+  ExpectedCount := FRootList.Count + 1;
+  CheckTrue(TContextMenuList(FRootList).Add(cNewTestExe, '"%1"', '.txt', cNewShellItemCaption), 'Item could not be added');
+  CheckEquals(ExpectedCount, FRootList.Count, 'Count was not increased');
   Check(TContextMenuList(FRootList).Last is TContextMenuShellItem, 'Context menu item must be added as TContextMenuShellItem');
-  TestDelete(NEW_SHELL_ITEM_CAPTION);
+  FTestItems.Add(cNewShellItemCaption);
 end;
 
 procedure TContextListTest.TestChangeItemCommands;
@@ -1014,10 +979,10 @@ const
   );
 
 var
-  i: Integer;
+  i, ErasableItemsCount: Integer;
 
 begin
-  Check(HasAdminAccessRights(), 'Test must be run with admin access rights!');
+  ErasableItemsCount := FRootList.ErasableItemsCount;
 
   // Add Shell context menu items
   for i := Low(cNotErasableShellFilePaths) to High(cNotErasableShellFilePaths) do
@@ -1028,7 +993,7 @@ begin
     AddShellExCMTestItem(cShellNotErasableFileExt, 'ShellEx not erasable '+ IntToStr(i), '', cShellExGUID, cNotErasableShellExFilePaths[i]);
 
   TContextMenuList(FRootList).LoadContextmenu(cShellNotErasableFileExt, False);
-  CheckEquals(0, FRootList.ErasableItemsCount, 'Count of erasable items differs from expected');
+  CheckEquals(ErasableItemsCount, FRootList.ErasableItemsCount, 'Count of erasable items differs from expected');
 end;
 
 procedure TContextListTest.CleanUp;
@@ -1063,25 +1028,18 @@ end;
 procedure TServiceListTest.SetUp;
 begin
   inherited SetUp;
+  Check(HasAdminAccessRights(), 'Test must be run with admin access rights!');
+
   FRootList := TRootList<TRootItem>(TServiceList.Create);
   FTestItems.Append(cService);
-  FErasableTestItems.Append(cServiceErasable);
-end;
-
-procedure TServiceListTest.AddEnabledTestItems;
-begin
-  Check(HasAdminAccessRights(), 'Test must be run with admin access rights!');
   Check(TServiceList(FRootList).Add(cTestExe, '', cService), 'Service already exists!');
+  FErasableTestItems.Append(cServiceErasable);
   Check(TServiceList(FRootList).Add(cTestExeErasable, '', cServiceErasable), 'Service already exists!');
-  CheckEquals(2, FRootList.Count, 'Actual item count differs from expected count');
-end;
-
-procedure TServiceListTest.LoadItems();
-begin
-  Check(HasAdminAccessRights(), 'Test must be run with admin access rights!');
-  TServiceList(FRootList).LoadService(ChangeFileExt(ExtractFileName(cTestExe), ''), False);
-  TServiceList(FRootList).LoadService(ChangeFileExt(ExtractFileName(cTestExeErasable), ''), False);
   CheckEquals(FErasableTestItems.Count, FRootList.ErasableItemsCount, 'Count of erasable items differs from expected');
+  CheckEquals(2, FRootList.Count, 'Actual item count differs from expected count');
+
+  FRootList.Clear();
+  FRootList.Search(False);
 end;
 
 procedure TServiceListTest.TestRename(const AItemName: string);
@@ -1102,14 +1060,6 @@ end;
 { TTaskListTest }
 
 procedure TTaskListTest.SetUp;
-begin
-  inherited SetUp;
-  FRootList := TRootList<TRootItem>(TTaskList.Create);
-  FTestItems.Append(cTask);
-  FErasableTestItems.Append(cTaskErasable);
-end;
-
-procedure TTaskListTest.AddEnabledTestItems;
 
   procedure ImportTask(const AName: string);
   var
@@ -1123,17 +1073,19 @@ procedure TTaskListTest.AddEnabledTestItems;
   end;
 
 begin
+  inherited SetUp;
   Check(HasAdminAccessRights(), 'Test must be run with admin access rights!');
-  ImportTask(cTask);
-  ImportTask(cTaskErasable);
-  CheckEquals(2, FRootList.Count, 'Actual item count differs from expected count');
-end;
 
-procedure TTaskListTest.LoadItems();
-begin
-  Check(HasAdminAccessRights(), 'Test must be run with admin access rights!');
-  TTaskList(FRootList).Search(False);
+  FRootList := TRootList<TRootItem>(TTaskList.Create);
+  FTestItems.Append(cTask);
+  ImportTask(cTask);
+  FErasableTestItems.Append(cTaskErasable);
+  ImportTask(cTaskErasable);
   CheckEquals(FErasableTestItems.Count, FRootList.ErasableItemsCount, 'Count of erasable items differs from expected');
+  CheckEquals(2, FRootList.Count, 'Actual item count differs from expected count');
+
+  FRootList.Clear();
+  FRootList.Search(False);
 end;
 
 initialization
