@@ -1457,8 +1457,6 @@ type
   /// </summary>
   TStartupList = class(TRootList<TStartupListItem>, IImportableList)
   private
-    function AddNewStartupUserItem(const AName: string; const AFileName: TFileName;
-      const AArguments: string = ''; AStartupUser: Boolean = True): Boolean;
     function LoadStatus(const AName: string;
       AStartupLocation: TStartupLocation): TStartupItemStatus;
   public
@@ -1474,6 +1472,9 @@ type
     /// <param name="ACaption">
     ///   The display name.
     /// </param>
+    /// <param name="AStartupUser">
+    ///   Item is located in autostart of current user or in common autostart.
+    /// </param>
     /// <returns>
     ///   <c>True</c> if the item was successfully added or <c>False</c> otherwise.
     /// </returns>
@@ -1481,7 +1482,8 @@ type
     ///   <c>EListBlocked</c> if another operation is pending on the list.
     ///   <c>EAlreadyExists</c> if item already exists.
     /// </exception>
-    function Add(const AFileName, AArguments, ACaption: string): Boolean; overload;
+    function Add(const AFileName, AArguments, ACaption: string;
+      AStartupUser: Boolean = True): Boolean; overload;
 
     /// <summary>
     ///   Exports the complete list as file.
@@ -4374,8 +4376,7 @@ begin
     [TStartupUserItem.FileExtensionStartupUser, TStartupUserItem.FileExtensionStartupCommon]);
 end;
 
-function TStartupList.AddNewStartupUserItem(const AName: string;
-  const AFileName: TFileName; const AArguments: string = '';
+function TStartupList.Add(const AFileName, AArguments, ACaption: string;
   AStartupUser: Boolean = True): Boolean;
 const
   cStartupUserLocation: array[Boolean] of TStartupLocation = (
@@ -4384,46 +4385,11 @@ const
   );
 
 var
-  i: Integer;
-  LnkFile: TLnkFile;
-
-begin
-  // File path already exists in another item?
-  for i := 0 to Count - 1 do
-  begin
-    if string(Items[i].Command).Contains(AFileName) then
-      raise EAlreadyExists.CreateFmt('Item "%s" already exists!', [AFileName]);
-  end;  //of for
-
-  // Prepare .lnk file
-  LnkFile := TLnkFile.Create(cStartupUserLocation[AStartupUser].GetLocation().Value
-    + ChangeFileExt(AName, TLnkFile.FileExtension));
-
-  with LnkFile do
-  begin
-    ExeFileName := AFileName;
-    Arguments := AArguments;
-  end;  //of with
-
-  // Link file created successfully?
-  if not LnkFile.Save() then
-    raise EStartupException.CreateFmt('Could not create "%s"!', [LnkFile.FileName]);
-
-  // Add item to list
-  Result := (Add(TStartupUserItem.Create(ExtractFileName(LnkFile.FileName),
-    LnkFile.Command, LnkFile.FileName, True, AStartupUser, LnkFile)) <> -1);
-
-  // Windows 8?
-  if (Result and CheckWin32Version(6, 2)) then
-    // Write the StartupApproved value
-    Last.Enabled := True;
-end;
-
-function TStartupList.Add(const AFileName, AArguments, ACaption: string): Boolean;
-var
-  Name, Ext: string;
+  Name, Ext, LnkFileName: string;
   Command: TCommandString;
   Reg: TRegistry;
+  LnkFile: TLnkFile;
+  i :Integer;
 
 begin
   Result := False;
@@ -4447,7 +4413,41 @@ begin
     try
       // Add new startup user item?
       if (Ext = '.exe') then
-        Result := AddNewStartupUserItem(ACaption, AFileName, AArguments)
+      begin
+        // File path already exists in another item?
+        for i := 0 to Count - 1 do
+        begin
+          if string(Items[i].Command).Contains(AFileName) then
+            raise EAlreadyExists.CreateFmt('Item "%s" already exists!', [AFileName]);
+        end;  //of for
+
+        LnkFileName := cStartupUserLocation[AStartupUser].GetLocation().Value
+          + ChangeFileExt(ACaption, TLnkFile.FileExtension);
+
+        // Do not overwrite existing item
+        if FileExists(LnkFileName) then
+          raise EAlreadyExists.CreateFmt('Item "%s" already exists!', [LnkFileName]);
+
+        // Prepare .lnk file
+        LnkFile := TLnkFile.Create(LnkFileName);
+
+        with LnkFile do
+        begin
+          ExeFileName := AFileName;
+          Arguments := AArguments;
+        end;  //of with
+
+        // Link file created successfully?
+        if not LnkFile.Save() then
+        begin
+          FreeAndNil(LnkFile);
+          raise EStartupException.CreateFmt('Could not create "%s"!', [LnkFileName]);
+        end;  //of begin
+
+        // Add item to list
+        Result := (Add(TStartupUserItem.Create(ExtractFileName(LnkFileName),
+          LnkFile.Command, LnkFile.FileName, True, AStartupUser, LnkFile)) <> -1);
+      end  //of begin
       else
       begin
         // No WOW64 redirection on HKCU!
@@ -4469,16 +4469,16 @@ begin
           Result := (Add(TStartupItem.Create(ACaption, Command, TStartupItem.StartupRunKey,
             rkHKCU, True, False, False)) <> -1);
 
-          // Windows 8?
-          if (Result and CheckWin32Version(6, 2)) then
-            // Write the StartupApproved value
-            Last.Enabled := True;
-
         finally
           Reg.CloseKey();
           Reg.Free;
         end;  //of try
       end;  //of begin
+
+      // Windows 8?
+      if (Result and CheckWin32Version(6, 2)) then
+        // Write the StartupApproved value
+        Last.Enabled := True;
 
     finally
       FExportLock.Release();
@@ -4554,7 +4554,6 @@ begin
       raise EListBlocked.Create(SOperationPending);
 
     try
-      // Init new .lnk file
       LnkFile := TLnkFile.Create(AFileName);
 
       // Set the name of item
@@ -4563,8 +4562,7 @@ begin
 
       try
         // Create .lnk file and add it to list
-        Result := AddNewStartupUserItem(Name, LnkFile.ExeFileName, LnkFile.Arguments,
-          (Ext = TStartupUserItem.FileExtensionStartupUser));
+        Result := Add(LnkFile.ExeFileName, LnkFile.Arguments, Name, (Ext = TStartupUserItem.FileExtensionStartupUser));
 
       finally
         LnkFile.Free;
@@ -4576,7 +4574,7 @@ begin
 
   finally
     FSearchLock.Release();
-  end;
+  end;  //of try
 end;
 
 procedure TStartupList.LoadDisabled(AStartupUser: Boolean);
