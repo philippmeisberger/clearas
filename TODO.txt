@@ -12,8 +12,8 @@ Ideas:
 - Two execution modes
   - Admin: Read and edit all items (like now)
   - User: Read and edit only items owned by user
-- Add items to listview async
-  - Allow editing at same time
+- Support changing "Extended" attribute of Shell context menu items
+- Support Shell extensions whose key is a GUID
 - Visual grouping
 - Context menu: support cascading shell submenus (ExtendedSubCommandsKey)
 - Receive notifications about registry changes
