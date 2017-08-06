@@ -2655,10 +2655,16 @@ begin
         mtWarning, [mbOK], 0);
     end;
 
-    on E: EWarning do
+    on E: EAssertionFailed do
+    begin
+      TaskMessageDlg(StripHotKey(mmAdd.Caption) + FLang.GetString(LID_IMPOSSIBLE),
+        E.Message, mtWarning, [mbOK], 0);
+    end;
+
+    on E: EAlreadyExists do
     begin
       TaskMessageDlg(FLang.GetString([LID_BACKUP_IMPORT, LID_IMPOSSIBLE]),
-        E.Message, mtWarning, [mbOK], 0);
+        FLang.GetString(LID_ITEM_ALREADY_EXISTS), mtWarning, [mbOK], 0);
     end;
 
     on E: Exception do

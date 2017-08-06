@@ -1514,6 +1514,7 @@ type
     /// </returns>
     /// <exception>
     ///   <c>EListBlocked</c> if another operation is pending on the list.
+    ///   <c>EAlreadyExists</c> if item already exists.
     /// </exception>
     function ImportBackup(const AFileName: TFileName): Boolean;
 
