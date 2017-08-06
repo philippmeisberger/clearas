@@ -2865,7 +2865,7 @@ begin
     Reg.RootKey := AHKey;
 
     if not Reg.OpenKey(AKeyPath, False) then
-      raise Exception.CreateFmt('Key "%s" does not exist!', [AKeyPath]);
+      raise Exception.CreateFmt('Could not open key "%s": %s', [AKeyPath, Reg.LastErrorMsg]);
 
     if Reg.KeyExists(AKeyName) then
       Result := Reg.DeleteKey(AKeyName)
