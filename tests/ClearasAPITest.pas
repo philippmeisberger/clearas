@@ -980,17 +980,26 @@ const
 
 var
   i, ErasableItemsCount: Integer;
+  Name: string;
 
 begin
   ErasableItemsCount := FRootList.ErasableItemsCount;
 
   // Add Shell context menu items
   for i := Low(cNotErasableShellFilePaths) to High(cNotErasableShellFilePaths) do
-    AddShellCMTestItem(cShellNotErasableFileExt, 'Shell not erasable ' + IntToStr(i), '', '', cNotErasableShellFilePaths[i]);
+  begin
+    Name := 'Shell not erasable ' + IntToStr(i);
+    AddShellCMTestItem(cShellNotErasableFileExt, Name, '', '', cNotErasableShellFilePaths[i]);
+    FTestItems.Append(Name);
+  end;
 
   // Add ShellEx context menu items
   for i := Low(cNotErasableShellExFilePaths) to High(cNotErasableShellExFilePaths) do
-    AddShellExCMTestItem(cShellNotErasableFileExt, 'ShellEx not erasable '+ IntToStr(i), '', cShellExGUID, cNotErasableShellExFilePaths[i]);
+  begin
+    Name := 'ShellEx not erasable '+ IntToStr(i);
+    AddShellExCMTestItem(cShellNotErasableFileExt, Name, '', cShellExGUID, cNotErasableShellExFilePaths[i]);
+    FTestItems.Append(Name);
+  end;
 
   TContextMenuList(FRootList).LoadContextmenu(cShellNotErasableFileExt, False);
   CheckEquals(ErasableItemsCount, FRootList.ErasableItemsCount, 'Count of erasable items differs from expected');
