@@ -391,6 +391,9 @@ type
     ///   selects this file. If the file does not exist a <see cref="EWarning"/>
     ///   is raised.
     /// </summary>
+    /// <exception>
+    ///   <c>EWarning</c> if file does not exist.
+    /// </exception>
     procedure OpenInExplorer();
 
     /// <summary>

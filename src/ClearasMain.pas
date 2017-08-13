@@ -1182,6 +1182,9 @@ begin
   Result := False;
 
   try
+    if not Assigned(AItem) then
+      raise EInvalidItem.Create(SNoItemSelected);
+
     SelectedList := GetSelectedList();
 
     // Set a default file name
