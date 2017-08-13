@@ -509,10 +509,7 @@ begin
 
   except
     on E: EInvalidItem do
-    begin
-      TaskMessageDlg(FLang.GetString([LID_REFRESH, LID_IMPOSSIBLE]),
-        FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
-    end;
+      MessageDlg(FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
 
     on E: EListBlocked do
     begin
@@ -1217,10 +1214,7 @@ begin
 
   except
     on E: EInvalidItem do
-    begin
-      TaskMessageDlg(FLang.GetString([LID_EXPORT, LID_IMPOSSIBLE]),
-        FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
-    end;
+      MessageDlg(FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
 
     on E: Exception do
       FLang.ShowException(FLang.GetString([LID_EXPORT, LID_IMPOSSIBLE]), E.Message);
@@ -1311,10 +1305,7 @@ begin
 
   except
     on E: EInvalidItem do
-    begin
-      TaskMessageDlg(FLang.GetString([LID_DELETE_ERASABLE, LID_IMPOSSIBLE]),
-        FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
-    end;
+      MessageDlg(FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
 
     on E: EListBlocked do
     begin
@@ -1439,10 +1430,7 @@ begin
 
   except
     on E: EInvalidItem do
-    begin
-      TaskMessageDlg(FLang.GetString([LID_DELETE, LID_IMPOSSIBLE]),
-        FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
-    end;
+      MessageDlg(FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
 
     on E: EListBlocked do
     begin
@@ -1451,10 +1439,7 @@ begin
     end;
 
     on E: EWarning do
-    begin
-      TaskMessageDlg(FLang.GetString([LID_DELETE, LID_IMPOSSIBLE]), E.Message,
-        mtWarning, [mbOK], 0);
-    end;
+      MessageDlg(E.Message, mtWarning, [mbOK], 0);
 
     on E: Exception do
       FLang.ShowException(FLang.GetString([LID_DELETE, LID_IMPOSSIBLE]), E.Message);
@@ -1528,10 +1513,7 @@ begin
 
   except
     on E: EInvalidItem do
-    begin
-      TaskMessageDlg(FLang.GetString([LID_DISABLE, LID_IMPOSSIBLE]),
-        FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
-    end;
+      MessageDlg(FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
 
     on E: EListBlocked do
     begin
@@ -1540,10 +1522,7 @@ begin
     end;
 
     on E: EWarning do
-    begin
-      TaskMessageDlg(FLang.GetString([LID_DISABLE, LID_IMPOSSIBLE]), E.Message,
-        mtWarning, [mbOK], 0);
-    end;
+      MessageDlg(E.Message, mtWarning, [mbOK], 0);
 
     on E: Exception do
       FLang.ShowException(FLang.GetString([LID_DISABLE, LID_IMPOSSIBLE]), E.Message);
@@ -1617,10 +1596,7 @@ begin
 
   except
     on E: EInvalidItem do
-    begin
-      TaskMessageDlg(FLang.GetString([LID_ENABLE, LID_IMPOSSIBLE]),
-        FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
-    end;
+      MessageDlg(FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
 
     on E: EListBlocked do
     begin
@@ -1629,10 +1605,7 @@ begin
     end;
 
     on E: EWarning do
-    begin
-      TaskMessageDlg(FLang.GetString([LID_ENABLE, LID_IMPOSSIBLE]),
-        E.Message, mtWarning, [mbOK], 0);
-    end;
+      MessageDlg(E.Message, mtWarning, [mbOK], 0);
 
     on E: Exception do
       FLang.ShowException(FLang.GetString([LID_ENABLE, LID_IMPOSSIBLE]), E.Message);
@@ -2051,10 +2024,7 @@ begin
 
   except
     on E: EInvalidItem do
-    begin
-      TaskMessageDlg(FLang.GetString([LID_CONTEXT_MENU_ICON_CHANGE, LID_IMPOSSIBLE]),
-        FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
-    end;
+      MessageDlg(FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
 
     on E: Exception do
     begin
@@ -2092,10 +2062,7 @@ begin
 
   except
     on E: EInvalidItem do
-    begin
-      TaskMessageDlg(FLang.GetString([LID_CONTEXT_MENU_ICON_DELETE, LID_IMPOSSIBLE]),
-        FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
-    end;
+      MessageDlg(FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
 
     on E: Exception do
     begin
@@ -2122,10 +2089,7 @@ begin
     end;
 
     on E: EInvalidItem do
-    begin
-      TaskMessageDlg(FLang.GetString([LID_OPEN_IN_EXPLORER, LID_IMPOSSIBLE]),
-        FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
-    end;
+      MessageDlg(FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
   end;  //of try
 end;
 
@@ -2146,10 +2110,7 @@ begin
 
   except
     on E: EInvalidItem do
-    begin
-      TaskMessageDlg(FLang.GetString([LID_OPEN_IN_REGEDIT, LID_IMPOSSIBLE]),
-        FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
-    end;
+      MessageDlg(FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
   end;  //of try
 end;
 
@@ -2180,7 +2141,7 @@ begin
 
   except
     on E: EInvalidItem do
-      TaskMessageDlg('', FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
+      MessageDlg(FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
   end;  //of try
 end;
 
@@ -2217,10 +2178,7 @@ begin
 
   except
     on E: EInvalidItem do
-    begin
-      TaskMessageDlg(FLang.GetString([LID_RENAME, LID_IMPOSSIBLE]),
-        FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
-    end;
+      MessageDlg(FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
 
     on E: EListBlocked do
     begin
@@ -2229,10 +2187,7 @@ begin
     end;
 
     on E: EWarning do
-    begin
-      TaskMessageDlg(FLang.GetString([LID_RENAME, LID_IMPOSSIBLE]),
-        FLang.GetString(LID_ITEM_ALREADY_EXISTS), mtWarning, [mbOK], 0);
-    end;
+      MessageDlg(E.Message, mtWarning, [mbOK], 0);
 
     on E: Exception do
       FLang.ShowException(FLang.GetString([LID_RENAME, LID_IMPOSSIBLE]), E.Message);
@@ -2344,10 +2299,7 @@ begin
 
   except
     on E: EInvalidItem do
-    begin
-      TaskMessageDlg(FLang.GetString([LID_LOCATION_COPY, LID_IMPOSSIBLE]),
-        FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
-    end;
+      MessageDlg(FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
   end;  //of try
 end;
 
@@ -2403,10 +2355,7 @@ begin
 
   except
     on E: EInvalidItem do
-    begin
-      TaskMessageDlg(FLang.GetString([LID_PATH_EDIT, LID_IMPOSSIBLE]),
-        FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
-    end;
+      MessageDlg(FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
 
     on E: EListBlocked do
     begin
@@ -2426,10 +2375,7 @@ begin
 
   except
     on E: EInvalidItem do
-    begin
-      TaskMessageDlg(FLang.GetString([LID_EXECUTE, LID_IMPOSSIBLE]),
-        FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
-    end;
+      MessageDlg(FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
 
     on E: Exception do
       FLang.ShowException(FLang.GetString([LID_EXECUTE, LID_IMPOSSIBLE]), E.Message);
@@ -2531,16 +2477,10 @@ begin
     end;
 
     on E: EAlreadyExists do
-    begin
-      TaskMessageDlg(StripHotKey(mmAdd.Caption) + FLang.GetString(LID_IMPOSSIBLE),
-        FLang.GetString(LID_ITEM_ALREADY_EXISTS), mtError, [mbOK], 0);
-    end;
+      MessageDlg(FLang.GetString(LID_ITEM_ALREADY_EXISTS), mtError, [mbOK], 0);
 
     on E: EAssertionFailed do
-    begin
-      TaskMessageDlg(StripHotKey(mmAdd.Caption) + FLang.GetString(LID_IMPOSSIBLE),
-        E.Message, mtError, [mbOK], 0);
-    end;
+      MessageDlg(E.Message, mtError, [mbOK], 0);
 
     on E: Exception do
     begin
@@ -2614,10 +2554,7 @@ begin
 
   except
     on E: EInvalidItem do
-    begin
-      TaskMessageDlg(FLang.GetString([LID_ITEMS_EXPORT, LID_IMPOSSIBLE]),
-        FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
-    end;
+      MessageDlg(FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
 
     on E: EListBlocked do
     begin
@@ -2653,10 +2590,7 @@ begin
 
   except
     on E: EInvalidItem do
-    begin
-      TaskMessageDlg(FLang.GetString([LID_BACKUP_IMPORT, LID_IMPOSSIBLE]),
-        FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
-    end;
+      MessageDlg(FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
 
     on E: EListBlocked do
     begin
@@ -2665,16 +2599,10 @@ begin
     end;
 
     on E: EAssertionFailed do
-    begin
-      TaskMessageDlg(StripHotKey(mmAdd.Caption) + FLang.GetString(LID_IMPOSSIBLE),
-        E.Message, mtError, [mbOK], 0);
-    end;
+      MessageDlg(E.Message, mtError, [mbOK], 0);
 
     on E: EAlreadyExists do
-    begin
-      TaskMessageDlg(FLang.GetString([LID_BACKUP_IMPORT, LID_IMPOSSIBLE]),
-        FLang.GetString(LID_ITEM_ALREADY_EXISTS), mtError, [mbOK], 0);
-    end;
+      MessageDlg(FLang.GetString(LID_ITEM_ALREADY_EXISTS), mtError, [mbOK], 0);
 
     on E: Exception do
     begin
