@@ -28,8 +28,6 @@ type
     FRootList: TRootList<TRootItem>;
     FTestItems,
     FErasableTestItems: TStringList;
-    // TODO: Remove CleanUp as not needed
-    procedure CleanUp; virtual;
     function GetItemForName(const AItemName: string): TRootItem;
     procedure TestChangeStatus(const AItemName: string);
     procedure TestDelete(const AItemName: string);
@@ -58,13 +56,11 @@ type
   private
     procedure AddTestItemEnabled(ALocation: TStartupLocation;
       AErasable: Boolean = False);
-    procedure DeleteTestItem(ALocation: TStartupLocation);
     function GetItemName(ALocation: TStartupLocation;
       AErasable: Boolean = False): string;
     procedure ImportUserBackup;
   public
     procedure SetUp; override;
-    procedure CleanUp; override;
   published
     procedure TestAddNewItem;
     procedure TestImportBackup;
@@ -95,10 +91,10 @@ type
     procedure AddShellNewCMTestItem(const AFileExt, AName, ACaption, AIcon,
       AFileName: string);
   protected
-    procedure CleanUp; override;
     procedure TestRename(const AItemName: string); override;
   public
     procedure SetUp; override;
+    procedure TearDown; override;
   published
     procedure TestAddNewItem;
     procedure TestChangeItemCommands; override;
@@ -199,11 +195,6 @@ begin
     FreeAndNil(FTestItems);
     inherited TearDown;
   end;
-end;
-
-procedure TRootListTest.CleanUp;
-begin
-  // Nothing to clean up here!
 end;
 
 procedure TRootListTest.EnsureFileExportedAndDelete(const AFileName: string);
@@ -343,7 +334,7 @@ begin
   ChangeStatus(SelectedItem, False);
   ChangeStatus(SelectedItem, True);
 
-  // Disable again to test deleting of disabled item
+  // Disable again to test deletion of disabled item
   ChangeStatus(SelectedItem, False);
 end;
 
@@ -489,7 +480,7 @@ begin
   // Add .exe to autostart
   ExpectedCount := FRootList.Count + 1;
   CheckTrue(TStartupList(FRootList).Add('C:\Windows\explorer.exe', cNewTestArgument, cNewStartupUserCaption), 'Item could not be added');
-  Check(TStartupList(FRootList).Last is TStartupUserItem, '.exe must be added as TStartupUserItem');
+  CheckIs(TStartupList(FRootList).Last, TStartupUserItem, '.exe files must be added as TStartupUserItem');
   Check((TStartupList(FRootList).Last as TStartupUserItem).StartupUser, 'New item must be added to current user startup and not common startup');
   CheckEquals(ExpectedCount, FRootList.Count, 'Count was not increased');
   FTestItems.Add(cNewStartupUserCaption + TLnkFile.FileExtension);
@@ -497,7 +488,7 @@ begin
   // Add .bat to autostart
   ExpectedCount := FRootList.Count + 1;
   CheckTrue(TStartupList(FRootList).Add(cTestFilesDir +'HKCU.bat', cNewTestArgument, cNewStartupItemCaption), 'Item could not be added');
-  Check(TStartupList(FRootList).Last is TStartupItem, '.bat must be added as TStartupItem');
+  CheckIs(TStartupList(FRootList).Last, TStartupItem, '.bat files must be added as TStartupItem');
   CheckEquals(ExpectedCount, FRootList.Count, 'Count was not increased');
   FTestItems.Add(cNewStartupItemCaption);
 end;
@@ -588,84 +579,6 @@ begin
       Reg.OpenKey(ALocation.GetLocation().Value, False);
       Reg.WriteString(ItemName, ExeName);
       CheckEqualsString('', Reg.LastErrorMsg, Reg.LastErrorMsg);
-
-    finally
-      Reg.CloseKey();
-      Reg.Free;
-    end;  //of try
-  end;
-end;
-
-procedure TStartupListTest.CleanUp;
-var
-  Location: TStartupLocation;
-
-begin
-  for Location := Low(TStartupLocation) to High(TStartupLocation) do
-    DeleteTestItem(Location);
-end;
-
-procedure TStartupListTest.DeleteTestItem(ALocation: TStartupLocation);
-var
-  Reg: TRegistry;
-  LnkFile: TLnkFile;
-
-begin
-  if (ALocation in [slStartupUser, slCommonStartup]) then
-  begin
-    LnkFile := TLnkFile.Create(ALocation.GetLocation().Value + GetItemName(ALocation));
-
-    try
-      with LnkFile do
-      begin
-        ExeFileName := cTestExe;
-        Arguments := '-s';
-      end;  //of with
-
-      if LnkFile.Exists() then
-        CheckTrue(LnkFile.Delete(), 'Could not delete .lnk file!');
-
-    finally
-      LnkFile.Free;
-    end;  //of try
-  end  //of begin
-  else
-  begin
-    // 32 bit OS
-    if (TOSVersion.Architecture = arIntelX86) and (ALocation in [slHklmRun32, slHklmRunOnce32]) then
-      Exit;
-
-    if (ALocation in [slHklmRun32, slHklmRunOnce32]) then
-      Reg := TRegistry.Create(KEY_WOW64_32KEY or KEY_READ or KEY_WRITE)
-    else
-      Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
-
-    try
-      Reg.RootKey := ALocation.GetLocation().Key;
-      Reg.OpenKey(ALocation.GetLocation().Value, False);
-
-      if Reg.ValueExists(GetItemName(ALocation)) then
-      begin
-        CheckTrue(Reg.DeleteValue(GetItemName(ALocation)), 'Could not delete Registry value: '+ GetItemName(ALocation) +'!');
-        CheckEqualsString('', Reg.LastErrorMsg, Reg.LastErrorMsg);
-      end;  //of begin
-
-      Reg.CloseKey();
-
-      if not CheckWin32Version(6, 2) then
-      begin
-        // Delete item from disabled location (prior to Windows 7)
-        Reg.RootKey := HKEY_LOCAL_MACHINE;
-        Reg.OpenKey(TStartupItem.DisabledKey, False);
-        Reg.DeleteKey(GetItemName(ALocation));
-      end  //of begin
-      else
-      begin
-        // Delete item from approved location (since Windows 8)
-        Reg.RootKey := ALocation.GetApprovedLocation().Key;
-        Reg.OpenKey(ALocation.GetApprovedLocation().Value, False);
-        Reg.DeleteValue(GetItemName(ALocation));
-      end;  //of if
 
     finally
       Reg.CloseKey();
@@ -915,6 +828,36 @@ begin
   end;  //of try
 end;
 
+procedure TContextListTest.TearDown;
+var
+  Reg: TRegistry;
+
+begin
+  inherited TearDown;
+
+  if not HasAdminAccessRights() then
+    Exit;
+
+  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
+
+  try
+    Reg.RootKey := HKEY_CLASSES_ROOT;
+    Reg.DeleteKey(cShellFileExt);
+    Reg.DeleteKey(cShellFileExtErasable);
+    Reg.DeleteKey(cShellNewCMItem);
+    Reg.DeleteKey(cShellNotErasableFileExt);
+    Reg.DeleteKey('CLSID\'+ cShellExGUID);
+
+    Reg.RootKey := HKEY_LOCAL_MACHINE;
+    Reg.DeleteKey(KEY_COMMAND_STORE +'\'+ cShellCMCascadingSubItem1);
+    Reg.DeleteKey(KEY_COMMAND_STORE +'\'+ cShellCMCascadingSubItem2);
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
+  end;  //of try
+end;
+
 procedure TContextListTest.TestAddNewItem;
 const
   cNewShellItemCaption = 'Edit with notepad';
@@ -1003,32 +946,6 @@ begin
 
   TContextMenuList(FRootList).LoadContextmenu(cShellNotErasableFileExt, False);
   CheckEquals(ErasableItemsCount, FRootList.ErasableItemsCount, 'Count of erasable items differs from expected');
-end;
-
-procedure TContextListTest.CleanUp;
-var
-  Reg: TRegistry;
-
-begin
-  Check(HasAdminAccessRights(), 'Test must be run with admin access rights!');
-  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
-
-  try
-    Reg.RootKey := HKEY_CLASSES_ROOT;
-    Reg.DeleteKey(cShellFileExt);
-    Reg.DeleteKey(cShellFileExtErasable);
-    Reg.DeleteKey(cShellNewCMItem);
-    Reg.DeleteKey(cShellNotErasableFileExt);
-    Reg.DeleteKey('CLSID\'+ cShellExGUID);
-
-    Reg.RootKey := HKEY_LOCAL_MACHINE;
-    Reg.DeleteKey(KEY_COMMAND_STORE +'\'+ cShellCMCascadingSubItem1);
-    Reg.DeleteKey(KEY_COMMAND_STORE +'\'+ cShellCMCascadingSubItem2);
-
-  finally
-    Reg.CloseKey();
-    Reg.Free;
-  end;  //of try
 end;
 
 
