@@ -2136,7 +2136,8 @@ begin
         fMask := SEE_MASK_INVOKEIDLIST;
       end;  //of with
 
-      ShellExecuteEx(@ShellExecuteInfo);
+      if not ShellExecuteEx(@ShellExecuteInfo) then
+        MessageDlg(SysErrorMessage(GetLastError()), mtError, [mbOK], 0);
     end;  //of begin
 
   except
