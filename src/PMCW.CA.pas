@@ -12,7 +12,7 @@ interface
 
 uses
   Winapi.Windows, System.Classes, System.SysUtils, System.Win.Registry,
-  PMCW.SysUtils;
+  Winapi.ShellAPI;
 
 const
   /// <summary>
@@ -47,9 +47,9 @@ function CertificateExists(): Boolean;
 /// </exception>
 procedure InstallCertificate();
 
-{$R PMCW.CA.res}
-
 implementation
+
+{$R PMCW.CA.res}
 
 function CertificateExists(): Boolean;
 var
@@ -74,6 +74,7 @@ procedure InstallCertificate();
 var
   ResourceStream: TResourceStream;
   FileName: string;
+  ShellExecuteInfo: TShellExecuteInfo;
 
 begin
   ResourceStream := TResourceStream.Create(HInstance, RESOURCE_CA, RT_RCDATA);
@@ -84,7 +85,20 @@ begin
     ResourceStream.SaveToFile(FileName);
 
     // Install certificate
-    if not ShellExec('open', 'certutil.exe', '-user -addstore ROOT "'+ FileName +'"', SW_HIDE) then
+    ZeroMemory(@ShellExecuteInfo, SizeOf(TShellExecuteInfo));
+
+    with ShellExecuteInfo do
+    begin
+      cbSize := SizeOf(TShellExecuteInfo);
+      Wnd := 0;
+      lpVerb := 'open';
+      lpFile := 'certutil.exe';
+      lpParameters := PChar(Format('-user -addstore ROOT "%s"', [FileName]));
+      lpDirectory := nil;
+      nShow := SW_HIDE;
+    end;  //of with
+
+    if not ShellExecuteEx(@ShellExecuteInfo) then
       raise EOSError.Create(SysErrorMessage(GetLastError()));
 
   finally

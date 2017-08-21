@@ -110,28 +110,6 @@ function LoadResourceString(const AResource: string; const AIdent: Word;
   const ADefault: string = ''): string;
 
 /// <summary>
-///   Performs an operation on a specified file.
-/// </summary>
-/// <param name="AOperation">
-///   The operation to perform.
-/// </param>
-/// <param name="AFileName">
-///   Object on which to execute the specified operation.
-/// </param>
-/// <param name="AArguments">
-///   Optional arguments passed to the program.
-/// </param>
-/// <param name="AShow">
-///   Optional: The show mode.
-/// </param>
-/// <returns>
-///   <c>True</c> if the operation was successfully executed or <c>False</c>
-///   otherwise.
-/// </returns>
-function ShellExec(const AOperation, AFileName: string; const AArguments: string = '';
-  AShow: Integer = SW_SHOWNORMAL): Boolean;
-
-/// <summary>
 ///   Expands an environment variable.
 /// </summary>
 /// <param name="AVariable">
@@ -248,13 +226,6 @@ begin
 {$ENDIF}
 end;
 
-function ShellExec(const AOperation, AFileName: string; const AArguments: string = '';
-  AShow: Integer = SW_SHOWNORMAL): Boolean;
-begin
-  Result := (ShellExecute(0, PChar(AOperation), PChar(AFileName), PChar(AArguments),
-    nil, AShow) > 32);
-end;
-
 function ExpandEnvironmentVar(var AVariable: string): Boolean;
 var
   BufferSize: Integer;
@@ -363,8 +334,24 @@ begin
   end;  //of try
 end;
 {$ELSE}
+var
+  ShellExecuteInfo: TShellExecuteInfo;
+
 begin
-  Result := ShellExec('open', AUrl, '', SW_SHOWNORMAL);
+  ZeroMemory(@ShellExecuteInfo, SizeOf(TShellExecuteInfo));
+
+  with ShellExecuteInfo do
+  begin
+    cbSize := SizeOf(TShellExecuteInfo);
+    Wnd := 0;
+    lpVerb := 'open';
+    lpFile := PChar(AUrl);
+    lpDirectory := nil;
+    lpParameters := nil;
+    nShow := SW_SHOWDEFAULT;
+  end;  //of with
+
+  Result := ShellExecuteEx(@ShellExecuteInfo);
 end;
 {$ENDIF}
 

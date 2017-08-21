@@ -13,7 +13,8 @@ interface
 uses
   Winapi.Windows, System.SysUtils, System.Classes, Vcl.Dialogs, Vcl.Forms,
   Vcl.StdCtrls, Vcl.ComCtrls, System.UITypes, Vcl.Consts, System.Net.HttpClient,
-  System.NetConsts, System.Net.URLClient, PMCW.SysUtils, PMCW.CA, PMCW.LanguageFile,
+  System.NetConsts, System.Net.URLClient, Winapi.ShellAPI, PMCW.SysUtils,
+  PMCW.CA, PMCW.LanguageFile,
 {$WARN UNIT_PLATFORM OFF}
   Vcl.FileCtrl;
 {$WARN UNIT_PLATFORM ON}
@@ -779,8 +780,6 @@ begin
 end;
 
 function TUpdateDialog.Execute(AParentHwnd: HWND): Boolean;
-var
-  UseTls: Boolean;
 
   function GetUniqueFileName(const AFileName: string): string;
   var
@@ -796,6 +795,9 @@ var
       Inc(i);
     end;  //of while
   end;
+
+var
+  UseTls: Boolean;
 
 begin
   Assert(FRemoteFileName <> '', 'RemoteFileName is not set!');
@@ -862,7 +864,7 @@ end;
 
 procedure TUpdateDialog.LaunchSetup();
 begin
-  ShellExec('open', FFileName);
+  ShellExecute(0, 'open', PChar(FFileName), nil, nil, SW_SHOWNORMAL);
 end;
 
 procedure TUpdateDialog.FormCloseQuery(Sender: TObject; var CanClose: Boolean);
