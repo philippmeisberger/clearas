@@ -2443,7 +2443,7 @@ end;
 
 procedure TCommandStringHelper.Execute();
 begin
-  ShellExec('open', ExtractFileName, ExtractArguments);
+  ShellExecute(0, 'open', PChar(ExtractFileName), PChar(ExtractArguments), nil, SW_SHOWNORMAL);
 end;
 
 function TCommandStringHelper.Expand(): TCommandString;
@@ -2904,12 +2904,12 @@ begin
     // Redirected 32 bit item?
     if AWow64 then
       // Execute 32 bit RegEdit
-      ShellExec('open', {$IFDEF WIN64}GetSystemWow64Directory() +{$ENDIF}REGISTRY_EDITOR)
+      ShellExecute(0, 'open', REGISTRY_EDITOR, nil, {$IFDEF WIN64}PChar(GetSystemWow64Directory()){$ELSE}nil{$ENDIF}, SW_SHOWNORMAL)
     else
     begin
       // Execute 64 bit RegEdit
       OldValue := DisableWow64FsRedirection();
-      ShellExec('open', REGISTRY_EDITOR);
+      ShellExecute(0, 'open', REGISTRY_EDITOR, nil, nil, SW_SHOWNORMAL);
       RevertWow64FsRedirection(OldValue);
     end;  //of if
 

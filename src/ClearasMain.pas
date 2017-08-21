@@ -2395,7 +2395,7 @@ var
 begin
   if (PageControl.ActivePageIndex = 3) then
   begin
-    ShellExec('open', 'control', 'schedtasks');
+    ShellExecute(0, 'open', 'control', 'schedtasks', nil, SW_SHOWNORMAL);
     Exit;
   end;  //of begin
 
