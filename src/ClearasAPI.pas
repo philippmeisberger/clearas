@@ -621,8 +621,8 @@ type
   /// <summary>
   ///   A <c>TRootList</c> is the basic list that contains a set of
   ///   <see cref="TRootItem"/>s. The list is thread-safe and supports locking.
-  ///   You can use the <see cref="IsLocked"/> method to see if the list is
-  ///   locked.
+  ///   You can use the <see cref="IsExporting"/> method to see if the list is
+  ///   being exported.
   /// </summary>
   /// <remarks>
   ///   This class is intended to be used only as ancestor for other classes.
@@ -1454,8 +1454,8 @@ type
   /// <summary>
   ///   A <c>TStartupList</c> is the list that contains a set of
   ///   <see cref="TStartupListItem"/>s. The list is thread-safe and supports
-  ///   locking. You can use the <see cref="IsLocked"/> method to see if the
-  ///   list is locked.
+  ///   locking. You can use the <see cref="IsExporting"/> method to see if the
+  ///   list is being exported.
   /// </summary>
   TStartupList = class(TRootList<TStartupListItem>, IImportableList)
   private
@@ -1895,8 +1895,8 @@ type
   /// <summary>
   ///   A <c>TContextMenuList</c> is the list that contains a set of
   ///   <see cref="TContextMenuListItem"/>s. The list is thread-safe and supports
-  ///   locking. You can use the <see cref="IsLocked"/> method to see if the
-  ///   list is locked.
+  ///   locking. You can use the <see cref="IsExporting"/> method to see if the
+  ///   list is being exported.
   /// </summary>
   TContextMenuList = class(TRootList<TContextMenuListItem>)
   private
@@ -2116,8 +2116,8 @@ type
   /// <summary>
   ///   A <c>TServiceList</c> is the list that contains a set of
   ///   <see cref="TServiceListItem"/>s. The list is thread-safe and supports
-  ///   locking. You can use the <see cref="IsLocked"/> method to see if the
-  ///   list is locked.
+  ///   locking. You can use the <see cref="IsExporting"/> method to see if the
+  ///   list is being exported.
   /// </summary>
   TServiceList = class(TRootList<TServiceListItem>)
   private
@@ -2308,8 +2308,8 @@ type
   /// <summary>
   ///   A <c>TTaskList</c> is the list that contains a set of
   ///   <see cref="TTaskListItem"/>s. The list is thread-safe and supports
-  ///   locking. You can use the <see cref="IsLocked"/> method to see if the
-  ///   list is locked.
+  ///   locking. You can use the <see cref="IsExporting"/> method to see if the
+  ///   list is being exported.
   /// </summary>
   TTaskList = class(TRootList<TTaskListItem>, IImportableList)
   private
