@@ -302,15 +302,10 @@ var
 begin
   Module := GetModuleHandle(PChar(AResource));
 
-  try
-    if ((Module <> 0) and (LoadString(Module, AIdent, @Buffer[0], SizeOf(Buffer)) <> 0)) then
-      Result := Buffer
-    else
-      Result := ADefault;
-
-  finally
-    FreeLibrary(Module);
-  end;  //of try
+  if ((Module <> 0) and (LoadString(Module, AIdent, @Buffer[0], SizeOf(Buffer)) <> 0)) then
+    Result := Buffer
+  else
+    Result := ADefault;
 end;
 {$ENDIF}
 
