@@ -249,7 +249,7 @@ type
     function GetFileDescription(const AFileName: TFileName): string;
 
     /// <summary>
-    ///   Gets the handle to the <see cref="FileName"/>.
+    ///   Gets the handle to the <see cref="Command"/>.
     /// </summary>
     /// <returns>
     ///   The handle to the icon.
@@ -362,7 +362,7 @@ type
     ///   Checks if the .exe file exists.
     /// </summary>
     /// <returns>
-    ///   <c>True</c> if the file in property <see cref="FileName"/> exists or
+    ///   <c>True</c> if the file in property <see cref="Command"/> exists or
     ///   <c>False</c> otherwise.
     /// </returns>
     function FileExists(): Boolean;
@@ -5019,7 +5019,7 @@ begin
   end;  //of try
 end;
 
-function TContextMenuShellItem.DeleteIcon: Boolean;
+function TContextMenuShellItem.DeleteIcon(): Boolean;
 begin
   Result := ChangeIcon('');
 end;
