@@ -2047,7 +2047,6 @@ type
     FServiceStart: TServiceStart;
     function GetHandle(AAccess: DWORD): SC_HANDLE;
   protected
-    function GetLocation(): string; override;
     function GetRootKey(): TRootKey; override;
     procedure Rename(const ANewName: string); override;
     procedure SetCommand(const ACommand: TCommandString); override;
@@ -5193,7 +5192,7 @@ end;
 
 function TContextMenuShellExItem.GetIcon(): HICON;
 begin
-  // Impossible!
+  // TODO: Get icon
   Result := 0;
 end;
 
@@ -5350,6 +5349,7 @@ end;
 
 function TContextMenuShellNewItem.GetIcon(): HICON;
 begin
+  // TODO: Get icon
   Result := 0;
 end;
 
@@ -5896,7 +5896,7 @@ constructor TServiceListItem.Create(const AName, ACaption: string;
   const ACommand: TCommandString; AEnabled: Boolean; AServiceStart: TServiceStart;
   AServiceManager: SC_HANDLE);
 begin
-  inherited Create(AName, ACaption, ACommand, '', AEnabled, False);
+  inherited Create(AName, ACaption, ACommand, KEY_SERVICE_ENABLED + AName, AEnabled, False);
   FServiceStart := AServiceStart;
   FServiceManager := AServiceManager;
   FDeactivationTime := 0;
@@ -5915,11 +5915,6 @@ begin
     raise EServiceException.Create(SysErrorMessage(GetLastError()));
 
   Result := Handle;
-end;
-
-function TServiceListItem.GetLocation(): string;
-begin
-  Result := KEY_SERVICE_ENABLED + Name;
 end;
 
 function TServiceListItem.GetRootKey(): TRootKey;
