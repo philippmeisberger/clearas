@@ -456,6 +456,10 @@ begin
     RootList := GetListForIndex(AIndex);
     ListView := GetListViewForIndex(AIndex);
 
+    // Clear cached icons
+    if Assigned(ListView.SmallImages) then
+      ListView.SmallImages.Clear();
+
     // Make a total refresh or just use cached items
     if ATotal then
     begin
