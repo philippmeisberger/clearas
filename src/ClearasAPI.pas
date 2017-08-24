@@ -5579,17 +5579,54 @@ end;
 
 procedure TContextMenuList.LoadContextmenu(const ALocationRoot: string;
   AContextMenuItemType: TContextMenuItemType; AWow64: Boolean);
+
+  function GetShellExCaptionAndFileName(const AProgId: string; AWow64: Boolean;
+    var ACaption, AFileName: string): Boolean;
+  var
+    Reg: TRegistry;
+
+  begin
+    Result := False;
+
+    // Use 32 bit hive?
+    if AWow64 then
+      Reg := TRegistry.Create(KEY_WOW64_32KEY or KEY_READ)
+    else
+      Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ);
+
+    try
+      Reg.RootKey := HKEY_CLASSES_ROOT;
+
+      if Reg.OpenKey('CLSID\'+ AProgId, False) then
+      begin
+        ACaption := Reg.ReadString('');
+
+        if Reg.OpenKey('InProcServer32', False) then
+        begin
+          if not (Reg.GetDataType('') in [rdString, rdExpandString]) then
+            Exit;
+
+          AFileName := Reg.ReadString('');
+          Result := True;
+        end;  //of begin
+      end;  //of begin
+
+    finally
+      Reg.Free;
+    end;  //of try
+  end;
+
 var
   Reg: TRegistry;
   i, DelimiterPos: Integer;
-  List: TStringList;
-  ItemName, Key, FileName, GuID, Caption: string;
+  Keys: TStringList;
+  ItemName, Key, FileName, ProgId, Caption: string;
   Enabled, Wow64, Extended: Boolean;
   MuiString: TMuiString;
 
 begin
   Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ);
-  List := TStringList.Create;
+  Keys := TStringList.Create;
 
   case AContextMenuItemType of
     itShell:    Key := ALocationRoot +'\'+ TContextMenuShellItem.CanonicalName;
@@ -5659,12 +5696,12 @@ begin
     else
     begin
       // Read out all keys
-      Reg.GetKeyNames(List);
+      Reg.GetKeyNames(Keys);
 
-      for i := 0 to List.Count - 1 do
+      for i := 0 to Keys.Count - 1 do
       begin
         Reg.CloseKey();
-        ItemName := List[i];
+        ItemName := Keys[i];
         Reg.OpenKey(Key +'\'+ ItemName, False);
         FileName := '';
 
@@ -5714,61 +5751,27 @@ begin
           // Search for shell extensions
           if (AContextMenuItemType = itShellEx) then
           begin
-            GuID := Reg.ReadString('');
+            ProgId := Reg.ReadString('');
+            Wow64 := False;
 
             // Filter empty and unreadable ShellEx items
-            if ((GuID = '') or GuID.StartsWith('@')) then
+            if ((ProgId = '') or ProgId.StartsWith('@')) then
               Continue;
 
             // Get status and GUID of ShellEx item
-            Enabled := GuID.StartsWith('{');
+            Enabled := ProgId.StartsWith('{');
 
             // Disabled ShellEx items got "-" before GUID!
             if not Enabled then
-              GUID := GuID.Substring(GuID.IndexOf('{'));
-
-            Reg.CloseKey();
-            Wow64 := False;
+              ProgId := ProgId.Substring(ProgId.IndexOf('{'));
 
             // Try to get file path and description in native hive
-            if Reg.OpenKey('CLSID\'+ GuID, False) then
+            if not GetShellExCaptionAndFileName(ProgId, False, Caption, FileName) then
             begin
-              Caption := Reg.ReadString('');
-
-              if Reg.OpenKey('InProcServer32', False) then
-              begin
-                if not (Reg.GetDataType('') in [rdString, rdExpandString]) then
-                  Continue;
-
-                FileName := Reg.ReadString('');
-              end;  //of begin
-            end  //of begin
-            else
-              if AWow64 then
-              begin
-                // Try 32 bit hive
-                Reg.Access := KEY_WOW64_32KEY or KEY_READ;
+              // Try to get file path and description in redirected hive
+              if GetShellExCaptionAndFileName(ProgId, True, Caption, FileName) then
                 Wow64 := True;
-
-                try
-                  if Reg.OpenKey('CLSID\'+ GuID, False) then
-                  begin
-                    Caption := Reg.ReadString('') +'32';
-
-                    if Reg.OpenKey('InProcServer32', False) then
-                    begin
-                      if not (Reg.GetDataType('') in [rdString, rdExpandString]) then
-                        Continue;
-
-                      FileName := Reg.ReadString('');
-                    end;  //of begin
-                  end;  //of begin
-
-                finally
-                  // Switch back to 64 bit hive
-                  Reg.Access := KEY_WOW64_64KEY or KEY_READ;
-                end;  //of try
-              end;  //of if
+            end;  //of begin
 
             Add(TContextMenuShellExItem.Create(ItemName, Caption, FileName, ALocationRoot, Enabled, Wow64));
           end;  //of begin
@@ -5776,7 +5779,7 @@ begin
     end;  //of if
 
   finally
-    List.Free;
+    Keys.Free;
     Reg.CloseKey();
     Reg.Free;
   end;  //of try
