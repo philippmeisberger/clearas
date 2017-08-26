@@ -4064,6 +4064,10 @@ begin
 
   FLnkFile.ExeFileName := ACommand.ExtractFileName();
   FLnkFile.Arguments := ACommand.ExtractArguments();
+
+  if not FLnkFile.Save() then
+    raise EStartupException.Create('Could not save .lnk!');
+
   FCommand := ACommand;
   UpdateErasable();
 
