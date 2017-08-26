@@ -3131,10 +3131,12 @@ begin
     begin
       AItem.LoadIcon(FIcon);
 
+      // Remove old icon
       if ((AItem.ImageIndex <> -1) and (AItem.ImageIndex < FImages.Count)) then
-        FImages.InsertIcon(AItem.ImageIndex, FIcon)
-      else
-        AItem.ImageIndex := FImages.AddIcon(FIcon);
+        FImages.Delete(AItem.ImageIndex);
+
+      // NOTE: Inserting icon at same index in image list will not update icon on UI
+      AItem.ImageIndex := FImages.AddIcon(FIcon);
     end;  //of begin
 
     // Update erasable count
