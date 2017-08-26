@@ -73,7 +73,6 @@ type
     mmReport: TMenuItem;
     pmOpenRegedit: TMenuItem;
     pmOpenExplorer: TMenuItem;
-    IconList: TImageList;
     tsService: TTabSheet;
     lwService: TListView;
     lService: TLabel;
@@ -114,6 +113,7 @@ type
     pmExecute: TMenuItem;
     N8: TMenuItem;
     pmProperties: TMenuItem;
+    StartupImages: TImageList;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -268,6 +268,7 @@ begin
   begin
     OnCounterUpdate := OnStartupCounterUpdate;
     OnNotify := OnStartupListNotify;
+    Images := lwStartup.SmallImages;
   end;  //of with
 
   FContext := TContextMenuList.Create;
@@ -455,10 +456,6 @@ begin
   try
     RootList := GetListForIndex(AIndex);
     ListView := GetListViewForIndex(AIndex);
-
-    // Clear cached icons
-    if Assigned(ListView.SmallImages) then
-      ListView.SmallImages.Clear();
 
     // Make a total refresh or just use cached items
     if ATotal then
@@ -718,43 +715,33 @@ end;
 procedure TMain.OnStartupListNotify(Sender: TObject; const AItem: TStartupListItem;
   AAction: TCollectionNotification);
 var
-  Icon: TIcon;
   Text: string;
 
 begin
   if (AAction = cnAdded) then
   begin
     Text := GetItemText(AItem);
-    Icon := TIcon.Create;
 
-    try
-      if ((eStartupSearch.Text = '') or (Text.ToLower().Contains(LowerCase(eStartupSearch.Text)))) then
+    if ((eStartupSearch.Text = '') or (Text.ToLower().Contains(LowerCase(eStartupSearch.Text)))) then
+    begin
+      with lwStartup.Items.Add do
       begin
-        with lwStartup.Items.Add do
+        Caption := FStatusText[AItem.Enabled];
+        ImageIndex := AItem.ImageIndex;
+        SubItems.AddObject(Text, AItem);
+        SubItems.Append(AItem.Command);
+        SubItems.Append(AItem.ToString());
+
+        // Show deactivation timestamp?
+        if mmDate.Checked then
         begin
-          Caption := FStatusText[AItem.Enabled];
-          SubItems.AddObject(Text, AItem);
-          SubItems.Append(AItem.Command);
-          SubItems.Append(AItem.ToString());
-
-          // Show deactivation timestamp?
-          if mmDate.Checked then
-          begin
-            if (AItem.DeactivationTime <> 0) then
-              SubItems.Append(DateTimeToStr(AItem.DeactivationTime))
-            else
-              SubItems.Append('');
-          end;  //of begin
-
-          // Get icon of program
-          Icon.Handle := AItem.Icon;
-          ImageIndex := IconList.AddIcon(Icon);
-        end;  //of with
-      end;  //of begin
-
-    finally
-      Icon.Free;
-    end;  //of try
+          if (AItem.DeactivationTime <> 0) then
+            SubItems.Append(DateTimeToStr(AItem.DeactivationTime))
+          else
+            SubItems.Append('');
+        end;  //of begin
+      end;  //of with
+    end;  //of begin
   end;  //of begin
 end;
 
@@ -2247,9 +2234,9 @@ begin
         // Only Shell contextmenu items can be renamed
         pmRename.Enabled := (SelectedItem is TContextMenuShellItem);
 
-        // Only icon of Shell contextmenu items can be changed
+        // Currently only icon of Shell contextmenu items can be changed
         pmChangeIcon.Visible := pmRename.Enabled;
-        pmDeleteIcon.Visible := (pmRename.Enabled and (SelectedItem.Icon <> 0));
+        pmDeleteIcon.Visible := (pmRename.Enabled and (SelectedItem.IconFileName <> ''));
         pmEditPath.Enabled := (SelectedItem.Command <> '');
 
         // Context menu items cannot be executed
@@ -2315,7 +2302,6 @@ end;
 procedure TMain.pmEditPathClick(Sender: TObject);
 var
   Path, EnteredPath: string;
-  Icon: TIcon;
   SelectedListView: TListView;
   SelectedItem: TRootItem;
 
@@ -2338,17 +2324,7 @@ begin
 
     // Update icon
     if (PageControl.ActivePageIndex = 0) then
-    begin
-      Icon := TIcon.Create;
-
-      try
-        Icon.Handle := SelectedItem.Icon;
-        lwStartup.ItemFocused.ImageIndex := IconList.AddIcon(Icon);
-
-      finally
-        FreeAndNil(Icon);
-      end;  //of try
-    end;  //of begin
+      lwStartup.ItemFocused.ImageIndex := SelectedItem.ImageIndex;
 
     // Update file path in TListView
     if (PageControl.ActivePageIndex <> 1) then

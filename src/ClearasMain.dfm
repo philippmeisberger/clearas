@@ -90,7 +90,7 @@ object Main: TMain
         RowSelect = True
         PopupMenu = PopupMenu
         ShowWorkAreas = True
-        SmallImages = IconList
+        SmallImages = StartupImages
         TabOrder = 0
         ViewStyle = vsReport
         OnColumnClick = ListViewColumnClick
@@ -676,7 +676,7 @@ object Main: TMain
   object PopupMenu: TPopupMenu
     AutoPopup = False
     OnPopup = PopupMenuPopup
-    Left = 336
+    Left = 440
     object pmChangeStatus: TMenuItem
       Caption = 'Disable'
       Default = True
@@ -745,7 +745,7 @@ object Main: TMain
     end
   end
   object MainMenu: TMainMenu
-    Left = 440
+    Left = 496
     object mmFile: TMenuItem
       Caption = 'File'
       object mmAdd: TMenuItem
@@ -839,14 +839,10 @@ object Main: TMain
       end
     end
   end
-  object IconList: TImageList
-    BkColor = clWhite
-    Left = 392
-  end
   object QuickSearchIconList: TImageList
-    Left = 256
+    Left = 360
     Bitmap = {
-      494C010103000800700210001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C010103000800800210001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000001000000001002000000000000010
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000
@@ -984,5 +980,10 @@ object Main: TMain
       3FCFF087000000001FCFE1C7000000008F8FE3E700000000C01FFFFF00000000
       E03FFFFF00000000F9FFFFFF0000000000000000000000000000000000000000
       000000000000}
+  end
+  object StartupImages: TImageList
+    ColorDepth = cd32Bit
+    DrawingStyle = dsTransparent
+    Left = 264
   end
 end

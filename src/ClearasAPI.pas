@@ -16,7 +16,7 @@ uses
   Winapi.Windows, Winapi.WinSvc, System.Classes, System.SysUtils, System.Win.Registry,
   Winapi.ShlObj, Winapi.ActiveX, System.Win.ComObj, System.Zip, Vcl.Graphics,
   Winapi.ShellAPI, System.SyncObjs, System.Generics.Collections, System.IOUtils,
-  Winapi.KnownFolders, System.Variants, Winapi.Taskschd, PMCW.Registry,
+  Winapi.KnownFolders, System.Variants, Winapi.Taskschd, Vcl.ImgList, PMCW.Registry,
   PMCW.LanguageFile, PMCW.IniFileParser, PMCW.SysUtils;
 
 type
@@ -216,18 +216,13 @@ type
   TRootItem = class(TObject)
   private
     FErasable: Boolean;
+    FImageIndex: Integer;
   protected
     FEnabled: Boolean;
     FCommand: TCommandString;
     FName,
     FLocation,
     FCaption: string;
-    FIcon: HICON;
-
-    /// <summary>
-    ///   Frees the cached icon handle.
-    /// </summary>
-    procedure DestroyIconHandle();
 
     /// <summary>
     ///   Gets the complete store location.
@@ -249,14 +244,6 @@ type
     function GetFileDescription(const AFileName: TFileName): string;
 
     /// <summary>
-    ///   Gets the handle to the <see cref="Command"/>.
-    /// </summary>
-    /// <returns>
-    ///   The handle to the icon.
-    /// </returns>
-    function GetIcon(): HICON; overload; virtual;
-
-    /// <summary>
     ///   Gets the handle to a .exe file.
     /// </summary>
     /// <param name="AExeFileName">
@@ -265,7 +252,15 @@ type
     /// <returns>
     ///   The handle to the icon.
     /// </returns>
-    function GetIcon(const AExeFileName: TFileName): HICON; overload; virtual;
+    function GetIcon(const AExeFileName: TFileName): HICON; virtual;
+
+    /// <summary>
+    ///   Gets the icon filename.
+    /// </summary>
+    /// <returns>
+    ///   The icon filename.
+    /// </returns>
+    function GetIconFileName(): string; virtual;
 
     /// <summary>
     ///   Gets the store location. Usually a Registry key.
@@ -332,11 +327,6 @@ type
       const ALocation: string; AEnabled: Boolean); reintroduce;
 
     /// <summary>
-    ///   Destructor for destroying a <c>TRootItem</c> instance.
-    /// </summary>
-    destructor Destroy; override;
-
-    /// <summary>
     ///   Deletes the item.
     /// </summary>
     /// <returns>
@@ -387,6 +377,14 @@ type
     function GetExportFilter(ALanguageFile: TLanguageFile): string; virtual; abstract;
 
     /// <summary>
+    ///   Loads the icon.
+    /// </summary>
+    /// <param name="AIcon">
+    ///   The resulting icon.
+    /// </param>
+    procedure LoadIcon(AIcon: TIcon);
+
+    /// <summary>
     ///   Opens the folder that contains the .exe file in Windows Explorer and
     ///   selects this file. If the file does not exist a <see cref="EWarning"/>
     ///   is raised.
@@ -422,9 +420,14 @@ type
     property Erasable: Boolean read FErasable;
 
     /// <summary>
-    ///   Gets the icon of the .exe file.
+    ///   Gets the icon filename.
     /// </summary>
-    property Icon: HICON read GetIcon;
+    property IconFileName: string read GetIconFileName;
+
+    /// <summary>
+    ///   Index of the icon inside the <see cref="TRootList.Images"/>.
+    /// </summary>
+    property ImageIndex: Integer read FImageIndex write FImageIndex;
 
     /// <summary>
     ///   Gets the store location. Usually a Registry key.
@@ -634,8 +637,10 @@ type
     FOnCounterUpdate: TNotifyEvent;
     FEnabledItemsCount,
     FErasableItemsCount: Integer;
+    FIcon: TIcon;
     procedure NotifyOnCounterUpdate();
   protected
+    FImages: TCustomImageList;
     FSearchLock,
     FExportLock: TCriticalSection;
     procedure Notify(const Item: T; Action: TCollectionNotification); override;
@@ -654,6 +659,11 @@ type
     ///   Destructor for destroying a <c>TRootList</c> instance.
     /// </summary>
     destructor Destroy; override;
+
+    /// <summary>
+    ///   Removes all items from the list.
+    /// </summary>
+    procedure Clear();
 
     /// <summary>
     ///   Changes the command of the specified item.
@@ -846,6 +856,14 @@ type
     ///   Gets the count of erasable marked items.
     /// </summary>
     property ErasableItemsCount: Integer read FErasableItemsCount;
+
+    /// <summary>
+    ///   Contains the images of the items.
+    /// </summary>
+    /// <remarks>
+    ///   Use <see cref="TRootItem.ImageIndex"/> to get the index of the image.
+    /// </remarks>
+    property Images: TCustomImageList read FImages write FImages;
 
     /// <summary>
     ///   Occurs when counter is updated.
@@ -1578,9 +1596,38 @@ type
   /// </remarks>
   TContextMenuListItem = class(TRegistryItem)
   protected
+    FIcon: TMuiString;
+    function GetIconFileName(): string; override;
     function GetRootKey(): TRootKey; override;
     procedure Rename(const ANewName: string); override;
   public
+    /// <summary>
+    ///   Constructor for creating a <c>TContextMenuListItem</c> instance.
+    /// </summary>
+    /// <param name="AName">
+    ///   The internal name.
+    /// </param>
+    /// <param name="ACaption">
+    ///   The display name.
+    /// </param>
+    /// <param name="ACommand">
+    ///   The command.
+    /// </param>
+    /// <param name="ALocation">
+    ///   The location where the item can be found.
+    /// </param>
+    /// <param name="AIcon">
+    ///   The icon.
+    /// </param>
+    /// <param name="AEnabled">
+    ///   The status.
+    /// </param>
+    /// <param name="AWow64">
+    ///   Use the WOW64 technology.
+    /// </param>
+    constructor Create(const AName, ACaption: string; const ACommand: TCommandString;
+      const ALocation: string; const AIcon: TMuiString; AEnabled, AWow64: Boolean);
+
     /// <summary>
     ///   Deletes the item.
     /// </summary>
@@ -1629,9 +1676,6 @@ type
   private
     FExtended: Boolean;
   protected
-    function GetIcon(): HICON; override;
-    function GetIcon(const AFileName: TFileName): HICON; override;
-    function GetIconFileName(): string;
     function GetLocation(): string; override;
     procedure Rename(const AValueName, ANewCaption: string); reintroduce; overload;
     procedure Rename(const ANewName: string); overload; override;
@@ -1728,6 +1772,9 @@ type
     /// <param name="ALocation">
     ///   The location where the item can be found.
     /// </param>
+    /// <param name="AIcon">
+    ///   The icon.
+    /// </param>
     /// <param name="AEnabled">
     ///   The status.
     /// </param>
@@ -1735,8 +1782,8 @@ type
     ///   The contextmenu item is only shown when shift-key is pressed and a
     ///   right click is performed. Otherwise the item is always shown.
     /// </param>
-    constructor Create(const AName, ACaption, ALocation: string; AEnabled,
-      AExtended: Boolean);
+    constructor Create(const AName, ACaption, ALocation: string;
+      const AIcon: TMuiString; AEnabled, AExtended: Boolean);
 
     /// <summary>
     ///   Deletes the item.
@@ -1770,7 +1817,6 @@ type
   /// </summary>
   TContextMenuShellExItem = class(TContextMenuListItem)
   protected
-    function GetIcon(): HICON; override;
     function GetLocation(): string; override;
     procedure Rename(const ANewName: string); override;
     procedure SetCommand(const ACommand: TCommandString); override;
@@ -1810,7 +1856,6 @@ type
   /// </summary>
   TContextMenuShellNewItem = class(TContextMenuListItem)
   protected
-    function GetIcon(): HICON; override;
     function GetLocation(): string; override;
     function IsErasable(): Boolean; override;
     procedure Rename(const ANewName: string); override;
@@ -1840,10 +1885,14 @@ type
     /// <param name="ALocation">
     ///   The location where the item can be found.
     /// </param>
+    /// <param name="AIcon">
+    ///   The icon.
+    /// </param>
     /// <param name="AEnabled">
     ///   The status.
     /// </param>
-    constructor Create(const AName, ACaption, ALocation: string; AEnabled: Boolean);
+    constructor Create(const AName, ACaption, ALocation: string; const AIcon: TMuiString;
+      AEnabled: Boolean);
 
     /// <summary>
     ///   Deletes the item.
@@ -2671,8 +2720,8 @@ end;
 
 { TRootItem }
 
-constructor TRootItem.Create(const AName, ACaption: string;
-  const ACommand: TCommandString; const ALocation: string; AEnabled: Boolean);
+constructor TRootItem.Create(const AName, ACaption: string; const ACommand: TCommandString;
+  const ALocation: string; AEnabled: Boolean);
 begin
   inherited Create;
   FName := AName;
@@ -2680,14 +2729,8 @@ begin
   FCommand := ACommand;
   FLocation := ALocation;
   FEnabled := AEnabled;
-  FIcon := 0;
+  FImageIndex := -1;
   UpdateErasable();
-end;
-
-destructor TRootItem.Destroy;
-begin
-  DestroyIconHandle();
-  inherited Destroy;
 end;
 
 function TRootItem.GetFileDescription(const AFileName: TFileName): string;
@@ -2726,49 +2769,71 @@ begin
   end;  //of begin
 end;
 
-procedure TRootItem.DestroyIconHandle();
-begin
-  if (FIcon <> 0) then
-  begin
-    DestroyIcon(FIcon);
-    FIcon := 0;
-  end;  //of begin
-end;
-
 procedure TRootItem.Execute();
 begin
   FCommand.Execute();
 end;
 
-function TRootItem.GetIcon(): HICON;
+procedure TRootItem.LoadIcon(AIcon: TIcon);
+var
+  IconFileName: string;
+  MuiString: TMuiString;
+  OldValue: Boolean;
+
 begin
-  Result := GetIcon(FCommand.Expand());
+  IconFileName := GetIconFileName();
+
+  // No icon?
+  if (IconFileName = '') then
+  begin
+    AIcon.Handle := 0;
+    Exit;
+  end;  //of begin
+
+  // MUI string?
+  if IconFileName.Contains(',') then
+  begin
+    MuiString := IconFileName;
+    IconFileName := MuiString.Path;
+  end  //of begin
+  else
+    IconFileName := IconFileName.DeQuotedString('"');
+
+  OldValue := DisableWow64FsRedirection();
+
+  try
+    if (ExtractFileExt(IconFileName) = '.dll') then
+      AIcon.Handle := ExtractIcon(HInstance, PChar(IconFileName), MuiString.Id)
+    else
+      if (ExtractFileExt(IconFileName) = '.exe') then
+        AIcon.Handle := GetIcon(IconFileName)
+      else
+        if (ExtractFileExt(IconFileName) = '.ico') then
+          AIcon.LoadFromFile(IconFileName);
+
+  finally
+    RevertWow64FsRedirection(OldValue);
+  end;  //of try
 end;
 
 function TRootItem.GetIcon(const AExeFileName: TFileName): HICON;
 var
   FileInfo: TSHFileInfo;
-  OldValue: Boolean;
 
 begin
   Result := 0;
-  DestroyIconHandle();
 
-  // Only extract icon from .exe files
   if ((AExeFileName = '') or (ExtractFileExt(AExeFileName) = '')) then
     Exit;
 
-  OldValue := DisableWow64FsRedirection();
-  ZeroMemory(@FileInfo, SizeOf(FileInfo));
-
   if Succeeded(SHGetFileInfo(PChar(AExeFileName), 0, FileInfo, SizeOf(FileInfo),
     SHGFI_ICON or SHGFI_SMALLICON)) then
-    FIcon := FileInfo.hIcon
-  else
-    FIcon := 0;
+    Result := FileInfo.hIcon;
+end;
 
-  RevertWow64FsRedirection(OldValue);
-  Result := FIcon;
+function TRootItem.GetIconFileName(): string;
+begin
+  Result := FCommand.Expand();
 end;
 
 function TRootItem.GetLocation(): string;
@@ -3013,11 +3078,12 @@ begin
   FDuplicates := False;
   FSearchLock := TCriticalSection.Create;
   FExportLock := TCriticalSection.Create;
+  FIcon := TIcon.Create;
 end;
 
 destructor TRootList<T>.Destroy;
 begin
-  Clear();
+  FreeAndNil(FIcon);
   FreeAndNil(FExportLock);
   FreeAndNil(FSearchLock);
   inherited Destroy;
@@ -3060,6 +3126,17 @@ begin
     // Change item file path
     ItemErasable := AItem.Erasable;
     AItem.Command := ACommand;
+
+    // Update icon
+    if Assigned(FImages) then
+    begin
+      AItem.LoadIcon(FIcon);
+
+      if ((AItem.ImageIndex <> -1) and (AItem.ImageIndex < FImages.Count)) then
+        FImages.InsertIcon(AItem.ImageIndex, FIcon)
+      else
+        AItem.ImageIndex := FImages.AddIcon(FIcon);
+    end;  //of begin
 
     // Update erasable count
     if (ItemErasable and not AItem.Erasable) then
@@ -3112,6 +3189,14 @@ begin
   finally
     FExportLock.Release();
   end;  //of try
+end;
+
+procedure TRootList<T>.Clear();
+begin
+  inherited Clear();
+
+  if Assigned(FImages) then
+    FImages.Clear();
 end;
 
 function TRootList<T>.DeleteItem(AItem: T): Boolean;
@@ -3234,6 +3319,13 @@ end;
 
 procedure TRootList<T>.Notify(const Item: T; Action: TCollectionNotification);
 begin
+  // Load item icon?
+  if (Assigned(FImages) and (Action = cnAdded)) then
+  begin
+    Item.LoadIcon(FIcon);
+    Item.ImageIndex := FImages.AddIcon(FIcon);
+  end;  //of begin
+
   TThread.Synchronize(nil,
     procedure
     begin
@@ -3343,11 +3435,14 @@ begin
     if not SearchLock.TryEnter() then
       raise EListBlocked.Create(SOperationPending);
 
+    CoInitialize(nil);
+
     try
       Synchronize(DoNotifyOnStart);
       DoExecute();
 
     finally
+      CoUninitialize();
       SearchLock.Release();
     end;  //of try
 
@@ -4787,6 +4882,19 @@ end;
 
 { TContextMenuListItem}
 
+constructor TContextMenuListItem.Create(const AName, ACaption: string;
+  const ACommand: TCommandString; const ALocation: string;
+  const AIcon: TMuiString; AEnabled, AWow64: Boolean);
+begin
+  inherited Create(AName, ACaption, ACommand, ALocation, AEnabled, AWow64);
+  FIcon := AIcon;
+end;
+
+function TContextMenuListItem.GetIconFileName(): string;
+begin
+  Result := FIcon;
+end;
+
 function TContextMenuListItem.GetRootKey(): TRootKey;
 begin
   Result := rkHKCR;
@@ -4863,62 +4971,6 @@ begin
   end;  //of try
 end;
 
-function TContextMenuShellItem.GetIcon(const AFileName: TFileName): HICON;
-var
-  Icon: TIcon;
-
-begin
-  Result := 0;
-  DestroyIconHandle();
-
-  if (AFileName = '') then
-    Exit;
-
-  Icon := TIcon.Create;
-
-  try
-    if (ExtractFileExt(AFileName) = '.exe') then
-      Icon.Handle := inherited GetIcon(AFileName)
-    else
-      Icon.LoadFromFile(AFileName);
-
-    FIcon := Icon.Handle;
-    Result := FIcon;
-
-  finally
-    Icon.Free;
-  end;  //of try
-end;
-
-function TContextMenuShellItem.GetIcon(): HICON;
-begin
-  Result := GetIcon(GetIconFileName());
-end;
-
-function TContextMenuShellItem.GetIconFileName(): string;
-var
-  Reg: TRegistry;
-
-begin
-  Result := '';
-  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ);
-
-  try
-    Reg.RootKey := HKEY_CLASSES_ROOT;
-
-    // Invalid key?
-    if not Reg.OpenKey(GetLocation(), False) then
-      raise EContextMenuException.Create(Reg.LastErrorMsg);
-
-    if Reg.ValueExists('Icon') then
-      Result := Reg.ReadString('Icon').DeQuotedString('"');
-
-  finally
-    Reg.CloseKey();
-    Reg.Free;
-  end;  //of try
-end;
-
 procedure TContextMenuShellItem.SetCommand(const ACommand: TCommandString);
 var
   Reg: TRegistry;
@@ -4950,6 +5002,9 @@ begin
 end;
 
 function TContextMenuShellItem.ChangeIcon(const ANewIconFileName: string): Boolean;
+const
+  ICON_NAME = 'Icon';
+
 var
   Reg: TRegistry;
 
@@ -4964,25 +5019,29 @@ begin
     if not Reg.OpenKey(GetLocation(), False) then
       raise EContextMenuException.Create(Reg.LastErrorMsg);
 
-    DestroyIconHandle();
-
     // Delete icon?
-    if ((ANewIconFileName = '') and Reg.ValueExists('Icon')) then
-      Exit(Reg.DeleteValue('Icon'));
-
-    // Change icon
-    // TODO: May use SHRegSetPath()
-    if Reg.ValueExists('Icon') then
-      case Reg.GetDataType('Icon') of
-        rdExpandString: Reg.WriteExpandString('Icon', ANewIconFileName);
-        rdString:       Reg.WriteString('Icon', ANewIconFileName);
-        else            raise EContextMenuException.Create('Invalid data type!');
-      end  //of case
+    if ((ANewIconFileName = '') and Reg.ValueExists(ICON_NAME)) then
+      Result := Reg.DeleteValue(ICON_NAME)
     else
-      Reg.WriteString('Icon', ANewIconFileName);
+    begin
+      // Change icon
+      // TODO: May use SHRegSetPath()
+      if Reg.ValueExists(ICON_NAME) then
+      begin
+        case Reg.GetDataType(ICON_NAME) of
+          rdExpandString: Reg.WriteExpandString(ICON_NAME, ANewIconFileName);
+          rdString:       Reg.WriteString(ICON_NAME, ANewIconFileName);
+          else            raise EContextMenuException.Create('Invalid data type!');
+        end;  //of case
+      end  //of begin
+      else
+        Reg.WriteString(ICON_NAME, ANewIconFileName);
 
-    GetIcon(ANewIconFileName.DeQuotedString('"'));
-    Result := True;
+      Result := True;
+    end;  //of if
+
+    if Result then
+      FIcon := ANewIconFileName;
 
   finally
     Reg.CloseKey();
@@ -5056,9 +5115,9 @@ end;
 { TContextMenuShellCascadingItem }
 
 constructor TContextMenuShellCascadingItem.Create(const AName, ACaption, ALocation: string;
-  AEnabled, AExtended: Boolean);
+  const AIcon: TMuiString; AEnabled, AExtended: Boolean);
 begin
-  inherited Create(AName, ACaption, '', ALocation, AEnabled, AExtended);
+  inherited Create(AName, ACaption, '', ALocation, AIcon, AEnabled, AExtended);
 end;
 
 procedure TContextMenuShellCascadingItem.GetSubCommands(ASubCommands: TStrings);
@@ -5194,12 +5253,6 @@ begin
   end;  //of try
 end;
 
-function TContextMenuShellExItem.GetIcon(): HICON;
-begin
-  // TODO: Get icon
-  Result := 0;
-end;
-
 function TContextMenuShellExItem.GetLocation(): string;
 begin
   Result := inherited GetLocation() +'\'+ HandlersKey +'\'+ Name;
@@ -5300,9 +5353,9 @@ end;
 { TContextMenuShellNewItem }
 
 constructor TContextMenuShellNewItem.Create(const AName, ACaption, ALocation: string;
-  AEnabled: Boolean);
+  const AIcon: TMuiString; AEnabled: Boolean);
 begin
-  inherited Create(AName, ACaption, '', ALocation, AEnabled, False);
+  inherited Create(AName, ACaption, '', ALocation, AIcon, AEnabled, False);
 end;
 
 procedure TContextMenuShellNewItem.SetEnabled(const AEnabled: Boolean);
@@ -5349,12 +5402,6 @@ begin
     Reg.CloseKey();
     Reg.Free;
   end;  //of try
-end;
-
-function TContextMenuShellNewItem.GetIcon(): HICON;
-begin
-  // TODO: Get icon
-  Result := 0;
 end;
 
 function TContextMenuShellNewItem.GetLocation(): string;
@@ -5513,8 +5560,7 @@ begin
         Reg.WriteString('', Command);
 
         // Adds item to list
-        Result := (Add(TContextMenuShellItem.Create(Name, ACaption, Command, FileType, True,
-          AExtended)) <> -1);
+        Result := (Add(TContextMenuShellItem.Create(Name, ACaption, Command, FileType, '', True, AExtended)) <> -1);
         SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, nil, nil);
 
       finally
@@ -5695,7 +5741,7 @@ begin
       if (Key = '') then
         Key := Caption;
 
-      Add(TContextMenuShellNewItem.Create(Key, Caption, ALocationRoot, Enabled));
+      Add(TContextMenuShellNewItem.Create(Key, Caption, ALocationRoot, '', Enabled));
     end  //of begin
     else
     begin
@@ -5728,6 +5774,7 @@ begin
           // Get status and caption of Shell item
           Enabled := not Reg.ValueExists(TContextMenuShellItem.DisableValueName);
           Extended := Reg.ValueExists('Extended');
+          MuiString := Reg.ReadString('Icon');
 
           // Cascading shell item?
           if not Reg.OpenKey('command', False) then
@@ -5739,7 +5786,7 @@ begin
 
             Caption := Reg.ReadString(TContextMenuShellCascadingItem.CaptionValueName);
             Add(TContextMenuShellCascadingItem.Create(ItemName, Caption, ALocationRoot,
-              Enabled, Extended));
+              MuiString, Enabled, Extended));
             Continue;
           end;  //of begin
 
@@ -5749,7 +5796,7 @@ begin
 
           FileName := Reg.ReadString('');
           Add(TContextMenuShellItem.Create(ItemName, Caption, FileName, ALocationRoot,
-            Enabled, Extended));
+            MuiString, Enabled, Extended));
         end  //of begin
         else
           // Search for shell extensions
@@ -5777,7 +5824,7 @@ begin
                 Wow64 := True;
             end;  //of begin
 
-            Add(TContextMenuShellExItem.Create(ItemName, Caption, FileName, ALocationRoot, Enabled, Wow64));
+            Add(TContextMenuShellExItem.Create(ItemName, Caption, FileName, ALocationRoot, '', Enabled, Wow64));
           end;  //of begin
       end;  //of for
     end;  //of if
