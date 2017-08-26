@@ -632,8 +632,7 @@ type
   /// </remarks>
   TRootList<T: TRootItem> = class(TObjectList<T>, IInterface)
   strict private
-    // TODO: Better use TDuplicates
-    FDuplicates: Boolean;
+    FAllowDuplicates: Boolean;
     FOnCounterUpdate: TNotifyEvent;
     FEnabledItemsCount,
     FErasableItemsCount: Integer;
@@ -845,7 +844,7 @@ type
     /// <summary>
     ///   Allow items with the the same name.
     /// </summary>
-    property Duplicates: Boolean read FDuplicates write FDuplicates;
+    property AllowDuplicates: Boolean read FAllowDuplicates write FAllowDuplicates;
 
     /// <summary>
     ///   Gets the count of enabled items in the list.
@@ -3075,7 +3074,7 @@ begin
   inherited Create;
   FEnabledItemsCount := 0;
   FErasableItemsCount := 0;
-  FDuplicates := False;
+  FAllowDuplicates := False;
   FSearchLock := TCriticalSection.Create;
   FExportLock := TCriticalSection.Create;
   FIcon := TIcon.Create;
@@ -3379,7 +3378,7 @@ begin
     if (not Assigned(AItem) or (IndexOf(AItem) = -1)) then
       raise EInvalidItem.Create(SNoItemSelected);
 
-    if not FDuplicates then
+    if not FAllowDuplicates then
     begin
       // Check for item with the same name
       for i := 0 to Count - 1 do
@@ -5467,7 +5466,7 @@ end;
 constructor TContextMenuList.Create;
 begin
   inherited Create;
-  Duplicates := True;
+  AllowDuplicates := True;
 end;
 
 function TContextMenuList.Add(const AFileName, AArguments, ALocationRoot,
