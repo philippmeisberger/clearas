@@ -580,7 +580,7 @@ end;
 procedure TMain.OnContextCounterUpdate(Sender: TObject);
 begin
   // Refresh counter label
-  if Assigned(FContext) then
+  if (not (csDestroying in ComponentState) and Assigned(FContext)) then
   begin
     lwContext.Columns[1].Caption := FLang.Format(LID_CONTEXT_MENU_COUNTER,
       [FContext.EnabledItemsCount, FContext.Count]);
@@ -705,7 +705,7 @@ end;
 procedure TMain.OnStartupCounterUpdate(Sender: TObject);
 begin
   // Refresh counter label
-  if Assigned(FStartup) then
+  if (not (csDestroying in ComponentState) and Assigned(FStartup)) then
   begin
     lwStartup.Columns[1].Caption := FLang.Format(LID_PROGRAM_COUNTER,
       [FStartup.EnabledItemsCount, FStartup.Count]);
@@ -791,7 +791,7 @@ end;
 procedure TMain.OnServiceCounterUpdate(Sender: TObject);
 begin
   // Refresh counter label
-  if Assigned(FService) then
+  if (not (csDestroying in ComponentState) and Assigned(FService)) then
   begin
     lwService.Columns[1].Caption := FLang.Format(LID_SERVICE_COUNTER,
       [FService.EnabledItemsCount, FService.Count]);
@@ -905,7 +905,7 @@ end;
 procedure TMain.OnTaskCounterUpdate(Sender: TObject);
 begin
   // Refresh counter label
-  if Assigned(FTasks) then
+  if (not (csDestroying in ComponentState) and Assigned(FTasks)) then
   begin
     lwTasks.Columns[1].Caption := FLang.Format(LID_TASKS_COUNTER, [FTasks.EnabledItemsCount,
       FTasks.Count]);
