@@ -3320,13 +3320,26 @@ end;
 
 procedure TRootList<T>.Notify(const Item: T; Action: TCollectionNotification);
 begin
-  // Load item icon?
-  if (Assigned(FImages) and (Action = cnAdded)) then
+  // Icon handling
+  if Assigned(FImages) then
   begin
-    Item.LoadIcon(FIcon);
-    Item.ImageIndex := FImages.AddIcon(FIcon);
+    case Action of
+      cnAdded:
+        begin
+          Item.LoadIcon(FIcon);
+          Item.ImageIndex := FImages.AddIcon(FIcon);
+        end;
+
+      cnRemoved:
+        begin
+          // Remove icon
+          if (Assigned(FImages) and (Item.ImageIndex <> -1) and (Item.ImageIndex < FImages.Count)) then
+            FImages.Delete(Item.ImageIndex);
+        end;
+    end;  //of case
   end;  //of begin
 
+  // Must be executed in main thread!
   TThread.Synchronize(nil,
     procedure
     begin
