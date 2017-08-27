@@ -5665,6 +5665,9 @@ procedure TContextMenuList.LoadContextmenu(const ALocationRoot: string;
       begin
         ACaption := Reg.ReadString('');
 
+        if AWow64 then
+          ACaption := ACaption +'32';
+
         if Reg.OpenKey('InProcServer32', False) then
         begin
           if not (Reg.GetDataType('') in [rdString, rdExpandString]) then
