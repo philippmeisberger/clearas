@@ -5574,7 +5574,7 @@ begin
         Reg.WriteString('', Command);
 
         // Adds item to list
-        Result := (Add(TContextMenuShellItem.Create(Name, ACaption, Command, FileType, '', True, AExtended)) <> -1);
+        Result := (Add(TContextMenuShellItem.Create(Name, ACaption, Command, FileType, '', True, False)) <> -1);
         SHChangeNotify(SHCNE_ASSOCCHANGED, SHCNF_IDLIST, nil, nil);
 
       finally
