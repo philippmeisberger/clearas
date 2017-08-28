@@ -348,6 +348,7 @@ begin
     try
       with Updater do
       begin
+      {$IFDEF PORTABLE}
         FileNameLocal := 'Clearas.exe';
 
         // Download 64-Bit version?
@@ -355,6 +356,10 @@ begin
           FileNameRemote := 'clearas64.exe'
         else
           FileNameRemote := 'clearas.exe';
+      {$ELSE}
+        FileNameLocal := 'Clearas Setup.exe';
+        FileNameRemote := 'clearas_setup.exe';
+      {$ENDIF}
       end;  //of begin
 
       // Successfully downloaded update?
@@ -362,6 +367,9 @@ begin
       begin
         mmUpdate.Caption := FLang.GetString(LID_UPDATE_SEARCH);
         mmUpdate.Enabled := False;
+      {$IFNDEF PORTABLE}
+        Updater.LaunchSetup();
+      {$ENDIF}
       end;  //of begin
 
     finally
