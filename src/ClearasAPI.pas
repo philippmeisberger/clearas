@@ -1693,6 +1693,33 @@ type
       DisableValueName = 'LegacyDisable';
 
     /// <summary>
+    ///   Constructor for creating a <c>TContextMenuShellItem</c> instance.
+    /// </summary>
+    /// <param name="AName">
+    ///   The internal name.
+    /// </param>
+    /// <param name="ACaption">
+    ///   The display name.
+    /// </param>
+    /// <param name="ACommand">
+    ///   The command.
+    /// </param>
+    /// <param name="ALocation">
+    ///   The location where the item can be found.
+    /// </param>
+    /// <param name="AIcon">
+    ///   The icon.
+    /// </param>
+    /// <param name="AEnabled">
+    ///   The status.
+    /// </param>
+    /// <param name="AExtended">
+    ///   The item is hidden and only visible if "shift" is pressed.
+    /// </param>
+    constructor Create(const AName, ACaption: string; const ACommand: TCommandString;
+      const ALocation: string; const AIcon: TMuiString; AEnabled, AExtended: Boolean);
+
+    /// <summary>
     ///   Changes the icon of a contextmenu item.
     /// </summary>
     /// <param name="ANewIconFileName">
@@ -4951,7 +4978,15 @@ begin
 end;
 
 
-{ TContextMenuShellExItem }
+{ TContextMenuShellItem }
+
+constructor TContextMenuShellItem.Create(const AName, ACaption: string;
+  const ACommand: TCommandString; const ALocation: string; const AIcon: TMuiString;
+  AEnabled, AExtended: Boolean);
+begin
+  inherited Create(AName, ACaption, ACommand, ALocation, AIcon, AEnabled, False);
+  FExtended := AExtended;
+end;
 
 function TContextMenuShellItem.GetLocation(): string;
 begin
