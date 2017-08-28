@@ -17,6 +17,7 @@ Version 5.0 [*??.08.17*]
 * Added "Quick-Search" to Autostart tab
 * Added "Execute" to popup menu
 * Added "Properties" to popup menu
+* Added support for changing extended attribute of shell context menu items
 * Improved "Open in Explorer"
 * Added loading description of ShellEx and ShellNew items
 * Added loading of MUI strings

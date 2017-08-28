@@ -12,6 +12,7 @@ General
   - Admin: Read and edit all items (like now)
   - User: Read and edit only items owned by user
 - Add support for cleaning shell bags
+- Guide/Manual
 
 Context menu
 ============
@@ -21,7 +22,6 @@ Context menu
   --> Disable ShellNew again (but first remove _ShellNew)
 - Add support for editing file path of ShellNew items
 - Add support for editing file paths of Shell Cascading items
-- Add support for changing "Extended" attribute of Shell context menu items
 - Add support for cascading shell submenus in "ExtendedSubCommandsKey" subkey
 
 Services

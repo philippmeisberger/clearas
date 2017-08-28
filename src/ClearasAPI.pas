@@ -1674,6 +1674,7 @@ type
   TContextMenuShellItem = class(TContextMenuListItem)
   private
     FExtended: Boolean;
+    procedure SetExtended(const AExtended: Boolean);
   protected
     function GetLocation(): string; override;
     procedure Rename(const AValueName, ANewCaption: string); reintroduce; overload;
@@ -1757,10 +1758,9 @@ type
     function ToString(): string; override;
 
     /// <summary>
-    ///   Gets the behaviour that the contextmenu item is only shown when
-    ///   shift-key is pressed and a right click is performed.
+    ///   The item is hidden and only visible if "shift" is pressed.
     /// </summary>
-    property Extended: Boolean read FExtended;
+    property Extended: Boolean read FExtended write SetExtended;
   end;
 
   /// <summary>
@@ -1805,8 +1805,7 @@ type
     ///   The status.
     /// </param>
     /// <param name="AExtended">
-    ///   The contextmenu item is only shown when shift-key is pressed and a
-    ///   right click is performed. Otherwise the item is always shown.
+    ///   The item is hidden and only visible if "shift" is pressed.
     /// </param>
     constructor Create(const AName, ACaption, ALocation: string;
       const AIcon: TMuiString; AEnabled, AExtended: Boolean);
@@ -2004,11 +2003,6 @@ type
     /// <param name="ACaption">
     ///   The display name.
     /// </param>
-    /// <param name="AExtended">
-    ///   If set to <c>True</c> the contextmenu item will only be shown when
-    ///   shift-key is pressed and a right click is performed. Otherwise the
-    ///   item is always shown.
-    /// </param>
     /// <returns>
     ///   <c>True</c> if the item was successfully added or <c>False</c> otherwise.
     /// </returns>
@@ -2016,8 +2010,7 @@ type
     ///   <c>EListBlocked</c> if another operation is pending on the list.
     ///   <c>EAlreadyExists</c> if item already exists.
     /// </exception>
-    function Add(const AFileName, AArguments, ALocationRoot, ACaption: string;
-      AExtended: Boolean = False): Boolean; overload;
+    function Add(const AFileName, AArguments, ALocationRoot, ACaption: string): Boolean; overload;
 
     /// <summary>
     ///   Exports the complete list as file.
@@ -5130,6 +5123,37 @@ begin
   end;  //of try
 end;
 
+procedure TContextMenuShellItem.SetExtended(const AExtended: Boolean);
+const
+  EXTENDED_NAME = 'Extended';
+
+var
+  Reg: TRegistry;
+
+begin
+  if (FExtended = AExtended) then
+    Exit;
+
+  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
+
+  try
+    Reg.RootKey := HKEY_CLASSES_ROOT;
+
+    if not Reg.OpenKey(GetLocation(), False) then
+      raise EContextMenuException.Create(Reg.LastErrorMsg);
+
+    if AExtended then
+      Reg.WriteString(EXTENDED_NAME, '')
+    else
+      Reg.DeleteValue(EXTENDED_NAME);
+
+    FExtended := AExtended;
+
+  finally
+    Reg.Free;
+  end;  //of try
+end;
+
 function TContextMenuShellItem.DeleteIcon(): Boolean;
 begin
   Result := ChangeIcon('');
@@ -5520,7 +5544,7 @@ begin
 end;
 
 function TContextMenuList.Add(const AFileName, AArguments, ALocationRoot,
-  ACaption: string; AExtended: Boolean = False): Boolean;
+  ACaption: string): Boolean;
 var
   Name, Ext, LocationRoot, FileType, KeyPath: string;
   Command: TCommandString;
@@ -5594,10 +5618,6 @@ begin
         // Set caption of item
         if (Trim(ACaption) <> '') then
           Reg.WriteString('', ACaption);
-
-        // Extended: Item is only visible with shift + right click
-        if AExtended then
-          Reg.WriteString('Extended', '');
 
         Reg.CloseKey();
         KeyPath := KeyPath +'\command';

@@ -114,6 +114,7 @@ type
     N8: TMenuItem;
     pmProperties: TMenuItem;
     StartupImages: TImageList;
+    pmExtended: TMenuItem;
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
@@ -169,6 +170,7 @@ type
     procedure PopupMenuPopup(Sender: TObject);
     procedure pmExecuteClick(Sender: TObject);
     procedure pmPropertiesClick(Sender: TObject);
+    procedure pmExtendedClick(Sender: TObject);
   private
     FStartup: TStartupList;
     FContext: TContextMenuList;
@@ -1123,6 +1125,7 @@ begin
     pmCopyLocation.Caption := GetString(LID_LOCATION_COPY);
     pmChangeIcon.Caption := GetString(LID_CONTEXT_MENU_ICON_CHANGE);
     pmDeleteIcon.Caption := GetString(LID_CONTEXT_MENU_ICON_DELETE);
+    pmExtended.Caption := GetString(LID_EXTEND);
     pmProperties.Caption := GetString(LID_PROPERTIES);
   end;  //of with
 
@@ -2237,6 +2240,8 @@ begin
         // Currently only icon of Shell contextmenu items can be changed
         pmChangeIcon.Visible := pmRename.Enabled;
         pmDeleteIcon.Visible := (pmRename.Enabled and (SelectedItem.IconFileName <> ''));
+        pmExtended.Visible := pmRename.Enabled;
+        pmExtended.Checked := (pmRename.Enabled and (SelectedItem as TContextMenuShellItem).Extended);
         pmEditPath.Enabled := (SelectedItem.Command <> '');
 
         // Context menu items cannot be executed
@@ -2363,6 +2368,26 @@ begin
   end;  //of try
 end;
 
+procedure TMain.pmExtendedClick(Sender: TObject);
+var
+  SelectedItem: TRootItem;
+
+begin
+  try
+    SelectedItem := GetSelectedItem();
+
+    if SelectedItem.InheritsFrom(TContextMenuShellItem) then
+      (SelectedItem as TContextMenuShellItem).Extended := pmExtended.Checked;
+
+  except
+    on E: EInvalidItem do
+      MessageDlg(FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
+
+    on E: Exception do
+      FLang.ShowException(FLang.GetString([LID_HIDE, LID_IMPOSSIBLE]), E.Message);
+  end;  //of try
+end;
+
 { TMain.mmAddClick
 
   MainMenu entry to add a new item to the current selected list. }
@@ -2426,8 +2451,10 @@ begin
                FLang.GetString(LID_HIDE), Extended, False) then
                Exit;
 
-             if not FContext.Add(FileName, Args, Location, Name, Extended) then
+             if not FContext.Add(FileName, Args, Location, Name) then
                raise Exception.Create('Item was not added!');
+
+             (FContext.Last as TContextMenuShellItem).Extended := Extended;
 
              // User choice exists for selected file extension?
              if FContext.Last.UserChoiceExists(Location) then
@@ -2437,7 +2464,7 @@ begin
                  [LID_CONTEXT_MENU_USER_CHOICE_WARNING2, LID_CONTEXT_MENU_USER_CHOICE_RESET]),
                  mtConfirmation, mbYesNo, 0) = idYes) then
                  FContext.Last.DeleteUserChoice(Location);
-             end;
+             end;  //of begin
 
            finally
              List.Free;
