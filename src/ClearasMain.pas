@@ -213,8 +213,6 @@ type
     procedure OnTaskCounterUpdate(Sender: TObject);
     function ShowExportItemDialog(AItem: TRootItem): Boolean;
     procedure ShowColumnDate(AListView: TListView; AShow: Boolean = True);
-    // TODO: Remove recycle bin context menu feature
-    function UpdateContextPath(): Boolean;
     procedure OnUpdate(Sender: TObject; const ANewBuild: Cardinal);
     procedure WMTimer(var Message: TWMTimer); message WM_TIMER;
     { IChangeLanguageListener }
@@ -320,10 +318,32 @@ end;
   VCL event that is called when form is shown. }
 
 procedure TMain.FormShow(Sender: TObject);
+{$IFDEF PORTABLE}
+var
+  Reg: TRegistry;
+{$ENDIF}
 begin
+{$IFDEF PORTABLE}
   // Update Clearas recycle bin context menu entry
-  mmContext.Checked := UpdateContextPath();
+  // TODO: Finally remove in 5.1
+  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_WRITE);
 
+  try
+    Reg.RootKey := HKEY_CLASSES_ROOT;
+
+    // Only update if context menu entry exists
+    if Reg.OpenKey(KEY_RECYCLEBIN +'\Clearas\command', False) then
+    begin
+      Reg.WriteString('', ParamStr(0));
+      mmContext.Visible := True;
+      mmContext.Checked := True;
+    end;  //of begin
+
+  finally
+    Reg.CloseKey();
+    Reg.Free;
+  end;  //of try
+{$ENDIF}
   // Load items
   PageControlChange(Sender);
 end;
@@ -1317,35 +1337,6 @@ begin
 
     on E: Exception do
       FLang.ShowException(FLang.GetString([LID_DELETE_ERASABLE, LID_IMPOSSIBLE]), E.Message);
-  end;  //of try
-end;
-
-{ public TMain.UpdateContextPath
-
-  Updates "Open Clearas" in recycle bin context menu. }
-
-function TMain.UpdateContextPath(): Boolean;
-var
-  Reg: TRegistry;
-
-begin
-  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_WRITE);
-
-  try
-    Reg.RootKey := HKEY_CLASSES_ROOT;
-
-    // Only update if context menu entry exists
-    if Reg.OpenKey(KEY_RECYCLEBIN +'\Clearas\command', False) then
-    begin
-      Reg.WriteString('', ParamStr(0));
-      Result := True;
-    end  //of begin
-    else
-      Result := False;
-
-  finally
-    Reg.CloseKey();
-    Reg.Free;
   end;  //of try
 end;
 
@@ -2628,48 +2619,35 @@ begin
   end;  //of try
 end;
 
-{ TMain.mmContextClick
-
-  MainMenu entry to add or removes "Clearas" in the recycle bin context menu. }
-
 procedure TMain.mmContextClick(Sender: TObject);
+{$IFDEF PORTABLE}
 var
   Reg: TRegistry;
-
+{$ENDIF}
 begin
+{$IFDEF PORTABLE}
+  // Only allow to remove recycle bin context menu entry
+  if not mmContext.Checked then
+    Exit;
+
+  // TODO: Finally remove in 5.1
   Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
 
   try
     Reg.RootKey := HKEY_CLASSES_ROOT;
 
-    // Checkbox checked?
-    if mmContext.Checked then
+    // Remove recycle bin context menu entry
+    if Reg.OpenKey(KEY_RECYCLEBIN, False) then
     begin
-      // Remove recycle bin context menu entry
-      Reg.OpenKey(KEY_RECYCLEBIN, False);
+      Reg.DeleteKey('Clearas');
+      mmContext.Visible := False;
+    end;  //of begin
 
-      if Reg.DeleteKey('Clearas') then
-        mmContext.Checked := False;
-    end  //of begin
-    else
-    try
-      // Add recycle bin context menu entry
-      Reg.OpenKey(KEY_RECYCLEBIN +'\Clearas', True);
-      Reg.WriteString('', FLang.GetString(LID_OPEN_CLEARAS));
-      Reg.CloseKey();
-      Reg.OpenKey(KEY_RECYCLEBIN +'\Clearas\command', True);
-      Reg.WriteString('', ParamStr(0));
-      mmContext.Checked := True;
-
-    finally
-      Reg.CloseKey();
-      Reg.Free;
-    end;  //of try
-
-  except
-    on E: Exception do
-      FLang.ShowException('Adding Clearas to recycle bin context menu failed!', E.Message);
+  finally
+    Reg.CloseKey();
+    Reg.Free;
   end;  //of try
+{$ENDIF}
 end;
 
 { TMain.mmRefreshClick

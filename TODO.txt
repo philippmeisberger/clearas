@@ -20,6 +20,7 @@ Context menu
 - Display icons
 - When disabling ShellNew item and updating related software ShellNew item gets usually registered again (ShellNew and _ShellNew exist in same key)
   --> Disable ShellNew again (but first remove _ShellNew)
+- Search in key "CLSID"
 - Add support for editing file path of ShellNew items
 - Add support for editing file paths of Shell Cascading items
 - Add support for cascading shell submenus in "ExtendedSubCommandsKey" subkey
