@@ -2824,11 +2824,10 @@ begin
     if (ExtractFileExt(IconFileName) = '.dll') then
       AIcon.Handle := ExtractIcon(HInstance, PChar(IconFileName), MuiString.Id)
     else
-      if (ExtractFileExt(IconFileName) = '.exe') then
-        AIcon.Handle := GetIcon(IconFileName)
+      if (ExtractFileExt(IconFileName) = '.ico') then
+        AIcon.LoadFromFile(IconFileName)
       else
-        if (ExtractFileExt(IconFileName) = '.ico') then
-          AIcon.LoadFromFile(IconFileName);
+        AIcon.Handle := GetIcon(IconFileName)
 
   finally
     RevertWow64FsRedirection(OldValue);
