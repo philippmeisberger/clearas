@@ -1040,8 +1040,8 @@ begin
       3:   mmAdd.Caption := GetString(LID_TASKS_ADD);
     end;  //of case
 
-    mmImport.Caption := GetString(LID_BACKUP_IMPORT);
-    mmExport.Caption := GetString(LID_ITEMS_EXPORT);
+    mmImport.Caption := GetString(LID_IMPORT);
+    mmExport.Caption := GetString(LID_EXPORT);
     mmClose.Caption := GetString(LID_QUIT);
 
     // Edit menu labels
@@ -2378,7 +2378,7 @@ begin
   try
     SelectedItem := GetSelectedItem();
 
-    if SelectedItem.InheritsFrom(TContextMenuShellItem) then
+    if (SelectedItem is TContextMenuShellItem) then
       (SelectedItem as TContextMenuShellItem).Extended := pmExtended.Checked;
 
   except
@@ -2616,7 +2616,7 @@ begin
 
     on E: Exception do
     begin
-      FLang.ShowException(FLang.GetString([LID_BACKUP_IMPORT, LID_IMPOSSIBLE]),
+      FLang.ShowException(FLang.GetString([LID_IMPORT, LID_IMPOSSIBLE]),
         E.Message);
     end;
   end;  //of try

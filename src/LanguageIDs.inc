@@ -25,9 +25,7 @@ const
   LID_OPEN_IN_REGEDIT                   = LID_LAST + 26;
   LID_HIDE                              = LID_LAST + 28;
   LID_STARTUP_ADD                       = LID_LAST + 29;
-  LID_BACKUP_IMPORT                     = LID_LAST + 30;
-  LID_ITEM_EXPORT                       = LID_LAST + 31;
-  LID_ITEMS_EXPORT                      = LID_LAST + 32;
+  LID_IMPORT                            = LID_LAST + 30;
   LID_QUIT                              = LID_LAST + 33;
   LID_EDIT                              = LID_LAST + 34;
   LID_RECYCLEBIN_ENTRY                  = LID_LAST + 35;
