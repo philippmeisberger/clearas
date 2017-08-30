@@ -574,11 +574,6 @@ begin
     eContextSearch.Visible := False;
     pbContextProgress.Visible := True;
   end;  //of begin
-
-  bEnableContextItem.Enabled := False;
-  bDisableContextItem.Enabled := False;
-  bDeleteContextItem.Enabled := False;
-  bExportContextItem.Enabled := False;
 end;
 
 { private TMain.OnContextSearchEnd
@@ -792,10 +787,6 @@ begin
   lwStartup.Cursor := crHourGlass;
   mmLang.Enabled := False;
   cbRunOnce.Enabled := False;
-  bEnableStartupItem.Enabled := False;
-  bDisableStartupItem.Enabled := False;
-  bDeleteStartupItem.Enabled := False;
-  bExportStartupItem.Enabled := False;
 end;
 
 { private TMain.OnStartupSearchEnd
@@ -890,11 +881,6 @@ begin
     eServiceSearch.Visible := False;
     pbServiceProgress.Visible := True;
   end;  //of begin
-
-  bEnableServiceItem.Enabled := False;
-  bDisableServiceItem.Enabled := False;
-  bDeleteServiceItem.Enabled := False;
-  bExportServiceItem.Enabled := False;
 end;
 
 { private TMain.OnServiceSearchEnd
@@ -1016,11 +1002,6 @@ begin
     eTaskSearch.Visible := False;
     pbTaskProgress.Visible := True;
   end;  //of begin
-
-  bEnableTaskItem.Enabled := False;
-  bDisableTaskitem.Enabled := False;
-  bDeleteTaskItem.Enabled := False;
-  bExportTaskItem.Enabled := False;
 end;
 
 { private TMain.SetLanguage
@@ -1386,43 +1367,12 @@ begin
       // Successfully deleted?
       if SelectedList.DeleteItem(SelectedItem) then
       begin
-        case PageControl.ActivePageIndex of
-          0:
-            begin
-              bEnableStartupItem.Enabled := False;
-              bDisableStartupItem.Enabled := False;
-              bDeleteStartupItem.Enabled := False;
-              bExportStartupItem.Enabled := False;
-            end;
-
-          1:
-            begin
-              bEnableContextItem.Enabled := False;
-              bDisableContextItem.Enabled := False;
-              bDeleteContextItem.Enabled := False;
-              bExportContextItem.Enabled := False;
-            end;
-
-          2:
-            begin
-              bEnableServiceItem.Enabled := False;
-              bDisableServiceItem.Enabled := False;
-              bDeleteServiceItem.Enabled := False;
-              bExportServiceItem.Enabled := False;
-            end;
-
-          3:
-            begin
-              bEnableTaskItem.Enabled := False;
-              bDisableTaskitem.Enabled := False;
-              bDeleteTaskItem.Enabled := False;
-              bExportTaskItem.Enabled := False;
-            end;
-        end;  //of case
-
         // Delete item from TListView
         SelectedListView.DeleteSelected();
         SelectedListView.ItemFocused := nil;
+
+        // Disable buttons
+        SelectedListView.OnSelectItem(Self, nil, False);
       end  //of begin
       else
         raise Exception.Create('Unknown error!');
