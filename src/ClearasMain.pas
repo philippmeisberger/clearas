@@ -536,6 +536,10 @@ begin
 
       for i := 0 to RootList.Count - 1 do
         RootList.OnNotify(Self, RootList[i], cnAdded);
+
+      // Resort items
+      if (ListView.Tag >= 0) then
+        ListView.AlphaSort();
     end;  //of if
 
   except
