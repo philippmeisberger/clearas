@@ -53,7 +53,7 @@ Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: 
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}"; Flags: postinstall shellexec
 
 [Registry]
-Root: HKCR; Subkey: "CLSID\{{645FF040-5081-101B-9F08-00AA002F954E}\shell\{#MyAppName}"; Flags: uninsdeletekey
+Root: HKCR; Subkey: "CLSID\{{645FF040-5081-101B-9F08-00AA002F954E}\shell\{#MyAppName}"; Flags: uninsdeletekey; Tasks: "ContextMenuRecycleBin"
 Root: HKCR; Subkey: "CLSID\{{645FF040-5081-101B-9F08-00AA002F954E}\shell\{#MyAppName}"; ValueType: string; ValueName: ""; ValueData: "{cm:LaunchProgram,{#MyAppName}}"; Tasks: "ContextMenuRecycleBin"
 Root: HKCR; Subkey: "CLSID\{{645FF040-5081-101B-9F08-00AA002F954E}\shell\{#MyAppName}\command"; ValueType: string; ValueName: ""; ValueData: "{app}\{#MyAppExeName}"; Tasks: "ContextMenuRecycleBin"
 
