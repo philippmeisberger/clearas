@@ -184,7 +184,7 @@ type
     function GetSelectedItem(): TRootItem;
     function GetSelectedList(): TRootList<TRootItem>;
     function GetSelectedListView(): TListView;
-    function GetItemText(AItem: TRootItem): string; inline;
+    function GetItemText(AItem: TRootItem): string;
     procedure Refresh(AIndex: Integer; ATotal: Boolean = True);
     procedure OnContextSearchStart(Sender: TObject);
     procedure OnContextSearchEnd(Sender: TObject);
@@ -211,6 +211,7 @@ type
     procedure OnTaskListNotify(Sender: TObject; const AItem: TTaskListItem;
       AAction: TCollectionNotification);
     procedure OnTaskCounterUpdate(Sender: TObject);
+    procedure SortList(AListView: TListView);
     function ShowExportItemDialog(AItem: TRootItem): Boolean;
     procedure ShowColumnDate(AListView: TListView; AShow: Boolean = True);
     procedure OnUpdate(Sender: TObject; const ANewBuild: Cardinal);
@@ -541,8 +542,7 @@ begin
         RootList.OnNotify(Self, RootList[i], cnAdded);
 
       // Resort items
-      if (ListView.Tag >= 0) then
-        ListView.AlphaSort();
+      SortList(ListView);
     end;  //of if
 
   except
@@ -592,16 +592,7 @@ begin
     eContextSearch.Visible := True;
   end;  //of begin
 
-  // Sort?
-  if (lwContext.Tag >= 0) then
-  begin
-    lwContext.AlphaSort();
-
-    // Show selected item again after sorting
-    if Assigned(lwContext.ItemFocused) then
-      lwContext.ItemFocused.MakeVisible(False);
-  end;  //of begin
-
+  SortList(lwContext);
   lwContext.Cursor := crDefault;
 end;
 
@@ -798,17 +789,7 @@ begin
   mmImport.Enabled := True;
   mmLang.Enabled := True;
   cbRunOnce.Enabled := True;
-
-  // Sort?
-  if (lwStartup.Tag >= 0) then
-  begin
-    lwStartup.AlphaSort();
-
-    // Show selected item again after sorting
-    if Assigned(lwStartup.ItemFocused) then
-      lwStartup.ItemFocused.MakeVisible(False);
-  end;  //of begin
-
+  SortList(lwStartup);
   lwStartup.Cursor := crDefault;
 end;
 
@@ -899,16 +880,7 @@ begin
     eServiceSearch.Visible := True;
   end;  //of begin
 
-  // Sort?
-  if (lwService.Tag >= 0) then
-  begin
-    lwService.AlphaSort();
-
-    // Show selected item again after sorting
-    if Assigned(lwService.ItemFocused) then
-      lwService.ItemFocused.MakeVisible(False);
-  end;  //of begin
-
+  SortList(lwService);
   lwService.Cursor := crDefault;
 end;
 
@@ -972,16 +944,7 @@ begin
     eTaskSearch.Visible := True;
   end;  //of begin
 
-  // Sort?
-  if (lwTasks.Tag >= 0) then
-  begin
-    lwTasks.AlphaSort();
-
-    // Show selected item again after sorting
-    if Assigned(lwTasks.ItemFocused) then
-      lwTasks.ItemFocused.MakeVisible(False);
-  end;  //of begin
-
+  SortList(lwTasks);
   lwTasks.Cursor := crDefault;
 end;
 
@@ -1229,6 +1192,18 @@ begin
     on E: Exception do
       FLang.ShowException(FLang.GetString([LID_EXPORT, LID_IMPOSSIBLE]), E.Message);
   end;  //of try
+end;
+
+procedure TMain.SortList(AListView: TListView);
+begin
+  if not Assigned(AListView) then
+    Exit;
+
+  if (AListView.Tag >= 0) then
+    AListView.AlphaSort();
+
+  if Assigned(AListView.ItemFocused) then
+    AListView.ItemFocused.MakeVisible(False);
 end;
 
 { public TMain.mmDeleteErasableClick
