@@ -3150,10 +3150,7 @@ begin
     begin
       AItem.LoadIcon(FIcon);
 
-      // Remove old icon
-      if ((AItem.ImageIndex <> -1) and (AItem.ImageIndex < FImages.Count)) then
-        FImages.Delete(AItem.ImageIndex);
-
+      // NOTE: Do not remove old icon as indices will change
       // NOTE: Inserting icon at same index in image list will not update icon on UI
       AItem.ImageIndex := FImages.AddIcon(FIcon);
     end;  //of begin
@@ -3340,22 +3337,10 @@ end;
 procedure TRootList<T>.Notify(const Item: T; Action: TCollectionNotification);
 begin
   // Icon handling
-  if Assigned(FImages) then
+  if (Assigned(FImages) and (Action = cnAdded)) then
   begin
-    case Action of
-      cnAdded:
-        begin
-          Item.LoadIcon(FIcon);
-          Item.ImageIndex := FImages.AddIcon(FIcon);
-        end;
-
-      cnRemoved:
-        begin
-          // Remove icon
-          if (Assigned(FImages) and (Item.ImageIndex <> -1) and (Item.ImageIndex < FImages.Count)) then
-            FImages.Delete(Item.ImageIndex);
-        end;
-    end;  //of case
+    Item.LoadIcon(FIcon);
+    Item.ImageIndex := FImages.AddIcon(FIcon);
   end;  //of begin
 
   // Must be executed in main thread!
