@@ -487,6 +487,9 @@ begin
     RootList := GetListForIndex(AIndex);
     ListView := GetListViewForIndex(AIndex);
 
+    // Disable buttons
+    ListView.OnSelectItem(Self, nil, False);
+
     // Make a total refresh or just use cached items
     if ATotal then
     begin
@@ -1657,8 +1660,6 @@ procedure TMain.eSearchRightButtonClick(Sender: TObject);
 begin
   if ((Sender as TButtonedEdit).Text <> '') then
     (Sender as TButtonedEdit).Clear();
-
-  // TODO: Disable buttons
 end;
 
 { TMain.CustomDrawItem
