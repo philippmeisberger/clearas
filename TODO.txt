@@ -13,6 +13,7 @@ General
   - User: Read and edit only items owned by user
 - Add support for cleaning shell bags
 - Guide/Manual
+- Divide search in multiple threads
 
 Context menu
 ============

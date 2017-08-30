@@ -2221,6 +2221,7 @@ begin
         pmRename.Enabled := True;
         pmDeleteIcon.Visible := False;
         pmChangeIcon.Visible := False;
+        pmExtended.Visible := False;
         pmEditPath.Enabled := True;
         pmExecute.Enabled := not SelectedItem.Erasable;
       end;
@@ -2254,6 +2255,7 @@ begin
         pmRename.Enabled := True;
         pmDeleteIcon.Visible := False;
         pmChangeIcon.Visible := False;
+        pmExtended.Visible := False;
         pmEditPath.Enabled := (SelectedItem.Command <> '');
         pmExecute.Enabled := not SelectedItem.Erasable;
       end;
@@ -2265,6 +2267,7 @@ begin
         pmRename.Enabled := True;
         pmDeleteIcon.Visible := False;
         pmChangeIcon.Visible := False;
+        pmExtended.Visible := False;
         pmEditPath.Enabled := (SelectedItem.Command <> '');
 
         // Tasks cannot be executed when they are disabled

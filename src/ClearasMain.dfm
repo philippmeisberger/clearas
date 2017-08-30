@@ -728,6 +728,7 @@ object Main: TMain
     object pmExtended: TMenuItem
       AutoCheck = True
       Caption = 'Extended'
+      Visible = False
       OnClick = pmExtendedClick
     end
     object N2: TMenuItem
