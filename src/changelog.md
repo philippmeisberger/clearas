@@ -3,7 +3,7 @@ Clearas
 
 An open-source project by PM Code Works
 
-Version 5.0 [*??.08.17*]
+Version 5.0 [*??.09.17*]
 -----------
 
 * Added automatic search for invalid items
@@ -32,6 +32,7 @@ Version 5.0 [*??.08.17*]
   * Column "Deactivation time" did not have correct caption after changing language
   * Caption was not refreshed after editing the path
   * Arguments are missing after adding a .bat file to autostart
+  * Loading primary language if requested locale could not be found in language file
 * Removed support for Windows 2000 and XP
 * Updater v3.1
   * Removed dependency to "indy" components library
