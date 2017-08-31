@@ -17,7 +17,7 @@ uses
 {$IFDEF MSWINDOWS}
   Winapi.Windows, Winapi.ShellAPI, System.NetEncoding, System.UITypes, Vcl.Forms;
 {$ELSE}
-  IniFiles;
+  StrUtils, IniFiles;
 {$ENDIF}
 
 const
@@ -124,11 +124,11 @@ type
   end;
 
   /// <summary>
-  ///   The <c>TLanguageFile</c> is a platform independent UI translater. It
-  ///   uses language IDs to unique identify strings inside a StringTable resource
-  ///   on Windows or INI file on other platforms. It scans such a resource an
-  ///   identifies available languages. A menu for language selection can be
-  ///   created using <see cref="BuildLanguageMenu"/>.
+  ///   <c>TLanguageFile</c> is a platform independent UI translator. It uses
+  ///   language IDs to unique identify strings inside a <c>StringTable</c>
+  ///   resource on Windows or INI file on other platforms. It scans such a
+  ///   resource and identifies available languages. A menu for language
+  ///   selection can be created using <see cref="BuildLanguageMenu"/>.
   /// </summary>
   TLanguageFile = class(TObject)
   private
@@ -152,6 +152,9 @@ type
     /// <param name="AInterval">
     ///   Optional: The application defined interval between languages.
     /// </param>
+    /// <exceptions>
+    ///   <c>ELanguageException</c> if no language was found.
+    /// </exceptions>
     procedure Load(const AInterval: Word = 200);
   {$ELSE}
     /// <summary>
@@ -170,6 +173,9 @@ type
     /// <param name="AInterval">
     ///   Optional: The application defined interval between languages.
     /// </param>
+    /// <exception>
+    ///   <c>ELanguageException</c> if no language was found.
+    /// </exception>
     constructor Create(const AInterval: Word = 200);
   {$ELSE}
     /// <summary>
@@ -241,7 +247,7 @@ type
       {$IFDEF FPC}const{$ELSE}TVarRec{$ENDIF}): string; overload;
 
     /// <summary>
-    ///   Loads a single string from a StringTable resource based language file.
+    ///   Loads a single string from the language file.
     /// </summary>
     /// <param name="AIndex">
     ///   The language ID.
@@ -252,7 +258,7 @@ type
     function GetString(AIndex: TLanguageId): string; overload;
 
     /// <summary>
-    ///   Loads multiple strings from a StringTable file based language file.
+    ///   Loads multiple strings from the language file.
     /// </summary>
     /// <param name="AIndices">
     ///   An array containing multiple language IDs.
@@ -287,7 +293,7 @@ type
     property Locale: TLocale read FLocale write SetLocale;
 
     /// <summary>
-    ///   Loads a single string from a StringTable resource based language file.
+    ///   Loads a single string from the language file.
     /// </summary>
     property Strings[AIndex: TLanguageId]: string read GetString; default;
   end;
@@ -487,9 +493,6 @@ begin
 
   // Remove last separator
   FLanguages.CommaText := FLanguages.CommaText.Remove(Length(FLanguages.CommaText) - 1);
-
-  // Try to set user prefered language
-  SetLocale(GetUserDefaultUILanguage());
 {$ELSE}
 var
   Languages: TStrings;
@@ -515,10 +518,10 @@ begin
   finally
     Languages.Free;
   end;  //of try
+{$ENDIF}
 
   // Try to set user prefered language
   SetLocale(GetUserDefaultUILanguage());
-{$ENDIF}
 end;
 
 procedure TLanguageFile.RemoveListener(AListener: IChangeLanguageListener);
@@ -531,6 +534,9 @@ procedure TLanguageFile.SetLocale(const ALocale: TLocale);
 var
   i: Integer;
   Listener: IChangeLanguageListener;
+{$IFNDEF MSWINDOWS}
+  Locale: TLocale;
+{$ENDIF}
 
 begin
   if (FLocale <> ALocale) then
@@ -539,12 +545,18 @@ begin
     // Requested language not found?
     if (FLanguages.Values[IntToStr(ALocale)] = '') then
     begin
-      // English as fallback
-      FLocale := MAKELANGID(LANG_ENGLISH, SUBLANG_DEFAULT);
+      // Try primary language
+      FLocale := MAKELANGID(PRIMARYLANGID(ALocale), SUBLANG_DEFAULT);
 
-      // Default language not found?
       if (FLanguages.Values[IntToStr(FLocale)] = '') then
-        raise ELanguageException.Create('No default language found in language file!');
+      begin
+        // English as fallback
+        FLocale := MAKELANGID(LANG_ENGLISH, SUBLANG_DEFAULT);
+
+        // Default language not found?
+        if (FLanguages.Values[IntToStr(FLocale)] = '') then
+          raise ELanguageException.Create('No default language found in language file!');
+      end;  //of begin
     end  //of begin
     else
       FLocale := ALocale;
@@ -554,12 +566,27 @@ begin
     // Requested language not found?
     if (FLanguages.Values[ALocale] = '') then
     begin
-      // English as fallback
-      FLocale := 'en_US';
+      // Try primary language
+      for i := 0 to FLanguages.Count - 1 do
+      begin
+        Locale := FIni.ReadString(FLanguages.ValueFromIndex[i], IntToStr(FIRST_LANGUAGE_START_INDEX), '');
 
-      // Default language not found?
-      if (FLanguages.Values[FLocale] = '') then
-        raise ELanguageException.Create('No default language found in language file!');
+        if AnsiStartsText(Copy(ALocale, 1, 3), Locale) then
+        begin
+          FLocale := Locale;
+          Break;
+        end;  //of begin
+      end;  //of for
+
+      if ((FLocale = '') or (FLanguages.Values[FLocale] = '')) then
+      begin
+        // English as fallback
+        FLocale := 'en_US';
+
+        // Default language not found?
+        if (FLanguages.Values[FLocale] = '') then
+          raise ELanguageException.Create('No default language found in language file!');
+      end;  //of begin
     end  //of begin
     else
       FLocale := ALocale;
