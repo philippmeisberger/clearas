@@ -1,7 +1,6 @@
 program Clearas;
 
-{$R 'changelog.res' 'changelog.rc'}
-{$R 'description.res' 'description.rc'}
+{$R *.dres}
 
 uses
   Forms,
