@@ -85,7 +85,6 @@ type
     FExeFileName: TFileName;
     FArguments: string;
     function GetCommand(): TCommandString;
-    procedure SetFileName(const AFileName: TFileName);
   protected
     /// <summary>
     ///   Saves a .lnk file.
@@ -121,21 +120,12 @@ type
     constructor Create(const AFileName: TFileName); reintroduce;
 
     /// <summary>
-    ///   Deletes the .lnk file.
-    /// </summary>
-    /// <returns>
-    ///   <c>True</c> if the .lnk file was successfully deleted or <c>False</c>
-    ///   otherwise.
-    /// </returns>
-    function Delete(): Boolean;
-
-    /// <summary>
     ///   Checks if the .lnk file exists.
     /// </summary>
     /// <returns>
     ///   <c>True</c> if the .lnk file exists or <c>False</c> otherwise.
     /// </returns>
-    function Exists(): Boolean;
+    function Exists(): Boolean; inline;
 
     /// <summary>
     ///   Checks if arguments are specified.
@@ -182,7 +172,7 @@ type
     /// <summary>
     ///   Gets or sets the filename to the .lnk file.
     /// </summary>
-    property FileName: TFileName read FFileName write SetFileName;
+    property FileName: TFileName read FFileName write FFileName;
   end;
 
   /// <summary>
@@ -2630,19 +2620,6 @@ begin
   Result := TCommandString.Create(FExeFileName, FArguments);
 end;
 
-procedure TLnkFile.SetFileName(const AFileName: TFileName);
-begin
-  if (Exists() and not RenameFile(FFileName, AFileName)) then
-    raise Exception.Create(SysErrorMessage(GetLastError()));
-
-  FFileName := AFileName;
-end;
-
-function TLnkFile.Delete(): Boolean;
-begin
-  Result := DeleteFile(FFileName);
-end;
-
 function TLnkFile.Exists(): Boolean;
 begin
   Result := FileExists(FFileName);
@@ -4200,7 +4177,7 @@ begin
   if (FEnabled or Win8) then
   begin
     // Could not delete .lnk?
-    if not FLnkFile.Delete() then
+    if not DeleteFile(FLnkFile.FileName) then
       raise EStartupException.CreateFmt('Could not delete "%s"!', [FLnkFile.FileName]);
 
     if Win8 then
@@ -4271,7 +4248,7 @@ begin
       Reg.WriteString('location', ToString());
 
     // Delete original .lnk
-    if not FLnkFile.Delete() then
+    if not DeleteFile(FLnkFile.FileName) then
       raise EStartupException.CreateFmt('Could not delete "%s"!', [FLnkFile.FileName]);
 
     // Update information
@@ -4337,6 +4314,9 @@ begin
     NewName, [rfReplaceAll, rfIgnoreCase]);
 
   // Rename .lnk file
+  if not MoveFile(PChar(FLnkFile.FileName), PChar(NewFileName)) then
+    raise EStartupException.Create(SysErrorMessage(GetLastError()));
+
   FLnkFile.FileName := NewFileName;
   Win8 := CheckWin32Version(6, 2);
 
