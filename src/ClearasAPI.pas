@@ -4074,6 +4074,7 @@ constructor TStartupUserItem.Create(const AName: string; const ACommand: TComman
   const ALocation: string; AEnabled, AStartupUser: Boolean; ALnkFile: TLnkFile);
 const
   cCurrentUser: array[Boolean] of TRootKey = (rkHKLM, rkHKCU);
+  cEnabledWindowsVista: array[Boolean] of TRootKey = (rkHKLM, rkUnknown);
 
 var
   RootKey: TRootKey;
@@ -4083,7 +4084,7 @@ begin
   if CheckWin32Version(6, 2) then
     RootKey := cCurrentUser[AStartupUser]
   else
-    RootKey := rkUnknown;
+    RootKey := cEnabledWindowsVista[AEnabled];
 
   inherited Create(AName, ACommand, ALocation, RootKey, AEnabled, False);
   FStartupUser := AStartupUser;
