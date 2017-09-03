@@ -457,7 +457,7 @@ type
     function GetFullLocation(): string; override;
 
     /// <summary>
-    ///   Deletes a specified registry key.
+    ///   Deletes a specified registry key and its subkeys.
     /// </summary>
     /// <param name="AHKey">
     ///   The root key.
@@ -1324,9 +1324,6 @@ type
     /// <param name="AName">
     ///   The internal name.
     /// </param>
-    /// <param name="ACommand">
-    ///   The command.
-    /// </param>
     /// <param name="ALocation">
     ///   The location where the item can be found.
     /// </param>
@@ -1339,8 +1336,8 @@ type
     /// <param name="ALnkFile">
     ///   The corresponding .lnk file.
     /// </param>
-    constructor Create(const AName: string; const ACommand: TCommandString;
-      const ALocation: string; AEnabled, AStartupUser: Boolean; ALnkFile: TLnkFile);
+    constructor Create(const AName, ALocation: string; AEnabled, AStartupUser: Boolean;
+      ALnkFile: TLnkFile);
 
     /// <summary>
     ///   Destructor for destroying a <c>TStartupUserItem</c> instance.
@@ -4070,8 +4067,8 @@ end;
 
 { TStartupUserItem }
 
-constructor TStartupUserItem.Create(const AName: string; const ACommand: TCommandString;
-  const ALocation: string; AEnabled, AStartupUser: Boolean; ALnkFile: TLnkFile);
+constructor TStartupUserItem.Create(const AName, ALocation: string; AEnabled,
+  AStartupUser: Boolean; ALnkFile: TLnkFile);
 const
   cCurrentUser: array[Boolean] of TRootKey = (rkHKLM, rkHKCU);
   cEnabledWindowsVista: array[Boolean] of TRootKey = (rkHKLM, rkUnknown);
@@ -4086,7 +4083,7 @@ begin
   else
     RootKey := cEnabledWindowsVista[AEnabled];
 
-  inherited Create(AName, ACommand, ALocation, RootKey, AEnabled, False);
+  inherited Create(AName, ALnkFile.Command, ALocation, RootKey, AEnabled, False);
   FStartupUser := AStartupUser;
   FLnkFile := ALnkFile;
 end;
@@ -4557,7 +4554,7 @@ begin
 
         // Add item to list
         Result := (Add(TStartupUserItem.Create(ExtractFileName(LnkFileName),
-          LnkFile.Command, LnkFile.FileName, True, AStartupUser, LnkFile)) <> -1);
+          LnkFile.FileName, True, AStartupUser, LnkFile)) <> -1);
       end  //of begin
       else
       begin
@@ -4695,8 +4692,9 @@ var
   i: Integer;
   Item: TStartupListItem;
   Wow64, RunOnce, StartupUser: Boolean;
-  Location, Name, LnkFileName, KeyPath, OriginKey: string;
+  Location, Name, KeyPath, OriginKey: string;
   Command: TCommandString;
+  LnkFile: TLnkFile;
 
 begin
   // Deprecated since Windows 8!
@@ -4735,10 +4733,15 @@ begin
       else
       begin
         Name := ExtractFileName(Location.Replace('^', '\'));
-        LnkFileName := Reg.ReadString('path');
 
-        if (LnkFileName = '') then
-          LnkFileName := Location.Replace('^', '\');
+        // Setup non-existing .lnk file
+        LnkFile := TLnkFile.Create(Reg.ReadString('path'));
+
+        with LnkFile do
+        begin
+          ExeFileName := Command.ExtractFileName();
+          Arguments := Command.ExtractArguments();
+        end;  //of with
 
         // Windows >= Vista?
         if CheckWin32Version(6) then
@@ -4746,16 +4749,7 @@ begin
         else
           StartupUser := AnsiSameText(Reg.ReadString('location'), 'Startup');
 
-        Item := TStartupUserItem.Create(Name, Command, Location, False, StartupUser, nil);
-
-        // Setup .lnk file
-        TStartupUserItem(Item).LnkFile := TLnkFile.Create(LnkFileName);
-
-        with TStartupUserItem(Item).LnkFile do
-        begin
-          ExeFileName := Item.Command.ExtractFileName();
-          Arguments := Item.Command.ExtractArguments();
-        end;  //of with
+        Item := TStartupUserItem.Create(Name, Location, False, StartupUser, LnkFile);
       end;  //of if
 
       Item.DeactivationTime := Item.GetTimestamp(Reg);
@@ -4828,8 +4822,8 @@ begin
         // TODO: EOleSysError can be raised if .lnk is invalid
         LnkFile := TLnkFile.Create(AStartupLocation.GetLocation().Value + Name);
 
-        Item := TStartupUserItem.Create(Name, LnkFile.Command, LnkFile.FileName,
-          Status.GetEnabled(), StartupUser, LnkFile);
+        Item := TStartupUserItem.Create(Name, LnkFile.FileName, Status.GetEnabled(),
+          StartupUser, LnkFile);
         Item.DeactivationTime := Status.GetDeactivationTime();
         Add(Item);
       until FindNext(SearchResult) <> 0;
