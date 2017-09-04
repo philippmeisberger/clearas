@@ -4178,7 +4178,7 @@ begin
   begin
     // Could not delete .lnk?
     if not DeleteFile(FLnkFile.FileName) then
-      raise EStartupException.CreateFmt('Could not delete "%s"!', [FLnkFile.FileName]);
+      raise EStartupException.CreateFmt('Could not delete "%s": %s!', [FLnkFile.FileName, SysErrorMessage(GetLastError())]);
 
     if Win8 then
       Result := inherited Delete()
@@ -5068,7 +5068,7 @@ begin
     begin
       // Delete disable value, but do not fail if value does not exist!
       if (Reg.ValueExists(DisableValueName) and not Reg.DeleteValue(DisableValueName)) then
-        raise EStartupException.CreateFmt('Could not delete value "%s"!', [DisableValueName]);
+        raise EContextMenuException.CreateFmt('Could not delete value "%s"!', [DisableValueName]);
     end  //of begin
     else
       Reg.WriteString(DisableValueName, '');
@@ -6052,7 +6052,7 @@ begin
 
       // Last status exists?
       if not Reg.ValueExists(Name) then
-        raise EStartupException.Create('Last status does not exist!');
+        raise EServiceException.Create('Last status does not exist!');
 
       // Enable service
       if not ChangeServiceConfig(Service, SERVICE_NO_CHANGE, Reg.ReadInteger(Name),
