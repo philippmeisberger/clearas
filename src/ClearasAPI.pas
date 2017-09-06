@@ -4716,12 +4716,8 @@ begin
 
         // Setup non-existing .lnk file
         LnkFile := TLnkFile.Create(Reg.ReadString('path'));
-
-        with LnkFile do
-        begin
-          ExeFileName := Command.ExtractFileName();
-          Arguments := Command.ExtractArguments();
-        end;  //of with
+        LnkFile.ExeFileName := Command.ExtractFileName();
+        LnkFile.Arguments := Command.ExtractArguments();
 
         // Windows >= Vista?
         if CheckWin32Version(6) then
