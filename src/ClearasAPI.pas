@@ -4303,25 +4303,23 @@ end;
 
 procedure TStartupUserItem.Rename(const ANewName: string);
 var
-  OldFileName, NewFileName, NewName, OldKeyName, NewKeyName: string;
+  NewFileName, NewName, NewKeyName: string;
   Reg: TRegistry;
   Win8: Boolean;
 
 begin
-  OldFileName := FLnkFile.FileName;
   NewName := ChangeFileExt(ANewName, TLnkFile.FileExtension);
-  NewFileName := StringReplace(OldFileName, ExtractFileName(OldFileName),
+  NewFileName := StringReplace(FLnkFile.FileName, ExtractFileName(FLnkFile.FileName),
     NewName, [rfReplaceAll, rfIgnoreCase]);
-
-  // Rename .lnk file
-  if not MoveFile(PChar(FLnkFile.FileName), PChar(NewFileName)) then
-    raise EStartupException.Create(SysErrorMessage(GetLastError()));
-
-  FLnkFile.FileName := NewFileName;
   Win8 := CheckWin32Version(6, 2);
 
   if (FEnabled or Win8) then
   begin
+    // Rename .lnk file
+    if not MoveFile(PChar(FLnkFile.FileName), PChar(NewFileName)) then
+      raise EStartupException.Create(SysErrorMessage(GetLastError()));
+
+    FLnkFile.FileName := NewFileName;
     FLocation := NewFileName;
 
     if Win8 then
@@ -4331,35 +4329,35 @@ begin
   end  //of begin
   else
   begin
+    // Rename disable key prior to Windows 8
     Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
 
     try
       Reg.RootKey := HKEY_LOCAL_MACHINE;
-      Reg.OpenKey(DisabledKey, True);
 
-      OldKeyName := AddCircumflex(FLnkFile.FileName);
-      NewKeyName := AddCircumflex(NewFileName);
+      if not Reg.KeyExists(FLocation) then
+        raise EStartupException.CreateFmt('Key "%s" does not exist!', [FLocation]);
 
-      if not Reg.KeyExists(OldKeyName) then
-        raise EStartupException.CreateFmt('Key "%s" does not exist!', [DisabledKey + OldKeyName]);
+      NewKeyName := DisabledKey + AddCircumflex(NewFileName);
 
+      // New key must not exist
       if Reg.KeyExists(NewKeyName) then
-        raise EStartupException.CreateFmt('Key "%s" already exists!', [DisabledKey + NewKeyName]);
+        raise EStartupException.CreateFmt('Key "%s" already exists!', [NewKeyName]);
 
       // Rename key and delete old key
-      Reg.MoveKey(OldKeyName, NewKeyName, True);
+      Reg.MoveKey(FLocation, NewKeyName, True);
 
-      if not Reg.KeyExists(NewKeyName) then
-        raise EStartupException.CreateFmt('Key "%s" was not renamed!', [DisabledKey + OldKeyName]);
+      // Update information
+      if not Reg.OpenKey(NewKeyName, False) then
+        raise EStartupException.CreateFmt('New key "%s" was not created!', [NewKeyName]);
 
-      FLocation := DisabledKey + NewKeyName;
-
-      // Update specific information
-      Reg.CloseKey();
-      Reg.OpenKey(FLocation, False);
       Reg.WriteString('path', NewFileName);
       Reg.WriteString('item', ChangeFileExt(NewName, ''));
+      FLnkFile.FileName := NewFileName;
+      FLocation := NewKeyName;
       FName := ANewName;
+
+      // TODO: Backup .lnk is not renamed
 
     finally
       Reg.CloseKey();
