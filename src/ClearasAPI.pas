@@ -4267,8 +4267,17 @@ begin
 end;
 
 procedure TStartupUserItem.ExportItem(const AFileName: string);
+var
+  LnkFileName: string;
+
 begin
-  if not CopyFile(PChar(FLnkFile.FileName), PChar(ChangeFileExt(AFileName,
+  LnkFileName := FLnkFile.FileName;
+
+  // Export backup .lnk
+  if (not FEnabled and not CheckWin32Version(6, 2)) then
+    LnkFileName := GetBackupLnk();
+
+  if not CopyFile(PChar(LnkFileName), PChar(ChangeFileExt(AFileName,
     GetBackupExtension())), False) then
     raise EStartupException.Create('Could not create backup file!');
 end;
