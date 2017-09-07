@@ -1269,7 +1269,6 @@ type
     FStartupUser: Boolean;
     function AddCircumflex(const AName: string): string;
     function BackupExists(): Boolean; deprecated 'Since Windows 8';
-    procedure CreateBackup(); deprecated 'Since Windows 8';
     function DeleteBackup(): Boolean; deprecated 'Since Windows 8';
     function GetBackupDir(): string; deprecated 'Since Windows 8';
     function GetBackupLnk(): string; deprecated 'Since Windows 8';
@@ -4085,16 +4084,6 @@ begin
   Result := System.SysUtils.FileExists(GetBackupLnk());
 end;
 
-procedure TStartupUserItem.CreateBackup();
-begin
-  // Deprecated since Windows 8!
-  if CheckWin32Version(6, 2) then
-    Exit;
-
-  if not CopyFile(PChar(FLnkFile.FileName), PChar(GetBackupLnk()), False) then
-    raise EStartupException.CreateFmt('Backup could not be created in "%s"!', [GetBackupLnk()]);
-end;
-
 function TStartupUserItem.GetFullLocation(): string;
 begin
   if FEnabled then
@@ -4226,9 +4215,13 @@ begin
   if not FLnkFile.Exists() then
     raise EStartupException.CreateFmt('"%s" does not exist!', [FLnkFile.FileName]);
 
-  // Create backup by copying original .lnk
-  CreateBackup();
+  // Move .lnk file to backup location
+  if not MoveFileEx(PChar(FLnkFile.FileName), PChar(GetBackupLnk()), MOVEFILE_REPLACE_EXISTING) then
+    raise EStartupException.Create(SysErrorMessage(GetLastError()));
 
+  FLnkFile.FileName := GetBackupLnk();
+
+  // Store settings in Registry
   Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_WRITE);
 
   try
@@ -4253,10 +4246,6 @@ begin
     else
       Reg.WriteString('location', ToString());
 
-    // Delete original .lnk
-    if not DeleteFile(FLnkFile.FileName) then
-      raise EStartupException.CreateFmt('Could not delete "%s"!', [FLnkFile.FileName]);
-
     // Update information
     FLocation := DisabledKey + KeyName;
     FRootKey := rkHKLM;
@@ -4275,8 +4264,8 @@ begin
   if BackupExists() then
   begin
     // Failed to restore backup file?
-    if not CopyFile(PChar(GetBackupLnk()), PChar(FLnkFile.FileName), True) then
-      raise EStartupException.CreateFmt('Could not restore backup "%s"!', [GetBackupLnk()]);
+    if not MoveFile(PChar(GetBackupLnk()), PChar(FLnkFile.FileName)) then
+      raise EStartupException.CreateFmt('Could not restore backup "%s": %s!', [GetBackupLnk(), SysErrorMessage(GetLastError())]);
   end  //of begin
   else
   begin
@@ -4289,9 +4278,6 @@ begin
   if not DeleteKey(HKEY_LOCAL_MACHINE, DisabledKey,
     AddCircumflex(FLnkFile.FileName), False) then
     raise EStartupException.Create('Could not delete key!');
-
-  // Delete backup file after enabling prior to Windows 7
-  DeleteBackup();
 
   // Update information
   FLocation := FLnkFile.FileName;
