@@ -4268,14 +4268,30 @@ end;
 
 procedure TStartupUserItem.ExportItem(const AFileName: string);
 var
-  LnkFileName: string;
+  LnkFileName, OriginalLnkFileName: string;
 
 begin
   LnkFileName := FLnkFile.FileName;
 
   // Export backup .lnk
   if (not FEnabled and not CheckWin32Version(6, 2)) then
+  begin
     LnkFileName := GetBackupLnk();
+
+    // Backup file does not exist?
+    if not System.SysUtils.FileExists(LnkFileName) then
+    begin
+      OriginalLnkFileName := FLnkFile.FileName;
+      FLnkFile.FileName := AFileName;
+
+      // Failed to create backup .lnk?
+      if not FLnkFile.Save() then
+        raise EStartupException.CreateFmt('Could not create "%s"!', [FLnkFile.FileName]);
+
+      FLnkFile.FileName := OriginalLnkFileName;
+      Exit;
+    end;  //of begin
+  end;  //of begin
 
   if not CopyFile(PChar(LnkFileName), PChar(ChangeFileExt(AFileName,
     GetBackupExtension())), False) then
