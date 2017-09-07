@@ -1268,8 +1268,6 @@ type
     FLnkFile: TLnkFile;
     FStartupUser: Boolean;
     function AddCircumflex(const AName: string): string;
-    function BackupExists(): Boolean; deprecated 'Since Windows 8';
-    function DeleteBackup(): Boolean; deprecated 'Since Windows 8';
     function GetBackupDir(): string; deprecated 'Since Windows 8';
     function GetBackupLnk(): string; deprecated 'Since Windows 8';
   protected
@@ -4075,15 +4073,6 @@ begin
   Result := AName.Replace('\', '^');
 end;
 
-function TStartupUserItem.BackupExists(): Boolean;
-begin
-  // Deprecated since Windows 8!
-  if CheckWin32Version(6, 2) then
-    Exit(False);
-
-  Result := System.SysUtils.FileExists(GetBackupLnk());
-end;
-
 function TStartupUserItem.GetFullLocation(): string;
 begin
   if FEnabled then
@@ -4184,32 +4173,25 @@ begin
   begin
     Result := DeleteKey(HKEY_LOCAL_MACHINE, DisabledKey, AddCircumflex(FLnkFile.FileName));
 
-    // Delete backup file prior to Windows 7
+    // Delete backup file prior to Windows 8
     if Result then
-      DeleteBackup();
+      DeleteFile(GetBackupLnk());
   end;  //of if
-end;
-
-function TStartupUserItem.DeleteBackup(): Boolean;
-begin
-  // Deprecated since Windows 8!
-  if CheckWin32Version(6, 2) then
-    Exit(False);
-
-  Result := DeleteFile(GetBackupLnk());
 end;
 
 function TStartupUserItem.Disable(): Boolean;
 var
   Reg: TRegistry;
-  KeyName: string;
+  KeyName, BackupDir, BackupLnk: string;
 
 begin
   Result := False;
+  BackupLnk := GetBackupLnk();
+  BackupDir := ExtractFilePath(BackupLnk);
 
   // Create backup directory if not exist
-  if not DirectoryExists(GetBackupDir()) then
-    ForceDirectories(GetBackupDir());
+  if not DirectoryExists(BackupDir) then
+    ForceDirectories(BackupDir);
 
   // .lnk does not exist
   if not FLnkFile.Exists() then
@@ -4234,7 +4216,7 @@ begin
     Reg.WriteString('path', FLocation);
     Reg.WriteString('item', ChangeFileExt(ExtractFileName(Name), ''));
     Reg.WriteString('command', Command);
-    Reg.WriteString('backup', GetBackupLnk());
+    Reg.WriteString('backup', BackupLnk);
 
     // Special Registry entries only for Windows >= Vista
     if CheckWin32Version(6) then
@@ -4261,7 +4243,7 @@ end;
 function TStartupUserItem.Enable(): Boolean;
 begin
   // Backup file exists?
-  if BackupExists() then
+  if System.SysUtils.FileExists(GetBackupLnk()) then
   begin
     // Failed to restore backup file?
     if not MoveFile(PChar(GetBackupLnk()), PChar(FLnkFile.FileName)) then
@@ -4856,7 +4838,7 @@ begin
     Load(Location);
   end;  //of for
 
-  // Load disabled items from deprecated Registry keys only prior to Windows 7
+  // Load disabled items from deprecated Registry keys only prior to Windows 8
   LoadDisabled(False);
   LoadDisabled(True);
 end;
