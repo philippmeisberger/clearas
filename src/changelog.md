@@ -34,6 +34,7 @@ Version 5.0 [*??.09.17*]
   * Arguments are missing after adding a .bat file to autostart
   * Loading primary language if requested locale could not be found in language file
   * Renaming disabled startup user items was not possible
+  * Disabled startup user items were enabled after changing file path
 * Removed support for Windows 2000 and XP
 * Updater v3.1
   * Removed dependency to "indy" components library

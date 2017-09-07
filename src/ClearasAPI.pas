@@ -4146,25 +4146,31 @@ begin
 end;
 
 procedure TStartupUserItem.SetCommand(const ACommand: TCommandString);
+var
+  LnkFileName: string;
+
 begin
-  if (not Enabled and not CheckWin32Version(6, 2)) then
+  if (not FEnabled and not CheckWin32Version(6, 2)) then
+  begin
+    LnkFileName := FLnkFile.FileName;
+    FLnkFile.FileName := GetBackupLnk();
     inherited SetCommand(ACommand);
+  end;  //of begin
 
   FLnkFile.ExeFileName := ACommand.ExtractFileName();
   FLnkFile.Arguments := ACommand.ExtractArguments();
 
   if not FLnkFile.Save() then
-    raise EStartupException.Create('Could not save .lnk!');
+    raise EStartupException.CreateFmt('Could not save "%s"!', [FLnkFile.FileName]);
+
+  if (not FEnabled and not CheckWin32Version(6, 2)) then
+    FLnkFile.FileName := LnkFileName;
 
   FCommand := ACommand;
   UpdateErasable();
 
   // Update caption
   FCaption := GetFileDescription(ACommand.Expand());
-
-  // Rewrite backup prior to Windows 7
-  if not FEnabled then
-    CreateBackup();
 end;
 
 function TStartupUserItem.Delete(): Boolean;
