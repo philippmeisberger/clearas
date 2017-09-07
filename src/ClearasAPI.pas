@@ -3716,7 +3716,14 @@ end;
 
 function TStartupListItem.Delete(): Boolean;
 begin
-  Result := DeleteValue(GetApprovedLocation(), False);
+  // Delete status from Registry
+  if CheckWin32Version(6, 2) then
+    Result := DeleteValue(GetApprovedLocation(), False)
+  else
+    if not FEnabled then
+      Result := (RegDeleteKeyEx(HKEY_LOCAL_MACHINE, PChar(FLocation), KEY_WOW64_64KEY, 0) = ERROR_SUCCESS)
+    else
+      Result := True;
 end;
 
 procedure TStartupListItem.ExportItem(const AFileName: string);
@@ -3805,14 +3812,11 @@ function TStartupItem.Delete(): Boolean;
 begin
   if (FEnabled or CheckWin32Version(6, 2)) then
   begin
-    Result := DeleteValue(GetLocation(), True);
+    if not DeleteValue(GetLocation(), True) then
+      Exit(False);
+  end;  //of begin
 
-    // Windows 8?
-    if (Result and CheckWin32Version(6, 2)) then
-      Result := inherited Delete();
-  end  //of begin
-  else
-    Result := DeleteKey(HKEY_LOCAL_MACHINE, DisabledKey, Name);
+  Result := inherited Delete();
 end;
 
 function TStartupItem.Disable(): Boolean;
@@ -4152,31 +4156,18 @@ begin
 end;
 
 function TStartupUserItem.Delete(): Boolean;
-var
-  Win8: Boolean;
-
 begin
-  Win8 := CheckWin32Version(6, 2);
-
-  if (FEnabled or Win8) then
+  if (FEnabled or CheckWin32Version(6, 2)) then
   begin
     // Could not delete .lnk?
     if not DeleteFile(FLnkFile.FileName) then
       raise EStartupException.CreateFmt('Could not delete "%s": %s!', [FLnkFile.FileName, SysErrorMessage(GetLastError())]);
-
-    if Win8 then
-      Result := inherited Delete()
-    else
-      Result := True;
   end  //of begin
   else
-  begin
-    Result := DeleteKey(HKEY_LOCAL_MACHINE, DisabledKey, AddCircumflex(FLnkFile.FileName));
-
     // Delete backup file prior to Windows 8
-    if Result then
-      DeleteFile(GetBackupLnk());
-  end;  //of if
+    DeleteFile(GetBackupLnk());
+
+  Result := inherited Delete();
 end;
 
 function TStartupUserItem.Disable(): Boolean;
