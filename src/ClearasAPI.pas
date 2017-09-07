@@ -4201,8 +4201,6 @@ begin
   if not MoveFileEx(PChar(FLnkFile.FileName), PChar(GetBackupLnk()), MOVEFILE_REPLACE_EXISTING) then
     raise EStartupException.Create(SysErrorMessage(GetLastError()));
 
-  FLnkFile.FileName := GetBackupLnk();
-
   // Store settings in Registry
   Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_WRITE);
 
