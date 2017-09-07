@@ -4303,32 +4303,36 @@ end;
 
 procedure TStartupUserItem.Rename(const ANewName: string);
 var
-  NewFileName, NewName, NewKeyName: string;
+  NewLnkFileName, NewName, NewKeyName, NewBackupLnkName: string;
   Reg: TRegistry;
   Win8: Boolean;
 
 begin
   NewName := ChangeFileExt(ANewName, TLnkFile.FileExtension);
-  NewFileName := StringReplace(FLnkFile.FileName, ExtractFileName(FLnkFile.FileName),
+  NewLnkFileName := StringReplace(FLnkFile.FileName, ExtractFileName(FLnkFile.FileName),
     NewName, [rfReplaceAll, rfIgnoreCase]);
   Win8 := CheckWin32Version(6, 2);
 
   if (FEnabled or Win8) then
   begin
     // Rename .lnk file
-    if not MoveFile(PChar(FLnkFile.FileName), PChar(NewFileName)) then
+    if not MoveFile(PChar(FLnkFile.FileName), PChar(NewLnkFileName)) then
       raise EStartupException.Create(SysErrorMessage(GetLastError()));
 
-    FLnkFile.FileName := NewFileName;
-    FLocation := NewFileName;
+    FLnkFile.FileName := NewLnkFileName;
+    FLocation := NewLnkFileName;
 
     if Win8 then
       inherited Rename(ANewName)
     else
-      FName := ANewName;
+      FName := NewName;
   end  //of begin
   else
   begin
+    // Rename backup .lnk file
+    NewBackupLnkName := GetBackupDir() + NewName + GetBackupExtension();
+    MoveFile(PChar(GetBackupLnk()), PChar(NewBackupLnkName));
+
     // Rename disable key prior to Windows 8
     Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
 
@@ -4338,7 +4342,7 @@ begin
       if not Reg.KeyExists(FLocation) then
         raise EStartupException.CreateFmt('Key "%s" does not exist!', [FLocation]);
 
-      NewKeyName := DisabledKey + AddCircumflex(NewFileName);
+      NewKeyName := DisabledKey + AddCircumflex(NewLnkFileName);
 
       // New key must not exist
       if Reg.KeyExists(NewKeyName) then
@@ -4351,13 +4355,12 @@ begin
       if not Reg.OpenKey(NewKeyName, False) then
         raise EStartupException.CreateFmt('New key "%s" was not created!', [NewKeyName]);
 
-      Reg.WriteString('path', NewFileName);
+      Reg.WriteString('path', NewLnkFileName);
       Reg.WriteString('item', ChangeFileExt(NewName, ''));
-      FLnkFile.FileName := NewFileName;
+      Reg.WriteString('backup', NewBackupLnkName);
+      FLnkFile.FileName := NewLnkFileName;
       FLocation := NewKeyName;
-      FName := ANewName;
-
-      // TODO: Backup .lnk is not renamed
+      FName := NewName;
 
     finally
       Reg.CloseKey();
