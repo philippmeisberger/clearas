@@ -800,7 +800,7 @@ type
     /// <exception>
     ///   <c>EListBlocked</c> if another operation is pending on the list.
     ///   <c>EInvalidItem</c> if no item is selected.
-    ///   <c>EWarning</c> if item with new name already exists.
+    ///   <c>EAlreadyExists</c> if item with new name already exists.
     /// </exception>
     procedure RenameItem(AItem: T; const ANewName: string);
 
@@ -3316,7 +3316,7 @@ begin
       // Check for item with the same name
       for i := 0 to Count - 1 do
         if (Items[i].Name = ANewName) then
-          raise EWarning.Create('Item named "'+ ANewName +'" already exists!');
+          raise EAlreadyExists.Create('Item named "'+ ANewName +'" already exists!');
     end;  //of begin
 
     AItem.Name := ANewName;

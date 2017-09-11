@@ -2102,8 +2102,8 @@ begin
         mtWarning, [mbOK], 0);
     end;
 
-    on E: EWarning do
-      MessageDlg(E.Message, mtWarning, [mbOK], 0);
+    on E: EAlreadyExists do
+      MessageDlg(FLang.GetString(LID_ITEM_ALREADY_EXISTS), mtError, [mbOK], 0);
 
     on E: Exception do
       FLang.ShowException(FLang.GetString([LID_RENAME, LID_IMPOSSIBLE]), E.Message);
