@@ -1244,9 +1244,6 @@ type
   private
     FLnkFile: TLnkFile;
     FStartupUser: Boolean;
-    function AddCircumflex(const AName: string): string;
-    function GetBackupDir(): string; deprecated 'Since Windows 8';
-    function GetBackupLnk(): string; deprecated 'Since Windows 8';
   protected
     procedure Disable(); override;
     procedure Enable(); override;
@@ -3835,7 +3832,7 @@ begin
     if Wow64 then
     begin
       // RunOnce item?
-      if (ExtractFileName(NewKeyPath) = 'RunOnce') then
+      if FRunOnce then
         NewKeyPath := StartupRunOnceKey
       else
         NewKeyPath := StartupRunKey;
@@ -3999,11 +3996,6 @@ begin
   inherited Destroy;
 end;
 
-function TStartupUserItem.AddCircumflex(const AName: string): string;
-begin
-  Result := AName.Replace('\', '^');
-end;
-
 function TStartupUserItem.GetFullLocation(): string;
 begin
   if FEnabled then
@@ -4024,14 +4016,6 @@ begin
     Result := StartupApprovedKey;
 end;
 
-function TStartupUserItem.GetBackupDir(): string;
-begin
-  Result := GetKnownFolderPath(FOLDERID_Windows);
-
-  if (Result <> '') then
-    Result := Result +'pss\';
-end;
-
 function TStartupUserItem.GetBackupExtension(): string;
 begin
   if FStartupUser then
@@ -4040,40 +4024,21 @@ begin
     Result := FileExtensionStartupCommon;
 end;
 
-function TStartupUserItem.GetBackupLnk(): string;
-begin
-  // Not possible on Windows 8!
-  if CheckWin32Version(6, 2) then
-    Exit;
-
-  Result := GetBackupDir() + Name + GetBackupExtension();
-end;
-
 function TStartupUserItem.GetExportFilter(ALanguageFile: TLanguageFile): string;
 begin
   Result := ToString() +'|*'+ GetBackupExtension();
 end;
 
 procedure TStartupUserItem.SetCommand(const ACommand: TCommandString);
-var
-  LnkFileName: string;
-
 begin
   if (not FEnabled and not CheckWin32Version(6, 2)) then
-  begin
-    LnkFileName := FLnkFile.FileName;
-    FLnkFile.FileName := GetBackupLnk();
     inherited SetCommand(ACommand);
-  end;  //of begin
 
   FLnkFile.ExeFileName := ACommand.ExtractFileName();
   FLnkFile.Arguments := ACommand.ExtractArguments();
 
   if not FLnkFile.Save() then
     raise EStartupException.CreateFmt('Could not save "%s"!', [FLnkFile.FileName]);
-
-  if (not FEnabled and not CheckWin32Version(6, 2)) then
-    FLnkFile.FileName := LnkFileName;
 
   FCommand := ACommand;
   UpdateErasable();
@@ -4084,15 +4049,13 @@ end;
 
 procedure TStartupUserItem.Delete();
 begin
-  if (FEnabled or CheckWin32Version(6, 2)) then
-  begin
+  if (not CheckWin32Version(6, 2) and not FEnabled) then
+    // Do not complain if backup .lnk could not be deleted prior to Windows 8
+    DeleteFile(FLnkFile.FileName)
+  else
     // Could not delete .lnk?
     if not DeleteFile(FLnkFile.FileName) then
       raise EStartupException.CreateFmt('Could not delete "%s": %s!', [FLnkFile.FileName, SysErrorMessage(GetLastError())]);
-  end  //of begin
-  else
-    // Delete backup file prior to Windows 8
-    DeleteFile(GetBackupLnk());
 
   inherited Delete();
 end;
@@ -4103,8 +4066,8 @@ var
   KeyName, BackupDir, BackupLnk: string;
 
 begin
-  BackupLnk := GetBackupLnk();
-  BackupDir := ExtractFilePath(BackupLnk);
+  BackupDir := GetKnownFolderPath(FOLDERID_Windows) +'pss\';
+  BackupLnk := BackupDir + Name + GetBackupExtension();
 
   // Create backup directory if not exist
   if not DirectoryExists(BackupDir) then
@@ -4115,15 +4078,17 @@ begin
     raise EStartupException.CreateFmt('"%s" does not exist!', [FLnkFile.FileName]);
 
   // Move .lnk file to backup location
-  if not MoveFileEx(PChar(FLnkFile.FileName), PChar(GetBackupLnk()), MOVEFILE_REPLACE_EXISTING) then
+  if not MoveFileEx(PChar(FLnkFile.FileName), PChar(BackupLnk), MOVEFILE_REPLACE_EXISTING) then
     raise EStartupException.Create(SysErrorMessage(GetLastError()));
+
+  FLnkFile.FileName := BackupLnk;
 
   // Store settings in Registry
   Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_WRITE);
 
   try
     Reg.RootKey := HKEY_LOCAL_MACHINE;
-    KeyName := AddCircumflex(FLocation);
+    KeyName := FLocation.Replace('\', '^');
 
     if not Reg.OpenKey(DisabledKey + KeyName, True) then
       raise EStartupException.CreateFmt('Could not create key "%s": %s', [DisabledKey + KeyName, Reg.LastErrorMsg]);
@@ -4155,44 +4120,68 @@ begin
 end;
 
 procedure TStartupUserItem.Enable();
+var
+  Reg: TRegistry;
+  OriginalLnkFileName: string;
+
 begin
-  // Backup file exists?
-  if System.SysUtils.FileExists(GetBackupLnk()) then
-  begin
-    // Failed to restore backup file?
-    if not MoveFile(PChar(GetBackupLnk()), PChar(FLnkFile.FileName)) then
-      raise EStartupException.CreateFmt('Could not restore backup "%s": %s!', [GetBackupLnk(), SysErrorMessage(GetLastError())]);
-  end  //of begin
-  else
-  begin
-    // Failed to create new .lnk file?
-    if not FLnkFile.Save() then
-      raise EStartupException.CreateFmt('Could not create "%s"!', [FLnkFile.FileName]);
-  end;  //of if
+  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
 
-  // Do not abort if old key could not be deleted
-  DeleteKey(HKEY_LOCAL_MACHINE, DisabledKey + AddCircumflex(FLnkFile.FileName));
+  try
+    Reg.RootKey := HKEY_LOCAL_MACHINE;
 
-  // Update information
-  FLocation := FLnkFile.FileName;
-  FRootKey := rkUnknown;
-  FEnabled := True;
+    if not Reg.OpenKey(FLocation, False) then
+      raise EStartupException.CreateFmt('Could not open key "%s": %s', [FLocation, Reg.LastErrorMsg]);
+
+    // Read original .lnk filename
+    OriginalLnkFileName := Reg.ReadString('path');
+
+    // Backup file exists?
+    if System.SysUtils.FileExists(FLnkFile.FileName) then
+    begin
+      // Failed to restore backup file?
+      if not MoveFile(PChar(FLnkFile.FileName), PChar(OriginalLnkFileName)) then
+        raise EStartupException.CreateFmt('Could not restore backup "%s": %s!', [FLnkFile.FileName, SysErrorMessage(GetLastError())]);
+
+      FLnkFile.FileName := OriginalLnkFileName;
+    end  //of begin
+    else
+    begin
+      FLnkFile.FileName := OriginalLnkFileName;
+
+      // Failed to create new .lnk file?
+      if not FLnkFile.Save() then
+      begin
+        FLnkFile.FileName := Reg.ReadString('backup');
+        raise EStartupException.CreateFmt('Could not create "%s"!', [OriginalLnkFileName]);
+      end;  //of begin
+    end;  //of if
+
+    Reg.CloseKey();
+
+    // Do not abort if old key could not be deleted
+    Reg.DeleteKey(FLocation);
+
+    // Update information
+    FLocation := FLnkFile.FileName;
+    FRootKey := rkUnknown;
+    FEnabled := True;
+
+  finally
+    Reg.Free;
+  end;  //of try
 end;
 
 procedure TStartupUserItem.ExportItem(const AFileName: string);
 var
-  LnkFileName, OriginalLnkFileName: string;
+  OriginalLnkFileName: string;
 
 begin
-  LnkFileName := FLnkFile.FileName;
-
   // Export backup .lnk
   if (not FEnabled and not CheckWin32Version(6, 2)) then
   begin
-    LnkFileName := GetBackupLnk();
-
     // Backup file does not exist?
-    if not System.SysUtils.FileExists(LnkFileName) then
+    if not System.SysUtils.FileExists(FLnkFile.FileName) then
     begin
       OriginalLnkFileName := FLnkFile.FileName;
       FLnkFile.FileName := AFileName;
@@ -4206,14 +4195,14 @@ begin
     end;  //of begin
   end;  //of begin
 
-  if not CopyFile(PChar(LnkFileName), PChar(ChangeFileExt(AFileName,
+  if not CopyFile(PChar(FLnkFile.FileName), PChar(ChangeFileExt(AFileName,
     GetBackupExtension())), False) then
     raise EStartupException.Create('Could not create backup file!');
 end;
 
 procedure TStartupUserItem.Rename(const ANewName: string);
 var
-  NewLnkFileName, NewName, NewKeyName, NewBackupLnkName: string;
+  NewLnkFileName, NewName, NewKeyName, NewStoredLnkFileName: string;
   Reg: TRegistry;
   Win8: Boolean;
 
@@ -4221,15 +4210,20 @@ begin
   NewName := ChangeFileExt(ANewName, TLnkFile.FileExtension);
   NewLnkFileName := StringReplace(FLnkFile.FileName, ExtractFileName(FLnkFile.FileName),
     NewName, [rfReplaceAll, rfIgnoreCase]);
+
+  // Setup new backup .lnk name
+  if (not FEnabled and not CheckWin32Version(6, 2)) then
+    NewLnkFileName := ExtractFilePath(FLnkFile.FileName) + NewName + GetBackupExtension();
+
+  // Rename .lnk file
+  if not MoveFile(PChar(FLnkFile.FileName), PChar(NewLnkFileName)) then
+    raise EStartupException.Create(SysErrorMessage(GetLastError()));
+
+  FLnkFile.FileName := NewLnkFileName;
   Win8 := CheckWin32Version(6, 2);
 
   if (FEnabled or Win8) then
   begin
-    // Rename .lnk file
-    if not MoveFile(PChar(FLnkFile.FileName), PChar(NewLnkFileName)) then
-      raise EStartupException.Create(SysErrorMessage(GetLastError()));
-
-    FLnkFile.FileName := NewLnkFileName;
     FLocation := NewLnkFileName;
 
     if Win8 then
@@ -4239,20 +4233,20 @@ begin
   end  //of begin
   else
   begin
-    // Rename backup .lnk file
-    NewBackupLnkName := GetBackupDir() + NewName + GetBackupExtension();
-    MoveFile(PChar(GetBackupLnk()), PChar(NewBackupLnkName));
-
     // Rename disable key prior to Windows 8
     Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
 
     try
       Reg.RootKey := HKEY_LOCAL_MACHINE;
 
-      if not Reg.KeyExists(FLocation) then
-        raise EStartupException.CreateFmt('Key "%s" does not exist!', [FLocation]);
+      if not Reg.OpenKey(FLocation, False) then
+        raise EStartupException.CreateFmt('Could not open key "%s": %s', [FLocation, Reg.LastErrorMsg]);
 
-      NewKeyName := DisabledKey + AddCircumflex(NewLnkFileName);
+      NewStoredLnkFileName := Reg.ReadString('path');
+      NewStoredLnkFileName := StringReplace(NewStoredLnkFileName,
+        ExtractFileName(NewStoredLnkFileName), NewName, [rfReplaceAll, rfIgnoreCase]);
+      Reg.CloseKey();
+      NewKeyName := DisabledKey + NewStoredLnkFileName.Replace('\', '^');
 
       // New key must not exist
       if Reg.KeyExists(NewKeyName) then
@@ -4265,10 +4259,9 @@ begin
       if not Reg.OpenKey(NewKeyName, False) then
         raise EStartupException.CreateFmt('New key "%s" was not created!', [NewKeyName]);
 
-      Reg.WriteString('path', NewLnkFileName);
+      Reg.WriteString('path', NewStoredLnkFileName);
       Reg.WriteString('item', ChangeFileExt(NewName, ''));
-      Reg.WriteString('backup', NewBackupLnkName);
-      FLnkFile.FileName := NewLnkFileName;
+      Reg.WriteString('backup', NewLnkFileName);
       FLocation := NewKeyName;
       FName := NewName;
 
@@ -4625,10 +4618,15 @@ begin
       begin
         Name := ExtractFileName(Location.Replace('^', '\'));
 
-        // Setup non-existing .lnk file
-        LnkFile := TLnkFile.Create(Reg.ReadString('path'));
-        LnkFile.ExeFileName := Command.ExtractFileName();
-        LnkFile.Arguments := Command.ExtractArguments();
+        // Read backup .lnk file
+        LnkFile := TLnkFile.Create(Reg.ReadString('backup'));
+
+        // In case backup does not exist cache the original .lnk information
+        if not LnkFile.Exists() then
+        begin
+          LnkFile.ExeFileName := Command.ExtractFileName();
+          LnkFile.Arguments := Command.ExtractArguments();
+        end;  //of begin
 
         // Windows >= Vista?
         if CheckWin32Version(6) then
