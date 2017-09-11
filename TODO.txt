@@ -14,6 +14,7 @@ General
 - Add support for cleaning shell bags
 - Guide/Manual
 - Divide search in multiple threads
+- Use ref-counting
 
 Context menu
 ============

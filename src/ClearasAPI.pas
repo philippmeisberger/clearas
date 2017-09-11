@@ -447,30 +447,22 @@ type
     function GetFullLocation(): string; override;
 
     /// <summary>
-    ///   Deletes a specified registry key and its subkeys.
+    ///   Deletes a specified registry key and all its subkeys.
     /// </summary>
     /// <param name="AHKey">
     ///   The root key.
     /// </param>
-    /// <param name="AKeyPath">
-    ///   The key which contains the key to be deleted.
-    /// </param>
-    /// <param name="AKeyName">
+    /// <param name="AKey">
     ///   The key to be deleted.
     /// </param>
-    /// <param name="AFailIfNotExists">
-    ///   Optional: Set to <c>False</c> to avoid raising <c>EWarning</c> if the
-    ///   key does not exist.
-    /// </param>
     /// <returns>
-    ///   <c>True</c> if key was successfully deleted or <c>False</c> otherwise.
+    ///   <c>True</c> if key was successfully deleted or <c>False</c> if key could
+    ///   not be found.
     /// </returns>
     /// <exception>
-    ///   <c>Exception</c> if key does not exist.
-    ///   <c>EWarning</c> if key has already been deleted.
+    ///   <c>ERegistryException</c> if key could not be deleted.
     /// </exception>
-    function DeleteKey(AHKey: HKEY; const AKeyPath, AKeyName: string;
-      AFailIfNotExists: Boolean = True): Boolean;
+    function DeleteKey(AHKey: HKEY; const AKey: string): Boolean;
 
     /// <summary>
     ///   Gets the root Registry key.
@@ -2909,8 +2901,7 @@ begin
   FWow64 := AWow64;
 end;
 
-function TRegistryItem.DeleteKey(AHKey: HKEY; const AKeyPath, AKeyName: string;
-  AFailIfNotExists: Boolean = True): Boolean;
+function TRegistryItem.DeleteKey(AHKey: HKEY; const AKey: string): Boolean;
 var
   Reg: TRegistry;
 
@@ -2921,19 +2912,16 @@ begin
   try
     Reg.RootKey := AHKey;
 
-    if not Reg.OpenKey(AKeyPath, False) then
-      raise Exception.CreateFmt('Could not open key "%s": %s', [AKeyPath, Reg.LastErrorMsg]);
+    if not Reg.KeyExists(AKey) then
+      Exit;
 
-    if Reg.KeyExists(AKeyName) then
-      Result := Reg.DeleteKey(AKeyName)
-    else
-      if AFailIfNotExists then
-        raise EWarning.CreateFmt('Key "%s" already deleted!', [AKeyPath])
-      else
-        Result := True;
+    if not Reg.DeleteKey(AKey) then
+      raise ERegistryException.CreateFmt('Key "%s\%s" could not be deleted: %s', [Reg.RootKeyName, AKey, Reg.LastErrorMsg]);
+
+    Result := True;
 
   finally
-    Reg.CloseKey();
+    SetLastError(Reg.LastError);
     Reg.Free;
   end;  //of try
 end;
@@ -3621,14 +3609,10 @@ begin
     if not Reg.OpenKey(AKeyPath, False) then
       raise ERegistryException.CreateFmt('Could not open key "%s\%s": %s', [Reg.RootKeyName, AKeyPath, Reg.LastErrorMsg]);
 
-    // Try to delete value
-    if (Reg.ValueExists(Name) and not Reg.DeleteValue(Name)) then
-      raise ERegistryException.CreateFmt('Could not delete value "%s": %s', [Name, Reg.LastErrorMsg]);
-
-    // Deleted or does not exist
-    Result := True;
+    Result := Reg.DeleteValue(Name);
 
   finally
+    SetLastError(Reg.LastError);
     Reg.CloseKey();
     Reg.Free;
   end;  //of try
@@ -4246,9 +4230,7 @@ begin
   end;  //of if
 
   // Do not abort if old key could not be deleted
-  if not DeleteKey(HKEY_LOCAL_MACHINE, DisabledKey,
-    AddCircumflex(FLnkFile.FileName), False) then
-    raise EStartupException.Create('Could not delete key!');
+  DeleteKey(HKEY_LOCAL_MACHINE, DisabledKey + AddCircumflex(FLnkFile.FileName));
 
   // Update information
   FLocation := FLnkFile.FileName;
@@ -4886,8 +4868,8 @@ end;
 
 function TContextMenuListItem.Delete(): Boolean;
 begin
-  if not DeleteKey(HKEY_CLASSES_ROOT, ExtractFileDir(GetLocation()), Name) then
-    raise EContextMenuException.Create('Could not delete key!');
+  if not DeleteKey(HKEY_CLASSES_ROOT, ExtractFilePath(GetLocation()) + Name) then
+    raise ERegistryException.CreateFmt('Key "%s" does not exist!', [ExtractFilePath(GetLocation()) + Name]);
 
   Result := True;
 end;
@@ -5170,7 +5152,7 @@ begin
     GetSubCommands(Commands);
 
     for i := 0 to Commands.Count - 1 do
-      DeleteKey(HKEY_LOCAL_MACHINE, KEY_COMMAND_STORE, Commands[i], False);
+      DeleteKey(HKEY_LOCAL_MACHINE, KEY_COMMAND_STORE +'\'+ Commands[i]);
 
     Result := inherited Delete();
 
@@ -5446,9 +5428,8 @@ end;
 
 function TContextMenuShellNewItem.Delete(): Boolean;
 begin
-  if not DeleteKey(HKEY_CLASSES_ROOT, ExtractFileDir(GetLocation()),
-    ExtractFileName(GetLocation())) then
-    raise EContextMenuException.Create('Could not delete key!');
+  if not DeleteKey(HKEY_CLASSES_ROOT, GetLocation()) then
+    raise ERegistryException.CreateFmt('Key "%s" does not exist!', [GetLocation()]);
 
   Result := True;
 end;
