@@ -1033,8 +1033,8 @@ type
   protected
     FDeactivationTime: TDateTime;
     FRootKey: TRootKey;
-    function Disable(): Boolean; virtual; deprecated 'Since Windows 8'; abstract;
-    function Enable(): Boolean; virtual; deprecated 'Since Windows 8'; abstract;
+    procedure Disable(); virtual; deprecated 'Since Windows 8'; abstract;
+    procedure Enable(); virtual; deprecated 'Since Windows 8'; abstract;
     function DeleteValue(const AKeyPath: string; AReallyWow64: Boolean = True): Boolean;
     function GetApprovedLocation(): string; virtual; abstract;
     function GetRootKey(): TRootKey; override;
@@ -1138,8 +1138,8 @@ type
   private
     FRunOnce: Boolean;
   protected
-    function Disable(): Boolean; override;
-    function Enable(): Boolean; override;
+    procedure Disable(); override;
+    procedure Enable(); override;
     function GetWow64Key(): string; override;
     function GetApprovedLocation(): string; override;
     procedure Rename(const ANewName: string); override;
@@ -1263,8 +1263,8 @@ type
     function GetBackupDir(): string; deprecated 'Since Windows 8';
     function GetBackupLnk(): string; deprecated 'Since Windows 8';
   protected
-    function Disable(): Boolean; override;
-    function Enable(): Boolean; override;
+    procedure Disable(); override;
+    procedure Enable(); override;
     function GetApprovedLocation(): string; override;
     function GetFullLocation(): string; override;
     procedure Rename(const ANewName: string); override;
@@ -3557,16 +3557,10 @@ begin
   if not CheckWin32Version(6, 2) then
   begin
     if (FEnabled and not AEnabled) then
-    begin
-      if not Disable() then
-        raise Exception.Create('Unknown error!');
-    end  //of begin
+      Disable()
     else
       if (not FEnabled and AEnabled) then
-      begin
-        if not Enable() then
-          raise Exception.Create('Unknown error!');
-      end;  //of if
+        Enable();
 
     inherited SetEnabled(AEnabled);
   end  //of begin
@@ -3803,12 +3797,11 @@ begin
   Result := inherited Delete();
 end;
 
-function TStartupItem.Disable(): Boolean;
+procedure TStartupItem.Disable();
 var
   Reg: TRegistry;
 
 begin
-  Result := False;
   Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
 
   try
@@ -3849,7 +3842,6 @@ begin
     FRootKey := rkHKLM;
     FLocation := DisabledKey + Name;
     FEnabled := False;
-    Result := True;
 
   finally
     Reg.CloseKey();
@@ -3857,7 +3849,7 @@ begin
   end;  //of try
 end;
 
-function TStartupItem.Enable(): Boolean;
+procedure TStartupItem.Enable();
 var
   Reg: TRegistry;
   NewKeyPath: string;
@@ -3865,7 +3857,6 @@ var
   Access64: LongWord;
 
 begin
-  Result := False;
   Access64 := KEY_WOW64_64KEY or KEY_READ;
   Reg := TRegistry.Create(Access64);
 
@@ -3927,7 +3918,6 @@ begin
     FLocation := NewKeyPath;
     FEnabled := True;
     FDeactivationTime := 0;
-    Result := True;
 
   finally
     Reg.CloseKey();
@@ -4154,13 +4144,12 @@ begin
   Result := inherited Delete();
 end;
 
-function TStartupUserItem.Disable(): Boolean;
+procedure TStartupUserItem.Disable();
 var
   Reg: TRegistry;
   KeyName, BackupDir, BackupLnk: string;
 
 begin
-  Result := False;
   BackupLnk := GetBackupLnk();
   BackupDir := ExtractFilePath(BackupLnk);
 
@@ -4205,7 +4194,6 @@ begin
     FLocation := DisabledKey + KeyName;
     FRootKey := rkHKLM;
     FEnabled := False;
-    Result := True;
 
   finally
     Reg.CloseKey();
@@ -4213,7 +4201,7 @@ begin
   end;  //of try
 end;
 
-function TStartupUserItem.Enable(): Boolean;
+procedure TStartupUserItem.Enable();
 begin
   // Backup file exists?
   if System.SysUtils.FileExists(GetBackupLnk()) then
@@ -4236,7 +4224,6 @@ begin
   FLocation := FLnkFile.FileName;
   FRootKey := rkUnknown;
   FEnabled := True;
-  Result := True;
 end;
 
 procedure TStartupUserItem.ExportItem(const AFileName: string);
