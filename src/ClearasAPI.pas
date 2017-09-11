@@ -319,11 +319,7 @@ type
     /// <summary>
     ///   Deletes the item.
     /// </summary>
-    /// <returns>
-    ///   <c>True</c> if the item was successfully deleted or <c>False</c>
-    ///   otherwise.
-    /// </returns>
-    function Delete(): Boolean; virtual; abstract;
+    procedure Delete(); virtual; abstract;
 
     /// <summary>
     ///   Executes the item.
@@ -683,14 +679,11 @@ type
     /// <param name="AItem">
     ///   The item.
     /// </param>
-    /// <returns>
-    ///   <c>True</c> if item was successfully deleted or <c>False</c> otherwise.
-    /// </returns>
     /// <exception>
     ///   <c>EListBlocked</c> if another operation is pending on the list.
     ///   <c>EInvalidItem</c> if no item is selected.
     /// </exception>
-    function DeleteItem(AItem: T): Boolean;
+    procedure DeleteItem(AItem: T);
 
     /// <summary>
     ///   Disables an item.
@@ -1081,11 +1074,7 @@ type
     /// <summary>
     ///   Deletes the item.
     /// </summary>
-    /// <returns>
-    ///   <c>True</c> if the item was successfully deleted or <c>False</c>
-    ///   otherwise.
-    /// </returns>
-    function Delete(): Boolean; override;
+    procedure Delete(); override;
 
     /// <summary>
     ///   Exports the item as file.
@@ -1229,11 +1218,7 @@ type
     /// <summary>
     ///   Deletes the item.
     /// </summary>
-    /// <returns>
-    ///   <c>True</c> if the item was successfully deleted or <c>False</c>
-    ///   otherwise.
-    /// </returns>
-    function Delete(): Boolean; override;
+    procedure Delete(); override;
 
     /// <summary>
     ///   Gets the item type as string.
@@ -1326,11 +1311,7 @@ type
     /// <summary>
     ///   Deletes the item.
     /// </summary>
-    /// <returns>
-    ///   <c>True</c> if the item was successfully deleted or <c>False</c>
-    ///   otherwise.
-    /// </returns>
-    function Delete(): Boolean; override;
+    procedure Delete(); override;
 
     /// <summary>
     ///   Exports the item as file.
@@ -1606,11 +1587,7 @@ type
     /// <summary>
     ///   Deletes the item.
     /// </summary>
-    /// <returns>
-    ///   <c>True</c> if the item was successfully deleted or <c>False</c>
-    ///   otherwise.
-    /// </returns>
-    function Delete(): Boolean; override;
+    procedure Delete(); override;
 
     /// <summary>
     ///   Executes the item.
@@ -1789,11 +1766,7 @@ type
     /// <summary>
     ///   Deletes the item.
     /// </summary>
-    /// <returns>
-    ///   <c>True</c> if the item was successfully deleted or <c>False</c>
-    ///   otherwise.
-    /// </returns>
-    function Delete(): Boolean; override;
+    procedure Delete(); override;
 
     /// <summary>
     ///   Exports the item as file.
@@ -1898,11 +1871,7 @@ type
     /// <summary>
     ///   Deletes the item.
     /// </summary>
-    /// <returns>
-    ///   <c>True</c> if the item was successfully deleted or <c>False</c>
-    ///   otherwise.
-    /// </returns>
-    function Delete(): Boolean; override;
+    procedure Delete(); override;
 
     /// <summary>
     ///   Exports the item as file.
@@ -2123,11 +2092,7 @@ type
     /// <summary>
     ///   Deletes the item.
     /// </summary>
-    /// <returns>
-    ///   <c>True</c> if the item was successfully deleted or <c>False</c>
-    ///   otherwise.
-    /// </returns>
-    function Delete(): Boolean; override;
+    procedure Delete(); override;
 
     /// <summary>
     ///   Exports the item as file.
@@ -2291,11 +2256,7 @@ type
     /// <summary>
     ///   Deletes the item.
     /// </summary>
-    /// <returns>
-    ///   <c>True</c> if the item was successfully deleted or <c>False</c>
-    ///   otherwise.
-    /// </returns>
-    function Delete(): Boolean; override;
+    procedure Delete(); override;
 
     /// <summary>
     ///   Executes the item.
@@ -3175,7 +3136,7 @@ begin
     FImages.Clear();
 end;
 
-function TRootList<T>.DeleteItem(AItem: T): Boolean;
+procedure TRootList<T>.DeleteItem(AItem: T);
 var
   Deleted: Boolean;
 
@@ -3193,17 +3154,11 @@ begin
       if (not Assigned(AItem) or (IndexOf(AItem) = -1)) then
         raise EInvalidItem.Create(SNoItemSelected);
 
-      // Delete item
-      Deleted := AItem.Delete();
-
-      // Successful?
-      if Deleted then
-        // Remove item from list
-        Remove(AItem);
+      AItem.Delete();
+      Remove(AItem);
 
     finally
       FExportLock.Release();
-      Result := Deleted;
     end;  //of try
 
   finally
@@ -3692,16 +3647,14 @@ begin
   end;  //of try
 end;
 
-function TStartupListItem.Delete(): Boolean;
+procedure TStartupListItem.Delete();
 begin
-  // Delete status from Registry
+  // Delete status from Registry but do not complain if it does not exist
   if CheckWin32Version(6, 2) then
-    Result := DeleteValue(GetApprovedLocation(), False)
+    DeleteValue(GetApprovedLocation(), False)
   else
     if not FEnabled then
-      Result := (RegDeleteKeyEx(HKEY_LOCAL_MACHINE, PChar(FLocation), KEY_WOW64_64KEY, 0) = ERROR_SUCCESS)
-    else
-      Result := True;
+      DeleteKey(HKEY_LOCAL_MACHINE, FLocation);
 end;
 
 procedure TStartupListItem.ExportItem(const AFileName: string);
@@ -3786,15 +3739,15 @@ begin
   FRunOnce := ARunOnce;
 end;
 
-function TStartupItem.Delete(): Boolean;
+procedure TStartupItem.Delete();
 begin
   if (FEnabled or CheckWin32Version(6, 2)) then
   begin
     if not DeleteValue(GetLocation(), True) then
-      Exit(False);
+      raise ERegistryException.CreateFmt('Could not delete "%s" in "%s": %s', [Name, GetLocation(), SysErrorMessage(GetLastError())]);
   end;  //of begin
 
-  Result := inherited Delete();
+  inherited Delete();
 end;
 
 procedure TStartupItem.Disable();
@@ -4129,7 +4082,7 @@ begin
   FCaption := GetFileDescription(ACommand.Expand());
 end;
 
-function TStartupUserItem.Delete(): Boolean;
+procedure TStartupUserItem.Delete();
 begin
   if (FEnabled or CheckWin32Version(6, 2)) then
   begin
@@ -4141,7 +4094,7 @@ begin
     // Delete backup file prior to Windows 8
     DeleteFile(GetBackupLnk());
 
-  Result := inherited Delete();
+  inherited Delete();
 end;
 
 procedure TStartupUserItem.Disable();
@@ -4853,12 +4806,10 @@ begin
   FCaption := ANewName;
 end;
 
-function TContextMenuListItem.Delete(): Boolean;
+procedure TContextMenuListItem.Delete();
 begin
   if not DeleteKey(HKEY_CLASSES_ROOT, ExtractFilePath(GetLocation()) + Name) then
     raise ERegistryException.CreateFmt('Key "%s" does not exist!', [ExtractFilePath(GetLocation()) + Name]);
-
-  Result := True;
 end;
 
 function TContextMenuListItem.DeleteUserChoice(const AFileExtension: string): Boolean;
@@ -5127,7 +5078,7 @@ begin
   end;  //of try
 end;
 
-function TContextMenuShellCascadingItem.Delete(): Boolean;
+procedure TContextMenuShellCascadingItem.Delete();
 var
   i: Integer;
   Commands: TStringList;
@@ -5141,7 +5092,7 @@ begin
     for i := 0 to Commands.Count - 1 do
       DeleteKey(HKEY_LOCAL_MACHINE, KEY_COMMAND_STORE +'\'+ Commands[i]);
 
-    Result := inherited Delete();
+    inherited Delete();
 
   finally
     Commands.Free;
@@ -5413,12 +5364,10 @@ begin
     + ToString() +' item!');
 end;
 
-function TContextMenuShellNewItem.Delete(): Boolean;
+procedure TContextMenuShellNewItem.Delete();
 begin
   if not DeleteKey(HKEY_CLASSES_ROOT, GetLocation()) then
     raise ERegistryException.CreateFmt('Key "%s" does not exist!', [GetLocation()]);
-
-  Result := True;
 end;
 
 procedure TContextMenuShellNewItem.ExportItem(const AFileName: string);
@@ -6068,7 +6017,7 @@ begin
   end;  //of try
 end;
 
-function TServiceListItem.Delete(): Boolean;
+procedure TServiceListItem.Delete();
 const
   SERVICE_DELETE = $00010000;
 
@@ -6077,7 +6026,6 @@ var
   Reg: TRegistry;
 
 begin
-  Result := False;
   Service := GetHandle(SERVICE_DELETE);
   Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
 
@@ -6090,16 +6038,16 @@ begin
     if not FEnabled then
     begin
       Reg.RootKey := HKEY_LOCAL_MACHINE;
-      Reg.OpenKey(KEY_SERVICE_DISABLED, False);
+
+      if not Reg.OpenKey(KEY_SERVICE_DISABLED, False) then
+        raise ERegistryException.Create(Reg.LastErrorMsg);
 
       // Windows >= Vista?
       if CheckWin32Version(6) then
-        Result := Reg.DeleteKey(Name)
+        Reg.DeleteKey(Name)
       else
-        Result := Reg.DeleteValue(Name);
-    end  //of begin
-    else
-      Result := True;
+        Reg.DeleteValue(Name);
+    end;  //of begin
 
   finally
     Reg.CloseKey();
@@ -6521,14 +6469,13 @@ begin
   end;  //of while
 end;
 
-function TTaskListItem.Delete(): Boolean;
+procedure TTaskListItem.Delete();
 var
   TaskFolder: ITaskFolder;
 
 begin
   OleCheck(FTaskService.GetFolder(PChar(Location), TaskFolder));
   OleCheck(TaskFolder.DeleteTask(PChar(Name), 0));
-  Result := True;
 end;
 
 procedure TTaskListItem.Execute();

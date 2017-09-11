@@ -1272,11 +1272,9 @@ begin
                 Continue;
             end;  //of begin
 
-            if SelectedList.DeleteItem(SelectedItem) then
-            begin
-              SelectedListView.Items[i].Delete();
-              Inc(ItemsDeleted);
-            end;  //of begin
+            SelectedList.DeleteItem(SelectedItem);
+            SelectedListView.Items[i].Delete();
+            Inc(ItemsDeleted);
 
             // All eraseble items deleted?
             if (SelectedList.ErasableItemsCount = 0) then
@@ -1339,18 +1337,12 @@ begin
           Exit;
       end;  //of begin
 
-      // Successfully deleted?
-      if SelectedList.DeleteItem(SelectedItem) then
-      begin
-        // Delete item from TListView
-        SelectedListView.DeleteSelected();
-        SelectedListView.ItemFocused := nil;
+      SelectedList.DeleteItem(SelectedItem);
+      SelectedListView.DeleteSelected();
+      SelectedListView.ItemFocused := nil;
 
-        // Disable buttons
-        SelectedListView.OnSelectItem(Self, nil, False);
-      end  //of begin
-      else
-        raise Exception.Create('Unknown error!');
+      // Disable buttons
+      SelectedListView.OnSelectItem(Self, nil, False);
     end;  //of begin
 
   except
