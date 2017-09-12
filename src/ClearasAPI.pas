@@ -375,8 +375,8 @@ type
     ///   selects this file. If the file does not exist a <see cref="EWarning"/>
     ///   is raised.
     /// </summary>
-    /// <exception>
-    ///   <c>EWarning</c> if file does not exist.
+    /// <exception cref="EWarning">
+    ///   if file does not exist.
     /// </exception>
     procedure OpenInExplorer();
 
@@ -455,8 +455,8 @@ type
     ///   <c>True</c> if key was successfully deleted or <c>False</c> if key could
     ///   not be found.
     /// </returns>
-    /// <exception>
-    ///   <c>ERegistryException</c> if key could not be deleted.
+    /// <exception cref="ERegistryException">
+    ///   if key could not be deleted.
     /// </exception>
     function DeleteKey(AHKey: HKEY; const AKey: string): Boolean;
 
@@ -485,8 +485,8 @@ type
     /// <returns>
     ///   The deactivation timestamp.
     /// </returns>
-    /// <exception>
-    ///   <c>ERegistryException</c> when timestamp could not be written.
+    /// <exception cref="ERegistryException">
+    ///   when timestamp could not be written.
     /// </exception>
     function WriteTimestamp(const AReg: TRegistry): TDateTime;
   public
@@ -561,7 +561,7 @@ type
   end;
 
   /// <summary>
-  ///   Occurs when something has failed.
+  ///   Occurs when something went wrong.
   /// </summary>
   /// <param name="Sender">
   ///   The sender.
@@ -651,9 +651,11 @@ type
     /// <param name="ACommand">
     ///   The new command.
     /// </param>
-    /// <exception>
-    ///   <c>EListBlocked</c> if another operation is pending on the list.
-    ///   <c>EInvalidItem</c> if no item is selected.
+    /// <exception cref="EListBlocked">
+    ///   if list is being exported.
+    /// </exception>
+    /// <exception cref="EInvalidItem">
+    ///   if <c>AItem</c> is not assigned.
     /// </exception>
     procedure ChangeCommand(AItem: T; const ACommand: TCommandString);
 
@@ -666,10 +668,14 @@ type
     /// <param name="AEnabled">
     ///   The new status.
     /// </param>
-    /// <exception>
-    ///   <c>EListBlocked</c> if another operation is pending on the list.
-    ///   <c>EInvalidItem</c> if no item is selected.
-    ///   <c>EWarning</c> if new status is equal to current.
+    /// <exception cref="EListBlocked">
+    ///   if list is being exported.
+    /// </exception>
+    /// <exception cref="EInvalidItem">
+    ///   if <c>AItem</c> is not assigned.
+    /// </exception>
+    /// <exception cref="EWarning">
+    ///   if new status is equal to current.
     /// </exception>
     procedure ChangeItemStatus(AItem: T; const AEnabled: Boolean);
 
@@ -679,9 +685,11 @@ type
     /// <param name="AItem">
     ///   The item.
     /// </param>
-    /// <exception>
-    ///   <c>EListBlocked</c> if another operation is pending on the list.
-    ///   <c>EInvalidItem</c> if no item is selected.
+    /// <exception cref="EListBlocked">
+    ///   if list is being exported.
+    /// </exception>
+    /// <exception cref="EInvalidItem">
+    ///   if <c>AItem</c> is not assigned.
     /// </exception>
     procedure DeleteItem(AItem: T);
 
@@ -691,10 +699,14 @@ type
     /// <param name="AItem">
     ///   The item.
     /// </param>
-    /// <exception>
-    ///   <c>EListBlocked</c> if another operation is pending on the list.
-    ///   <c>EInvalidItem</c> if no item is selected.
-    ///   <c>EWarning</c> if item is already disabled.
+    /// <exception cref="EListBlocked">
+    ///   if list is being exported.
+    /// </exception>
+    /// <exception cref="EInvalidItem">
+    ///   if <c>AItem</c> is not assigned.
+    /// </exception>
+    /// <exception cref="EWarning">
+    ///   if <c>AItem</c> is already disabled.
     /// </exception>
     procedure DisableItem(AItem: T);
 
@@ -704,10 +716,14 @@ type
     /// <param name="AItem">
     ///   The item.
     /// </param>
-    /// <exception>
-    ///   <c>EListBlocked</c> if another operation is pending on the list.
-    ///   <c>EInvalidItem</c> if no item is selected.
-    ///   <c>EWarning</c> if item is already enabled.
+    /// <exception cref="EListBlocked">
+    ///   if list is being exported.
+    /// </exception>
+    /// <exception cref="EInvalidItem">
+    ///   if <c>AItem</c> is not assigned.
+    /// </exception>
+    /// <exception cref="EWarning">
+    ///   if <c>AItem</c> is already enabled.
     /// </exception>
     procedure EnableItem(AItem: T);
 
@@ -720,8 +736,8 @@ type
     /// <param name="AFileName">
     ///   The absolute filename to the file.
     /// </param>
-    /// <exception>
-    ///   <c>EInvalidItem</c> if no item is selected.
+    /// <exception cref="EInvalidItem">
+    ///   if <c>AItem</c> is not assigned.
     /// </exception>
     procedure ExportItem(AItem: T; const AFileName: string);
 
@@ -797,10 +813,14 @@ type
     /// <param name="ANewName">
     ///   The new name.
     /// </param>
-    /// <exception>
-    ///   <c>EListBlocked</c> if another operation is pending on the list.
-    ///   <c>EInvalidItem</c> if no item is selected.
-    ///   <c>EAlreadyExists</c> if item with new name already exists.
+    /// <exception cref="EListBlocked">
+    ///   if list is being exported.
+    /// </exception>
+    /// <exception cref="EInvalidItem">
+    ///   if <c>AItem</c> is not assigned.
+    /// </exception>
+    /// <exception cref="EAlreadyExists">
+    ///   if an item already exists with given name.
     /// </exception>
     procedure RenameItem(AItem: T; const ANewName: string);
 
@@ -1451,9 +1471,11 @@ type
     /// <returns>
     ///   <c>True</c> if the item was successfully added or <c>False</c> otherwise.
     /// </returns>
-    /// <exception>
-    ///   <c>EListBlocked</c> if another operation is pending on the list.
-    ///   <c>EAlreadyExists</c> if item already exists.
+    /// <exception cref="EListBlocked">
+    ///   if another operation is pending.
+    /// </exception>
+    /// <exception cref="EAlreadyExists">
+    ///   if item already exists.
     /// </exception>
     function Add(const AFileName, AArguments, ACaption: string;
       AStartupUser: Boolean = True): Boolean; overload;
@@ -1486,9 +1508,11 @@ type
     /// <returns>
     ///   <c>True</c> if the import was successful or <c>False</c> otherwise.
     /// </returns>
-    /// <exception>
-    ///   <c>EListBlocked</c> if another operation is pending on the list.
-    ///   <c>EAlreadyExists</c> if item already exists.
+    /// <exception cref="EListBlocked">
+    ///   if another operation is pending.
+    /// </exception>
+    /// <exception cref="EAlreadyExists">
+    ///   if item already exists.
     /// </exception>
     function ImportBackup(const AFileName: TFileName): Boolean;
 
@@ -1948,9 +1972,11 @@ type
     /// <returns>
     ///   <c>True</c> if the item was successfully added or <c>False</c> otherwise.
     /// </returns>
-    /// <exception>
-    ///   <c>EListBlocked</c> if another operation is pending on the list.
-    ///   <c>EAlreadyExists</c> if item already exists.
+    /// <exception cref="EListBlocked">
+    ///   if another operation is pending.
+    /// </exception>
+    /// <exception cref="EAlreadyExists">
+    ///   if item already exists.
     /// </exception>
     function Add(const AFileName, AArguments, ALocationRoot, ACaption: string): Boolean; overload;
 
@@ -2153,9 +2179,11 @@ type
     /// <returns>
     ///   <c>True</c> if the item was successfully added or <c>False</c> otherwise.
     /// </returns>
-    /// <exception>
-    ///   <c>EListBlocked</c> if another operation is pending on the list.
-    ///   <c>EAlreadyExists</c> if item already exists.
+    /// <exception cref="EListBlocked">
+    ///   if another operation is pending.
+    /// </exception>
+    /// <exception cref="EAlreadyExists">
+    ///   if item already exists.
     /// </exception>
     function Add(const AFileName, AArguments, ACaption: string): Boolean; overload;
 
@@ -2374,8 +2402,11 @@ type
     /// <returns>
     ///   <c>True</c> if the import was successful or <c>False</c> otherwise.
     /// </returns>
-    /// <exception>
-    ///   <c>EListBlocked</c> if another operation is pending on the list.
+    /// <exception cref="EListBlocked">
+    ///   if another operation is pending.
+    /// </exception>
+    /// <exception cref="ETaskException">
+    ///   if backup is invalid or task could not be added.
     /// </exception>
     function ImportBackup(const AFileName: TFileName): Boolean;
 
