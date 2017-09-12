@@ -282,7 +282,7 @@ begin
   if SelectedItem.Erasable then
     Dec(ErasableCounter);
 
-  CheckTrue(FRootList.DeleteItem(SelectedItem), 'Item "'+ AItemName +'" was not deleted!');
+  FRootList.DeleteItem(SelectedItem);
   Dec(Counter);
   CheckEquals(EnabledCounter, FRootList.EnabledItemsCount, 'After deleting item "'+ AItemName +'" EnabledItemsCount should be decreased');
   CheckEquals(ErasableCounter, FRootList.ErasableItemsCount, 'After deleting item "'+ AItemName +'" ErasableItemsCount should be decreased');
@@ -420,11 +420,13 @@ end;
 procedure TRootListTest.TestRename(const AItemName: string);
 var
   SelectedItem: TRootItem;
+  NewName: string;
 
 begin
   SelectedItem := GetItemForName(AItemName);
-  FRootList.RenameItem(SelectedItem, AItemName +'2');
-  CheckEquals(AItemName +'2', SelectedItem.Name, 'Item was not renamed correctly');
+  NewName := ChangeFileExt(AItemName, '') +'2'+ ExtractFileExt(AItemName);
+  FRootList.RenameItem(SelectedItem, NewName);
+  CheckEquals(NewName, SelectedItem.Name, 'Item was not renamed correctly');
   FRootList.RenameItem(SelectedItem, AItemName);
   CheckEquals(AItemName, SelectedItem.Name, 'Item was not renamed correctly twice');
 end;
