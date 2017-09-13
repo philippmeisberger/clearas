@@ -117,7 +117,7 @@ type
     /// <param name="AFileName">
     ///   The filename of the .lnk file.
     /// </param>
-    constructor Create(const AFileName: TFileName); reintroduce;
+    constructor Create(const AFileName: TFileName);
 
     /// <summary>
     ///   Checks if the .lnk file exists.
@@ -314,7 +314,7 @@ type
     ///   The status.
     /// </param>
     constructor Create(const AName, ACaption: string; const ACommand: TCommandString;
-      const ALocation: string; AEnabled: Boolean); reintroduce;
+      const ALocation: string; AEnabled: Boolean);
 
     /// <summary>
     ///   Deletes the item.
@@ -1522,7 +1522,7 @@ type
     /// <param name="AStartupLocation">
     ///   The startup location to search for items.
     /// </param>
-    procedure Load(AStartupLocation: TStartupLocation); reintroduce; overload;
+    procedure Load(AStartupLocation: TStartupLocation);
 
     /// <summary>
     ///   Searches for disabled items and adds them to the list.
