@@ -2067,7 +2067,7 @@ end;
 
 procedure TMain.pmRenameClick(Sender: TObject);
 var
-  Name: string;
+  Name, OriginalName: string;
   Item: TRootItem;
 
 begin
@@ -2080,9 +2080,12 @@ begin
     else
       Name := Item.Caption;
 
+    OriginalName := Name;
+
     if InputQuery(StripHotkey(pmRename.Caption), StripHotkey(pmRename.Caption), Name) then
     begin
-      if ((Trim(Name) = '') or (Name = Item.Name) or (Name = Item.Caption)) then
+      // Nothing entered or nothing changed
+      if ((Trim(Name) = '') or AnsiSameText(Name, OriginalName)) then
         Exit;
 
       GetSelectedList().RenameItem(Item, Name);
@@ -2245,7 +2248,7 @@ begin
       FLang.GetString(LID_ITEM_CHANGE_PATH), Path);
 
     // Nothing entered or nothing changed
-    if ((Trim(EnteredPath) = '') or (EnteredPath = Path)) then
+    if ((Trim(EnteredPath) = '') or AnsiSameText(EnteredPath, Path)) then
       Exit;
 
     // Try to change the file path
