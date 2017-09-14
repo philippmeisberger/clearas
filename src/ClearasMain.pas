@@ -1922,6 +1922,10 @@ var
 
 begin
   try
+    // Export pending?
+    if GetSelectedList().IsExporting() then
+      raise EListBlocked.Create(SOperationPending);
+
     SelectedItem := GetSelectedItem();
 
     // Only icon of shell item can be changed
@@ -1941,6 +1945,12 @@ begin
     on E: EInvalidItem do
       MessageDlg(FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
 
+    on E: EListBlocked do
+    begin
+      MessageDlg(FLang.GetString([LID_OPERATION_PENDING1, LID_OPERATION_PENDING2]),
+        mtWarning, [mbOK], 0);
+    end;
+
     on E: Exception do
     begin
       FLang.ShowException(FLang.GetString([LID_CONTEXT_MENU_ICON_CHANGE,
@@ -1959,6 +1969,10 @@ var
 
 begin
   try
+    // Export pending?
+    if GetSelectedList().IsExporting() then
+      raise EListBlocked.Create(SOperationPending);
+
     SelectedItem := GetSelectedItem();
 
     // Only icon of shell item can be deleted
@@ -1978,6 +1992,12 @@ begin
   except
     on E: EInvalidItem do
       MessageDlg(FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
+
+    on E: EListBlocked do
+    begin
+      MessageDlg(FLang.GetString([LID_OPERATION_PENDING1, LID_OPERATION_PENDING2]),
+        mtWarning, [mbOK], 0);
+    end;
 
     on E: Exception do
     begin
@@ -2301,6 +2321,10 @@ var
 
 begin
   try
+    // Export pending?
+    if GetSelectedList().IsExporting() then
+      raise EListBlocked.Create(SOperationPending);
+
     SelectedItem := GetSelectedItem();
 
     if (SelectedItem is TContextMenuShellItem) then
@@ -2309,6 +2333,12 @@ begin
   except
     on E: EInvalidItem do
       MessageDlg(FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
+
+    on E: EListBlocked do
+    begin
+      MessageDlg(FLang.GetString([LID_OPERATION_PENDING1, LID_OPERATION_PENDING2]),
+        mtWarning, [mbOK], 0);
+    end;
 
     on E: Exception do
       FLang.ShowException(FLang.GetString([LID_HIDE, LID_IMPOSSIBLE]), E.Message);
