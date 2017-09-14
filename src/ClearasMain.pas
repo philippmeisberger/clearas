@@ -2711,14 +2711,16 @@ end;
   Event method that is called when tab is changed. }
 
 procedure TMain.PageControlChange(Sender: TObject);
+var
+  SelectedList: TRootList<TRootItem>;
+
 begin
   case PageControl.ActivePageIndex of
     0: begin
          mmAdd.Caption := FLang.GetString(LID_STARTUP_ADD);
-         mmImport.Enabled := True;
          mmDate.Enabled := True;
          mmShowCaptions.Enabled := True;
-         ShowColumnDate(lwStartup, (mmDate.Enabled and mmDate.Checked));
+         ShowColumnDate(lwStartup, mmDate.Checked);
        end;
 
     1: begin
@@ -2730,7 +2732,6 @@ begin
 
     2: begin
          mmAdd.Caption := FLang.GetString(LID_SERVICE_ADD);
-         mmImport.Enabled := False;
          mmDate.Enabled := True;
          mmShowCaptions.Enabled := True;
          ShowColumnDate(lwService, mmDate.Checked);
@@ -2738,14 +2739,18 @@ begin
 
     3: begin
          mmAdd.Caption := FLang.GetString(LID_TASKS_ADD);
-         mmImport.Enabled := True;
          mmDate.Enabled := False;
          mmShowCaptions.Enabled := False;
        end;
   end;  //of case
 
+  SelectedList := GetSelectedList();
+
+  // Only enable "Import" if list supports it
+  mmImport.Enabled := Supports(SelectedList, IImportableList);
+
   // Load items dynamically
-  if (GetSelectedList().Count = 0) then
+  if (SelectedList.Count = 0) then
     Refresh(PageControl.ActivePageIndex);
 
   // Only allow popup menu if item is focused
