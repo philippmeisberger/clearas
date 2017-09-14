@@ -495,6 +495,10 @@ begin
     // Make a total refresh or just use cached items
     if ATotal then
     begin
+      // Export pending?
+      if RootList.IsExporting() then
+        raise EListBlocked.Create(SOperationPending);
+
       with TSearchThread.Create(RootList) do
       begin
         OnError := OnSearchError;
