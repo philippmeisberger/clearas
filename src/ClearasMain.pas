@@ -213,6 +213,7 @@ type
     procedure OnTaskCounterUpdate(Sender: TObject);
     procedure SortList(AListView: TListView);
     function ShowExportItemDialog(AItem: TRootItem): Boolean;
+    procedure ShowOperationPendingUI(AIndex: Integer; AShow: Boolean);
     procedure ShowColumnDate(AListView: TListView; AShow: Boolean = True);
     procedure OnUpdate(Sender: TObject; const ANewBuild: Cardinal);
     procedure WMTimer(var Message: TWMTimer); message WM_TIMER;
@@ -564,16 +565,7 @@ end;
 procedure TMain.OnContextSearchStart(Sender: TObject);
 begin
   lwContext.Clear();
-  mmLang.Enabled := False;
-  cbContextExpert.Enabled := False;
-  lwContext.Cursor := crHourGlass;
-
-  // Show progress bar
-  if cbContextExpert.Checked then
-  begin
-    eContextSearch.Visible := False;
-    pbContextProgress.Visible := True;
-  end;  //of begin
+  ShowOperationPendingUI(1, True);
 end;
 
 { private TMain.OnContextSearchEnd
@@ -582,18 +574,8 @@ end;
 
 procedure TMain.OnContextSearchEnd(Sender: TObject);
 begin
-  mmLang.Enabled := True;
-  cbContextExpert.Enabled := True;
-
-  // Hide progress bar
-  if cbContextExpert.Checked then
-  begin
-    pbContextProgress.Visible := False;
-    eContextSearch.Visible := True;
-  end;  //of begin
-
   SortList(lwContext);
-  lwContext.Cursor := crDefault;
+  ShowOperationPendingUI(1, False);
 end;
 
 { private TMain.OnContextCounterUpdate
@@ -647,28 +629,7 @@ var
 begin
   Index := (Sender as TExportListThread).PageControlIndex;
   PageControl.Pages[Index].Cursor := crHourGlass;
-
-  case Index of
-    0: lwStartup.Cursor := crHourGlass;
-
-    1: begin
-         eContextSearch.Visible := False;
-         pbContextProgress.Visible := True;
-         lwContext.Cursor := crHourGlass;
-       end;
-
-    2: begin
-         eServiceSearch.Visible := False;
-         pbServiceProgress.Visible := True;
-         lwService.Cursor := crHourGlass;
-       end;
-
-    3: begin
-         eTaskSearch.Visible := False;
-         pbTaskProgress.Visible := True;
-         lwTasks.Cursor := crHourGlass;
-       end;
-  end;  //of case
+  ShowOperationPendingUI(Index, True);
 end;
 
 procedure TMain.OnListLocked(Sender: TObject);
@@ -688,28 +649,7 @@ var
 begin
   Index := (Sender as TExportListThread).PageControlIndex;
   PageControl.Pages[Index].Cursor := crDefault;
-
-  case Index of
-    0: lwStartup.Cursor := crDefault;
-
-    1: begin
-         pbContextProgress.Visible := False;
-         eContextSearch.Visible := True;
-         lwContext.Cursor := crDefault;
-       end;
-
-    2: begin
-         pbServiceProgress.Visible := False;
-         eServiceSearch.Visible := True;
-         lwService.Cursor := crDefault;
-       end;
-
-    3: begin
-         pbTaskProgress.Visible := False;
-         eTaskSearch.Visible := True;
-         lwTasks.Cursor := crDefault;
-       end;
-  end;  //of case
+  ShowOperationPendingUI(Index, False);
 end;
 
 { private TMain.OnExportListError
@@ -775,9 +715,7 @@ end;
 procedure TMain.OnStartupSearchStart(Sender: TObject);
 begin
   lwStartup.Clear();
-  lwStartup.Cursor := crHourGlass;
-  mmLang.Enabled := False;
-  cbRunOnce.Enabled := False;
+  ShowOperationPendingUI(0, True);
 end;
 
 { private TMain.OnStartupSearchEnd
@@ -786,11 +724,8 @@ end;
 
 procedure TMain.OnStartupSearchEnd(Sender: TObject);
 begin
-  mmImport.Enabled := True;
-  mmLang.Enabled := True;
-  cbRunOnce.Enabled := True;
   SortList(lwStartup);
-  lwStartup.Cursor := crDefault;
+  ShowOperationPendingUI(0, False);
 end;
 
 { private TMain.OnServiceCounterUpdate
@@ -852,16 +787,7 @@ end;
 procedure TMain.OnServiceSearchStart(Sender: TObject);
 begin
   lwService.Clear();
-  lwService.Cursor := crHourGlass;
-  mmLang.Enabled := False;
-  cbServiceExpert.Enabled := False;
-
-  // Show progress bar
-  if cbServiceExpert.Checked then
-  begin
-    eServiceSearch.Visible := False;
-    pbServiceProgress.Visible := True;
-  end;  //of begin
+  ShowOperationPendingUI(2, True);
 end;
 
 { private TMain.OnServiceSearchEnd
@@ -870,18 +796,8 @@ end;
 
 procedure TMain.OnServiceSearchEnd(Sender: TObject);
 begin
-  mmLang.Enabled := True;
-  cbServiceExpert.Enabled := True;
-
-  // Hide progress bar
-  if cbServiceExpert.Checked then
-  begin
-    pbServiceProgress.Visible := False;
-    eServiceSearch.Visible := True;
-  end;  //of begin
-
   SortList(lwService);
-  lwService.Cursor := crDefault;
+  ShowOperationPendingUI(2, False);
 end;
 
 { private TMain.OnSearchError
@@ -933,19 +849,8 @@ end;
 
 procedure TMain.OnTaskSearchEnd(Sender: TObject);
 begin
-  mmImport.Enabled := True;
-  mmLang.Enabled := True;
-  cbTaskExpert.Enabled := True;
-
-  // Hide progress bar
-  if cbTaskExpert.Checked then
-  begin
-    pbTaskProgress.Visible := False;
-    eTaskSearch.Visible := True;
-  end;  //of begin
-
   SortList(lwTasks);
-  lwTasks.Cursor := crDefault;
+  ShowOperationPendingUI(3, False);
 end;
 
 { private TMain.OnTaskSearchStart
@@ -955,16 +860,7 @@ end;
 procedure TMain.OnTaskSearchStart(Sender: TObject);
 begin
   lwTasks.Clear();
-  mmLang.Enabled := False;
-  cbTaskExpert.Enabled := False;
-  lwTasks.Cursor := crHourGlass;
-
-  // Show progress bar
-  if cbTaskExpert.Checked then
-  begin
-    eTaskSearch.Visible := False;
-    pbTaskProgress.Visible := True;
-  end;  //of begin
+  ShowOperationPendingUI(3, True);
 end;
 
 { private TMain.SetLanguage
@@ -1192,6 +1088,39 @@ begin
     on E: Exception do
       FLang.ShowException(FLang.GetString([LID_EXPORT, LID_IMPOSSIBLE]), E.Message);
   end;  //of try
+end;
+
+procedure TMain.ShowOperationPendingUI(AIndex: Integer; AShow: Boolean);
+begin
+  case AIndex of
+    0: cbRunOnce.Enabled := not AShow;
+
+    1:
+      begin
+        pbContextProgress.Visible := AShow;
+        eContextSearch.Visible := not AShow;
+        cbContextExpert.Enabled := not AShow;
+      end;
+
+    2:
+      begin
+        pbServiceProgress.Visible := AShow;
+        eServiceSearch.Visible := not AShow;
+        cbServiceExpert.Enabled := not AShow;
+      end;
+
+    3:
+      begin
+        pbTaskProgress.Visible := AShow;
+        eTaskSearch.Visible := not AShow;
+        cbTaskExpert.Enabled := not AShow;
+      end;
+  end;  //of case
+
+  if AShow then
+    GetListViewForIndex(AIndex).Cursor := crHourGlass
+  else
+    GetListViewForIndex(AIndex).Cursor := crDefault;
 end;
 
 procedure TMain.SortList(AListView: TListView);
