@@ -2426,9 +2426,9 @@ var
 
 begin
   try
-    SelectedList := TRootList<TRootItem>(GetSelectedList());
+    SelectedList := GetSelectedList();
 
-    // Operation pending?
+    // Export already pending?
     if SelectedList.IsExporting() then
       raise EListBlocked.Create(SOperationPending);
 
