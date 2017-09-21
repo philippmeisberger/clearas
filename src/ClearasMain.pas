@@ -2311,7 +2311,8 @@ begin
     if not InputQuery(StripHotKey(mmAdd.Caption), FLang.GetString(LID_RENAME_PROMPT), Name) then
       Exit;
 
-    Assert(Name <> '', 'Name must not be empty!');
+    if (Name = '') then
+      raise EArgumentException.Create('Name must not be empty!');
 
     // Append optional parameters
     if not InputQuery(StripHotKey(mmAdd.Caption), FLang.GetString(LID_PARAMETERS_PROMPT), Args) then
@@ -2373,7 +2374,7 @@ begin
     on E: EAlreadyExists do
       MessageDlg(FLang.GetString(LID_ITEM_ALREADY_EXISTS), mtError, [mbOK], 0);
 
-    on E: EAssertionFailed do
+    on E: EArgumentException do
       MessageDlg(E.Message, mtError, [mbOK], 0);
 
     on E: Exception do
@@ -2492,7 +2493,7 @@ begin
         mtWarning, [mbOK], 0);
     end;
 
-    on E: EAssertionFailed do
+    on E: EArgumentException do
       MessageDlg(E.Message, mtError, [mbOK], 0);
 
     on E: EAlreadyExists do

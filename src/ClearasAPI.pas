@@ -102,6 +102,9 @@ type
     ///   <c>True</c> if the .lnk file was successfully written or <c>False</c>
     ///   otherwise.
     /// </returns>
+    /// <exception cref="EArgumentException">
+    ///   if <c>AFileName</c> or <c>AExeFileName</c> is empty.
+    /// </exception>
     function Save(const AFileName, AExeFileName: TFileName;
       const AArguments: string = ''): Boolean; overload;
   public
@@ -800,7 +803,7 @@ type
     ///   Checks if the list is currently being exported.
     /// </summary>
     /// <returns>
-    ///   <c>True</c> if the list is locked or <c>False</c> otherwise.
+    ///   <c>True</c> if the list is being exported or <c>False</c> otherwise.
     /// </returns>
     function IsExporting(): Boolean;
 
@@ -1477,6 +1480,10 @@ type
     /// <exception cref="EAlreadyExists">
     ///   if item already exists.
     /// </exception>
+    /// <exception cref="EArgumentException">
+    ///   if <c>ACaption</c> is empty or <c>AFileName</c> is neither a .exe nor
+    ///   a .bat file.
+    /// </exception>
     function Add(const AFileName, AArguments, ACaption: string;
       AStartupUser: Boolean = True): Boolean; overload;
 
@@ -1513,6 +1520,9 @@ type
     /// </exception>
     /// <exception cref="EAlreadyExists">
     ///   if item already exists.
+    /// </exception>
+    /// <exception cref="EArgumentException">
+    ///   if file is no backup file.
     /// </exception>
     function ImportBackup(const AFileName: TFileName): Boolean;
 
@@ -1976,6 +1986,10 @@ type
     /// <exception cref="EAlreadyExists">
     ///   if item already exists.
     /// </exception>
+    /// <exception cref="EArgumentException">
+    ///   if <c>ALocationRoot</c> is invalid or <c>AFileName</c> is neither a
+    ///   .exe nor a .bat file.
+    /// </exception>
     function Add(const AFileName, AArguments, ALocationRoot, ACaption: string): Boolean; overload;
 
     /// <summary>
@@ -2182,6 +2196,9 @@ type
     /// </exception>
     /// <exception cref="EAlreadyExists">
     ///   if item already exists.
+    /// </exception>
+    /// <exception cref="EArgumentException">
+    ///   if <c>AFileName</c> is no .exe file.
     /// </exception>
     function Add(const AFileName, AArguments, ACaption: string): Boolean; overload;
 
@@ -2405,6 +2422,9 @@ type
     /// </exception>
     /// <exception cref="ETaskException">
     ///   if backup is invalid or task could not be added.
+    /// </exception>
+    /// <exception cref="EArgumentException">
+    ///   if file is no backup file.
     /// </exception>
     function ImportBackup(const AFileName: TFileName): Boolean;
 
@@ -2660,8 +2680,13 @@ var
 
 begin
   Result := False;
-  Assert(AFileName <> '', 'File name for .lnk file must not be empty!');
-  Assert(AExeFileName <> '', 'File path to .exe must not be empty!');
+
+  if (AFileName = '') then
+    raise EArgumentException.Create('File name for .lnk file must not be empty!');
+
+  if (AExeFileName = '') then
+    raise EArgumentException.Create('File path to .exe must not be empty!');
+
   CoInitialize(nil);
 
   try
@@ -4416,13 +4441,16 @@ var
 
 begin
   Result := False;
-  Assert(ACaption <> '', 'Caption must not be empty!');
+
+  if (ACaption = '') then
+    raise EArgumentException.Create('Caption must not be empty!');
+
   Name := ExtractFileName(AFileName);
   Ext := ExtractFileExt(Name);
 
   // Check invalid extension
   if ((Ext <> '.exe') and (Ext <> '.bat')) then
-    raise EAssertionFailed.Create('Invalid program extension! Must be ''.exe'' or ''.bat''!');
+    raise EArgumentException.Create('Invalid program extension! Must be ''.exe'' or ''.bat''!');
 
   // Search is pending?
   if not FSearchLock.TryEnter() then
@@ -4564,7 +4592,7 @@ begin
   // Check invalid extension
   if ((Ext <> TStartupUserItem.FileExtensionStartupCommon) and
     (Ext <> TStartupUserItem.FileExtensionStartupUser)) then
-    raise EAssertionFailed.CreateFmt('Invalid backup file extension! Must be "%s" or "%s"!',
+    raise EArgumentException.CreateFmt('Invalid backup file extension! Must be "%s" or "%s"!',
       [TStartupUserItem.FileExtensionStartupCommon, TStartupUserItem.FileExtensionStartupUser]);
 
   // Search is pending?
@@ -5442,13 +5470,13 @@ begin
 
   // Valid location?
   if ((LocationRoot <> '*') and (Length(LocationRoot) <= 2)) then
-    raise EAssertionFailed.Create('Invalid location: Expected at least two characters or ''*''!');
+    raise EArgumentException.Create('Invalid location: Expected at least two characters or ''*''!');
 
   Ext := ExtractFileExt(AFileName);
 
   // Check invalid extension
   if ((Ext <> '.exe') and (Ext <> '.bat')) then
-    raise EAssertionFailed.Create('Invalid program extension! Must be ''.exe'' or ''.bat''!');
+    raise EArgumentException.Create('Invalid program extension! Must be ''.exe'' or ''.bat''!');
 
   // Search is pending?
   if not FSearchLock.TryEnter() then
@@ -6163,7 +6191,8 @@ begin
   Name := ExtractFileName(AFileName);
 
   // Check invalid extension
-  Assert(ExtractFileExt(Name) = '.exe', 'Invalid program extension! Must be ''.exe''!');
+  if (ExtractFileExt(Name) <> '.exe') then
+    raise EArgumentException.Create('Invalid program extension! Must be ''.exe''!');
 
   // Search is pending?
   if not FSearchLock.TryEnter() then
@@ -6691,7 +6720,7 @@ begin
 
   // Check invalid extension
   if (ExtractFileExt(AFileName) <> GetBackupExtension()) then
-    raise EAssertionFailed.CreateFmt('Invalid backup file extension! Must be "%s"!', [GetBackupExtension()]);
+    raise EArgumentException.CreateFmt('Invalid backup file extension! Must be "%s"!', [GetBackupExtension()]);
 
   // Search is pending?
   if not FSearchLock.TryEnter() then
