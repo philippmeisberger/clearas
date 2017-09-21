@@ -5497,7 +5497,7 @@ begin
       Command := TCommandString.Create(AFileName, AArguments, True);
 
       // Init Registry access
-      Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_WRITE);
+      Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
 
       try
         Reg.RootKey := HKEY_CLASSES_ROOT;

@@ -36,6 +36,7 @@ Version 5.0 [*??.09.17*]
   * Loading primary language if requested locale could not be found in language file
   * Renaming disabled startup user items was not possible
   * Disabled startup user items were enabled after changing file path
+  * Adding context menu item for a file extension did not work
 * Removed support for Windows 2000 and XP
 * Updater v3.1
   * Removed dependency to "indy" components library
