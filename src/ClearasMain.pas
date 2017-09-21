@@ -171,6 +171,7 @@ type
     procedure pmExecuteClick(Sender: TObject);
     procedure pmPropertiesClick(Sender: TObject);
     procedure pmExtendedClick(Sender: TObject);
+    procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
   private
     FStartup: TStartupList;
     FContext: TContextMenuList;
@@ -348,6 +349,25 @@ begin
 {$ENDIF}
   // Load items
   PageControlChange(Sender);
+end;
+
+procedure TMain.FormCloseQuery(Sender: TObject; var CanClose: Boolean);
+var
+  i: Integer;
+
+begin
+  CanClose := True;
+
+  for i := 0 to PageControl.PageCount - 1 do
+  begin
+    // Export pending?
+    if GetListForIndex(i).IsExporting then
+    begin
+      CanClose := (MessageDlg(FLang.GetString([LID_OPERATION_PENDING1, LID_OPERATION_PENDING2]),
+        mtWarning, [mbOK, mbIgnore], 0) = idIgnore);
+      Break;
+    end;  //of begin
+  end;
 end;
 
 { private TMain.OnUpdate

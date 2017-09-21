@@ -15,6 +15,7 @@ object Main: TMain
   Menu = MainMenu
   OldCreateOrder = True
   Position = poScreenCenter
+  OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   OnShow = FormShow

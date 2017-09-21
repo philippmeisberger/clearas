@@ -22,6 +22,7 @@ Version 5.0 [*??.09.17*]
 * Added loading description of ShellEx and ShellNew items
 * Added loading of MUI strings
 * Added loading context menu items from AllFileSystemObjects, Directory\Background, Network and Printers per default
+* Added warning if quit was clicked and export is pending
 * Closed memory leak during export
 * Closed memory leak when importing a task
 * Bug fixes:
