@@ -2440,12 +2440,12 @@ begin
     if PromptForFileName(FileName, Filter, DefaultExt, StripHotkey(mmExport.Caption),
       '', True) then
     begin
-      // Export list (threaded!)
       with TExportListThread.Create(SelectedList, FileName, PageControl.ActivePageIndex) do
       begin
         OnStart := OnExportListStart;
         OnTerminate := OnExportListEnd;
         OnError := OnExportListError;
+        OnListLocked := Self.OnListLocked;
         Start;
       end;  //of with
     end;  //of begin
