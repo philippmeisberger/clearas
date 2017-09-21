@@ -2626,7 +2626,9 @@ begin
       PersistFile := (ShellLink as IPersistFile);
 
       // Try to read .lnk file
-      OleCheck(PersistFile.Load(PChar(FFileName), STGM_READ));
+      if Failed(PersistFile.Load(PChar(FFileName), STGM_READ)) then
+        Exit;
+
       SetLength(Path, MAX_PATH + 1);
 
       // Try to read path from .lnk
@@ -4734,10 +4736,7 @@ begin
       repeat
         Name := SearchResult.Name;
         Status := LoadStatus(Name, AStartupLocation);
-
-        // TODO: EOleSysError can be raised if .lnk is invalid
         LnkFile := TLnkFile.Create(AStartupLocation.GetLocation().Value + Name);
-
         Item := TStartupUserItem.Create(Name, LnkFile.FileName, Status.GetEnabled(),
           StartupUser, LnkFile);
         Item.DeactivationTime := Status.GetDeactivationTime();
