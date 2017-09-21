@@ -5828,6 +5828,8 @@ begin
 
   if AExpertMode then
     Search(AExpertMode, AWin64, 'Directory');
+
+  LoadContextmenu('CLSID\'+ CLSID_RecycleBin.ToString(), AWin64);
 end;
 
 procedure TContextMenuList.Search(AExpertMode: Boolean; AWin64: Boolean;

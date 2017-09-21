@@ -28,7 +28,6 @@ const
   LID_IMPORT                            = LID_LAST + 30;
   LID_QUIT                              = LID_LAST + 33;
   LID_EDIT                              = LID_LAST + 34;
-  LID_RECYCLEBIN_ENTRY                  = LID_LAST + 35;
   LID_DESCRIPTION_SHOW                  = LID_LAST + 36;
   LID_REFRESH                           = LID_LAST + 37;
   LID_DATE_OF_DEACTIVATION              = LID_LAST + 40;

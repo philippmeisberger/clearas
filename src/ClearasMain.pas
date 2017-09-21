@@ -34,7 +34,6 @@ type
     mmHelp: TMenuItem;
     mmAbout: TMenuItem;
     mmEdit: TMenuItem;
-    mmContext: TMenuItem;
     mmFile: TMenuItem;
     mmExport: TMenuItem;
     N3: TMenuItem;
@@ -107,7 +106,6 @@ type
     lCopy2: TLabel;
     lCopy3: TLabel;
     lCopy4: TLabel;
-    N11: TMenuItem;
     mmDeleteErasable: TMenuItem;
     eStartupSearch: TButtonedEdit;
     pmExecute: TMenuItem;
@@ -140,7 +138,6 @@ type
     procedure lwStartupSelectItem(Sender: TObject; Item: TListItem;
       Selected: Boolean);
     procedure mmAddClick(Sender: TObject);
-    procedure mmContextClick(Sender: TObject);
     procedure mmDateClick(Sender: TObject);
     procedure mmExportClick(Sender: TObject);
     procedure mmImportClick(Sender: TObject);
@@ -231,7 +228,6 @@ implementation
 {$R *.dfm}
 
 const
-  KEY_RECYCLEBIN  = 'CLSID\{645FF040-5081-101B-9F08-00AA002F954E}\shell';
   SORT_ASCENDING  = 0;
   SORT_DESCENDING = 1;
 
@@ -321,32 +317,7 @@ end;
   VCL event that is called when form is shown. }
 
 procedure TMain.FormShow(Sender: TObject);
-{$IFDEF PORTABLE}
-var
-  Reg: TRegistry;
-{$ENDIF}
 begin
-{$IFDEF PORTABLE}
-  // Update Clearas recycle bin context menu entry
-  // TODO: Finally remove in 5.1
-  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_WRITE);
-
-  try
-    Reg.RootKey := HKEY_CLASSES_ROOT;
-
-    // Only update if context menu entry exists
-    if Reg.OpenKey(KEY_RECYCLEBIN +'\Clearas\command', False) then
-    begin
-      Reg.WriteString('', ParamStr(0));
-      mmContext.Visible := True;
-      mmContext.Checked := True;
-    end;  //of begin
-
-  finally
-    Reg.CloseKey();
-    Reg.Free;
-  end;  //of try
-{$ENDIF}
   // Load items
   PageControlChange(Sender);
 end;
@@ -917,7 +888,6 @@ begin
 
     // Edit menu labels
     mmEdit.Caption := GetString(LID_EDIT);
-    mmContext.Caption := GetString(LID_RECYCLEBIN_ENTRY);
     mmDeleteErasable.Caption := GetString(LID_DELETE_ERASABLE);
 
     // View menu labels
@@ -2525,37 +2495,6 @@ begin
         E.Message);
     end;
   end;  //of try
-end;
-
-procedure TMain.mmContextClick(Sender: TObject);
-{$IFDEF PORTABLE}
-var
-  Reg: TRegistry;
-{$ENDIF}
-begin
-{$IFDEF PORTABLE}
-  // Only allow to remove recycle bin context menu entry
-  if not mmContext.Checked then
-    Exit;
-
-  // TODO: Finally remove in 5.1
-  Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
-
-  try
-    Reg.RootKey := HKEY_CLASSES_ROOT;
-
-    // Remove recycle bin context menu entry
-    if Reg.OpenKey(KEY_RECYCLEBIN, False) then
-    begin
-      Reg.DeleteKey('Clearas');
-      mmContext.Visible := False;
-    end;  //of begin
-
-  finally
-    Reg.CloseKey();
-    Reg.Free;
-  end;  //of try
-{$ENDIF}
 end;
 
 { TMain.mmRefreshClick

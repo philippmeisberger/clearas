@@ -780,14 +780,6 @@ object Main: TMain
     end
     object mmEdit: TMenuItem
       Caption = 'Edit'
-      object mmContext: TMenuItem
-        Caption = 'Recycle bin context menu item'
-        Visible = False
-        OnClick = mmContextClick
-      end
-      object N11: TMenuItem
-        Caption = '-'
-      end
       object mmDeleteErasable: TMenuItem
         Caption = 'Delete invalid items'
         OnClick = mmDeleteErasableClick
