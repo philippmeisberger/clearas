@@ -1868,9 +1868,7 @@ begin
     if PromptForFileName(FileName, 'Application *.exe|*.exe|Icon *.ico|*.ico',
       '', StripHotkey(pmChangeIcon.Caption)) then
     begin
-      if not (SelectedItem as TContextMenuShellItem).ChangeIcon('"'+ FileName +'"') then
-        raise Exception.Create('Unknown error!');
-
+      (SelectedItem as TContextMenuShellItem).ChangeIcon('"'+ FileName +'"');
       pmDeleteIcon.Visible := True;
     end;  //of begin
 
@@ -1916,9 +1914,7 @@ begin
     if (MessageDlg(FLang.GetString(LID_CONTEXT_MENU_ICON_DELETE_CONFIRM),
       mtConfirmation, mbYesNo, 0) = idYes) then
     begin
-      if not (SelectedItem as TContextMenuShellItem).DeleteIcon() then
-        raise Exception.Create('Unknown error!');
-
+      (SelectedItem as TContextMenuShellItem).DeleteIcon();
       pmDeleteIcon.Visible := False;
     end;  //of begin
 

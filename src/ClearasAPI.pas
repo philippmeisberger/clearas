@@ -1700,20 +1700,18 @@ type
     /// <param name="ANewIconFileName">
     ///   The new absolute .ico filename.
     ///  </param>
-    /// <returns>
-    ///   <c>True</c> if the icon was successfully changed or <c>False</c>
-    ///   otherwise.
-    /// </returns>
-    function ChangeIcon(const ANewIconFileName: string): Boolean;
+    /// <exception cref="EContextMenuException">
+    ///    if icon could not be changed.
+    /// </exception>
+    procedure ChangeIcon(const ANewIconFileName: string);
 
     /// <summary>
-    ///   Deletes the icon of a contextmenu.
+    ///   Deletes the icon of a contextmenu item.
     /// </summary>
-    /// <returns>
-    ///   <c>True</c> if the icon was successfully deleted or <c>False</c>
-    ///   otherwise.
-    /// </returns>
-    function DeleteIcon(): Boolean;
+    /// <exception cref="EContextMenuException">
+    ///    if icon could not be deleted.
+    /// </exception>
+    procedure DeleteIcon(); inline;
 
     /// <summary>
     ///   Exports the item as file.
@@ -4935,7 +4933,7 @@ begin
   end;  //of try
 end;
 
-function TContextMenuShellItem.ChangeIcon(const ANewIconFileName: string): Boolean;
+procedure TContextMenuShellItem.ChangeIcon(const ANewIconFileName: string);
 const
   ICON_NAME = 'Icon';
 
@@ -4943,7 +4941,6 @@ var
   Reg: TRegistry;
 
 begin
-  Result := False;
   Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
 
   try
@@ -4955,7 +4952,10 @@ begin
 
     // Delete icon?
     if ((ANewIconFileName = '') and Reg.ValueExists(ICON_NAME)) then
-      Result := Reg.DeleteValue(ICON_NAME)
+    begin
+      if not Reg.DeleteValue(ICON_NAME) then
+        raise EContextMenuException.Create('Could not delete icon: '+ Reg.LastErrorMsg);
+    end  //of begin
     else
     begin
       // Change icon
@@ -4970,12 +4970,9 @@ begin
       end  //of begin
       else
         Reg.WriteString(ICON_NAME, ANewIconFileName);
-
-      Result := True;
     end;  //of if
 
-    if Result then
-      FIcon := ANewIconFileName;
+    FIcon := ANewIconFileName;
 
   finally
     Reg.CloseKey();
@@ -5046,9 +5043,9 @@ begin
   end;  //of try
 end;
 
-function TContextMenuShellItem.DeleteIcon(): Boolean;
+procedure TContextMenuShellItem.DeleteIcon();
 begin
-  Result := ChangeIcon('');
+  ChangeIcon('');
 end;
 
 procedure TContextMenuShellItem.ExportItem(const AFileName: string);
