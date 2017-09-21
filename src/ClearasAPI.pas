@@ -1955,7 +1955,7 @@ type
       /// <summary>
       ///   A comma separated list that contains the default context menu locations.
       /// </summary>
-      DefaultLocations = '*, AllFileSystemObjects, Folder, Directory, Directory\Background, Drive, Network, Printers';
+      DefaultLocations = '*, AllFileSystemObjects, Folder, Directory, Drive, Network, Printers';
 
     /// <summary>
     ///   Constructor for creating a <c>TContextMenuList</c> instance.
@@ -5825,10 +5825,6 @@ end;
 procedure TContextMenuList.Search(AExpertMode: Boolean = False; AWin64: Boolean = True);
 begin
   Search(AExpertMode, AWin64, '');
-
-  if AExpertMode then
-    Search(AExpertMode, AWin64, 'Directory');
-
   LoadContextmenu('CLSID\'+ CLSID_RecycleBin.ToString(), AWin64);
 end;
 
@@ -5883,8 +5879,8 @@ var
             end;  //of begin
           end;  //of begin
 
-          // File extension: Search in subkey for ShellNew items
-          if AKeyName.StartsWith('.') then
+          // File extension or Directory: Search in subkey
+          if (AKeyName.StartsWith('.') or (AKeyName = 'Directory')) then
             SearchSubkey(AKeyName +'\'+ Keys[i]);
         end;  //of for
       end;  //of begin
