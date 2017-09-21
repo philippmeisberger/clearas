@@ -2337,8 +2337,8 @@ begin
              if FContext.Last.UserChoiceExists(Location) then
              begin
                // Delete user choice?
-               if (MessageDlg(FLang.Format(LID_CONTEXT_MENU_USER_CHOICE_WARNING1,
-                 [LID_CONTEXT_MENU_USER_CHOICE_WARNING2, LID_CONTEXT_MENU_USER_CHOICE_RESET]),
+               if (TaskMessageDlg(FLang[LID_CONTEXT_MENU_USER_CHOICE_WARNING1],
+                 FLang.GetString([LID_CONTEXT_MENU_USER_CHOICE_WARNING2, LID_CONTEXT_MENU_USER_CHOICE_RESET]),
                  mtConfirmation, mbYesNo, 0) = idYes) then
                  FContext.Last.DeleteUserChoice(Location);
              end;  //of begin
