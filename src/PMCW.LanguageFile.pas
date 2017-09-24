@@ -134,7 +134,7 @@ type
   private
     FListeners: TInterfaceList;
     FLocale,
-    FLangId: TLocale;
+    FSection: TLocale;
     FLanguages: TStringList;
   {$IFDEF LINUX}
     FIni: TIniFile;
@@ -329,7 +329,7 @@ constructor TLanguageFile.Create({$IFDEF LINUX}const AIniFile: TFileName{$ELSE}
 begin
   inherited Create;
 {$IFDEF MSWINDOWS}
-  FLangId := 0;
+  FSection := 0;
 {$ELSE}
   if not FileExists(AIniFile) then
     raise EArgumentException.Create(SysUtils.Format('Language file "%s" could not be found!', [AIniFile]));
@@ -414,21 +414,18 @@ end;
 function TLanguageFile.Format(const AIndices: array of TLanguageId;
   const AArgs: array of {$IFDEF FPC}const{$ELSE}TVarRec{$ENDIF}): string;
 var
-  i: Integer;
-  Text: string;
+  LanguageId: TLanguageId;
 
 begin
-  Text := '';
+  Result := '';
 
-  for i := 0 to Length(AIndices) -1 do
+  for LanguageId in AIndices do
   begin
-    if (AIndices[i] = NEW_LINE) then
-      Text := Text + sLineBreak
+    if (LanguageId = NEW_LINE) then
+      Result := Result + sLineBreak
     else
-      Text := Text + Format(AIndices[i], AArgs);
+      Result := Result + Format(LanguageId, AArgs);
   end;  //of for
-
-  Result := Text;
 end;
 
 function TLanguageFile.GetString(AIndex: TLanguageId): string;
@@ -438,7 +435,7 @@ var
   Error: DWORD;
 
 begin
-  if (LoadString(HInstance, FLangId + AIndex, Buffer, SizeOf(Buffer)) = 0) then
+  if (LoadString(HInstance, FSection + AIndex, Buffer, SizeOf(Buffer)) = 0) then
   begin
     Error := GetLastError();
 
@@ -451,27 +448,24 @@ begin
   Result := Buffer;
 {$ELSE}
 begin
-  Result := FIni.ReadString(FLangId, IntToStr(AIndex + FIRST_LANGUAGE_START_INDEX), '');
+  Result := FIni.ReadString(FSection, IntToStr(AIndex + FIRST_LANGUAGE_START_INDEX), '');
 {$ENDIF}
 end;
 
 function TLanguageFile.GetString(const AIndices: array of TLanguageId): string;
 var
-  i: Integer;
-  Text: string;
+  LanguageId: TLanguageId;
 
 begin
-  Text := '';
+  Result := '';
 
-  for i := 0 to Length(AIndices) - 1 do
+  for LanguageId in AIndices do
   begin
-    if (AIndices[i] = NEW_LINE) then
-      Text := Text + sLineBreak
+    if (LanguageId = NEW_LINE) then
+      Result := Result + sLineBreak
     else
-      Text := Text + GetString(AIndices[i]);
+      Result := Result + GetString(LanguageId);
   end;  //of for
-
-  Result := Text;
 end;
 
 procedure TLanguageFile.Load({$IFDEF MSWINDOWS}const AInterval: Word = 200{$ENDIF});
@@ -561,7 +555,7 @@ begin
     else
       FLocale := ALocale;
 
-    FLangId := StrToInt(FLanguages.Values[IntToStr(FLocale)]);
+    FSection := StrToInt(FLanguages.Values[IntToStr(FLocale)]);
   {$ELSE}
     // Requested language not found?
     if (FLanguages.Values[ALocale] = '') then
@@ -591,7 +585,7 @@ begin
     else
       FLocale := ALocale;
 
-    FLangId := FLanguages.Values[FLocale];
+    FSection := FLanguages.Values[FLocale];
   {$ENDIF}
 
     // Notify all listeners
