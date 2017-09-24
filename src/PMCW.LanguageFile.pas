@@ -475,25 +475,22 @@ var
   Buffer: array[0..4] of Char;
 
 begin
-  FLanguages.CommaText := '';
+  FLanguages.Clear();
   Language := FIRST_LANGUAGE_START_INDEX;
 
   // Load available languages
   while (LoadString(HInstance, Language, Buffer, SizeOf(Buffer)) <> 0) do
   begin
-    FLanguages.CommaText := FLanguages.CommaText + Buffer +'='+ IntToStr(Language) +',';
+    FLanguages.Append(string(Buffer) + FLanguages.NameValueSeparator + IntToStr(Language));
     Inc(Language, AInterval);
   end;  //of while
-
-  // Remove last separator
-  FLanguages.CommaText := FLanguages.CommaText.Remove(Length(FLanguages.CommaText) - 1);
 {$ELSE}
 var
   Languages: TStrings;
   i: Integer;
 
 begin
-  FLanguages.CommaText := '';
+  FLanguages.Clear();
   Languages := TStringList.Create;
 
   try
@@ -501,13 +498,7 @@ begin
 
     // Load available languages
     for i := 0 to Languages.Count - 1 do
-    begin
-      FLanguages.CommaText := FLanguages.CommaText + FIni.ReadString(Languages[i],
-        IntToStr(FIRST_LANGUAGE_START_INDEX), '') +'='+ Languages[i]+',';
-    end;  //of for
-
-    // Remove last separator
-    FLanguages.CommaText := Copy(FLanguages.CommaText, 0, Length(FLanguages.CommaText) - 1);
+      FLanguages.Append(FIni.ReadString(Languages[i], IntToStr(FIRST_LANGUAGE_START_INDEX), '') +'='+ Languages[i]);
 
   finally
     Languages.Free;
