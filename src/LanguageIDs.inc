@@ -55,7 +55,6 @@ const
   LID_PATH_EDIT                         = LID_LAST + 64;
   LID_CONTEXT_MENU_ADD                  = LID_LAST + 65;
   LID_LOCATION_COPY                     = LID_LAST + 66;
-  LID_OPEN_CLEARAS                      = LID_LAST + 67;
   LID_FILTER_EXE_BAT_FILES              = LID_LAST + 68;
   LID_FILTER_STARTUP_FILES              = LID_LAST + 69;
   LID_CONTEXT_MENU_USER_CHOICE_WARNING1 = LID_LAST + 71;
