@@ -624,6 +624,7 @@ type
     FSearchLock,
     FExportLock: TCriticalSection;
     procedure Notify(const Item: T; Action: TCollectionNotification); override;
+    procedure LockExportAndExecute(AExecute: TProc);
 
     { IInterface }
     function QueryInterface(const IID: TGUID; out Obj): HRESULT; stdcall;
@@ -1993,6 +1994,36 @@ type
     function Add(const AFileName, AArguments, ALocationRoot, ACaption: string): Boolean; overload;
 
     /// <summary>
+    ///   Changes the extended attribute of a <c>TContextMenuShellItem</c>.
+    /// </summary>
+    /// <param name="AItem">
+    ///   The item.
+    /// </param>
+    /// <param name="AExtended">
+    ///   The extended state.
+    /// </param>
+    procedure ChangeExtended(AItem: TContextMenuShellItem; AExtended: Boolean);
+
+    /// <summary>
+    ///   Changes the icon of a <c>TContextMenuShellItem</c>.
+    /// </summary>
+    /// <param name="AItem">
+    ///   The item.
+    /// </param>
+    /// <param name="ANewIconFileName">
+    ///   The new icon.
+    /// </param>
+    procedure ChangeIcon(AItem: TContextMenuShellItem; const ANewIconFileName: string);
+
+    /// <summary>
+    ///   Deletes the icon of a <c>TContextMenuShellItem</c>.
+    /// </summary>
+    /// <param name="AItem">
+    ///   The item.
+    /// </param>
+    procedure DeleteIcon(AItem: TContextMenuShellItem);
+
+    /// <summary>
     ///   Exports the complete list as file.
     /// </summary>
     /// <param name="AFileName">
@@ -3299,6 +3330,21 @@ begin
     FExportLock.Release();
 
   Result := not Entered;
+end;
+
+procedure TRootList<T>.LockExportAndExecute(AExecute: TProc);
+begin
+  Assert(Assigned(AExecute));
+
+  if not FExportLock.TryEnter() then
+    raise EListBlocked.Create(SOperationPending);
+
+  try
+    AExecute();
+
+  finally
+    FExportLock.Release();
+  end;  //of try
 end;
 
 procedure TRootList<T>.Notify(const Item: T; Action: TCollectionNotification);
@@ -5570,6 +5616,30 @@ begin
   finally
     FSearchLock.Release();
   end;  //of try
+end;
+
+procedure TContextMenuList.ChangeExtended(AItem: TContextMenuShellItem;
+  AExtended: Boolean);
+begin
+  LockExportAndExecute(
+    procedure
+    begin
+      AItem.Extended := AExtended;
+    end);
+end;
+
+procedure TContextMenuList.ChangeIcon(AItem: TContextMenuShellItem; const ANewIconFileName: string);
+begin
+  LockExportAndExecute(
+    procedure
+    begin
+      AItem.ChangeIcon(ANewIconFileName);
+    end);
+end;
+
+procedure TContextMenuList.DeleteIcon(AItem: TContextMenuShellItem);
+begin
+  LockExportAndExecute(AItem.DeleteIcon);
 end;
 
 procedure TContextMenuList.ExportList(const AFileName: string);

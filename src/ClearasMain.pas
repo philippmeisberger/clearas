@@ -1846,7 +1846,7 @@ var
 begin
   try
     // Export pending?
-    if GetSelectedList().IsExporting() then
+    if FContext.IsExporting() then
       raise EListBlocked.Create(SOperationPending);
 
     SelectedItem := GetSelectedItem();
@@ -1858,7 +1858,7 @@ begin
     if PromptForFileName(FileName, 'Application *.exe|*.exe|Icon *.ico|*.ico',
       '', StripHotkey(pmChangeIcon.Caption)) then
     begin
-      (SelectedItem as TContextMenuShellItem).ChangeIcon('"'+ FileName +'"');
+      FContext.ChangeIcon(SelectedItem as TContextMenuShellItem, '"'+ FileName +'"');
       pmDeleteIcon.Visible := True;
     end;  //of begin
 
@@ -1891,7 +1891,7 @@ var
 begin
   try
     // Export pending?
-    if GetSelectedList().IsExporting() then
+    if FContext.IsExporting() then
       raise EListBlocked.Create(SOperationPending);
 
     SelectedItem := GetSelectedItem();
@@ -1904,7 +1904,7 @@ begin
     if (MessageDlg(FLang.GetString(LID_CONTEXT_MENU_ICON_DELETE_CONFIRM),
       mtConfirmation, mbYesNo, 0) = idYes) then
     begin
-      (SelectedItem as TContextMenuShellItem).DeleteIcon();
+      FContext.DeleteIcon(SelectedItem as TContextMenuShellItem);
       pmDeleteIcon.Visible := False;
     end;  //of begin
 
@@ -2241,13 +2241,13 @@ var
 begin
   try
     // Export pending?
-    if GetSelectedList().IsExporting() then
+    if FContext.IsExporting() then
       raise EListBlocked.Create(SOperationPending);
 
     SelectedItem := GetSelectedItem();
 
     if (SelectedItem is TContextMenuShellItem) then
-      (SelectedItem as TContextMenuShellItem).Extended := pmExtended.Checked;
+      FContext.ChangeExtended(SelectedItem as TContextMenuShellItem, pmExtended.Checked);
 
   except
     on E: EInvalidItem do
