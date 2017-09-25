@@ -883,9 +883,9 @@ type
     FErrorMessage: string;
     procedure DoNotifyOnError();
     procedure DoNotifyOnListLocked();
-    procedure DoNotifyOnStart();
   protected
     FSelectedList: TRootList<TRootItem>;
+    procedure DoNotifyOnStart();
     procedure DoExecute(); virtual; abstract;
     procedure Execute(); override; final;
   public
@@ -3408,28 +3408,10 @@ begin
 end;
 
 procedure TRootListThread.Execute();
-var
-  SearchLock: TCriticalSection;
-
 begin
   try
     Assert(Assigned(FSelectedList));
-    SearchLock := FSelectedList.FSearchLock;
-
-    // Search is pending?
-    if not SearchLock.TryEnter() then
-      raise EListBlocked.Create(SOperationPending);
-
-    CoInitialize(nil);
-
-    try
-      Synchronize(DoNotifyOnStart);
-      DoExecute();
-
-    finally
-      CoUninitialize();
-      SearchLock.Release();
-    end;  //of try
+    DoExecute();
 
   except
     on E: EListBlocked do
@@ -3455,9 +3437,27 @@ begin
 end;
 
 procedure TSearchThread.DoExecute();
+var
+  SearchLock: TCriticalSection;
+
 begin
-  FSelectedList.Clear();
-  FSelectedList.Search(FExpertMode, FWin64);
+  SearchLock := FSelectedList.FSearchLock;
+
+  // Search is pending?
+  if not SearchLock.TryEnter() then
+    raise EListBlocked.Create(SOperationPending);
+
+  CoInitialize(nil);
+
+  try
+    Synchronize(DoNotifyOnStart);
+    FSelectedList.Clear();
+    FSelectedList.Search(FExpertMode, FWin64);
+
+  finally
+    CoUninitialize();
+    SearchLock.Release();
+  end;  //of try
 end;
 
 
@@ -3474,20 +3474,32 @@ end;
 
 procedure TExportListThread.DoExecute();
 var
-  ExportLock: TCriticalSection;
+  SearchLock, ExportLock: TCriticalSection;
 
 begin
-  ExportLock := FSelectedList.FExportLock;
+  SearchLock := FSelectedList.FSearchLock;
 
-  // Export is pending?
-  if not ExportLock.TryEnter() then
+  // Search is pending?
+  if not SearchLock.TryEnter() then
     raise EListBlocked.Create(SOperationPending);
 
   try
-    FSelectedList.ExportList(FFileName);
+    ExportLock := FSelectedList.FExportLock;
+
+    // Export is pending?
+    if not ExportLock.TryEnter() then
+      raise EListBlocked.Create(SOperationPending);
+
+    try
+      Synchronize(DoNotifyOnStart);
+      FSelectedList.ExportList(FFileName);
+
+    finally
+      ExportLock.Release();
+    end;
 
   finally
-    ExportLock.Release();
+    SearchLock.Release();
   end;  //of try
 end;
 
