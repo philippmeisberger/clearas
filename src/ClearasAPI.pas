@@ -195,11 +195,6 @@ type
   EWarning = class(EAbort);
 
   /// <summary>
-  ///   Nuke warning.
-  /// </summary>
-  ENukeException = class(Exception);
-
-  /// <summary>
   ///   Raised when trying to add an item that is already present.
   /// </summary>
   EAlreadyExists = class(EAbort);
@@ -5533,9 +5528,9 @@ begin
   Result := False;
   LocationRoot := Trim(ALocationRoot);
 
-  // Valid location?
-  if ((LocationRoot <> '*') and (Length(LocationRoot) <= 2)) then
-    raise EArgumentException.Create('Invalid location: Expected at least two characters or ''*''!');
+  // Invalid location?
+  if (LocationRoot = '') then
+    raise EArgumentException.Create('Location must not be empty!');
 
   Ext := ExtractFileExt(AFileName);
 
@@ -5553,14 +5548,6 @@ begin
       raise EListBlocked.Create(SOperationPending);
 
     try
-      Name := ChangeFileExt(ExtractFileName(AFileName), '');
-
-      // File path already exists in another item?
-      if (IndexOf(Name, LocationRoot) <> -1) then
-        raise EAlreadyExists.CreateFmt('Item "%s" already exists in "%s"!', [Name, LocationRoot]);
-
-      Command := TCommandString.Create(AFileName, AArguments, True);
-
       // Init Registry access
       Reg := TRegistry.Create(KEY_WOW64_64KEY or KEY_READ or KEY_WRITE);
 
@@ -5568,7 +5555,7 @@ begin
         Reg.RootKey := HKEY_CLASSES_ROOT;
 
         if not Reg.OpenKey(LocationRoot, True) then
-          raise EContextMenuException.CreateFmt('Could not create key "%s": %s', [LocationRoot, Reg.LastErrorMsg]);
+          raise EContextMenuException.CreateFmt('Could not open key "%s": %s', [LocationRoot, Reg.LastErrorMsg]);
 
         // Location is a file extension?
         if LocationRoot.StartsWith('.') then
@@ -5587,12 +5574,13 @@ begin
         else
           FileType := LocationRoot;
 
-        // User tries to nuke system
-        if (AnsiSameText(Name, 'open') and AnsiSameText(FileType, 'exefile')) then
-          raise ENukeException.Create('This would nuke the system!');
-
         Reg.CloseKey();
+        Name := ChangeFileExt(ExtractFileName(AFileName), '');
         KeyPath := FileType +'\'+ TContextMenuShellItem.CanonicalName +'\'+ Name;
+
+        // Key must not exist to avoid unwanted overrides
+        if Reg.KeyExists(KeyPath) then
+          raise EAlreadyExists.CreateFmt('"%s" already exists!', [KeyPath]);
 
         // Adds new context item to Registry
         if not Reg.OpenKey(KeyPath, True) then
@@ -5602,13 +5590,13 @@ begin
         if (Trim(ACaption) <> '') then
           Reg.WriteString('', ACaption);
 
-        Reg.CloseKey();
         KeyPath := KeyPath +'\command';
 
-        if not Reg.OpenKey(KeyPath, True) then
+        if not Reg.OpenKey('command', True) then
           raise EContextMenuException.CreateFmt('Could not create key "%s": %s', [KeyPath, Reg.LastErrorMsg]);
 
         // Write command of item
+        Command := TCommandString.Create(AFileName, AArguments, True);
         Reg.WriteString('', Command);
 
         // Adds item to list

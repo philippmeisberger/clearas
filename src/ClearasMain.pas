@@ -2367,9 +2367,6 @@ begin
     on E: EArgumentException do
       MessageDlg(E.Message, mtError, [mbOK], 0);
 
-    on E: ENukeException do
-      MessageDlg(E.Message, mtError, [mbOK], 0);
-
     on E: Exception do
     begin
       FLang.ShowException(StripHotKey(mmAdd.Caption) + FLang.GetString(LID_IMPOSSIBLE),

@@ -23,7 +23,6 @@ Version 5.0 [*??.09.17*]
 * Added loading of MUI strings
 * Added loading context menu items from AllFileSystemObjects, Directory\Background, Network and Printers per default
 * Added warning if quit was clicked and export is pending
-* Added nuke warning if trying to add a new contextmenu item for opening .exe files
 * Closed memory leak during export
 * Closed memory leak when importing a task
 * Bug fixes:
@@ -37,7 +36,8 @@ Version 5.0 [*??.09.17*]
   * Loading primary language if requested locale could not be found in language file
   * Renaming disabled startup user items was not possible
   * Disabled startup user items were enabled after changing file path
-  * Adding context menu item for a file extension did not work
+  * Adding new context menu item for a file extension did not work
+  * Adding new context menu item could overwrite existing item (possible system nuke)
 * Removed support for Windows 2000 and XP
 * Updater v3.1
   * Removed dependency to "indy" components library
