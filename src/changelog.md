@@ -23,7 +23,7 @@ Version 5.0 [*??.09.17*]
 * Added loading of MUI strings
 * Added loading context menu items from AllFileSystemObjects, Directory\Background, Network and Printers per default
 * Added warning if quit was clicked and export is pending
-* Added nuke warnings
+* Added nuke warning if trying to add a new contextmenu item for opening .exe files
 * Closed memory leak during export
 * Closed memory leak when importing a task
 * Bug fixes:

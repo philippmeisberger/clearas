@@ -4924,19 +4924,10 @@ begin
 end;
 
 procedure TContextMenuListItem.Delete();
-var
-  KeyPath: string;
-
 begin
   // TODO: ExtractFilePath() really necessary?
-  KeyPath := ExtractFilePath(GetLocation()) + Name;
-
-  // User tries to nuke system
-  if AnsiSameText(KeyPath, 'exefile\shell\open') then
-    raise ENukeException.Create('This would nuke the system!');
-
-  if not DeleteKey(HKEY_CLASSES_ROOT, KeyPath) then
-    raise ERegistryException.CreateFmt('Key "%s" does not exist!', [KeyPath]);
+  if not DeleteKey(HKEY_CLASSES_ROOT, ExtractFilePath(GetLocation()) + Name) then
+    raise ERegistryException.CreateFmt('Key "%s" does not exist!', [ExtractFilePath(GetLocation()) + Name]);
 end;
 
 function TContextMenuListItem.DeleteUserChoice(const AFileExtension: string): Boolean;
@@ -5850,6 +5841,10 @@ begin
         // Search for shell entries?
         if (AContextMenuItemType = itShell) then
         begin
+          // Prevent system nuking
+          if (Key.StartsWith('exefile') and ItemName.StartsWith('open')) then
+            Continue;
+
           Caption := Reg.ReadString('');
 
           // MUI string
