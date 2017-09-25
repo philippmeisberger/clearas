@@ -1281,6 +1281,9 @@ begin
     on E: EWarning do
       MessageDlg(E.Message, mtWarning, [mbOK], 0);
 
+    on E: ENukeException do
+      MessageDlg(E.Message, mtError, [mbOK], 0);
+
     on E: Exception do
       FLang.ShowException(FLang.GetString([LID_DELETE, LID_IMPOSSIBLE]), E.Message);
   end;  //of try
@@ -2365,6 +2368,9 @@ begin
       MessageDlg(FLang.GetString(LID_ITEM_ALREADY_EXISTS), mtError, [mbOK], 0);
 
     on E: EArgumentException do
+      MessageDlg(E.Message, mtError, [mbOK], 0);
+
+    on E: ENukeException do
       MessageDlg(E.Message, mtError, [mbOK], 0);
 
     on E: Exception do

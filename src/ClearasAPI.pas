@@ -195,6 +195,11 @@ type
   EWarning = class(EAbort);
 
   /// <summary>
+  ///   Nuke warning.
+  /// </summary>
+  ENukeException = class(Exception);
+
+  /// <summary>
   ///   Raised when trying to add an item that is already present.
   /// </summary>
   EAlreadyExists = class(EAbort);
@@ -4919,9 +4924,19 @@ begin
 end;
 
 procedure TContextMenuListItem.Delete();
+var
+  KeyPath: string;
+
 begin
-  if not DeleteKey(HKEY_CLASSES_ROOT, ExtractFilePath(GetLocation()) + Name) then
-    raise ERegistryException.CreateFmt('Key "%s" does not exist!', [ExtractFilePath(GetLocation()) + Name]);
+  // TODO: ExtractFilePath() really necessary?
+  KeyPath := ExtractFilePath(GetLocation()) + Name;
+
+  // User tries to nuke system
+  if AnsiSameText(KeyPath, 'exefile\shell\open') then
+    raise ENukeException.Create('This would nuke the system!');
+
+  if not DeleteKey(HKEY_CLASSES_ROOT, KeyPath) then
+    raise ERegistryException.CreateFmt('Key "%s" does not exist!', [KeyPath]);
 end;
 
 function TContextMenuListItem.DeleteUserChoice(const AFileExtension: string): Boolean;
@@ -5477,6 +5492,7 @@ end;
 
 procedure TContextMenuShellNewItem.Delete();
 begin
+  // TODO: Maybe inherited is sufficient
   if not DeleteKey(HKEY_CLASSES_ROOT, GetLocation()) then
     raise ERegistryException.CreateFmt('Key "%s" does not exist!', [GetLocation()]);
 end;
@@ -5579,6 +5595,10 @@ begin
         end  //of begin
         else
           FileType := LocationRoot;
+
+        // User tries to nuke system
+        if (AnsiSameText(Name, 'open') and AnsiSameText(FileType, 'exefile')) then
+          raise ENukeException.Create('This would nuke the system!');
 
         Reg.CloseKey();
         KeyPath := FileType +'\'+ TContextMenuShellItem.CanonicalName +'\'+ Name;
