@@ -23,6 +23,9 @@ type
     FErrorMessage: string;
     procedure TestLocking_SearchStart(Sender: TObject);
     procedure TestLocking_SearchError(Sender: TObject; const AErrorMessage: string);
+    procedure TestLocking_TestDelete();
+    procedure TestLocking_ExportStart(Sender: TObject);
+    procedure TestLocking_ExportFinished(Sender: TObject);
     procedure EnsureFileExportedAndDelete(const AFileName: string);
   protected
     FRootList: TRootList<TRootItem>;
@@ -38,15 +41,13 @@ type
   public
     procedure SetUp; override;
     procedure TearDown; override;
-    procedure TestDeleteItems;
-    // TODO: Fix TestLocking and enable it again
-    procedure TestLocking;
   published
     procedure TestChangeItemStatus;
     procedure TestRenameItems; virtual;
     procedure TestChangeItemCommands; virtual;
     procedure TestExportBackup;
     procedure TestExportItems;
+    procedure TestLocking;
   end;
 
   TStartupListTest = class(TRootListTest)
@@ -185,9 +186,18 @@ begin
 end;
 
 procedure TRootListTest.TearDown;
+var
+  i: Integer;
+
 begin
   try
-    TestDeleteItems();
+    // Delete valid test items
+    for i := 0 to FTestItems.Count - 1 do
+      TestDelete(FTestItems[i]);
+
+    // Delete erasable items
+    for i := 0 to FErasableTestItems.Count - 1 do
+      TestDelete(FErasableTestItems[i]);
 
   finally
     FreeAndNil(FRootList);
@@ -289,20 +299,6 @@ begin
   CheckEquals(Counter, FRootList.Count, 'After deleting item "'+ AItemName +'" Count should be decreased');
 end;
 
-procedure TRootListTest.TestDeleteItems;
-var
-  i: Integer;
-
-begin
-  // Delete valid test items
-  for i := 0 to FTestItems.Count - 1 do
-    TestDelete(FTestItems[i]);
-
-  // Delete erasable items
-  for i := 0 to FErasableTestItems.Count - 1 do
-    TestDelete(FErasableTestItems[i]);
-end;
-
 procedure TRootListTest.TestChangeStatus(const AItemName: string);
 
   procedure ChangeStatus(ASelectedItem: TRootItem; AEnabled: Boolean);
@@ -380,41 +376,80 @@ end;
 
 procedure TRootListTest.TestLocking_SearchStart(Sender: TObject);
 begin
-  try
-    // This must not be possible e.g. during loading!
-    FRootList.EnableItem(nil);
+  TestChangeStatus(FTestItems[0]);
+  TestRename(FTestItems[0]);
+  TestExport(FTestItems[0]);
+  TestChangeCommand(FTestItems[0], cTestExe, cNewTestFileName);
+  CheckException(TestLocking_TestDelete, EListBlocked, 'Delete must not be possible while a search is pending');
+  FLockingSuccessful := True;
+end;
 
-  except
-    on E: EListBlocked do
-      FLockingSuccessful := True;
-  end;  //of try
+procedure TRootListTest.TestLocking_TestDelete;
+begin
+  TestDelete(FTestItems[0]);
+end;
+
+procedure TRootListTest.TestLocking_ExportFinished(Sender: TObject);
+begin
+  Check(DeleteFile(ClassName + FRootList.GetBackupExtension()), 'List was not exported');
+end;
+
+procedure TRootListTest.TestLocking_ExportStart(Sender: TObject);
+begin
+  CheckException(TestChangeItemStatus, EListBlocked, 'Status must not be changed while an export is pending');
+  CheckException(TestRenameItems, EListBlocked, 'Command must not be changed while an export is pending');
+  TestExport(FTestItems[0]);
+  CheckException(TestChangeItemCommands, EListBlocked, 'Command must not be changed while an export is pending');
+  CheckException(TestLocking_TestDelete, EListBlocked, 'Delete must not be possible while a search is pending');
+  FLockingSuccessful := True;
 end;
 
 procedure TRootListTest.TestLocking;
 var
   SearchThread: TSearchThread;
+  ExportThread: TExportListThread;
 
 begin
   FLockingSuccessful := False;
 
-  // Start async loading
+  // Start async export
+  ExportThread := TExportListThread.Create(FRootList, ClassName + FRootList.GetBackupExtension(), -1);
+
+  with ExportThread do
+  begin
+    FreeOnTerminate := False;
+    OnStart := TestLocking_ExportStart;
+    OnTerminate := TestLocking_ExportFinished;
+    OnError := TestLocking_SearchError;
+    Start();
+  end;
+
+  Delay(300);
+  ExportThread.WaitFor();
+  FreeAndNil(ExportThread);
+  CheckSynchronize();
+  CheckEqualsString('', FErrorMessage, FErrorMessage);
+  Check(FLockingSuccessful, 'List was not locked during export');
+
+  // Start async search
+  FLockingSuccessful := False;
   SearchThread := TSearchThread.Create(FRootList);
 
   with SearchThread do
   begin
     FreeOnTerminate := False;
+    ExpertMode := True;
     OnStart := TestLocking_SearchStart;
     OnError := TestLocking_SearchError;
     Start();
   end;
 
-  // Wait for the thread
+  Delay(300);
   SearchThread.WaitFor();
   FreeAndNil(SearchThread);
   CheckSynchronize();
-
   CheckEqualsString('', FErrorMessage, FErrorMessage);
-  Check(FLockingSuccessful, 'List was not locked!');
+  Check(FLockingSuccessful, 'List was not locked during search');
 end;
 
 procedure TRootListTest.TestRename(const AItemName: string);
