@@ -1899,11 +1899,6 @@ type
       AEnabled: Boolean);
 
     /// <summary>
-    ///   Deletes the item.
-    /// </summary>
-    procedure Delete(); override;
-
-    /// <summary>
     ///   Exports the item as file.
     /// </summary>
     /// <param name="AFileName">
@@ -4920,9 +4915,8 @@ end;
 
 procedure TContextMenuListItem.Delete();
 begin
-  // TODO: ExtractFilePath() really necessary?
-  if not DeleteKey(HKEY_CLASSES_ROOT, ExtractFilePath(GetLocation()) + Name) then
-    raise ERegistryException.CreateFmt('Key "%s" does not exist!', [ExtractFilePath(GetLocation()) + Name]);
+  if not DeleteKey(HKEY_CLASSES_ROOT, GetLocation()) then
+    raise ERegistryException.CreateFmt('Key "%s" does not exist!', [GetLocation()]);
 end;
 
 function TContextMenuListItem.DeleteUserChoice(const AFileExtension: string): Boolean;
@@ -5474,13 +5468,6 @@ procedure TContextMenuShellNewItem.SetCommand(const ACommand: TCommandString);
 begin
   raise EAbstractError.Create('It is impossible to change the filename of a '
     + ToString() +' item!');
-end;
-
-procedure TContextMenuShellNewItem.Delete();
-begin
-  // TODO: Maybe inherited is sufficient
-  if not DeleteKey(HKEY_CLASSES_ROOT, GetLocation()) then
-    raise ERegistryException.CreateFmt('Key "%s" does not exist!', [GetLocation()]);
 end;
 
 procedure TContextMenuShellNewItem.ExportItem(const AFileName: string);
