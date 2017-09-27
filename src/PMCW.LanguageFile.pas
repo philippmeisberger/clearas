@@ -65,8 +65,6 @@ const
   LID_UPDATE_DOWNLOAD               = 24;
   LID_UPDATE_NOT_AVAILABLE          = 23;
   LID_UPDATE_CANCELED               = 30;
-  LID_UPDATE_64BIT                  = 34;
-  LID_UPDATE_64BIT_CONFIRM          = 35;
   LID_UPDATE_SECURE                 = 37;
   LID_UPDATE_SECURE_DESCRIPTION1    = 38;
   LID_UPDATE_SECURE_DESCRIPTION2    = 39;
