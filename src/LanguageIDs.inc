@@ -21,6 +21,7 @@ const
   LID_AUTOMATICALLY                     = LID_LAST + 21;
   LID_MANUALLY                          = LID_LAST + 22;
   LID_SEARCH                            = LID_LAST + 23;
+  LID_INCOMPATIBLE_OS                   = LID_LAST + 24;
   LID_EXECUTE                           = LID_LAST + 25;
   LID_OPEN_IN_REGEDIT                   = LID_LAST + 26;
   LID_HIDE                              = LID_LAST + 28;

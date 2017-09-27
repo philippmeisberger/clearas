@@ -318,8 +318,15 @@ end;
 
 procedure TMain.FormShow(Sender: TObject);
 begin
-  // Load items
-  PageControlChange(Sender);
+  // Windows Vista is required as scheduled task feature is not compatible with XP
+  if not CheckWin32Version(6) then
+  begin
+    MessageDlg(FLang[LID_INCOMPATIBLE_OS], mtWarning, [mbClose], 0);
+    Close;
+  end  //of begin
+  else
+    // Load items
+    PageControlChange(Sender);
 end;
 
 procedure TMain.FormCloseQuery(Sender: TObject; var CanClose: Boolean);
