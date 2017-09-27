@@ -642,7 +642,7 @@ begin
     slHklmRun:       Result := GetName('HKLM', AErasable);
     slHklmRun32:     Result := GetName('HKLM32', AErasable);
     slHklmRunOnce:   Result := GetName('HKLM RunOnce', AErasable);
-    slHklmRunOnce32: Result := GetName('HKLM RunOnce32', AErasable);
+    slHklmRunOnce32: Result := GetName('HKLM32 RunOnce', AErasable);
     slStartupUser:   Result := GetName('Startup User', AErasable) + TLnkFile.FileExtension;
     slCommonStartup: Result := GetName('Startup Common', AErasable) + TLnkFile.FileExtension;
   end;  //of case
