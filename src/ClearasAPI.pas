@@ -221,7 +221,7 @@ type
     ///   Gets the complete store location.
     /// </summary>
     /// <returns>
-    ///   The file name.
+    ///   The location.
     /// </returns>
     function GetFullLocation(): string; virtual; abstract;
 
@@ -443,6 +443,12 @@ type
   strict private
     FWow64: Boolean;
   protected
+    /// <summary>
+    ///   Gets the complete store location.
+    /// </summary>
+    /// <returns>
+    ///   The location.
+    /// </returns>
     function GetFullLocation(): string; override;
 
     /// <summary>
@@ -467,7 +473,7 @@ type
     ///   Gets the root Registry key.
     /// </summary>
     /// <returns>
-    ///    The root Registry key.
+    ///   The root Registry key.
     /// </returns>
     function GetRootKey(): TRootKey; virtual; abstract;
 
@@ -624,6 +630,13 @@ type
     FSearchLock,
     FExportLock: TCriticalSection;
     procedure Notify(const Item: T; Action: TCollectionNotification); override;
+
+    /// <summary>
+    ///   Locks the list from being exported and executes a specified method.
+    /// </summary>
+    /// <param name="AExecute">
+    ///   The method to be executed.
+    /// </param>
     procedure LockExportAndExecute(AExecute: TProc);
 
     { IInterface }
@@ -886,8 +899,23 @@ type
     procedure DoNotifyOnListLocked();
   protected
     FSelectedList: TRootList<TRootItem>;
+
+    /// <summary>
+    ///   Issues <see cref="OnStart"/> event.
+    /// </summary>
     procedure DoNotifyOnStart();
+
+    /// <summary>
+    ///   The execute method.
+    /// </summary>
     procedure DoExecute(); virtual; abstract;
+
+    /// <summary>
+    ///   Executes the thread.
+    /// </summary>
+    /// <remarks>
+    ///   Implement <see cref="DoExecute"/>!
+    /// </remarks>
     procedure Execute(); override; final;
   public
     /// <summary>
@@ -922,6 +950,9 @@ type
     FWin64,
     FExpertMode: Boolean;
   protected
+    /// <summary>
+    ///   Executes the search.
+    /// </summary>
     procedure DoExecute(); override;
   public
     /// <summary>
@@ -952,6 +983,9 @@ type
     FFileName: string;
     FPageControlIndex: Integer;
   protected
+    /// <summary>
+    ///   Executes the export.
+    /// </summary>
     procedure DoExecute(); override;
   public
     /// <summary>
@@ -1050,16 +1084,116 @@ type
   protected
     FDeactivationTime: TDateTime;
     FRootKey: TRootKey;
+
+    /// <summary>
+    ///   Disables the item.
+    /// </summary>
+    /// <remarks>
+    ///   DEPRECATED since Windows 8!
+    /// </remarks>
     procedure Disable(); virtual; deprecated 'Since Windows 8'; abstract;
+
+    /// <summary>
+    ///   Enables the item.
+    /// </summary>
+    /// <remarks>
+    ///   DEPRECATED since Windows 8!
+    /// </remarks>
     procedure Enable(); virtual; deprecated 'Since Windows 8'; abstract;
+
+    /// <summary>
+    ///   Deletes a Registry value.
+    /// </summary>
+    /// <param name="AKeyPath">
+    ///   The Registry key which contains the value.
+    /// </param>
+    /// <param name="AReallyWow64">
+    ///   Optional: Set to <c>False</c> to override inherited WOW64 behavior.
+    /// </param>
+    /// <returns>
+    ///   <c>True</c> if successful or <c>False</c> otherwise.
+    /// </returns>
+    /// <exception cref="ERegistryException">
+    ///   if key could not be found.
+    /// </exception>
     function DeleteValue(const AKeyPath: string; AReallyWow64: Boolean = True): Boolean;
+
+    /// <summary>
+    ///   Gets the approved startup location.
+    /// </summary>
+    /// <returns>
+    ///   The location.
+    /// </returns>
+    /// <remarks>
+    ///   Only since Windows 8!
+    /// </remarks>
     function GetApprovedLocation(): string; virtual; abstract;
+
+    /// <summary>
+    ///   Gets the root Registry key.
+    /// </summary>
+    /// <returns>
+    ///   The root Registry key.
+    /// </returns>
     function GetRootKey(): TRootKey; override;
+
+    /// <summary>
+    ///   Gets the redirected WOW64 Registry key.
+    /// </summary>
+    /// <returns>
+    ///   The redirected key.
+    /// </returns>
     function GetWow64Key(): string; virtual;
+
+    /// <summary>
+    ///   Renames the item.
+    /// </summary>
+    /// <param name="ANewName">
+    ///   The new name.
+    /// </param>
+    /// <exception cref="EStartupException">
+    ///   if value does not exist.
+    /// </exception>
     procedure Rename(const ANewName: string); overload; override;
+
+    /// <summary>
+    ///   Renames the item.
+    /// </summary>
+    /// <param name="AKeyPath">
+    ///   The key path.
+    /// </param>
+    /// <param name="ANewName">
+    ///   The new name.
+    /// </param>
+    /// <param name="AReallyWow64">
+    ///    Optional: Set to <c>False</c> to override inherited WOW64 behavior.
+    /// </param>
+    /// <returns>
+    ///   <c>True</c> if successful or <c>False</c> otherwise.
+    /// </returns>
+    /// <exception cref="EStartupException">
+    ///   if key could not be opened or value does not exist.
+    /// </exception>
     function Rename(const AKeyPath, ANewName: string;
       AReallyWow64: Boolean = True): Boolean; reintroduce; overload;
+
+    /// <summary>
+    ///   Changes the command.
+    /// </summary>
+    /// <param name="ACommand">
+    ///   The new command.
+    /// </param>
+    /// <exception cref="EStartupException">
+    ///   if key could not be opened or value does not exist.
+    /// </exception>
     procedure SetCommand(const ACommand: TCommandString); override;
+
+    /// <summary>
+    ///   Changes the status.
+    /// </summary>
+    /// <param name="AEnabled">
+    ///   The new status.
+    /// </param>
     procedure SetEnabled(const AEnabled: Boolean); override;
   public
     const
@@ -1125,7 +1259,7 @@ type
     ///   Gets the root Registry key.
     /// </summary>
     /// <returns>
-    ///    The root Registry key.
+    ///   The root Registry key.
     /// </returns>
     property RootKey: TRootKey read GetRootKey;
 
@@ -1151,10 +1285,47 @@ type
   private
     FRunOnce: Boolean;
   protected
+    /// <summary>
+    ///   Disables the item.
+    /// </summary>
+    /// <remarks>
+    ///   DEPRECATED since Windows 8!
+    /// </remarks>
     procedure Disable(); override;
+
+    /// <summary>
+    ///   Enables the item.
+    /// </summary>
+    /// <remarks>
+    ///   DEPRECATED since Windows 8!
+    /// </remarks>
     procedure Enable(); override;
+
+    /// <summary>
+    ///   Gets the redirected WOW64 Registry key.
+    /// </summary>
+    /// <returns>
+    ///   The redirected key.
+    /// </returns>
     function GetWow64Key(): string; override;
+
+    /// <summary>
+    ///   Gets the approved startup location.
+    /// </summary>
+    /// <returns>
+    ///   The location.
+    /// </returns>
+    /// <remarks>
+    ///   Only since Windows 8!
+    /// </remarks>
     function GetApprovedLocation(): string; override;
+
+    /// <summary>
+    ///   Renames the item.
+    /// </summary>
+    /// <param name="ANewName">
+    ///   The new name.
+    /// </param>
     procedure Rename(const ANewName: string); override;
   public
     const
@@ -1269,11 +1440,55 @@ type
     FLnkFile: TLnkFile;
     FStartupUser: Boolean;
   protected
+    /// <summary>
+    ///   Disables the item.
+    /// </summary>
+    /// <remarks>
+    ///   DEPRECATED since Windows 8!
+    /// </remarks>
     procedure Disable(); override;
+
+    /// <summary>
+    ///   Enables the item.
+    /// </summary>
+    /// <remarks>
+    ///   DEPRECATED since Windows 8!
+    /// </remarks>
     procedure Enable(); override;
+
+    /// <summary>
+    ///   Gets the approved startup location.
+    /// </summary>
+    /// <returns>
+    ///   The location.
+    /// </returns>
+    /// <remarks>
+    ///   Only since Windows 8!
+    /// </remarks>
     function GetApprovedLocation(): string; override;
+
+    /// <summary>
+    ///   Gets the complete store location.
+    /// </summary>
+    /// <returns>
+    ///   The location.
+    /// </returns>
     function GetFullLocation(): string; override;
+
+    /// <summary>
+    ///   Renames the item.
+    /// </summary>
+    /// <param name="ANewName">
+    ///   The new name.
+    /// </param>
     procedure Rename(const ANewName: string); override;
+
+    /// <summary>
+    ///   Changes the command.
+    /// </summary>
+    /// <param name="ACommand">
+    ///   The new command.
+    /// </param>
     procedure SetCommand(const ACommand: TCommandString); override;
   public
     const
@@ -1585,8 +1800,29 @@ type
   TContextMenuListItem = class(TRegistryItem)
   protected
     FIcon: TMuiString;
+
+    /// <summary>
+    ///   Gets the icon filename.
+    /// </summary>
+    /// <returns>
+    ///   The icon filename.
+    /// </returns>
     function GetIconFileName(): string; override;
+
+    /// <summary>
+    ///   Gets the root Registry key.
+    /// </summary>
+    /// <returns>
+    ///   The root Registry key.
+    /// </returns>
     function GetRootKey(): TRootKey; override;
+
+    /// <summary>
+    ///   Renames the item.
+    /// </summary>
+    /// <param name="ANewName">
+    ///   The new name.
+    /// </param>
     procedure Rename(const ANewName: string); override;
   public
     /// <summary>
@@ -1661,10 +1897,47 @@ type
     FExtended: Boolean;
     procedure SetExtended(const AExtended: Boolean);
   protected
+    /// <summary>
+    ///   Gets the store location. Usually a Registry key.
+    /// </summary>
+    /// <returns>
+    ///   The store location.
+    /// </returns>
     function GetLocation(): string; override;
+
+    /// <summary>
+    ///   Renames the item.
+    /// </summary>
+    /// <param name="AValueName">
+    ///   The value name.
+    /// </param>
+    /// <param name="ANewCaption">
+    ///   The new caption.
+    /// </param>
     procedure Rename(const AValueName, ANewCaption: string); reintroduce; overload;
+
+    /// <summary>
+    ///   Renames the item.
+    /// </summary>
+    /// <param name="ANewName">
+    ///   The new name.
+    /// </param>
     procedure Rename(const ANewName: string); overload; override;
+
+    /// <summary>
+    ///   Changes the command.
+    /// </summary>
+    /// <param name="ACommand">
+    ///   The new command.
+    /// </param
     procedure SetCommand(const ACommand: TCommandString); override;
+
+    /// <summary>
+    ///   Changes the status.
+    /// </summary>
+    /// <param name="AEnabled">
+    ///   The new status.
+    /// </param>
     procedure SetEnabled(const AEnabled: Boolean); override;
   public
     const
@@ -1754,8 +2027,31 @@ type
   private
     procedure GetSubCommands(ASubCommands: TStrings);
   protected
+    /// <summary>
+    ///   Checks if the item can be deleted.
+    /// </summary>
+    /// <remarks>
+    ///   <see cref="UpdateErasable"/> calls this method and caches the return
+    ///   value in <see cref="Erasable"/>. An item is erasable if filename is empty
+    ///   or does not exist. Override this method in derived class to implement
+    ///   custom behaviour.
+    /// </remarks>
     function IsErasable(): Boolean; override;
+
+    /// <summary>
+    ///   Renames the item.
+    /// </summary>
+    /// <param name="ANewName">
+    ///   The new name.
+    /// </param>
     procedure Rename(const ANewName: string); override;
+
+    /// <summary>
+    ///   Changes the command.
+    /// </summary>
+    /// <param name="ACommand">
+    ///   The new command.
+    /// </param>
     procedure SetCommand(const ACommand: TCommandString); override;
   public
     const
@@ -1821,9 +2117,36 @@ type
   /// </summary>
   TContextMenuShellExItem = class(TContextMenuListItem)
   protected
+    /// <summary>
+    ///   Gets the store location. Usually a Registry key.
+    /// </summary>
+    /// <returns>
+    ///   The store location.
+    /// </returns>
     function GetLocation(): string; override;
+
+    /// <summary>
+    ///   Renames the item.
+    /// </summary>
+    /// <param name="ANewName">
+    ///   The new name.
+    /// </param>
     procedure Rename(const ANewName: string); override;
+
+    /// <summary>
+    ///   Changes the command.
+    /// </summary>
+    /// <param name="ACommand">
+    ///   The new command.
+    /// </param>
     procedure SetCommand(const ACommand: TCommandString); override;
+
+    /// <summary>
+    ///   Changes the status.
+    /// </summary>
+    /// <param name="AEnabled">
+    ///   The new status.
+    /// </param>
     procedure SetEnabled(const AEnabled: Boolean); override;
   public
     const
@@ -1860,10 +2183,47 @@ type
   /// </summary>
   TContextMenuShellNewItem = class(TContextMenuListItem)
   protected
+    /// <summary>
+    ///   Gets the store location. Usually a Registry key.
+    /// </summary>
+    /// <returns>
+    ///   The store location.
+    /// </returns>
     function GetLocation(): string; override;
+
+    /// <summary>
+    ///   Checks if the item can be deleted.
+    /// </summary>
+    /// <remarks>
+    ///   <see cref="UpdateErasable"/> calls this method and caches the return
+    ///   value in <see cref="Erasable"/>. An item is erasable if filename is empty
+    ///   or does not exist. Override this method in derived class to implement
+    ///   custom behaviour.
+    /// </remarks>
     function IsErasable(): Boolean; override;
+
+    /// <summary>
+    ///   Renames the item.
+    /// </summary>
+    /// <param name="ANewName">
+    ///   The new name.
+    /// </param>
     procedure Rename(const ANewName: string); override;
+
+    /// <summary>
+    ///   Changes the command.
+    /// </summary>
+    /// <param name="ACommand">
+    ///   The new command.
+    /// </param>
     procedure SetCommand(const ACommand: TCommandString); override;
+
+    /// <summary>
+    ///   Changes the status.
+    /// </summary>
+    /// <param name="AEnabled">
+    ///   The new status.
+    /// </param>
     procedure SetEnabled(const AEnabled: Boolean); override;
   public
     const
@@ -2121,9 +2481,36 @@ type
     FServiceStart: TServiceStart;
     function GetHandle(AAccess: DWORD): SC_HANDLE;
   protected
+    /// <summary>
+    ///   Gets the root Registry key.
+    /// </summary>
+    /// <returns>
+    ///   The root Registry key.
+    /// </returns>
     function GetRootKey(): TRootKey; override;
+
+    /// <summary>
+    ///   Renames the item.
+    /// </summary>
+    /// <param name="ANewName">
+    ///   The new name.
+    /// </param>
     procedure Rename(const ANewName: string); override;
+
+    /// <summary>
+    ///   Changes the command.
+    /// </summary>
+    /// <param name="ACommand">
+    ///   The new command.
+    /// </param>
     procedure SetCommand(const ACommand: TCommandString); override;
+
+    /// <summary>
+    ///   Changes the status.
+    /// </summary>
+    /// <param name="AEnabled">
+    ///   The new status.
+    /// </param>
     procedure SetEnabled(const AEnabled: Boolean); override;
   public
     /// <summary>
@@ -2285,10 +2672,47 @@ type
     function GetTaskDefinition(): ITaskDefinition;
     function GetZipLocation(): string;
   protected
+    /// <summary>
+    ///   Gets the complete store location.
+    /// </summary>
+    /// <returns>
+    ///   The location.
+    /// </returns>
     function GetFullLocation(): string; override;
+
+    /// <summary>
+    ///   Checks if the item can be deleted.
+    /// </summary>
+    /// <remarks>
+    ///   <see cref="UpdateErasable"/> calls this method and caches the return
+    ///   value in <see cref="Erasable"/>. An item is erasable if filename is empty
+    ///   or does not exist. Override this method in derived class to implement
+    ///   custom behaviour.
+    /// </remarks>
     function IsErasable(): Boolean; override;
+
+    /// <summary>
+    ///   Renames the item.
+    /// </summary>
+    /// <param name="ANewName">
+    ///   The new name.
+    /// </param>
     procedure Rename(const ANewName: string); override;
+
+    /// <summary>
+    ///   Changes the command.
+    /// </summary>
+    /// <param name="ACommand">
+    ///   The new command.
+    /// </param>
     procedure SetCommand(const ACommand: TCommandString); override;
+
+    /// <summary>
+    ///   Changes the status.
+    /// </summary>
+    /// <param name="AEnabled">
+    ///   The new status.
+    /// </param>
     procedure SetEnabled(const AEnabled: Boolean); override;
   public
     /// <summary>
@@ -5362,6 +5786,7 @@ begin
   try
     Reg.RootKey := HKEY_CLASSES_ROOT;
 
+    // Export class registration in relation to OS bitness
     if Reg.OpenKey(GetLocation(), False) then
     begin
       Key := 'CLSID\'+ Reg.ReadString('');
@@ -5372,6 +5797,7 @@ begin
         RegFile.ExportKey(HKEY_CLASSES_ROOT, Key, True);
     end;  //of begin
 
+    // Export ShellEx item
     RegFile.ExportKey(HKEY_CLASSES_ROOT, GetLocation(), True);
     RegFile.Save();
 
