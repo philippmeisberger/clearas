@@ -631,6 +631,7 @@ var
 begin
   Index := (Sender as TExportListThread).PageControlIndex;
   PageControl.Pages[Index].Cursor := crHourGlass;
+  GetListViewForIndex(Index).Cursor := crHourGlass;
   ShowOperationPendingUI(Index, True);
 end;
 
@@ -651,6 +652,7 @@ var
 begin
   Index := (Sender as TExportListThread).PageControlIndex;
   PageControl.Pages[Index].Cursor := crDefault;
+  GetListViewForIndex(Index).Cursor := crDefault;
   ShowOperationPendingUI(Index, False);
 end;
 
@@ -1122,11 +1124,6 @@ begin
         cbTaskExpert.Enabled := not AShow;
       end;
   end;  //of case
-
-  if AShow then
-    GetListViewForIndex(AIndex).Cursor := crHourGlass
-  else
-    GetListViewForIndex(AIndex).Cursor := crDefault;
 end;
 
 procedure TMain.SortList(AListView: TListView);
