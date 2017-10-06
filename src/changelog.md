@@ -28,7 +28,7 @@ Version 5.0 [*??.09.17*]
 * Bug fixes:
   * In 64 bit version: File path of 32 bit context menu entries could not be found
   * ShellNew items could have empty name
-  * AV when using keyboard shortcuts during a search
+  * Fixed AV when using keyboard shortcuts during a search
   * Wrong listview was refreshed when switching the tab during a search
   * Column "Deactivation time" did not have correct caption after changing language
   * Caption was not refreshed after editing the path
@@ -38,6 +38,7 @@ Version 5.0 [*??.09.17*]
   * Disabled startup user items were enabled after changing file path
   * Adding new context menu item for a file extension did not work
   * Adding new context menu item could overwrite existing item (possible system nuke)
+  * Fixed out-of-bounds exception if "date" column is shown and status of service is changed
 * Removed support for Windows 2000 and XP
 * Updater v3.1
   * Removed dependency to "indy" components library

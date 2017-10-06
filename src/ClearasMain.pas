@@ -775,8 +775,13 @@ begin
         SubItems.Append(GetServiceStartCaption(AItem.Start));
 
         // Show deactivation timestamp?
-        if (mmDate.Checked and (AItem.DeactivationTime <> 0)) then
-          SubItems.Append(DateTimeToStr(AItem.DeactivationTime));
+        if mmDate.Checked then
+        begin
+          if (AItem.DeactivationTime <> 0) then
+            SubItems.Append(DateTimeToStr(AItem.DeactivationTime))
+          else
+            SubItems.Append('');
+        end;  //of begin
       end;  //of with
     end;  //of begin
   end;  //of begin
