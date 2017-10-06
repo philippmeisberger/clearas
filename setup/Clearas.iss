@@ -61,7 +61,7 @@ Root: HKCR; Subkey: "CLSID\{{645FF040-5081-101B-9F08-00AA002F954E}\shell\{#MyApp
 BeveledLabel=Inno Setup
 
 [CustomMessages]
-ContextMenu=Integrate {#MyAppName} into contextmeu
+ContextMenu=Integrate {#MyAppName} into contextmenu
 ContextMenuRecycleBin=Recycle Bin
 
 [Code]
