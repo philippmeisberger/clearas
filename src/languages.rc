@@ -1,5 +1,4 @@
-STRINGTABLE
-LANGUAGE LANG_GERMAN, SUBLANG_DEFAULT
+STRINGTABLE // deutsch
 BEGIN
   100, "1031"
   101, "Warnung"
@@ -127,8 +126,7 @@ BEGIN
   223, "Wollen Sie das Symbol wirklich löschen?"
 END
 
-STRINGTABLE
-LANGUAGE LANG_ENGLISH, SUBLANG_DEFAULT
+STRINGTABLE // english
 BEGIN
   300, "1033"
   301, "Warning"
@@ -256,8 +254,7 @@ BEGIN
   423, "Are you sure you want to delete the icon?"
 END
 
-STRINGTABLE
-LANGUAGE LANG_FRENCH, SUBLANG_DEFAULT
+STRINGTABLE // français
 BEGIN
   500, "1036"
   501, "Avertissement"
