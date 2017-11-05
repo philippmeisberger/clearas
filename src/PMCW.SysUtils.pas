@@ -17,7 +17,7 @@ uses
 {$IFDEF MSWINDOWS}
   Winapi.Windows, Winapi.ShellAPI, Winapi.ShlObj, Winapi.ActiveX, Vcl.Forms;
 {$ELSE}
-  Process, StrUtils, Resource, ElfReader, VersionResource;
+  Process, Resource, ElfReader, VersionResource;
 {$ENDIF}
 
 const
