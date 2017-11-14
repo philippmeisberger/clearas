@@ -1,6 +1,6 @@
 ﻿{ *********************************************************************** }
 {                                                                         }
-{ PM Code Works Language Resource Unit v2.2                               }
+{ PM Code Works Language File Unit v2.2                                   }
 {                                                                         }
 { Copyright (c) 2011-2017 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
@@ -8,7 +8,7 @@
 
 unit PMCW.LanguageFile;
 
-{$IFDEF FPC}{$mode delphi}{$ENDIF}
+{$IFDEF FPC}{$mode Delphi}{$ENDIF}
 
 interface
 
