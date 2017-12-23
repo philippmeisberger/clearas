@@ -201,7 +201,7 @@ type
     /// </exception>
     function ExportKey(AHKey: HKEY; const AKeyPath: string; ARecursive: Boolean;
       const AFilterValues: TStrings = nil;
-      const AFilterTypes: TRegistryFilter = [rdString, rdInteger, rdExpandString, rdBinary]): Integer;
+      const AFilterTypes: TRegistryFilter = [rdString, rdInteger, rdExpandString, rdBinary]): Cardinal;
 
     /// <summary>
     ///   Exports a single Registry value and saves it as .reg file.
@@ -669,9 +669,12 @@ end;
 
 function TRegistryFile.ExportKey(AHKey: HKEY; const AKeyPath: string;
   ARecursive: Boolean; const AFilterValues: TStrings = nil;
-  const AFilterTypes: TRegistryFilter = [rdString, rdInteger, rdExpandString, rdBinary]): Integer;
+  const AFilterTypes: TRegistryFilter = [rdString, rdInteger, rdExpandString, rdBinary]): Cardinal;
 
-  function ExportKeyValues(const ARegistry: TRegistry): Integer;
+var
+  Reg: TRegistry;
+
+  function ExportKeyValues(const AKey: string): Cardinal;
   var
     Values, Keys: TStringList;
     Section: string;
@@ -681,11 +684,16 @@ function TRegistryFile.ExportKey(AHKey: HKEY; const AKeyPath: string;
 
   begin
     Result := 0;
-    Section := ExcludeTrailingPathDelimiter(ARegistry.RootKeyName +'\'+ ARegistry.CurrentPath);
+    Reg.CloseKey();
+
+    if not Reg.OpenKeyReadOnly(AKey) then
+      Exit;
+
+    Section := ExcludeTrailingPathDelimiter(Reg.RootKeyName +'\'+ Reg.CurrentPath);
     Values := TStringList.Create;
 
     try
-      ARegistry.GetValueNames(Values);
+      Reg.GetValueNames(Values);
 
       for i := 0 to Values.Count - 1 do
       begin
@@ -702,12 +710,12 @@ function TRegistryFile.ExportKey(AHKey: HKEY; const AKeyPath: string;
           (AFilterValues.IndexOf(Values[i]) = -1)) then
           Continue;
 
-        case ARegistry.GetDataType(Values[i]) of
+        case Reg.GetDataType(Values[i]) of
           rdString:
             begin
               if (rdString in AFilterTypes) then
               begin
-                WriteString(Section, Values[i], ARegistry.ReadString(Values[i]));
+                WriteString(Section, Values[i], Reg.ReadString(Values[i]));
                 Inc(Result);
               end;  //of begin
             end;
@@ -716,7 +724,7 @@ function TRegistryFile.ExportKey(AHKey: HKEY; const AKeyPath: string;
             begin
               if (rdInteger in AFilterTypes) then
               begin
-                WriteInteger(Section, Values[i], ARegistry.ReadInteger(Values[i]));
+                WriteInteger(Section, Values[i], Reg.ReadInteger(Values[i]));
                 Inc(Result);
               end;  //of begin
             end;
@@ -725,7 +733,7 @@ function TRegistryFile.ExportKey(AHKey: HKEY; const AKeyPath: string;
             begin
               if (rdExpandString in AFilterTypes) then
               begin
-                WriteExpandString(Section, Values[i], ARegistry.ReadString(Values[i]));
+                WriteExpandString(Section, Values[i], Reg.ReadString(Values[i]));
                 Inc(Result);
               end;  //of begin
             end;
@@ -734,8 +742,8 @@ function TRegistryFile.ExportKey(AHKey: HKEY; const AKeyPath: string;
             begin
               if (rdBinary in AFilterTypes) then
               begin
-                SetLength(Buffer, ARegistry.GetDataSize(Values[i]));
-                ARegistry.ReadBinaryData(Values[i], Buffer[0], Length(Buffer));
+                SetLength(Buffer, Reg.GetDataSize(Values[i]));
+                Reg.ReadBinaryData(Values[i], Buffer[0], Length(Buffer));
                 WriteBytes(Section, Values[i], Buffer);
                 Inc(Result);
               end;  //of begin
@@ -748,30 +756,22 @@ function TRegistryFile.ExportKey(AHKey: HKEY; const AKeyPath: string;
     end;  //of try
 
     // Include subkeys?
-    if (not Cancel and ARecursive and ARegistry.HasSubKeys()) then
+    if (not Cancel and ARecursive and Reg.HasSubKeys()) then
     begin
       Keys := TStringList.Create;
 
       try
-        ARegistry.GetKeyNames(Keys);
+        Reg.GetKeyNames(Keys);
 
         // Export subkeys
         for i := 0 to Keys.Count - 1 do
-        begin
-          ARegistry.CloseKey();
-
-          if ARegistry.OpenKeyReadOnly(IncludeTrailingPathDelimiter(AKeyPath) + Keys[i]) then
-            Result := Result + ExportKeyValues(ARegistry);
-        end;  //of for
+          Result := Result + ExportKeyValues(IncludeTrailingPathDelimiter(AKey) + Keys[i]);
 
       finally
         FreeAndNil(Keys);
       end;  //of try
     end;  //of begin
   end;
-
-var
-  Reg: TRegistry;
 
 begin
   Result := 0;
@@ -788,11 +788,11 @@ begin
   try
     Reg.RootKey := AHKey;
 
-    // Start export
-    if not Reg.OpenKeyReadOnly(AKeyPath) then
-      raise ERegistryException.CreateFmt('Could not open key "%s\%s": %s', [Reg.RootKeyName, AKeyPath, Reg.LastErrorMsg]);
+    if not Reg.KeyExists(AKeyPath) then
+      raise ERegistryException.CreateFmt('Key "%s\%s" does not exist', [Reg.RootKeyName, AKeyPath]);
 
-    Result := ExportKeyValues(Reg);
+    // Start export
+    Result := ExportKeyValues(AKeyPath);
 
     // Notify finish
     if Assigned(FOnExportEnd) then
