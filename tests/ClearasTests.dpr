@@ -17,7 +17,8 @@ program ClearasTests;
 uses
   DUnitTestRunner,
   ClearasAPITest in 'ClearasAPITest.pas',
-  ClearasAPI in '..\src\ClearasAPI.pas';
+  ClearasAPI in '..\src\ClearasAPI.pas',
+  PMCW.RegistryFile.Test in 'PMCW.RegistryFile.Test.pas';
 
 {$R *.RES}
 
