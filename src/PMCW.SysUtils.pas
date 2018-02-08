@@ -2,13 +2,13 @@
 {                                                                         }
 { PM Code Works System Utilities Unit v1.0                                }
 {                                                                         }
-{ Copyright (c) 2011-2017 Philipp Meisberger (PM Code Works)              }
+{ Copyright (c) 2011-2018 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
 { *********************************************************************** }
 
 unit PMCW.SysUtils;
 
-{$IFDEF FPC}{$mode delphi}{$ENDIF}
+{$IFDEF FPC}{$MODE Delphi}{$ENDIF}
 
 interface
 
@@ -157,7 +157,7 @@ function GetKnownFolderPath(AFolderId: TGUID): string;
 /// <returns>
 ///   The path.
 /// </returns>
-function GetSystemWow64Directory(): string;
+function GetSystemWow64Directory(): string; overload;
 
 /// <summary>
 ///   Disables the WOW64 filesystem redirection on 64-bit Windows for a 32-bit
@@ -191,11 +191,9 @@ function Wow64RevertWow64FsRedirection(OldValue: BOOL): BOOL; stdcall;
 implementation
 
 {$IFDEF MSWINDOWS}
-{$WARN SYMBOL_PLATFORM OFF}
-function GetSystemWow64DirectoryW(lpBuffer: LPWSTR; uSize: UINT): UINT; stdcall; external kernel32 name 'GetSystemWow64DirectoryW' delayed;
-function Wow64DisableWow64FsRedirection; external kernel32 name 'Wow64DisableWow64FsRedirection' delayed;
-function Wow64RevertWow64FsRedirection; external kernel32 name 'Wow64RevertWow64FsRedirection' delayed;
-{$WARN SYMBOL_PLATFORM ON}
+function GetSystemWow64Directory(lpBuffer: LPTSTR; uSize: UINT): UINT; stdcall; external kernel32 name 'GetSystemWow64Directory'+{$IFDEF UNICODE}'W'{$ELSE}'A'{$ENDIF}; overload;
+function Wow64DisableWow64FsRedirection; external kernel32 name 'Wow64DisableWow64FsRedirection';
+function Wow64RevertWow64FsRedirection; external kernel32 name 'Wow64RevertWow64FsRedirection';
 
 function DisableWow64FsRedirection(): Boolean;
 {$IFDEF WIN32}
@@ -208,12 +206,8 @@ begin
   Result := True;
 
 {$IFDEF WIN32}
-  // WOW64 only present on 64-bit Windows
-  if (TOSVersion.Architecture = arIntelX64) then
-  begin
-    if Wow64DisableWow64FsRedirection(OldValue) then
-      Result := OldValue;
-  end;  //of begin
+  if Wow64DisableWow64FsRedirection(OldValue) then
+    Result := OldValue;
 {$ENDIF}
 end;
 
@@ -221,8 +215,7 @@ procedure RevertWow64FsRedirection(AOldValue: Boolean);
 begin
 {$IFDEF WIN32}
   // WOW64 only present on 64-bit Windows
-  if (not AOldValue and (TOSVersion.Architecture = arIntelX64)) then
-    Wow64RevertWow64FsRedirection(AOldValue);
+  Wow64RevertWow64FsRedirection(AOldValue);
 {$ENDIF}
 end;
 
@@ -251,21 +244,15 @@ end;
 
 function GetSystemWow64Directory(): string;
 var
-  Length: UINT;
+  Size: UINT;
 
 begin
-  // Not present on 32-bit Windows
-  if (TOSVersion.Architecture <> arIntelX64) then
-    Exit;
-
   SetLength(Result, MAX_PATH);
-  Length := GetSystemWow64DirectoryW(PWideChar(Result), MAX_PATH);
+  Size := GetSystemWow64Directory(PChar(Result), Length(Result));
+  SetLength(Result, Size);
 
-  if (Length > 0) then
-  begin
-    SetLength(Result, Length);
+  if (Size > 0) then
     Result := IncludeTrailingPathDelimiter(Result);
-  end;  //of begin
 end;
 
 function GetFolderPath(ACSIDL: Integer): string;
@@ -279,13 +266,9 @@ end;
 
 function GetKnownFolderPath(AFolderId: TGUID): string;
 var
-  Path: PWideChar;
+  Path: PChar;
 
 begin
-  // Only since Windows Vista
-  if (Win32MajorVersion < 6) then
-    Exit;
-
   if Succeeded(SHGetKnownFolderPath(AFolderId, 0, 0, Path)) then
   begin
     Result := IncludeTrailingPathDelimiter(string(Path));
