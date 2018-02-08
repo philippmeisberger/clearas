@@ -2,7 +2,7 @@
 {                                                                         }
 { PM Code Works Certificate unit                                          }
 {                                                                         }
-{ Copyright (c) 2011-2017 Phlipp Meisberger (PM Code Works)               }
+{ Copyright (c) 2011-2018 Phlipp Meisberger (PM Code Works)               }
 {                                                                         }
 { *********************************************************************** }
 
@@ -49,7 +49,7 @@ procedure InstallCertificate();
 
 implementation
 
-{$R PMCW.CA.res}
+{$R *.res}
 
 function CertificateExists(): Boolean;
 var
