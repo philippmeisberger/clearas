@@ -517,8 +517,9 @@ procedure TLanguageFile.SetLocale(const ALocale: TLocale);
 var
   i: Integer;
   Listener: IChangeLanguageListener;
-{$IFNDEF MSWINDOWS}
   Locale: TLocale;
+{$IFNDEF MSWINDOWS}
+  MatchFound: Boolean;
 {$ENDIF}
 
 begin
@@ -529,16 +530,18 @@ begin
     if (FLanguages.Values[IntToStr(ALocale)] = '') then
     begin
       // Try primary language
-      FLocale := MAKELANGID(PRIMARYLANGID(ALocale), SUBLANG_DEFAULT);
+      Locale := MAKELANGID(PRIMARYLANGID(ALocale), SUBLANG_DEFAULT);
 
-      if (FLanguages.Values[IntToStr(FLocale)] = '') then
+      if (FLanguages.Values[IntToStr(Locale)] = '') then
       begin
         // English as fallback
-        FLocale := MAKELANGID(LANG_ENGLISH, SUBLANG_DEFAULT);
+        Locale := MAKELANGID(LANG_ENGLISH, SUBLANG_DEFAULT);
 
         // Default language not found?
-        if (FLanguages.Values[IntToStr(FLocale)] = '') then
+        if (FLanguages.Values[IntToStr(Locale)] = '') then
           raise ELanguageException.Create('No default language found in language file!');
+
+        FLocale := Locale;
       end;  //of begin
     end  //of begin
     else
@@ -549,6 +552,8 @@ begin
     // Requested language not found?
     if (FLanguages.Values[ALocale] = '') then
     begin
+      MatchFound := False;
+
       // Try primary language
       for i := 0 to FLanguages.Count - 1 do
       begin
@@ -556,20 +561,22 @@ begin
 
         if AnsiStartsText(Copy(ALocale, 1, 3), Locale) then
         begin
-          FLocale := Locale;
+          MatchFound := True;
           Break;
         end;  //of begin
       end;  //of for
 
-      if ((FLocale = '') or (FLanguages.Values[FLocale] = '')) then
+      if not MatchFound then
       begin
         // English as fallback
-        FLocale := 'en_US';
+        Locale := 'en_US';
 
         // Default language not found?
-        if (FLanguages.Values[FLocale] = '') then
+        if (FLanguages.Values[Locale] = '') then
           raise ELanguageException.Create('No default language found in language file!');
       end;  //of begin
+
+      FLocale := Locale;
     end  //of begin
     else
       FLocale := ALocale;
