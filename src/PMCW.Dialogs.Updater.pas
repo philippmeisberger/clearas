@@ -2,7 +2,7 @@
 {                                                                         }
 { PM Code Works Updater v3.1                                              }
 {                                                                         }
-{ Copyright (c) 2011-2017 Philipp Meisberger (PM Code Works)              }
+{ Copyright (c) 2011-2018 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
 { *********************************************************************** }
 
@@ -623,11 +623,11 @@ begin
       if Terminated then
         Abort;
 
-      Synchronize(NotifyOnFinish);
-
     finally
       FileStream.Free;
     end;  //of try
+
+    Synchronize(NotifyOnFinish);
 
   except
     on E: EAbort do
