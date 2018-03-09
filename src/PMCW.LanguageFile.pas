@@ -274,6 +274,14 @@ type
     procedure RemoveListener(AListener: IChangeLanguageListener);
 
     /// <summary>
+    ///   Tries to send a bug report.
+    /// </summary>
+    /// <param name="AMailToLink">
+    ///   Optional: A mailto link.
+    /// </param>
+    procedure ReportBug(const AMailToLink: string = URL_CONTACT);
+
+    /// <summary>
     ///   Shows an exception message with additional information.
     /// </summary>
     /// <param name="AMessage">
@@ -592,14 +600,19 @@ begin
   end;  //of begin
 end;
 
+procedure TLanguageFile.ReportBug(const AMailToLink: string = URL_CONTACT);
+begin
+  // Try to send the report by mail client
+  if not OpenUrl(AMailToLink) then
+    MessageDlg(Format([LID_REPORT_SENDING_FAILED, LID_REPORT_MANUAL], [MAIL_CONTACT]), mtError, [mbOk], 0);
+end;
+
 {$IFDEF MSWINDOWS}
 procedure TLanguageFile.HyperlinkClicked(Sender: TObject);
 begin
 {$WARN SYMBOL_PLATFORM OFF}
-  // Try to send the report by mail client
-  if (Sender is TTaskDialog) and not OpenUrl((Sender as TTaskDialog).URL) then
-    TaskMessageDlg(GetString(LID_REPORT_SENDING_FAILED), Format(LID_REPORT_MANUAL,
-      [MAIL_CONTACT]), mtError, [mbOk], 0);
+  if (Sender is TTaskDialog) then
+    ReportBug((Sender as TTaskDialog).URL);
 {$WARN SYMBOL_PLATFORM ON}
 end;
 {$ENDIF}
