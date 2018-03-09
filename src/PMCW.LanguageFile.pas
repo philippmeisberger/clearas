@@ -13,9 +13,9 @@ unit PMCW.LanguageFile;
 interface
 
 uses
-  Classes, SysUtils, Menus, Dialogs,
+  Classes, SysUtils, Menus, Dialogs,  PMCW.SysUtils,
 {$IFDEF MSWINDOWS}
-  Winapi.Windows, System.NetEncoding, System.UITypes, Vcl.Forms, PMCW.SysUtils;
+  Winapi.Windows, System.NetEncoding, System.UITypes, Vcl.Forms;
 {$ELSE}
   StrUtils, IniFiles;
 {$ENDIF}
