@@ -429,7 +429,7 @@ begin
     if (LanguageId = NEW_LINE) then
       Result := Result + sLineBreak
     else
-      Result := Result + Format(LanguageId, AArgs);
+      Result := Result + Format(LanguageId, AArgs) +' ';
   end;  //of for
 end;
 
@@ -469,7 +469,7 @@ begin
     if (LanguageId = NEW_LINE) then
       Result := Result + sLineBreak
     else
-      Result := Result + GetString(LanguageId);
+      Result := Result + GetString(LanguageId) +' ';
   end;  //of for
 end;
 
