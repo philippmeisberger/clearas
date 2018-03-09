@@ -2,7 +2,7 @@
 {                                                                         }
 { PM Code Works Language File Unit v2.2                                   }
 {                                                                         }
-{ Copyright (c) 2011-2017 Philipp Meisberger (PM Code Works)              }
+{ Copyright (c) 2011-2018 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
 { *********************************************************************** }
 
@@ -15,7 +15,7 @@ interface
 uses
   Classes, SysUtils, Menus, Dialogs,
 {$IFDEF MSWINDOWS}
-  Winapi.Windows, Winapi.ShellAPI, System.NetEncoding, System.UITypes, Vcl.Forms;
+  Winapi.Windows, System.NetEncoding, System.UITypes, Vcl.Forms, PMCW.SysUtils;
 {$ELSE}
   StrUtils, IniFiles;
 {$ENDIF}
@@ -49,6 +49,8 @@ const
   LID_REPORT_BUG                    = 26;
   LID_REPORT_BUG_SUBJECT            = 19;
   LID_REPORT_BUG_BODY               = 20;
+  LID_REPORT_SENDING_FAILED         = 38;
+  LID_REPORT_MANUAL                 = 39;
   LID_FATAL_ERROR                   = 31;
   LID_TECHNICAL_DETAILS             = 32;
   LID_FILTER_REGISTRY_FILE          = 36;
@@ -66,12 +68,9 @@ const
   LID_UPDATE_NOT_AVAILABLE          = 23;
   LID_UPDATE_CANCELED               = 30;
   LID_UPDATE_SECURE                 = 37;
-  LID_UPDATE_SECURE_DESCRIPTION1    = 38;
-  LID_UPDATE_SECURE_DESCRIPTION2    = 39;
 
   { Certificate language IDs }
   LID_CERTIFICATE_INSTALL           = 16;
-  LID_CERTIFICATE_INSTALL_CONFIRM   = 40;
   LID_CERTIFICATE_ALREADY_INSTALLED = 27;
   LID_CERTIFICATE_NO_CERTUTIL       = 28;
 
@@ -598,10 +597,9 @@ procedure TLanguageFile.HyperlinkClicked(Sender: TObject);
 begin
 {$WARN SYMBOL_PLATFORM OFF}
   // Try to send the report by mail client
-  if (Sender is TTaskDialog) and (ShellExecute(0, 'open',
-    PChar((Sender as TTaskDialog).URL), nil, nil, SW_SHOWNORMAL) <= 32) then
-    // No mail client installed: Send it by report bug formular on website
-    ShellExecute(0, 'open', 'http://www.pm-codeworks.de/kontakt.html', nil, nil, SW_SHOWNORMAL);
+  if (Sender is TTaskDialog) and not OpenUrl((Sender as TTaskDialog).URL) then
+    TaskMessageDlg(GetString(LID_REPORT_SENDING_FAILED), Format(LID_REPORT_MANUAL,
+      [MAIL_CONTACT]), mtError, [mbOk], 0);
 {$WARN SYMBOL_PLATFORM ON}
 end;
 {$ENDIF}
@@ -610,7 +608,7 @@ procedure TLanguageFile.ShowException(const AMessage, ATechnicalDetails: string)
 {$IFDEF MSWINDOWS}
 {$WARN SYMBOL_PLATFORM OFF}
 const
-  URL_MAILTO = '<a href="mailto:%s?subject=%s&body=%s">%s</a>';
+  URL_MAILTO = '<a href="%s?subject=%s&body=%s">%s</a>';
 
 var
   TaskDialog: TTaskDialog;
@@ -647,8 +645,8 @@ begin
       ExpandButtonCaption := GetString(LID_TECHNICAL_DETAILS);
       MailSubject := URLEncode(Format(LID_REPORT_BUG_SUBJECT, [Application.Title]));
       MailBody := URLEncode(Format(LID_REPORT_BUG_BODY, [AMessage, ATechnicalDetails]));
-      FooterText := SysUtils.Format(URL_MAILTO, ['team@pm-codeworks.de',
-        MailSubject, MailBody, GetString(LID_REPORT_BUG)]);
+      FooterText := SysUtils.Format(URL_MAILTO, [URL_CONTACT, MailSubject, MailBody,
+        GetString(LID_REPORT_BUG)]);
       Flags := [tfExpandFooterArea, tfEnableHyperlinks];
       CommonButtons := [tcbClose];
       OnHyperlinkClicked := HyperlinkClicked;

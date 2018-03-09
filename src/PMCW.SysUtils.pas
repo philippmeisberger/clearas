@@ -15,7 +15,7 @@ interface
 uses
   SysUtils,
 {$IFDEF MSWINDOWS}
-  Winapi.Windows, Winapi.ShellAPI, Winapi.ShlObj, Winapi.ActiveX, Vcl.Forms;
+  Winapi.Windows, Winapi.ShellAPI, Winapi.ShlObj, Winapi.ActiveX;
 {$ELSE}
   Process, Resource, ElfReader, VersionResource;
 {$ENDIF}
@@ -24,12 +24,17 @@ const
   /// <summary>
   ///   URL to the website.
   /// </summary>
-  URL_BASE    = 'http://www.pm-codeworks.de/';
+  URL_BASE    = 'https://pm-codeworks.de/';
 
   /// <summary>
-  ///   URL to the report bug formular on the website.
+  ///   Contact mail.
   /// </summary>
-  URL_CONTACT = URL_BASE +'kontakt.html';
+  MAIL_CONTACT = 'team@pm-codeworks.de';
+
+  /// <summary>
+  ///   URL to write a mail.
+  /// </summary>
+  URL_CONTACT = 'mailto:'+ MAIL_CONTACT;
 
 type
   /// <summary>

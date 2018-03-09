@@ -14,7 +14,7 @@ uses
   Winapi.Windows, System.SysUtils, System.Classes, Vcl.Dialogs, Vcl.Forms,
   Vcl.StdCtrls, Vcl.ComCtrls, System.UITypes, Vcl.Consts, System.Net.HttpClient,
   System.NetConsts, System.Net.URLClient, Winapi.ShellAPI, PMCW.SysUtils,
-  PMCW.CA, PMCW.LanguageFile,
+  PMCW.LanguageFile,
 {$WARN UNIT_PLATFORM OFF}
   Vcl.FileCtrl;
 {$WARN UNIT_PLATFORM ON}
@@ -272,6 +272,7 @@ type
       const AResponseText: string);
     function GetTitle(): string;
     procedure SetTitle(const ATitle: string);
+    procedure StartDownload(const AUseTLS: Boolean);
   public
     /// <summary>
     ///   Constructor for creating a <c>TUpdateDialog</c> instance.
@@ -507,26 +508,19 @@ end;
 procedure TUpdateCheck.HttpError(Sender: TObject; const AResponseCode: Integer;
   const AResponseText: string);
 begin
-  if FNotifyNoUpdate then
+  if not FNotifyNoUpdate then
+    Exit;
+
+  if (AResponseCode > 0) then
   begin
-    if (AResponseCode = ERROR_CERTIFICATE_VALIDATION) then
-    begin
-      FLanguageFile.ShowException(AResponseText, Format('Certificate validation '
-        +'failed! Please visit the <a href="%sneuigkeiten.html">website</a> for '
-        +'more information.', [URL_BASE]));
-    end  //of begin
-    else
-      if (AResponseCode > 0) then
-      begin
-        FLanguageFile.ShowException(FLanguageFile.GetString([LID_UPDATE_NO_CONNECTION,
-          LID_UPDATE_CHECK_CONNECTION]), AResponseText + Format(' (%d)', [AResponseCode]));
-      end  //of begin
-      else
-      begin
-        TaskMessageDlg(FLanguageFile.Strings[LID_UPDATE_NO_CONNECTION],
-          FLanguageFile.Strings[LID_UPDATE_CHECK_CONNECTION], mtError, [mbOK], 0);
-      end;  //of if
-  end;  //of begin
+    FLanguageFile.ShowException(FLanguageFile.GetString([LID_UPDATE_NO_CONNECTION,
+      LID_UPDATE_CHECK_CONNECTION]), AResponseText + Format(' (%d)', [AResponseCode]));
+  end  //of begin
+  else
+  begin
+    TaskMessageDlg(FLanguageFile.Strings[LID_UPDATE_NO_CONNECTION],
+      FLanguageFile.Strings[LID_UPDATE_CHECK_CONNECTION], mtError, [mbOK], 0);
+  end;  //of if
 end;
 
 procedure TUpdateCheck.NotifyOnUpdate();
@@ -539,10 +533,7 @@ begin
   end  //of begin
   else
     if FNotifyNoUpdate then
-    begin
-      MessageDlg(FLanguageFile.GetString(LID_UPDATE_NOT_AVAILABLE), mtInformation,
-        [mbOk], 0);
-    end;  //of begin
+      MessageDlg(FLanguageFile.GetString(LID_UPDATE_NOT_AVAILABLE), mtInformation, [mbOk], 0);
 end;
 
 procedure TUpdateCheck.CheckFinished(Sender: TObject);
@@ -585,6 +576,9 @@ begin
   begin
     OnError := HttpError;
     OnTerminate := CheckFinished;
+
+    // Disable TLS as it is too much overhead to download a build number
+    TLSEnabled := False;
     Start();
   end;  //of with
 end;
@@ -705,6 +699,7 @@ end;
 constructor TUpdateDialog.Create(AOwner: TComponent; ALanguageFile: TLanguageFile);
 begin
   Create(AOwner);
+  Assert(Assigned(ALanguageFile), 'ALanguageFile is not assigned!');
   FLanguageFile := ALanguageFile;
   Title := FLanguageFile.GetString(LID_UPDATE);
 end;
@@ -739,14 +734,14 @@ begin
   // Certificate validation error?
   if (AResponseCode = ERROR_CERTIFICATE_VALIDATION) then
   begin
-    FLanguageFile.ShowException(AResponseText, Format('Certificate validation '
-      +'failed! Please visit the <a href="%sneuigkeiten.html">website</a> for '
-      +'more information.', [URL_BASE]));
+    if (TaskMessageDlg('Certificate validation failed', 'Secure update is not possible!',
+      mtWarning, [mbRetry, mbAbort], 0) = idRetry) then
+      StartDownload(False);
   end  //of begin
   else
   begin
     FLanguageFile.ShowException(FLanguageFile.GetString([LID_UPDATE_DOWNLOAD,
-      LID_IMPOSSIBLE]), Format('HTTP/1.1 %d '+ AResponseText, [AResponseCode]));
+      LID_IMPOSSIBLE]), Format('HTTP %d '+ AResponseText, [AResponseCode]));
   end;  //of if
 end;
 
@@ -779,6 +774,23 @@ begin
   FForm.Caption := ATitle;
 end;
 
+procedure TUpdateDialog.StartDownload(const AUseTLS: Boolean);
+begin
+  FThread := TDownloadThread.Create(URL_DIR + 'downloader.php?file='
+    + FRemoteFileName, FFileName);
+
+  with FThread do
+  begin
+    OnDownloading := Self.Downloading;
+    OnCancel := DownloadCanceled;
+    OnFinish := DownloadFinished;
+    OnTerminate := DownloadTerminated;
+    OnError := HttpError;
+    TLSEnabled := AUseTLS;
+    Start();
+  end;  //of with
+end;
+
 function TUpdateDialog.Execute(AParentHwnd: HWND): Boolean;
 
   function GetUniqueFileName(const AFileName: string): string;
@@ -796,40 +808,12 @@ function TUpdateDialog.Execute(AParentHwnd: HWND): Boolean;
     end;  //of while
   end;
 
-var
-  UseTls: Boolean;
-
 begin
   Assert(FRemoteFileName <> '', 'RemoteFileName is not set!');
   Assert(Assigned(FLanguageFile), 'LanguageFile property not assigned!');
-  UseTls := True;
 
   if (FLocalFileName = '') then
     FLocalFileName := FRemoteFileName;
-
-  // Certificate not installed?
-  if not CertificateExists() then
-  begin
-    // Ask user to install the certificate
-    if (TaskMessageDlg(FLanguageFile.GetString(LID_UPDATE_SECURE),
-      FLanguageFile.GetString([LID_UPDATE_SECURE_DESCRIPTION1,
-      LID_UPDATE_SECURE_DESCRIPTION2, NEW_LINE, LID_CERTIFICATE_INSTALL_CONFIRM]),
-      mtConfirmation, mbYesNo, 0, mbYes) = idYes) then
-    begin
-      try
-        InstallCertificate();
-
-      except
-        on E: EOSError do
-        begin
-          MessageDlg(E.Message, mtError, [mbOK], 0);
-          UseTls := False;
-        end;
-      end;  //of try
-    end  //of begin
-    else
-      UseTls := False;
-  end;  //of begin
 
   // Download folder not set yet?
   if (FDownloadDirectory = '') then
@@ -843,22 +827,7 @@ begin
   FFileName := GetUniqueFileName(IncludeTrailingPathDelimiter(FDownloadDirectory)
     + FLocalFileName);
   FButtonFinished.Caption := FLanguageFile.GetString(LID_CANCEL);
-
-  // Initialize thread
-  FThread := TDownloadThread.Create(URL_DIR + 'downloader.php?file='
-    + FRemoteFileName, FFileName);
-
-  with FThread do
-  begin
-    OnDownloading := Self.Downloading;
-    OnCancel := DownloadCanceled;
-    OnFinish := DownloadFinished;
-    OnTerminate := DownloadTerminated;
-    OnError := HttpError;
-    TLSEnabled := UseTls;
-    Start();
-  end;  //of with
-
+  StartDownload(True);
   Result := (FForm.ShowModal() = mrOk);
 end;
 
