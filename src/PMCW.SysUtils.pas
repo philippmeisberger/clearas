@@ -24,7 +24,7 @@ const
   /// <summary>
   ///   URL to the website.
   /// </summary>
-  URL_BASE    = 'https://pm-codeworks.de/';
+  URL_BASE     = 'https://www.pm-codeworks.de/';
 
   /// <summary>
   ///   Contact mail.
@@ -34,7 +34,7 @@ const
   /// <summary>
   ///   URL to write a mail.
   /// </summary>
-  URL_CONTACT = 'mailto:'+ MAIL_CONTACT;
+  URL_CONTACT  = 'mailto:'+ MAIL_CONTACT;
 
 type
   /// <summary>
