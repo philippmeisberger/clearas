@@ -436,21 +436,12 @@ end;
 function TLanguageFile.GetString(AIndex: TLanguageId): string;
 {$IFDEF MSWINDOWS}
 var
-  Buffer: array[0..79] of Char;
-  Error: DWORD;
+  CharsCopied: Integer;
 
 begin
-  if (LoadString(HInstance, FSection + AIndex, Buffer, SizeOf(Buffer)) = 0) then
-  begin
-    Error := GetLastError();
-
-    // ERROR_INVALID_WINDOW_HANDLE will be raised on Windows XP
-    if ((Error <> ERROR_SUCCESS) and (Error <> ERROR_INVALID_WINDOW_HANDLE)) then
-      raise ELanguageException.Create(SysUtils.Format(SysErrorMessage(
-        ERROR_RESOURCE_LANG_NOT_FOUND) +'. ID %d (Error %d)', [AIndex, Error]));
-  end;  //of begin
-
-  Result := Buffer;
+  SetLength(Result, 255);
+  CharsCopied := LoadString(HInstance, FSection + AIndex, PChar(Result), Length(Result));
+  SetLength(Result, CharsCopied);
 {$ELSE}
 begin
   Result := FIni.ReadString(FSection, IntToStr(AIndex + FIRST_LANGUAGE_START_INDEX), '');
