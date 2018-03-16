@@ -31,6 +31,7 @@ const
   LID_EDIT                              = LID_LAST + 34;
   LID_DESCRIPTION_SHOW                  = LID_LAST + 36;
   LID_REFRESH                           = LID_LAST + 37;
+  LID_BITNESS_WARNING                   = LID_LAST + 38;
   LID_DATE_OF_DEACTIVATION              = LID_LAST + 40;
   LID_STARTUP_RUNONCE                   = LID_LAST + 41;
   LID_STARTUP_HEADLINE                  = LID_LAST + 42;

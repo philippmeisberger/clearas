@@ -1151,6 +1151,17 @@ var
 
 begin
   try
+  {$IFDEF WIN32}
+    if (TOSVersion.Architecture in [arIntelX64]) then
+    begin
+      // Bitness of Clearas should match OS bitness as environment variables are expanded differently:
+      // Expanding %PROGRAMFILES% from 64-bit application on 64-bit OS results in e.g. C:\Program Files
+      // Expanding %PROGRAMFILES% from 32-bit application on 64-bit OS results in e.g. C:\Program Files (x86)
+      if (MessageDlg(FLang.GetString(LID_BITNESS_WARNING), mtWarning, mbAbortIgnore, 0) = idAbort) then
+        Exit;
+    end;  //of begin
+  {$ENDIF}
+
     SelectedList := GetSelectedList();
     SelectedListView := GetSelectedListView();
 
