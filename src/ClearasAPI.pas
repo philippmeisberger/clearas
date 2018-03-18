@@ -3497,6 +3497,7 @@ begin
         wHour := AReg.ReadInteger('HOUR');
         wMinute := AReg.ReadInteger('MINUTE');
         wSecond := AReg.ReadInteger('SECOND');
+        wMilliseconds := 0;
       end;  //of with
 
       Result := SystemTimeToDateTime(Timestamp);
