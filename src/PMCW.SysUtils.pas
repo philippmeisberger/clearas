@@ -97,6 +97,23 @@ function OpenUrl(const AUrl: string): Boolean;
 
 {$IFDEF MSWINDOWS}
 /// <summary>
+///   Loads a string from a <c>STRINGTABLE</c> resource.
+/// </summary>
+/// <param name="AResource">
+///   Path to the resource.
+/// </param>
+/// <param name="AIdent">
+///   ID of the string.
+/// </param>
+/// <param name="ADefault">
+///   Optional: The default string to use if loading failed.
+/// </param>
+/// <returns>
+///   The string.
+/// </returns>
+function LoadResourceString(const AIdent: Word; const ADefault: string = ''): string; overload; inline;
+
+/// <summary>
 ///   Loads a string from a resource.
 /// </summary>
 /// <param name="AResource">
@@ -112,7 +129,25 @@ function OpenUrl(const AUrl: string): Boolean;
 ///   The string.
 /// </returns>
 function LoadResourceString(const AResource: string; const AIdent: Word;
-  const ADefault: string = ''): string;
+  const ADefault: string = ''): string; overload; inline;
+
+/// <summary>
+///   Loads a string from a resource.
+/// </summary>
+/// <param name="AInstance">
+///   The instance.
+/// </param>
+/// <param name="AIdent">
+///   ID of the string.
+/// </param>
+/// <param name="ADefault">
+///   Optional: The default string to use if loading failed.
+/// </param>
+/// <returns>
+///   The string.
+/// </returns>
+function LoadResourceString(AInstance: HINST; const AIdent: Word;
+  const ADefault: string = ''): string; overload;
 
 /// <summary>
 ///   Expands an environment variable.
@@ -281,17 +316,28 @@ begin
   end;  //of begin
 end;
 
+function LoadResourceString(const AIdent: Word; const ADefault: string = ''): string;
+begin
+  Result := LoadResourceString(HInstance, AIdent, ADefault);
+end;
+
 function LoadResourceString(const AResource: string; const AIdent: Word;
   const ADefault: string = ''): string;
+begin
+  Result := LoadResourceString(GetModuleHandle(PChar(AResource)), AIdent, ADefault);
+end;
+
+function LoadResourceString(AInstance: HINST; const AIdent: Word;
+  const ADefault: string = ''): string;
 var
-  Module: HMODULE;
-  Buffer: array[0..255] of Char;
+  CharsCopied: Integer;
 
 begin
-  Module := GetModuleHandle(PChar(AResource));
+  SetLength(Result, 255);
+  CharsCopied := LoadString(AInstance, AIdent, PChar(Result), Length(Result));
 
-  if ((Module <> 0) and (LoadString(Module, AIdent, @Buffer[0], SizeOf(Buffer)) <> 0)) then
-    Result := Buffer
+  if (CharsCopied > 0) then
+    SetLength(Result, CharsCopied)
   else
     Result := ADefault;
 end;

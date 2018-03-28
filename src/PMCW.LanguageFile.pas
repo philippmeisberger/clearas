@@ -13,7 +13,7 @@ unit PMCW.LanguageFile;
 interface
 
 uses
-  Classes, SysUtils, Menus, Dialogs,  PMCW.SysUtils,
+  Classes, SysUtils, Menus, Dialogs, PMCW.SysUtils,
 {$IFDEF MSWINDOWS}
   Winapi.Windows, System.NetEncoding, System.UITypes, Vcl.Forms;
 {$ELSE}
@@ -46,6 +46,9 @@ const
   LID_IMPOSSIBLE                    = 18;
   LID_SELECT_LANGUAGE               = 25;
   LID_TO_WEBSITE                    = 29;
+  LID_FILTER_REGISTRY_FILE          = 36;
+
+  { Report bug IDs }
   LID_REPORT_BUG                    = 26;
   LID_REPORT_BUG_SUBJECT            = 19;
   LID_REPORT_BUG_BODY               = 20;
@@ -53,7 +56,6 @@ const
   LID_REPORT_MANUAL                 = 39;
   LID_FATAL_ERROR                   = 31;
   LID_TECHNICAL_DETAILS             = 32;
-  LID_FILTER_REGISTRY_FILE          = 36;
 
   { Update language IDs }
   LID_UPDATE                        = 5;
@@ -439,16 +441,10 @@ begin
 end;
 
 function TLanguageFile.GetString(AIndex: TLanguageId): string;
+begin
 {$IFDEF MSWINDOWS}
-var
-  CharsCopied: Integer;
-
-begin
-  SetLength(Result, 255);
-  CharsCopied := LoadString(HInstance, FSection + AIndex, PChar(Result), Length(Result));
-  SetLength(Result, CharsCopied);
+  Result := LoadResourceString(FSection + AIndex);
 {$ELSE}
-begin
   Result := FIni.ReadString(FSection, IntToStr(AIndex + FIRST_LANGUAGE_START_INDEX), '');
 {$ENDIF}
 end;
