@@ -483,7 +483,7 @@ begin
   Language := FIRST_LANGUAGE_START_INDEX;
 
   // Load available languages
-  while (LoadString(HInstance, Language, Buffer, SizeOf(Buffer)) <> 0) do
+  while (LoadString(HInstance, Language, Buffer, Length(Buffer)) <> 0) do
   begin
     FLanguages.Append(string(Buffer) + FLanguages.NameValueSeparator + IntToStr(Language));
     Inc(Language, AInterval);
