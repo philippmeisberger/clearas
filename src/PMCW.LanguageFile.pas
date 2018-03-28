@@ -152,6 +152,9 @@ type
     /// <exception href="ELanguageException">
     ///   if no language was found.
     /// </exception>
+    /// <exception href="EArgumentException">
+    ///   if <c>AInterval</c> is <c>0</c>.
+    /// </exception>
     procedure Load(const AInterval: Word = 200);
   {$ELSE}
     /// <summary>
@@ -473,6 +476,9 @@ var
   Buffer: array[0..4] of Char;
 
 begin
+  if (AInterval = 0) then
+    raise EArgumentException.Create('Invalid interval!');
+
   FLanguages.Clear();
   Language := FIRST_LANGUAGE_START_INDEX;
 
