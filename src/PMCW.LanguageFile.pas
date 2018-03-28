@@ -149,17 +149,17 @@ type
     /// <param name="AInterval">
     ///   Optional: The application defined interval between languages.
     /// </param>
-    /// <exceptions>
-    ///   <c>ELanguageException</c> if no language was found.
-    /// </exceptions>
+    /// <exception href="ELanguageException">
+    ///   if no language was found.
+    /// </exception>
     procedure Load(const AInterval: Word = 200);
   {$ELSE}
     /// <summary>
     ///   Loads available languages from language resource.
     /// </summary>
-    /// <exceptions>
-    ///   <c>ELanguageException</c> if no language was found.
-    /// </exceptions>
+    /// <exception href="ELanguageException">
+    ///   if no language was found.
+    /// </exception>
     procedure Load();
   {$ENDIF}
   public
@@ -170,8 +170,8 @@ type
     /// <param name="AInterval">
     ///   Optional: The application defined interval between languages.
     /// </param>
-    /// <exception>
-    ///   <c>ELanguageException</c> if no language was found.
+    /// <exception href="ELanguageException">
+    ///   if no language was found.
     /// </exception>
     constructor Create(const AInterval: Word = 200);
   {$ELSE}
@@ -181,9 +181,11 @@ type
     /// <param name="AIniFile">
     ///   The absolute filename of the language file.
     /// </param>
-    /// <exception>
-    ///   <c>EArgumentException</c> if file could not be found.
-    ///   <c>ELanguageException</c> if no language was found.
+    /// <exception href="EArgumentException">
+    ///   if file could not be found.
+    /// </exception>
+    /// <exception href="ELanguageException">
+    ///   if no language was found.
     /// </exception>
     constructor Create(const AIniFile: TFileName);
   {$ENDIF}
