@@ -3015,12 +3015,13 @@ function TCommandStringHelper.ExtractFileName(): string;
 var
   Parts: TArray<string>;
   i: Integer;
-  Line, ExtWithArguments: string;
+  Line, Arguments: string;
 
 begin
   if (Self = '') then
     Exit;
 
+  // Filename enquoted?
   if string(Self).StartsWith('"') then
   begin
     Parts := string(Self).Split(['"']);
@@ -3038,14 +3039,12 @@ begin
   end  //of begin
   else
   begin
-    if (string(Self).CountChar('.') = 1) then
-      i := string(Self).LastDelimiter(PathDelim +'.')
-    else
-      i := string(Self).LastDelimiter(PathDelim);
+    Arguments := ExtractArguments();
 
-    ExtWithArguments := string(Self).SubString(i + 1);
-    Parts := ExtWithArguments.Split([' ']);
-    Result := string(Self).Substring(0, string(Self).IndexOf(ExtWithArguments) + Length(Parts[0]));
+    if (Arguments <> '') then
+      Result := string(Self).Substring(0, string(Self).IndexOf(Arguments) - 1)
+    else
+      Result := Self;
   end;  //of if
 end;
 
