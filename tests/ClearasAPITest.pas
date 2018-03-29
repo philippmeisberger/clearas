@@ -121,6 +121,12 @@ type
     procedure SetUp; override;
   end;
 
+  TCommandStringTest = class(TTestCase)
+  published
+    //TODO: procedure TestExpand;
+    procedure TestExtract;
+  end;
+
 implementation
 
 type
@@ -1051,11 +1057,41 @@ begin
   FRootList.Search(False);
 end;
 
+
+{ TCommandStringTest }
+
+procedure TCommandStringTest.TestExtract;
+const
+  cCommandStrings: array[0..11] of TCommandString = (
+    'C:\Windows\regedit.exe',
+    'C:\Program Files\Sample\example.exe',
+    '"C:\Program Files\Sample\example.exe"',
+    //'C:\Program Files\Sample\example.exe /v',
+    'C:\Windows\regedit.exe /s',
+    'C:\Windows\regedit.exe "%1"',
+    'C:\Sample\2.0\.NET\example.exe "%1"',
+    '"C:\Program Files\Sample\2.0\Test Blank\example.exe" "%1"',
+    '"C:\Program Files\Sample\example.exe" "%1"',
+    '"C:\Program Files\Sample\example.exe" /arg1 C:\Windows\regedit.exe',
+    'C:\Program Files\Sample\example.exe /arg1 C:\Windows\regedit.exe',
+    '%windir%\system32\WindowsPowerShell\v1.0\powershell.exe -ExecutionPolicy Unrestricted -NonInteractive -NoProfile -WindowStyle Hidden "& %windir%\system32\WindowsPowerShell\v1.0\Modules\SmbShare\DisableUnusedSmb1.ps1 -Scenario Server"',
+    '"C:\Program Files\Sample\Sample(R) ABC 123 Test\delayed.exe" "C:\Program Files\Sample\Sample(R) ABC 123 Test\tray.exe" 60'
+  );
+
+var
+  CommandString: TCommandString;
+
+begin
+  for CommandString in cCommandStrings do
+    CheckEqualsString(CommandString, CommandString.Create(CommandString.ExtractFileName(), CommandString.ExtractArguments()));
+end;
+
 initialization
   RegisterTest(TStartupListTest.Suite);
   RegisterTest(TContextListTest.Suite);
   RegisterTest(TServiceListTest.Suite);
   RegisterTest(TTaskListTest.Suite);
+  RegisterTest(TCommandStringTest.Suite);
 end.
 
 
