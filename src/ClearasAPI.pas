@@ -3036,7 +3036,7 @@ begin
 
       if (Line <> '') then
       begin
-        Result := Line;
+        Result := Line.QuotedString('"');
         Break;
       end;  //of begin
     end;  //of for
@@ -4571,7 +4571,7 @@ begin
   if (not FEnabled and not CheckWin32Version(6, 2)) then
     inherited SetCommand(ACommand);
 
-  FLnkFile.ExeFileName := ACommand.ExtractFileName();
+  FLnkFile.ExeFileName := ACommand.ExtractFileName().DeQuotedString('"');
   FLnkFile.Arguments := ACommand.ExtractArguments();
 
   if not FLnkFile.Save() then
@@ -5164,7 +5164,7 @@ begin
         // In case backup does not exist cache the original .lnk information
         if not LnkFile.Exists() then
         begin
-          LnkFile.ExeFileName := Command.ExtractFileName();
+          LnkFile.ExeFileName := Command.ExtractFileName().DeQuotedString('"');
           LnkFile.Arguments := Command.ExtractArguments();
         end;  //of begin
 
@@ -7010,7 +7010,7 @@ begin
     if (Action.ActionType = TASK_ACTION_EXEC) then
     begin
       ExecAction := (Action as IExecAction);
-      ExecAction.Path := PChar(ACommand.ExtractFileName());
+      ExecAction.Path := PChar(ACommand.ExtractFileName().DeQuotedString('"'));
       ExecAction.Arguments := PChar(ACommand.ExtractArguments());
 
       OleCheck(FTaskService.GetFolder(PChar(Location), TaskFolder));
