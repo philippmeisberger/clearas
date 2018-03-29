@@ -336,16 +336,22 @@ var
 begin
   CanClose := True;
 
-  for i := 0 to PageControl.PageCount - 1 do
-  begin
-    // Export pending?
-    if GetListForIndex(i).IsExporting then
+  try
+    for i := 0 to PageControl.PageCount - 1 do
     begin
-      CanClose := (MessageDlg(FLang.GetString([LID_OPERATION_PENDING1, LID_OPERATION_PENDING2]),
-        mtWarning, [mbOK, mbIgnore], 0) = idIgnore);
-      Break;
-    end;  //of begin
-  end;
+      // Export pending?
+      if GetListForIndex(i).IsExporting then
+      begin
+        CanClose := (MessageDlg(FLang.GetString([LID_OPERATION_PENDING1, LID_OPERATION_PENDING2]),
+          mtWarning, [mbOK, mbIgnore], 0) = idIgnore);
+        Break;
+      end;  //of begin
+    end;  //of for
+
+  except
+    on E: EInvalidItem do
+      CanClose := True;
+  end;  //of try
 end;
 
 { private TMain.OnUpdate
