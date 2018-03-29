@@ -214,6 +214,7 @@ type
     procedure ShowOperationPendingUI(AIndex: Integer; AShow: Boolean);
     procedure ShowColumnDate(AListView: TListView; AShow: Boolean = True);
     procedure OnUpdate(Sender: TObject; const ANewBuild: Cardinal);
+    procedure OnException(Sender: TObject; E: Exception);
     procedure WMTimer(var Message: TWMTimer); message WM_TIMER;
     { IChangeLanguageListener }
     procedure LanguageChanged();
@@ -247,6 +248,9 @@ begin
     AddListener(Self);
     BuildLanguageMenu(mmLang);
   end;  //of with
+
+  // Use custom error dialog for possible uncatched exceptions
+  Application.OnException := OnException;
 
   // Init update notificator
   FUpdateCheck := TUpdateCheck.Create('Clearas', FLang);
@@ -312,9 +316,10 @@ begin
   FreeAndNil(FLang);
 end;
 
-{ TMain.FormShow
-
-  VCL event that is called when form is shown. }
+procedure TMain.OnException(Sender: TObject; E: Exception);
+begin
+  FLang.ShowException('Uncatched exception', E.Message);
+end;
 
 procedure TMain.FormShow(Sender: TObject);
 begin
