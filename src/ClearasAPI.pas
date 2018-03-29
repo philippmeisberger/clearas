@@ -2991,6 +2991,10 @@ begin
   if (Self = '') then
     Exit;
 
+  // Filename enquoted?
+  if string(Self).StartsWith('"') then
+    Exit(string(Self).Substring(Length(ExtractFileName()) + 1));
+
   // Cut path from extension until end
   // Note: Garbage in worst case if a folder name contains a '.'!
   Ext := string(Self).IndexOf('.');
