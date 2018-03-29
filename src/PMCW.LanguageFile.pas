@@ -317,7 +317,12 @@ type
 implementation
 
 {$IFDEF MSWINDOWS}
+{$IFDEF FPC}
+{$R languages.rc}
+function GetUserDefaultUILanguage(): LANGID; stdcall; external kernel32 name 'GetUserDefaultUILanguage';
+{$ELSE}
 {$R languages.res}
+{$ENDIF}
 {$ELSE}
 function GetUserDefaultUILanguage(): string;
 begin
