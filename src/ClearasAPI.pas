@@ -619,7 +619,8 @@ type
   /// </remarks>
   TRootList<T: TRootItem> = class(TObjectList<T>, IInterface)
   strict private
-    FAllowDuplicates: Boolean;
+    FAllowDuplicates,
+    FDestroying: Boolean;
     FOnCounterUpdate: TNotifyEvent;
     FEnabledItemsCount,
     FErasableItemsCount: Integer;
@@ -3521,6 +3522,7 @@ begin
   FEnabledItemsCount := 0;
   FErasableItemsCount := 0;
   FAllowDuplicates := False;
+  FDestroying := False;
   FSearchLock := TCriticalSection.Create;
   FExportLock := TCriticalSection.Create;
   FIcon := TIcon.Create;
@@ -3528,6 +3530,7 @@ end;
 
 destructor TRootList<T>.Destroy;
 begin
+  FDestroying := True;
   FreeAndNil(FIcon);
   FreeAndNil(FExportLock);
   FreeAndNil(FSearchLock);
@@ -3799,6 +3802,9 @@ begin
 
         cnRemoved:
           begin
+            if FDestroying then
+              Exit;
+
             // Item was enabled
             if (Item.Enabled and (FEnabledItemsCount > 0)) then
               // Update active counter
