@@ -3,7 +3,7 @@ Clearas
 
 An open-source project by PM Code Works
 
-Version 5.0 [*??.09.17*]
+Version 5.0 [*02.04.18*]
 -----------
 
 * Added automatic search for invalid items
