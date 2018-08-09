@@ -848,11 +848,7 @@ type
     /// <param name="AExpertMode">
     ///   Use advanced search mode.
     /// </param>
-    /// <param name="AWin64">
-    ///   If set to <c>True</c> search for 64-bit items. Otherwise search for
-    ///   32-bit items.
-    /// </param>
-    procedure Search(AExpertMode: Boolean = False; AWin64: Boolean = True); virtual; abstract;
+    procedure Search(AExpertMode: Boolean); virtual; abstract;
 
     /// <summary>
     ///   Allow items with the the same name.
@@ -948,7 +944,6 @@ type
   /// </summary>
   TSearchThread = class(TRootListThread)
   private
-    FWin64,
     FExpertMode: Boolean;
   protected
     /// <summary>
@@ -969,11 +964,6 @@ type
     ///   default search mode.
     /// </summary>
     property ExpertMode: Boolean read FExpertMode write FExpertMode;
-
-    /// <summary>
-    ///   Search for 64-bit items.
-    /// </summary>
-    property Win64: Boolean read FWin64 write FWin64;
   end;
 
   /// <summary>
@@ -1766,11 +1756,7 @@ type
     /// <param name="AExpertMode">
     ///   Use advanced search mode.
     /// </param>
-    /// <param name="AWin64">
-    ///   If set to <c>True</c> search for 64-bit items. Otherwise search for
-    ///   32-bit items.
-    /// </param>
-    procedure Search(AExpertMode: Boolean = False; AWin64: Boolean = True); override;
+    procedure Search(AExpertMode: Boolean); override;
   end;
 
 const
@@ -2305,8 +2291,7 @@ type
   /// </summary>
   TContextMenuList = class(TRootList<TContextMenuListItem>)
   private
-    procedure Search(AExpertMode: Boolean; AWin64: Boolean;
-      const ARoot: string = ''); reintroduce; overload;
+    procedure Search(AExpertMode: Boolean; const ARoot: string = ''); reintroduce; overload;
   public
     const
       /// <summary>
@@ -2408,11 +2393,7 @@ type
     /// <param name="ALocationRoot">
     ///   The root location e.g. <c>Drives</c>.
     /// </param>
-    /// <param name="AWow64">
-    ///   If set to <c>True</c> search for WOW64 items. Otherwise search for
-    ///   native items.
-    /// </param>
-    procedure LoadContextmenu(const ALocationRoot: string; AWow64: Boolean); overload;
+    procedure LoadContextmenu(const ALocationRoot: string); overload;
 
     /// <summary>
     ///   Searches for items and adds them to the list.
@@ -2423,12 +2404,8 @@ type
     /// <param name="AContextMenuItemType">
     ///   Specifies the item type to search for.
     /// </param>
-    /// <param name="AWow64">
-    ///   If set to <c>True</c> search for WOW64 items. Otherwise search for
-    ///   native items.
-    /// </param>
     procedure LoadContextmenu(const ALocationRoot: string;
-      AContextMenuItemType: TContextMenuItemType; AWow64: Boolean); overload;
+      AContextMenuItemType: TContextMenuItemType); overload;
 
     /// <summary>
     ///   Searches for items and adds them to the list.
@@ -2436,11 +2413,7 @@ type
     /// <param name="AExpertMode">
     ///   Use advanced search mode.
     /// </param>
-    /// <param name="AWin64">
-    ///   If set to <c>True</c> search for 64-bit items. Otherwise search for
-    ///   32-bit items.
-    /// </param>
-    procedure Search(AExpertMode: Boolean = False; AWin64: Boolean = True); overload; override;
+    procedure Search(AExpertMode: Boolean); overload; override;
   end;
 
 const
@@ -2644,11 +2617,7 @@ type
     /// <param name="AExpertMode">
     ///   Use advanced search mode.
     /// </param>
-    /// <param name="AWin64">
-    ///   If set to <c>True</c> search for 64-bit items. Otherwise search for
-    ///   32-bit items.
-    /// </param>
-    procedure Search(AExpertMode: Boolean = False; AWin64: Boolean = True); override;
+    procedure Search(AExpertMode: Boolean = False); override;
 
     /// <summary>
     ///   Gets the current handle to the service manager.
@@ -2885,11 +2854,7 @@ type
     /// <param name="AExpertMode">
     ///   Use advanced search mode.
     /// </param>
-    /// <param name="AWin64">
-    ///   If set to <c>True</c> search for 64-bit items. Otherwise search for
-    ///   32-bit items.
-    /// </param>
-    procedure Search(AExpertMode: Boolean = False; AWin64: Boolean = True); override;
+    procedure Search(AExpertMode: Boolean); override;
 
     /// <summary>
     ///   Gets the current task service.
@@ -3908,7 +3873,6 @@ begin
   inherited Create(ASelectedList);
   FreeOnTerminate := True;
   FExpertMode := False;
-  FWin64 := (TOSVersion.Architecture = arIntelX64);
 end;
 
 procedure TSearchThread.DoExecute();
@@ -3927,7 +3891,7 @@ begin
   try
     Synchronize(DoNotifyOnStart);
     FSelectedList.Clear();
-    FSelectedList.Search(FExpertMode, FWin64);
+    FSelectedList.Search(FExpertMode);
 
   finally
     CoUninitialize();
@@ -5301,7 +5265,7 @@ begin
   end;  //of if
 end;
 
-procedure TStartupList.Search(AExpertMode: Boolean = False; AWin64: Boolean = True);
+procedure TStartupList.Search(AExpertMode: Boolean);
 var
   Location: TStartupLocation;
 
@@ -6104,18 +6068,17 @@ begin
   end;  //of for
 end;
 
-procedure TContextMenuList.LoadContextmenu(const ALocationRoot: string;
-  AWow64: Boolean);
+procedure TContextMenuList.LoadContextmenu(const ALocationRoot: string);
 var
   ContextMenuItem: TContextMenuItemType;
 
 begin
   for ContextMenuItem := Low(TContextMenuItemType) to High(TContextMenuItemType) do
-    LoadContextmenu(ALocationRoot, ContextMenuItem, AWow64);
+    LoadContextmenu(ALocationRoot, ContextMenuItem);
 end;
 
 procedure TContextMenuList.LoadContextmenu(const ALocationRoot: string;
-  AContextMenuItemType: TContextMenuItemType; AWow64: Boolean);
+  AContextMenuItemType: TContextMenuItemType);
 
   function GetShellExCaptionAndFileName(const AProgId: string; AWow64: Boolean;
     var ACaption, AFileName: string): Boolean;
@@ -6330,14 +6293,13 @@ begin
   end;  //of try
 end;
 
-procedure TContextMenuList.Search(AExpertMode: Boolean = False; AWin64: Boolean = True);
+procedure TContextMenuList.Search(AExpertMode: Boolean);
 begin
-  Search(AExpertMode, AWin64, '');
-  LoadContextmenu('CLSID\'+ CLSID_RecycleBin.ToString(), AWin64);
+  Search(AExpertMode, '');
+  LoadContextmenu('CLSID\'+ CLSID_RecycleBin.ToString());
 end;
 
-procedure TContextMenuList.Search(AExpertMode: Boolean; AWin64: Boolean;
-  const ARoot: string = '');
+procedure TContextMenuList.Search(AExpertMode: Boolean; const ARoot: string = '');
 var
   Reg: TRegistry;
 
@@ -6364,11 +6326,11 @@ var
         begin
           // Load Shell context menu items
           if AnsiSameText(Keys[i], TContextMenuShellItem.CanonicalName) then
-            LoadContextmenu(AKeyName, itShell, AWin64);
+            LoadContextmenu(AKeyName, itShell);
 
           // Load ShellEx context menu items
           if AnsiSameText(Keys[i], TContextMenuShellExItem.CanonicalName) then
-            LoadContextmenu(AKeyName, itShellEx, AWin64);
+            LoadContextmenu(AKeyName, itShellEx);
 
           // Load ShellNew context menu items
           if Keys[i].Contains(TContextMenuShellNewItem.CanonicalName) then
@@ -6380,7 +6342,7 @@ var
             // Only valid ShellNew item when there are values inside
             if (Values.Count > 0) then
             begin
-              LoadContextmenu(AKeyName, itShellNew, AWin64);
+              LoadContextmenu(AKeyName, itShellNew);
 
               // "ShellNew" and "_ShellNew" in same key are possible: Take only one
               Exit;
@@ -6888,7 +6850,7 @@ begin
   end;  //of try
 end;
 
-procedure TServiceList.Search(AExpertMode: Boolean = False; AWin64: Boolean = True);
+procedure TServiceList.Search(AExpertMode: Boolean);
 var
   Services, ServicesCopy: PEnumServiceStatus;
   BytesNeeded, ServicesReturned, ResumeHandle, LastError, ServiceType: DWORD;
@@ -7300,7 +7262,7 @@ begin
   end;  //of try
 end;
 
-procedure TTaskList.Search(AExpertMode: Boolean = False; AWin64: Boolean = True);
+procedure TTaskList.Search(AExpertMode: Boolean);
 
   procedure LoadSubTasks(const APath: string);
   var
