@@ -28,6 +28,7 @@ SolidCompression=yes
 ArchitecturesInstallIn64BitMode=x64
 UninstallDisplayIcon={app}\{#MyAppExeName}
 VersionInfoVersion={#FileVersion}
+MinVersion=6.0
 SignTool=MySignTool sign /v /n "PM Code Works" /tr http://timestamp.globalsign.com/scripts/timstamp.dll /td SHA256 /fd SHA256 $f
 
 [Languages]
