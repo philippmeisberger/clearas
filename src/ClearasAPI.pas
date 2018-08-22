@@ -641,6 +641,22 @@ type
     /// </param>
     procedure LockExportAndExecute(AExecute: TProc);
 
+    /// <summary>
+    ///   Exports the complete list as file.
+    /// </summary>
+    /// <param name="AFileName">
+    ///   The absolute filename to the file.
+    /// </param>
+    procedure DoExportList(const AFileName: string); virtual; abstract;
+
+    /// <summary>
+    ///   Searches for items and adds them to the list.
+    /// </summary>
+    /// <param name="AExpertMode">
+    ///   Use advanced search mode.
+    /// </param>
+    procedure DoSearch(AExpertMode: Boolean); virtual; abstract;
+
     { IInterface }
     function QueryInterface(const IID: TGUID; out Obj): HRESULT; stdcall;
     function _AddRef: Integer; stdcall;
@@ -766,7 +782,7 @@ type
     /// <param name="AFileName">
     ///   The absolute filename to the file.
     /// </param>
-    procedure ExportList(const AFileName: string); virtual; abstract;
+    procedure ExportList(const AFileName: string);
 
     /// <summary>
     ///   Gets the file extension for backup files.
@@ -849,7 +865,7 @@ type
     /// <param name="AExpertMode">
     ///   Use advanced search mode.
     /// </param>
-    procedure Search(AExpertMode: Boolean); virtual; abstract;
+    procedure Search(AExpertMode: Boolean);
 
     /// <summary>
     ///   Allow items with the the same name.
@@ -1663,6 +1679,22 @@ type
   private
     function LoadStatus(const AName: string;
       AStartupLocation: TStartupLocation): TStartupItemStatus;
+  protected
+    /// <summary>
+    ///   Exports the complete list as file.
+    /// </summary>
+    /// <param name="AFileName">
+    ///   The absolute filename to the file.
+    /// </param>
+    procedure DoExportList(const AFileName: string); override;
+
+    /// <summary>
+    ///   Searches for items and adds them to the list.
+    /// </summary>
+    /// <param name="AExpertMode">
+    ///   Use advanced search mode.
+    /// </param>
+    procedure DoSearch(AExpertMode: Boolean); override;
   public
     /// <summary>
     ///   Adds a new item to the list.
@@ -1694,14 +1726,6 @@ type
     /// </exception>
     function Add(const AFileName, AArguments, ACaption: string;
       AStartupUser: Boolean = True): Boolean; overload;
-
-    /// <summary>
-    ///   Exports the complete list as file.
-    /// </summary>
-    /// <param name="AFileName">
-    ///   The absolute filename to the file.
-    /// </param>
-    procedure ExportList(const AFileName: string); override;
 
     /// <summary>
     ///   Gets the file filter for an <c>TOpenDialog</c> from a <c>TLanguageFile</c>.
@@ -1750,14 +1774,6 @@ type
     ///   <c>False</c> only search for default startup items.
     /// </param>
     procedure LoadDisabled(AStartupUser: Boolean); deprecated 'Since Windows 8';
-
-    /// <summary>
-    ///   Searches for items and adds them to the list.
-    /// </summary>
-    /// <param name="AExpertMode">
-    ///   Use advanced search mode.
-    /// </param>
-    procedure Search(AExpertMode: Boolean); override;
   end;
 
 const
@@ -2292,7 +2308,23 @@ type
   /// </summary>
   TContextMenuList = class(TRootList<TContextMenuListItem>)
   private
-    procedure Search(AExpertMode: Boolean; const ARoot: string = ''); reintroduce; overload;
+    procedure DoSearch(AExpertMode: Boolean; const ARoot: string = ''); reintroduce; overload;
+  protected
+    /// <summary>
+    ///   Exports the complete list as file.
+    /// </summary>
+    /// <param name="AFileName">
+    ///   The absolute filename to the file.
+    /// </param>
+    procedure DoExportList(const AFileName: string); override;
+
+    /// <summary>
+    ///   Searches for items and adds them to the list.
+    /// </summary>
+    /// <param name="AExpertMode">
+    ///   Use advanced search mode.
+    /// </param>
+    procedure DoSearch(AExpertMode: Boolean); overload; override;
   public
     const
       /// <summary>
@@ -2366,14 +2398,6 @@ type
     procedure DeleteIcon(AItem: TContextMenuShellItem);
 
     /// <summary>
-    ///   Exports the complete list as file.
-    /// </summary>
-    /// <param name="AFileName">
-    ///   The absolute filename to the file.
-    /// </param>
-    procedure ExportList(const AFileName: string); override;
-
-    /// <summary>
     ///   Searches for an item in the list identified by name and location.
     /// </summary>
     /// <param name="AName">
@@ -2407,14 +2431,6 @@ type
     /// </param>
     procedure LoadContextmenu(const ALocationRoot: string;
       AContextMenuItemType: TContextMenuItemType); overload;
-
-    /// <summary>
-    ///   Searches for items and adds them to the list.
-    /// </summary>
-    /// <param name="AExpertMode">
-    ///   Use advanced search mode.
-    /// </param>
-    procedure Search(AExpertMode: Boolean); overload; override;
   end;
 
 const
@@ -2553,6 +2569,22 @@ type
   TServiceList = class(TRootList<TServiceListItem>)
   private
     FManager: SC_HANDLE;
+  protected
+    /// <summary>
+    ///   Exports the complete list as file.
+    /// </summary>
+    /// <param name="AFileName">
+    ///   The absolute filename to the file.
+    /// </param>
+    procedure DoExportList(const AFileName: string); override;
+
+    /// <summary>
+    ///   Searches for items and adds them to the list.
+    /// </summary>
+    /// <param name="AExpertMode">
+    ///   Use advanced search mode.
+    /// </param>
+    procedure DoSearch(AExpertMode: Boolean); override;
   public
     /// <summary>
     ///   Constructor for creating a <c>TServiceList</c> instance.
@@ -2591,14 +2623,6 @@ type
     function Add(const AFileName, AArguments, ACaption: string): Boolean; overload;
 
     /// <summary>
-    ///   Exports the complete list as file.
-    /// </summary>
-    /// <param name="AFileName">
-    ///   The absolute filename to the file.
-    /// </param>
-    procedure ExportList(const AFileName: string); override;
-
-    /// <summary>
     ///   Loads and adds a service item to the list.
     /// </summary>
     /// <param name="AName">
@@ -2611,14 +2635,6 @@ type
     ///   The index on which the item was added.
     /// </returns>
     function LoadService(const AName: string; AIncludeDemand: Boolean = False): Integer;
-
-    /// <summary>
-    ///   Searches for items and adds them to the list.
-    /// </summary>
-    /// <param name="AExpertMode">
-    ///   Use advanced search mode.
-    /// </param>
-    procedure Search(AExpertMode: Boolean); override;
 
     /// <summary>
     ///   Gets the current handle to the service manager.
@@ -2780,6 +2796,22 @@ type
   private
     FTaskService: ITaskService;
     function AddTaskItem(const ATask: IRegisteredTask): Integer;
+  protected
+    /// <summary>
+    ///   Exports the complete list as file.
+    /// </summary>
+    /// <param name="AFileName">
+    ///   The absolute filename to the file.
+    /// </param>
+    procedure DoExportList(const AFileName: string); override;
+
+    /// <summary>
+    ///   Searches for items and adds them to the list.
+    /// </summary>
+    /// <param name="AExpertMode">
+    ///   Use advanced search mode.
+    /// </param>
+    procedure DoSearch(AExpertMode: Boolean); override;
   public
     /// <summary>
     ///   Constructor for creating a <c>TTaskList</c> instance.
@@ -2790,14 +2822,6 @@ type
     ///   Destructor for destroying a <c>TTaskList</c> instance.
     /// </summary>
     destructor Destroy; override;
-
-    /// <summary>
-    ///   Exports the complete list as file.
-    /// </summary>
-    /// <param name="AFileName">
-    ///   The absolute filename to the file.
-    /// </param>
-    procedure ExportList(const AFileName: string); override;
 
     /// <summary>
     ///   Gets the file extension for backup files.
@@ -2848,14 +2872,6 @@ type
     ///   if file is no backup file.
     /// </exception>
     function ImportBackup(const AFileName: TFileName): Boolean;
-
-    /// <summary>
-    ///   Searches for items and adds them to the list.
-    /// </summary>
-    /// <param name="AExpertMode">
-    ///   Use advanced search mode.
-    /// </param>
-    procedure Search(AExpertMode: Boolean); override;
 
     /// <summary>
     ///   Gets the current task service.
@@ -3666,6 +3682,29 @@ begin
   AItem.ExportItem(AFileName);
 end;
 
+procedure TRootList<T>.ExportList(const AFileName: string);
+begin
+  // Search is pending?
+  if not FSearchLock.TryEnter() then
+    raise EListBlocked.Create(SOperationPending);
+
+  try
+    // Export is pending?
+    if not FExportLock.TryEnter() then
+      raise EListBlocked.Create(SOperationPending);
+
+    try
+      DoExportList(AFileName);
+
+    finally
+      FExportLock.Release();
+    end;  //of try
+
+  finally
+    FSearchLock.Release();
+  end;  //of try
+end;
+
 function TRootList<T>.GetBackupExtension(): string;
 begin
   Result := '.reg';
@@ -3826,6 +3865,21 @@ begin
   end;  //of try
 end;
 
+procedure TRootList<T>.Search(AExpertMode: Boolean);
+begin
+  // Search is pending?
+  if not FSearchLock.TryEnter() then
+    raise EListBlocked.Create(SOperationPending);
+
+  try
+    Clear();
+    DoSearch(AExpertMode);
+
+  finally
+    FSearchLock.Release();
+  end;  //of try
+end;
+
 
 { TRootListThread }
 
@@ -3878,31 +3932,19 @@ end;
 constructor TSearchThread.Create(ASelectedList: TRootList<TRootItem>);
 begin
   inherited Create(ASelectedList);
-  FreeOnTerminate := True;
   FExpertMode := False;
 end;
 
 procedure TSearchThread.DoExecute();
-var
-  SearchLock: TCriticalSection;
-
 begin
-  SearchLock := FSelectedList.FSearchLock;
-
-  // Search is pending?
-  if not SearchLock.TryEnter() then
-    raise EListBlocked.Create(SOperationPending);
-
   CoInitialize(nil);
 
   try
     Synchronize(DoNotifyOnStart);
-    FSelectedList.Clear();
     FSelectedList.Search(FExpertMode);
 
   finally
     CoUninitialize();
-    SearchLock.Release();
   end;  //of try
 end;
 
@@ -3913,40 +3955,14 @@ constructor TExportListThread.Create(ASelectedList: TRootList<TRootItem>;
   const AFileName: string; APageControlIndex: Integer);
 begin
   inherited Create(ASelectedList);
-  FreeOnTerminate := True;
   FFileName := AFileName;
   FPageControlIndex := APageControlIndex;
 end;
 
 procedure TExportListThread.DoExecute();
-var
-  SearchLock, ExportLock: TCriticalSection;
-
 begin
-  SearchLock := FSelectedList.FSearchLock;
-
-  // Search is pending?
-  if not SearchLock.TryEnter() then
-    raise EListBlocked.Create(SOperationPending);
-
-  try
-    ExportLock := FSelectedList.FExportLock;
-
-    // Export is pending?
-    if not ExportLock.TryEnter() then
-      raise EListBlocked.Create(SOperationPending);
-
-    try
-      Synchronize(DoNotifyOnStart);
-      FSelectedList.ExportList(FFileName);
-
-    finally
-      ExportLock.Release();
-    end;
-
-  finally
-    SearchLock.Release();
-  end;  //of try
+  Synchronize(DoNotifyOnStart);
+  FSelectedList.ExportList(FFileName);
 end;
 
 
@@ -4998,7 +5014,7 @@ begin
   end;  //of try
 end;
 
-procedure TStartupList.ExportList(const AFileName: string);
+procedure TStartupList.DoExportList(const AFileName: string);
 var
   i: Integer;
   RegFile: TRegistryFile;
@@ -5272,7 +5288,7 @@ begin
   end;  //of if
 end;
 
-procedure TStartupList.Search(AExpertMode: Boolean);
+procedure TStartupList.DoSearch(AExpertMode: Boolean);
 var
   Location: TStartupLocation;
 
@@ -6035,7 +6051,7 @@ begin
   LockExportAndExecute(AItem.DeleteIcon);
 end;
 
-procedure TContextMenuList.ExportList(const AFileName: string);
+procedure TContextMenuList.DoExportList(const AFileName: string);
 var
   i: Integer;
   RegFile: TRegistryFile;
@@ -6300,13 +6316,13 @@ begin
   end;  //of try
 end;
 
-procedure TContextMenuList.Search(AExpertMode: Boolean);
+procedure TContextMenuList.DoSearch(AExpertMode: Boolean);
 begin
-  Search(AExpertMode, '');
+  DoSearch(AExpertMode, '');
   LoadContextmenu('CLSID\'+ CLSID_RecycleBin.ToString());
 end;
 
-procedure TContextMenuList.Search(AExpertMode: Boolean; const ARoot: string = '');
+procedure TContextMenuList.DoSearch(AExpertMode: Boolean; const ARoot: string = '');
 var
   Reg: TRegistry;
 
@@ -6726,7 +6742,7 @@ begin
   end;  //of try
 end;
 
-procedure TServiceList.ExportList(const AFileName: string);
+procedure TServiceList.DoExportList(const AFileName: string);
 var
   i: Integer;
   RegFile: TRegistryFile;
@@ -6857,7 +6873,7 @@ begin
   end;  //of try
 end;
 
-procedure TServiceList.Search(AExpertMode: Boolean);
+procedure TServiceList.DoSearch(AExpertMode: Boolean);
 var
   Services, ServicesCopy: PEnumServiceStatus;
   BytesNeeded, ServicesReturned, ResumeHandle, LastError, ServiceType: DWORD;
@@ -7138,7 +7154,7 @@ begin
   Result := Add(Item);
 end;
 
-procedure TTaskList.ExportList(const AFileName: string);
+procedure TTaskList.DoExportList(const AFileName: string);
 var
   i: Integer;
   ZipFile: TZipFile;
@@ -7269,7 +7285,7 @@ begin
   end;  //of try
 end;
 
-procedure TTaskList.Search(AExpertMode: Boolean);
+procedure TTaskList.DoSearch(AExpertMode: Boolean);
 
   procedure LoadSubTasks(const APath: string);
   var
