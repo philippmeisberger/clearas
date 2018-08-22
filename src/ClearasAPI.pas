@@ -620,7 +620,8 @@ type
   TRootList<T: TRootItem> = class(TObjectList<T>, IInterface)
   strict private
     FAllowDuplicates,
-    FDestroying: Boolean;
+    FDestroying,
+    FClearing: Boolean;
     FOnCounterUpdate: TNotifyEvent;
     FEnabledItemsCount,
     FErasableItemsCount: Integer;
@@ -2617,7 +2618,7 @@ type
     /// <param name="AExpertMode">
     ///   Use advanced search mode.
     /// </param>
-    procedure Search(AExpertMode: Boolean = False); override;
+    procedure Search(AExpertMode: Boolean); override;
 
     /// <summary>
     ///   Gets the current handle to the service manager.
@@ -3605,10 +3606,16 @@ end;
 
 procedure TRootList<T>.Clear();
 begin
+  FClearing := True;
   inherited Clear();
 
   if Assigned(FImages) then
     FImages.Clear();
+
+  FEnabledItemsCount := 0;
+  FErasableItemsCount := 0;
+  NotifyOnCounterUpdate();
+  FClearing := False;
 end;
 
 procedure TRootList<T>.DeleteItem(AItem: T);
@@ -3767,7 +3774,7 @@ begin
 
         cnRemoved:
           begin
-            if FDestroying then
+            if (FDestroying or FClearing) then
               Exit;
 
             // Item was enabled
