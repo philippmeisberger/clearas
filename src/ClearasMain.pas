@@ -11,12 +11,12 @@ unit ClearasMain;
 interface
 
 uses
-  Winapi.Windows, System.SysUtils, System.Classes, Vcl.Controls, Vcl.Forms,
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Classes, Vcl.Controls,
   Vcl.ComCtrls, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Dialogs, Vcl.Menus, Vcl.Graphics,
   Vcl.ClipBrd, Registry, System.ImageList, Winapi.CommCtrl, System.UITypes,
-  System.Generics.Collections, Winapi.ShellAPI, Vcl.ImgList, ClearasAPI,
-  PMCW.Dialogs.About, PMCW.LanguageFile, PMCW.SysUtils, PMCW.CA, PMCW.Dialogs.Updater,
-  ClearasDialogs, Winapi.Messages, PMCW.Registry;
+  Vcl.Forms, System.Generics.Collections, Winapi.ShellAPI, Vcl.ImgList, ClearasAPI,
+  ClearasDialogs, PMCW.Dialogs, PMCW.LanguageFile, PMCW.SysUtils, PMCW.Registry,
+  PMCW.Dialogs.Updater;
 
 type
   { TMain }
@@ -305,7 +305,7 @@ end;
 
 procedure TMain.OnException(Sender: TObject; E: Exception);
 begin
-  FLang.ShowException('Uncatched exception', E.Message);
+  ExceptionDlg(FLang, 'Uncatched exception', E.Message);
 end;
 
 procedure TMain.FormShow(Sender: TObject);
@@ -541,7 +541,7 @@ begin
               TThread.Synchronize(nil,
                 procedure
                 begin
-                  FLang.ShowException(FLang.GetString([LID_REFRESH, LID_IMPOSSIBLE]), Format('%s: %s', [RootList.ClassName, E.Message]));
+                   ExceptionDlg(FLang, FLang.GetString([LID_REFRESH, LID_IMPOSSIBLE]), Format('%s: %s', [RootList.ClassName, E.Message]));
                 end);
           end;  //of try
         end).Start();
@@ -973,7 +973,7 @@ begin
       MessageDlg(FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
 
     on E: Exception do
-      FLang.ShowException(FLang.GetString([LID_EXPORT, LID_IMPOSSIBLE]), E.Message);
+      ExceptionDlg(FLang, FLang.GetString([LID_EXPORT, LID_IMPOSSIBLE]), E.Message);
   end;  //of try
 end;
 
@@ -1119,7 +1119,7 @@ begin
     end;
 
     on E: Exception do
-      FLang.ShowException(FLang.GetString([LID_DELETE_ERASABLE, LID_IMPOSSIBLE]), E.Message);
+      ExceptionDlg(FLang, FLang.GetString([LID_DELETE_ERASABLE, LID_IMPOSSIBLE]), E.Message);
   end;  //of try
 end;
 
@@ -1181,7 +1181,7 @@ begin
       MessageDlg(E.Message, mtWarning, [mbOK], 0);
 
     on E: Exception do
-      FLang.ShowException(FLang.GetString([LID_DELETE, LID_IMPOSSIBLE]), E.Message);
+      ExceptionDlg(FLang, FLang.GetString([LID_DELETE, LID_IMPOSSIBLE]), E.Message);
   end;  //of try
 end;
 
@@ -1264,7 +1264,7 @@ begin
       MessageDlg(E.Message, mtWarning, [mbOK], 0);
 
     on E: Exception do
-      FLang.ShowException(FLang.GetString([LID_DISABLE, LID_IMPOSSIBLE]), E.Message);
+      ExceptionDlg(FLang, FLang.GetString([LID_DISABLE, LID_IMPOSSIBLE]), E.Message);
   end;  //of try
 end;
 
@@ -1347,7 +1347,7 @@ begin
       MessageDlg(E.Message, mtWarning, [mbOK], 0);
 
     on E: Exception do
-      FLang.ShowException(FLang.GetString([LID_ENABLE, LID_IMPOSSIBLE]), E.Message);
+      ExceptionDlg(FLang, FLang.GetString([LID_ENABLE, LID_IMPOSSIBLE]), E.Message);
   end;  //of try
 end;
 
@@ -1773,7 +1773,7 @@ begin
 
     on E: Exception do
     begin
-      FLang.ShowException(FLang.GetString([LID_CONTEXT_MENU_ICON_CHANGE,
+      ExceptionDlg(FLang, FLang.GetString([LID_CONTEXT_MENU_ICON_CHANGE,
         LID_IMPOSSIBLE]), E.Message);
     end;
   end;  //of try
@@ -1819,7 +1819,7 @@ begin
 
     on E: Exception do
     begin
-      FLang.ShowException(FLang.GetString([LID_CONTEXT_MENU_ICON_DELETE,
+      ExceptionDlg(FLang, FLang.GetString([LID_CONTEXT_MENU_ICON_DELETE,
         LID_IMPOSSIBLE]), E.Message);
     end;
   end;  //of try
@@ -1947,7 +1947,7 @@ begin
       MessageDlg(FLang.GetString(LID_ITEM_ALREADY_EXISTS), mtError, [mbOK], 0);
 
     on E: Exception do
-      FLang.ShowException(FLang.GetString([LID_RENAME, LID_IMPOSSIBLE]), E.Message);
+      ExceptionDlg(FLang, FLang.GetString([LID_RENAME, LID_IMPOSSIBLE]), E.Message);
   end;  //of try
 end;
 
@@ -2115,7 +2115,7 @@ begin
     end;
 
     on E: Exception do
-      FLang.ShowException(FLang.GetString([LID_PATH_EDIT, LID_IMPOSSIBLE]), E.Message);
+      ExceptionDlg(FLang, FLang.GetString([LID_PATH_EDIT, LID_IMPOSSIBLE]), E.Message);
   end;  //of try
 end;
 
@@ -2129,7 +2129,7 @@ begin
       MessageDlg(FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
 
     on E: Exception do
-      FLang.ShowException(FLang.GetString([LID_EXECUTE, LID_IMPOSSIBLE]), E.Message);
+      ExceptionDlg(FLang, FLang.GetString([LID_EXECUTE, LID_IMPOSSIBLE]), E.Message);
   end;  //of try
 end;
 
@@ -2159,7 +2159,7 @@ begin
     end;
 
     on E: Exception do
-      FLang.ShowException(FLang.GetString([LID_HIDE, LID_IMPOSSIBLE]), E.Message);
+      ExceptionDlg(FLang, FLang.GetString([LID_HIDE, LID_IMPOSSIBLE]), E.Message);
   end;  //of try
 end;
 
@@ -2268,7 +2268,7 @@ begin
 
     on E: Exception do
     begin
-      FLang.ShowException(StripHotKey(mmAdd.Caption) + FLang.GetString(LID_IMPOSSIBLE),
+      ExceptionDlg(FLang, StripHotKey(mmAdd.Caption) + FLang.GetString(LID_IMPOSSIBLE),
         E.Message);
     end;
   end;  //of try
@@ -2367,7 +2367,7 @@ begin
               TThread.Synchronize(nil,
                 procedure
                 begin
-                  FLang.ShowException(FLang.GetString([LID_EXPORT, LID_IMPOSSIBLE]), E.Message);
+                   ExceptionDlg(FLang, FLang.GetString([LID_EXPORT, LID_IMPOSSIBLE]), E.Message);
                 end);
           end;
         end).Start();
@@ -2427,7 +2427,7 @@ begin
 
     on E: Exception do
     begin
-      FLang.ShowException(FLang.GetString([LID_IMPORT, LID_IMPOSSIBLE]),
+      ExceptionDlg(FLang, FLang.GetString([LID_IMPORT, LID_IMPOSSIBLE]),
         E.Message);
     end;
   end;  //of try
@@ -2461,20 +2461,7 @@ end;
 
 procedure TMain.mmInstallCertificateClick(Sender: TObject);
 begin
-  try
-    // Certificate already installed?
-    if CertificateExists() then
-    begin
-      MessageDlg(FLang.GetString(LID_CERTIFICATE_ALREADY_INSTALLED),
-        mtInformation, [mbOK], 0);
-    end  //of begin
-    else
-      InstallCertificate();
-
-  except
-    on E: EOSError do
-      MessageDlg(E.Message, mtError, [mbOK], 0);
-  end;
+  InstallCertificateDlg(FLang);
 end;
 
 { TMain.mmUpdateClick
@@ -2494,7 +2481,7 @@ end;
 
 procedure TMain.mmReportClick(Sender: TObject);
 begin
-  FLang.ReportBug();
+  ReportBugDlg(FLang, '');
 end;
 
 { TMain.mmAboutClick
@@ -2502,26 +2489,8 @@ end;
   MainMenu entry that shows a info page with build number and version history. }
 
 procedure TMain.mmAboutClick(Sender: TObject);
-var
-  AboutDialog: TAboutDialog;
-  Description, Changelog: TResourceStream;
-
 begin
-  AboutDialog := TAboutDialog.Create(Self);
-  Description := TResourceStream.Create(HInstance, RESOURCE_DESCRIPTION, RT_RCDATA);
-  Changelog := TResourceStream.Create(HInstance, RESOURCE_CHANGELOG, RT_RCDATA);
-
-  try
-    AboutDialog.Title := StripHotkey(mmAbout.Caption);
-    AboutDialog.Description.LoadFromStream(Description);
-    AboutDialog.Changelog.LoadFromStream(Changelog);
-    AboutDialog.Execute();
-
-  finally
-    Changelog.Free;
-    Description.Free;
-    AboutDialog.Free;
-  end;  //of begin
+  AboutDlg(StripHotkey(mmAbout.Caption));
 end;
 
 { TMain.lCopyClick

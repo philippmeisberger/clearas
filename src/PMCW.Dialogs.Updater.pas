@@ -14,7 +14,7 @@ uses
   Winapi.Windows, System.SysUtils, System.Classes, Vcl.Dialogs, Vcl.Forms,
   Vcl.StdCtrls, Vcl.ComCtrls, System.UITypes, Vcl.Consts, System.Net.HttpClient,
   System.NetConsts, System.Net.URLClient, Winapi.ShellAPI, PMCW.SysUtils,
-  PMCW.LanguageFile,
+  PMCW.LanguageFile, PMCW.Dialogs,
 {$WARN UNIT_PLATFORM OFF}
   Vcl.FileCtrl;
 {$WARN UNIT_PLATFORM ON}
@@ -513,7 +513,7 @@ begin
 
   if (AResponseCode > 0) then
   begin
-    FLanguageFile.ShowException(FLanguageFile.GetString([LID_UPDATE_NO_CONNECTION,
+    ExceptionDlg(FLanguageFile, FLanguageFile.GetString([LID_UPDATE_NO_CONNECTION,
       LID_UPDATE_CHECK_CONNECTION]), AResponseText + Format(' (%d)', [AResponseCode]));
   end  //of begin
   else
@@ -740,7 +740,7 @@ begin
   end  //of begin
   else
   begin
-    FLanguageFile.ShowException(FLanguageFile.GetString([LID_UPDATE_DOWNLOAD,
+    ExceptionDlg(FLanguageFile, FLanguageFile.GetString([LID_UPDATE_DOWNLOAD,
       LID_IMPOSSIBLE]), Format('HTTP %d '+ AResponseText, [AResponseCode]));
   end;  //of if
 end;
