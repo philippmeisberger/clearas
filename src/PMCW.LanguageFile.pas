@@ -13,7 +13,7 @@ unit PMCW.LanguageFile;
 interface
 
 uses
-  Classes, SysUtils, Menus,
+  Classes, SysUtils,
 {$IFDEF MSWINDOWS}
   Windows, PMCW.SysUtils;
 {$ELSE}
@@ -139,7 +139,6 @@ type
     FIni: TIniFile;
   {$ENDIF}
     procedure SetLocale(const ALocale: TLocale);
-    procedure LanguageSelected(Sender: TObject);
   protected
   {$IFDEF MSWINDOWS}
     /// <summary>
@@ -208,14 +207,6 @@ type
     procedure AddListener(AListener: IChangeLanguageListener);
 
     /// <summary>
-    ///   Builds a select language menu based on available languages.
-    /// </summary>
-    /// <param name="AMainMenu">
-    ///   The menu item to create the submenu.
-    /// </param>
-    procedure BuildLanguageMenu(AMenuItem: TMenuItem);
-
-    /// <summary>
     ///   Embeds data into a single string by replacing a special flag starting
     ///   with <c>%</c> using a language ID.
     /// </summary>
@@ -276,6 +267,11 @@ type
     ///   A listener which implements the <see cref="IChangeLanguageListener"/> interface.
     /// </param>
     procedure RemoveListener(AListener: IChangeLanguageListener);
+
+    /// <summary>
+    ///   Gets the available translations.
+    /// </summary>
+    property Languages: TStringList read FLanguages;
 
     /// <summary>
     ///   Gets or sets the current used locale for UI translation.
@@ -349,50 +345,6 @@ begin
     FListeners.Add(AListener);
     AListener.LanguageChanged();
   end;  //of begin
-end;
-
-procedure TLanguageFile.LanguageSelected(Sender: TObject);
-begin
-{$IFDEF MSWINDOWS}
-  SetLocale((Sender as TMenuItem).Tag);
-{$ELSE}
-  SetLocale((Sender as TMenuItem).Hint);
-{$ENDIF}
-end;
-
-procedure TLanguageFile.BuildLanguageMenu(AMenuItem: TMenuItem);
-var
-  MenuItem: TMenuItem;
-  i: Integer;
-{$IFDEF MSWINDOWS}
-  Locale: TLocale;
-{$ENDIF}
-
-begin
-  // Create submenu
-  for i := 0 to FLanguages.Count - 1 do
-  begin
-    MenuItem := TMenuItem.Create(AMenuItem.Owner);
-
-    with MenuItem do
-    begin
-      RadioItem := True;
-      AutoCheck := True;
-    {$IFDEF MSWINDOWS}
-      Locale := StrToInt(FLanguages.Names[i]);
-      Tag := Locale;
-      Caption := Locale.DisplayName();
-      Checked := (FLocale = Tag);
-    {$ELSE}
-      Caption := FLanguages.ValueFromIndex[i];
-      Hint := FLanguages.Names[i];
-      Checked := (FLocale = Hint);
-    {$ENDIF}
-      OnClick := LanguageSelected;
-    end;  //of with
-
-    AMenuItem.Add(MenuItem);
-  end;  //of for
 end;
 
 function TLanguageFile.Format(const AIndex: TLanguageId; const AArgs: array of

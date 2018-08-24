@@ -16,11 +16,11 @@ uses
   Vcl.ClipBrd, Registry, System.ImageList, Winapi.CommCtrl, System.UITypes,
   Vcl.Forms, System.Generics.Collections, Winapi.ShellAPI, Vcl.ImgList, ClearasAPI,
   ClearasDialogs, PMCW.Dialogs, PMCW.LanguageFile, PMCW.SysUtils, PMCW.Registry,
-  PMCW.Dialogs.Updater;
+  PMCW.Application;
 
 type
   { TMain }
-  TMain = class(TForm, IChangeLanguageListener)
+  TMain = class(TMainForm)
     PopupMenu: TPopupMenu;
     pmChangeStatus: TMenuItem;
     N1: TMenuItem;
@@ -32,7 +32,6 @@ type
     N2: TMenuItem;
     pmCopyLocation: TMenuItem;
     mmHelp: TMenuItem;
-    mmAbout: TMenuItem;
     mmEdit: TMenuItem;
     mmFile: TMenuItem;
     mmExport: TMenuItem;
@@ -64,12 +63,7 @@ type
     lContext: TLabel;
     pbContextProgress: TProgressBar;
     cbContextExpert: TCheckBox;
-    mmUpdate: TMenuItem;
-    N9: TMenuItem;
-    mmInstallCertificate: TMenuItem;
-    N10: TMenuItem;
     pmEditPath: TMenuItem;
-    mmReport: TMenuItem;
     pmOpenRegedit: TMenuItem;
     pmOpenExplorer: TMenuItem;
     tsService: TTabSheet;
@@ -142,10 +136,6 @@ type
     procedure mmExportClick(Sender: TObject);
     procedure mmImportClick(Sender: TObject);
     procedure mmRefreshClick(Sender: TObject);
-    procedure mmAboutClick(Sender: TObject);
-    procedure mmUpdateClick(Sender: TObject);
-    procedure mmInstallCertificateClick(Sender: TObject);
-    procedure mmReportClick(Sender: TObject);
     procedure PageControlChange(Sender: TObject);
     procedure pmChangeStatusClick(Sender: TObject);
     procedure pmCopyLocationClick(Sender: TObject);
@@ -174,8 +164,6 @@ type
     FContext: TContextMenuList;
     FService: TServiceList;
     FTasks: TTaskList;
-    FLang: TLanguageFile;
-    FUpdateCheck: TUpdateCheck;
     FStatusText: array[Boolean] of string;
     function GetListForIndex(AIndex: Integer): TRootList<TRootItem>;
     function GetListViewForIndex(AIndex: Integer): TListView;
@@ -200,11 +188,10 @@ type
     function ShowExportItemDialog(AItem: TRootItem): Boolean;
     procedure ShowOperationPendingUI(AIndex: Integer; AShow: Boolean);
     procedure ShowColumnDate(AListView: TListView; AShow: Boolean = True);
-    procedure OnUpdate(Sender: TObject; const ANewBuild: Cardinal);
     procedure OnException(Sender: TObject; E: Exception);
     procedure WMTimer(var Message: TWMTimer); message WM_TIMER;
-    { IChangeLanguageListener }
-    procedure LanguageChanged();
+  protected
+    procedure LanguageChanged(); override;
   end;
 
 var
@@ -229,26 +216,21 @@ procedure TMain.FormCreate(Sender: TObject);
 begin
   // Setup languages
   FLang := TLanguageFile.Create;
+  FLang.AddListener(Self);
 
-  with FLang do
-  begin
-    AddListener(Self);
-    BuildLanguageMenu(mmLang);
-  end;  //of with
+  // Build menus
+  BuildLanguageMenu(mmLang);
+  BuildHelpMenu(mmHelp);
 
   // Use custom error dialog for possible uncatched exceptions
   Application.OnException := OnException;
 
   // Init update notificator
-  FUpdateCheck := TUpdateCheck.Create('Clearas', FLang);
-
-  with FUpdateCheck do
-  begin
-    OnUpdate := Self.OnUpdate;
-  {$IFNDEF DEBUG}
-    CheckForUpdate();
-  {$ENDIF}
-  end;  //of with
+{$IFDEF PORTABLE}
+  CheckForUpdate('Clearas', 'clearas.exe', 'clearas64.exe', 'Clearas.exe');
+{$ELSE}
+  CheckForUpdate('Clearas', 'clearas_setup.exe', '', 'Clearas Setup.exe');
+{$ENDIF}
 
   // Init lists
   FStartup := TStartupList.Create;
@@ -299,8 +281,6 @@ begin
   FreeAndNil(FService);
   FreeAndNil(FContext);
   FreeAndNil(FStartup);
-  FreeAndNil(FUpdateCheck);
-  FreeAndNil(FLang);
 end;
 
 procedure TMain.OnException(Sender: TObject; E: Exception);
@@ -344,56 +324,6 @@ begin
     on E: EInvalidItem do
       CanClose := True;
   end;  //of try
-end;
-
-{ private TMain.OnUpdate
-
-  Event that is called by TUpdateCheck when an update is available. }
-
-procedure TMain.OnUpdate(Sender: TObject; const ANewBuild: Cardinal);
-var
-  Updater: TUpdateDialog;
-
-begin
-  mmUpdate.Caption := FLang.GetString(LID_UPDATE_DOWNLOAD);
-
-  // Ask user to permit download
-  if (TaskMessageDlg(FLang.Format(LID_UPDATE_AVAILABLE, [ANewBuild]),
-    FLang[LID_UPDATE_CONFIRM_DOWNLOAD], mtConfirmation, mbYesNo, 0, mbYes) = idYes) then
-  begin
-    Updater := TUpdateDialog.Create(Self, FLang);
-
-    try
-      with Updater do
-      begin
-      {$IFDEF PORTABLE}
-        FileNameLocal := 'Clearas.exe';
-
-        // Download 64-Bit version?
-        if (TOSVersion.Architecture = arIntelX64) then
-          FileNameRemote := 'clearas64.exe'
-        else
-          FileNameRemote := 'clearas.exe';
-      {$ELSE}
-        FileNameLocal := 'Clearas Setup.exe';
-        FileNameRemote := 'clearas_setup.exe';
-      {$ENDIF}
-      end;  //of begin
-
-      // Successfully downloaded update?
-      if Updater.Execute() then
-      begin
-        mmUpdate.Caption := FLang.GetString(LID_UPDATE_SEARCH);
-        mmUpdate.Enabled := False;
-      {$IFNDEF PORTABLE}
-        Updater.LaunchSetup();
-      {$ENDIF}
-      end;  //of begin
-
-    finally
-      Updater.Free;
-    end;  //of try
-  end;  //of begin
 end;
 
 function TMain.GetItemText(AItem: TRootItem): string;
@@ -760,6 +690,8 @@ var
   i: Integer;
 
 begin
+  inherited LanguageChanged();
+
   with FLang do
   begin
     // Cache status text
@@ -789,14 +721,6 @@ begin
     mmShowCaptions.Caption := GetString(LID_DESCRIPTION_SHOW);
     mmDate.Caption := GetString(LID_DATE_OF_DEACTIVATION);
     cbRunOnce.Caption := GetString(LID_STARTUP_RUNONCE);
-    mmLang.Caption := GetString(LID_SELECT_LANGUAGE);
-
-    // Help menu labels
-    mmHelp.Caption := GetString(LID_HELP);
-    mmUpdate.Caption := GetString(LID_UPDATE_SEARCH);
-    mmInstallCertificate.Caption := GetString(LID_CERTIFICATE_INSTALL);
-    mmReport.Caption := GetString(LID_REPORT_BUG);
-    mmAbout.Caption := Format(LID_ABOUT, [Application.Title]);
 
     // "Startup" tab TButton labels
     tsStartup.Caption := GetString(LID_STARTUP);
@@ -2453,44 +2377,6 @@ var
 begin
   for i := 0 to PageControl.PageCount - 1 do
     Refresh(i, False);
-end;
-
-{ TMain.mmInstallCertificateClick
-
-  MainMenu entry that allows to install the PM Code Works certificate. }
-
-procedure TMain.mmInstallCertificateClick(Sender: TObject);
-begin
-  InstallCertificateDlg(FLang);
-end;
-
-{ TMain.mmUpdateClick
-
-  MainMenu entry that allows users to manually search for updates. }
-
-procedure TMain.mmUpdateClick(Sender: TObject);
-begin
-  FUpdateCheck.NotifyNoUpdate := True;
-  FUpdateCheck.CheckForUpdate();
-end;
-
-{ TMain.mmReportClick
-
-  MainMenu entry that allows users to easily report a bug by opening the web
-  browser and using the "report bug" formular. }
-
-procedure TMain.mmReportClick(Sender: TObject);
-begin
-  ReportBugDlg(FLang, '');
-end;
-
-{ TMain.mmAboutClick
-
-  MainMenu entry that shows a info page with build number and version history. }
-
-procedure TMain.mmAboutClick(Sender: TObject);
-begin
-  AboutDlg(StripHotkey(mmAbout.Caption));
 end;
 
 { TMain.lCopyClick

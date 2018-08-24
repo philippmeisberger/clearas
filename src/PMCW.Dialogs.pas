@@ -13,23 +13,12 @@ unit PMCW.Dialogs;
 interface
 
 uses
-  SysUtils, Classes, Dialogs, PMCW.LanguageFile, PMCW.Dialogs.About,
 {$IFDEF FPC}
   PMCW.SysUtils,
 {$ELSE}
   System.UITypes, PMCW.Dialogs.ReportBug,
 {$ENDIF}
-{$IFDEF MSWINDOWS}
-  Winapi.Windows, Vcl.Forms, Vcl.StdCtrls, PMCW.CA;
-{$ENDIF}
-
-/// <summary>
-///   Shows the about dialog.
-/// </summary>
-/// <param name="ATitle">
-///   The title.
-/// </param>
-procedure AboutDlg(const ATitle: string);
+  SysUtils, Dialogs, PMCW.LanguageFile;
 
 /// <summary>
 ///   Shows an exception message with additional information.
@@ -45,16 +34,6 @@ procedure AboutDlg(const ATitle: string);
 /// </param>
 procedure ExceptionDlg(ALanguageFile: TLanguageFile; const AMessage, ADetails: string);
 
-{$IFDEF MSWINDOWS}
-/// <summary>
-///   Shows a dialog to install the code-signing certificate.
-/// </summary>
-/// <param name="ALanguageFile">
-///   UI translation file.
-/// </param>
-procedure InstallCertificateDlg(ALanguageFile: TLanguageFile);
-{$ENDIF}
-
 /// <summary>
 ///   Shows a report bug dialog.
 /// </summary>
@@ -67,32 +46,6 @@ procedure InstallCertificateDlg(ALanguageFile: TLanguageFile);
 procedure ReportBugDlg(ALanguageFile: TLanguageFile; const AMessage: string);
 
 implementation
-
-procedure AboutDlg(const ATitle: string);
-var
-  AboutDialog: TAboutDialog;
-  Description, Changelog: TResourceStream;
-
-begin
-  AboutDialog := TAboutDialog.Create(nil);
-  Description := TResourceStream.Create(HInstance, RESOURCE_DESCRIPTION, RT_RCDATA);
-  Changelog := TResourceStream.Create(HInstance, RESOURCE_CHANGELOG, RT_RCDATA);
-
-  try
-    AboutDialog.Title := ATitle;
-  {$IFDEF LINUX}
-    AboutDialog.Icon.LoadFromResourceName(HINSTANCE, 'MAINICON');
-  {$ENDIF}
-    AboutDialog.Description.LoadFromStream(Description);
-    AboutDialog.Changelog.LoadFromStream(Changelog);
-    AboutDialog.Execute();
-
-  finally
-    FreeAndNil(Changelog);
-    FreeAndNil(Description);
-    FreeAndNil(AboutDialog);
-  end;  //of begin
-end;
 
 procedure ExceptionDlg(ALanguageFile: TLanguageFile; const AMessage, ADetails: string);
 {$IFDEF MSWINDOWS}
@@ -137,23 +90,6 @@ begin
     + ADetails, mtError, [mbClose], 0);
 {$ENDIF}
 end;
-
-{$IFDEF MSWINDOWS}
-procedure InstallCertificateDlg(ALanguageFile: TLanguageFile);
-begin
-  try
-    // Certificate already installed?
-    if CertificateExists() then
-      MessageDlg(ALanguageFile[LID_CERTIFICATE_ALREADY_INSTALLED], mtInformation, [mbOK], 0)
-    else
-      InstallCertificate();
-
-  except
-    on E: EOSError do
-      MessageDlg(E.Message, mtError, [mbOK], 0);
-  end;  //of try
-end;
-{$ENDIF}
 
 procedure ReportBugDlg(ALanguageFile: TLanguageFile; const AMessage: string);
 {$IFDEF FPC}
