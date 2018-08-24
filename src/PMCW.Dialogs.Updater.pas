@@ -310,11 +310,6 @@ type
     function Execute(AParentHwnd: HWND): Boolean; override;
 
     /// <summary>
-    ///   Launches the downloaded setup.
-    /// </summary>
-    procedure LaunchSetup();
-
-    /// <summary>
     ///   The downloaded file.
     /// </summary>
     property DownloadedFile: string read FFileName;
@@ -752,6 +747,10 @@ begin
 
   // Download successful: Close form automatically
   FForm.ModalResult := mrOk;
+
+  // Launch setup?
+  if FRemoteFileName.Contains('setup') then
+    ShellExecute(0, 'open', PChar(FFileName), nil, nil, SW_SHOWNORMAL);
 end;
 
 procedure TUpdateDialog.Downloading(Sender: TObject; AContentLength, AReadCount: Int64);
@@ -829,11 +828,6 @@ begin
   FButtonFinished.Caption := FLanguageFile.GetString(LID_CANCEL);
   StartDownload(True);
   Result := (FForm.ShowModal() = mrOk);
-end;
-
-procedure TUpdateDialog.LaunchSetup();
-begin
-  ShellExecute(0, 'open', PChar(FFileName), nil, nil, SW_SHOWNORMAL);
 end;
 
 procedure TUpdateDialog.FormCloseQuery(Sender: TObject; var CanClose: Boolean);
