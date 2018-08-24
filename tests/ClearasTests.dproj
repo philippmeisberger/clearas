@@ -88,6 +88,7 @@
         </DelphiCompile>
         <DCCReference Include="ClearasAPITest.pas"/>
         <DCCReference Include="..\src\ClearasAPI.pas"/>
+        <DCCReference Include="PMCW.RegistryFile.Test.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

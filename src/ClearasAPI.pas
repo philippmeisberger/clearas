@@ -17,7 +17,7 @@ uses
   Winapi.ShlObj, Winapi.ActiveX, System.Win.ComObj, System.Zip, Vcl.Graphics,
   Winapi.ShellAPI, System.SyncObjs, System.Generics.Collections, System.IOUtils,
   Winapi.KnownFolders, System.Variants, Winapi.Taskschd, Vcl.ImgList, PMCW.Registry,
-  PMCW.LanguageFile, PMCW.IniFileParser, PMCW.SysUtils;
+  PMCW.LanguageFile, PMCW.RegistryFile, PMCW.SysUtils;
 
 type
   /// <summary>
@@ -4012,21 +4012,24 @@ begin
   try
     if (FEnabled or CheckWin32Version(6, 2)) then
     begin
-      RegFile.ExportReg(FRootKey.ToHKey(), GetWow64Key(), Name);
+      RegFile.ExportValue(FRootKey.ToHKey(), GetWow64Key(), Name);
 
       try
         // Windows 8?
         if CheckWin32Version(6, 2) then
-          RegFile.ExportReg(FRootKey.ToHKey(), GetApprovedLocation(), Name);
+          RegFile.ExportValue(FRootKey.ToHKey(), GetApprovedLocation(), Name);
 
       except
         // Approved item does not exist?
-        on E: ERegistryFileException do
+        on E: ERegistryException do
           // Just continue!
-      end;
+      end;  //of try
     end  //of begin
     else
-      RegFile.ExportReg(FRootKey.ToHKey(), FLocation, False);
+      RegFile.ExportKey(FRootKey.ToHKey(), FLocation, False);
+
+    // Save .reg file
+    RegFile.UpdateFile();
 
   finally
     RegFile.Free;
@@ -4865,7 +4868,7 @@ begin
     end;  //of begin
 
     // Save file
-    RegFile.Save();
+    RegFile.UpdateFile();
 
   finally
     RegFile.Free;
@@ -5376,7 +5379,8 @@ begin
   RegFile := TRegistryFile.Create(ChangeFileExt(AFileName, GetBackupExtension()), True);
 
   try
-    RegFile.ExportReg(HKEY_CLASSES_ROOT, GetLocation(), True);
+    RegFile.ExportKey(HKEY_CLASSES_ROOT, GetLocation(), True);
+    RegFile.UpdateFile();
 
   finally
     RegFile.Free;
@@ -5461,7 +5465,8 @@ begin
     for i := 0 to Commands.Count - 1 do
       RegFile.ExportKey(HKEY_LOCAL_MACHINE, KEY_COMMAND_STORE +'\'+ Commands[i], True);
 
-    RegFile.Save();
+    // Save .reg file
+    RegFile.UpdateFile();
 
   finally
     Commands.Free;
@@ -5614,7 +5619,9 @@ begin
 
     // Export ShellEx item
     RegFile.ExportKey(HKEY_CLASSES_ROOT, GetLocation(), True);
-    RegFile.Save();
+
+    // Save .reg file
+    RegFile.UpdateFile();
 
   finally
     Reg.CloseKey();
@@ -5719,7 +5726,8 @@ begin
   RegFile := TRegistryFile.Create(ChangeFileExt(AFileName, GetBackupExtension()), True);
 
   try
-    RegFile.ExportReg(HKEY_CLASSES_ROOT, GetLocation(), True);
+    RegFile.ExportKey(HKEY_CLASSES_ROOT, GetLocation(), True);
+    RegFile.UpdateFile();
 
   finally
     RegFile.Free;
@@ -5881,7 +5889,8 @@ begin
     for i := 0 to Count - 1 do
       RegFile.ExportKey(HKEY_CLASSES_ROOT, Items[i].Location, True);
 
-    RegFile.Save();
+    // Save .reg file
+    RegFile.UpdateFile();
 
   finally
     RegFile.Free;
@@ -6426,7 +6435,7 @@ begin
   RegFile := TRegistryFile.Create(ChangeFileExt(AFileName, GetBackupExtension()), True);
 
   try
-    RegFile.ExportReg(HKEY_LOCAL_MACHINE, GetLocation(), True);
+    RegFile.ExportKey(HKEY_LOCAL_MACHINE, GetLocation(), True);
 
     if not FEnabled then
     begin
@@ -6435,11 +6444,13 @@ begin
       begin
         RegFile.ExportKey(HKEY_LOCAL_MACHINE, KEY_SERVICE_DISABLED +'\'+ Name, False);
         RegFile.ExportKey(HKEY_LOCAL_MACHINE, GetLocation(), True);
-        RegFile.Save();
       end  //of begin
       else
-        RegFile.ExportReg(HKEY_LOCAL_MACHINE, KEY_SERVICE_DISABLED, Name);
+        RegFile.ExportValue(HKEY_LOCAL_MACHINE, KEY_SERVICE_DISABLED, Name);
     end;  //of begin
+
+    // Save .reg file
+    RegFile.UpdateFile();
 
   finally
     RegFile.Free;
@@ -6582,7 +6593,7 @@ begin
     RegFile.ExportKey(HKEY_LOCAL_MACHINE, KEY_SERVICE_DISABLED, True);
 
     // Save .reg file
-    RegFile.Save();
+    RegFile.UpdateFile();
 
   finally
     RegFile.Free;
