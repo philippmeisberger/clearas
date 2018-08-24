@@ -43,7 +43,7 @@ const
   LID_EXPERT_MODE                       = LID_LAST + 49;
   LID_LOCATION                          = LID_LAST + 50;
   LID_ENABLED                           = LID_LAST + 51;
-  LID_KEY                               = LID_LAST + 52;
+  LID_TYPE                              = LID_LAST + 52;
   LID_ENABLE                            = LID_LAST + 53;
   LID_DISABLE                           = LID_LAST + 54;
   LID_EXPORT                            = LID_LAST + 55;

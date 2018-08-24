@@ -2,7 +2,6 @@ General
 =======
 
 - Add more optional columns like "date of deactivation"
-  - Add popup menu like in Windows Explorer to show or hide them
 - Improve usability
   - Visual grouping
   - Multiselect
