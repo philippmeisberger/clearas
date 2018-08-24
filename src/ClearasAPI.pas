@@ -840,6 +840,14 @@ type
     function IsExporting(): Boolean;
 
     /// <summary>
+    ///   Checks if a search is currently pending.
+    /// </summary>
+    /// <returns>
+    ///   <c>True</c> if a search is in progress or <c>False</c> otherwise.
+    /// </returns>
+    function IsSearching(): Boolean;
+
+    /// <summary>
     ///   Renames an item.
     /// </summary>
     /// <param name="AItem">
@@ -894,127 +902,6 @@ type
     ///   Occurs when counter is updated.
     /// </summary>
     property OnCounterUpdate: TNotifyEvent read FOnCounterUpdate write FOnCounterUpdate;
-  end;
-
-  /// <summary>
-  ///   Abstract thread which should perform a long-lasting operation on a
-  ///   <see cref="TRootList"/>.
-  /// </summary>
-  /// <remarks>
-  ///   Implement <c>DoExecute()</c> in the derived class.
-  /// </remarks>
-  TRootListThread = class(TThread)
-  strict private
-    FOnStart,
-    FOnListLocked: TNotifyEvent;
-    FOnError: TErrorEvent;
-    FErrorMessage: string;
-    procedure DoNotifyOnError();
-    procedure DoNotifyOnListLocked();
-  protected
-    FSelectedList: TRootList<TRootItem>;
-
-    /// <summary>
-    ///   Issues <see cref="OnStart"/> event.
-    /// </summary>
-    procedure DoNotifyOnStart();
-
-    /// <summary>
-    ///   The execute method.
-    /// </summary>
-    procedure DoExecute(); virtual; abstract;
-
-    /// <summary>
-    ///   Executes the thread.
-    /// </summary>
-    /// <remarks>
-    ///   Implement <see cref="DoExecute"/>!
-    /// </remarks>
-    procedure Execute(); override; final;
-  public
-    /// <summary>
-    ///   Contructor for creating a <c>TRootListThread</c> instance.
-    /// </summary>
-    /// <param name="ASelectedList">
-    ///   The list on which the operation should be performed.
-    /// </param>
-    constructor Create(ASelectedList: TRootList<TRootItem>);
-
-    /// <summary>
-    ///   Occurs when something went wrong.
-    /// </summary>
-    property OnError: TErrorEvent read FOnError write FOnError;
-
-    /// <summary>
-    ///   Occurs when another operation is pending on the list and therefore locked.
-    /// </summary>
-    property OnListLocked: TNotifyEvent read FOnListLocked write FOnListLocked;
-
-    /// <summary>
-    ///   Occurs when thread has started.
-    /// </summary>
-    property OnStart: TNotifyEvent read FOnStart write FOnStart;
-  end;
-
-  /// <summary>
-  ///   Performs a search.
-  /// </summary>
-  TSearchThread = class(TRootListThread)
-  private
-    FExpertMode: Boolean;
-  protected
-    /// <summary>
-    ///   Executes the search.
-    /// </summary>
-    procedure DoExecute(); override;
-  public
-    /// <summary>
-    ///   Constructor for creating a <c>TSearchThread</c> instance.
-    /// </summary>
-    /// <param name="ASelectedList">
-    ///   A <c>TRootList</c> to be filled.
-    /// </param>
-    constructor Create(ASelectedList: TRootList<TRootItem>);
-
-    /// <summary>
-    ///   If set to <c>True</c> use the expert search mode. Otherwise use the
-    ///   default search mode.
-    /// </summary>
-    property ExpertMode: Boolean read FExpertMode write FExpertMode;
-  end;
-
-  /// <summary>
-  ///   Exports a <see cref="TRootList"/> as file.
-  /// </summary>
-  TExportListThread = class(TRootListThread)
-  private
-    FFileName: string;
-    FPageControlIndex: Integer;
-  protected
-    /// <summary>
-    ///   Executes the export.
-    /// </summary>
-    procedure DoExecute(); override;
-  public
-    /// <summary>
-    ///   Constructor for creating a <c>TExportListThread</c> instance.
-    /// </summary>
-    /// <param name="ASelectedList">
-    ///   The <c>TRootList</c> which should be exported.
-    /// </param>
-    /// <param name="AFileName">
-    ///   The filename of the exported file.
-    /// </param>
-    /// <param name="APageControlIndex">
-    ///   The index of the <c>TPageControl</c> on which the export was invoked.
-    /// </param>
-    constructor Create(ASelectedList: TRootList<TRootItem>;
-      const AFileName: string; APageControlIndex: Integer);
-
-    /// <summary>
-    ///   The index of the <c>TPageControl</c> on which the export was invoked.
-    /// </summary>
-    property PageControlIndex: Integer read FPageControlIndex;
   end;
 
   /// <summary>
@@ -3756,6 +3643,19 @@ begin
   end;  //of for
 end;
 
+function TRootList<T>.IsSearching(): Boolean;
+var
+  Entered: Boolean;
+
+begin
+  Entered := FSearchLock.TryEnter();
+
+  if Entered then
+    FSearchLock.Release();
+
+  Result := not Entered;
+end;
+
 function TRootList<T>.IsExporting(): Boolean;
 var
   Entered: Boolean;
@@ -3871,98 +3771,16 @@ begin
   if not FSearchLock.TryEnter() then
     raise EListBlocked.Create(SOperationPending);
 
+  CoInitialize(nil);
+
   try
     Clear();
     DoSearch(AExpertMode);
 
   finally
     FSearchLock.Release();
-  end;  //of try
-end;
-
-
-{ TRootListThread }
-
-constructor TRootListThread.Create(ASelectedList: TRootList<TRootItem>);
-begin
-  inherited Create(True);
-  FreeOnTerminate := True;
-  FSelectedList := ASelectedList;
-end;
-
-procedure TRootListThread.DoNotifyOnError();
-begin
-  if Assigned(FOnError) then
-    FOnError(Self, FErrorMessage);
-end;
-
-procedure TRootListThread.DoNotifyOnListLocked();
-begin
-  if Assigned(FOnListLocked) then
-    FOnListLocked(Self);
-end;
-
-procedure TRootListThread.DoNotifyOnStart();
-begin
-  if Assigned(FOnStart) then
-    FOnStart(Self);
-end;
-
-procedure TRootListThread.Execute();
-begin
-  try
-    Assert(Assigned(FSelectedList));
-    DoExecute();
-
-  except
-    on E: EListBlocked do
-      Synchronize(DoNotifyOnListLocked);
-
-    on E: Exception do
-    begin
-      FErrorMessage := Format('%s: %s', [ClassName, E.Message]);
-      Synchronize(DoNotifyOnError);
-    end;
-  end;  //of try
-end;
-
-
-{ TSearchThread }
-
-constructor TSearchThread.Create(ASelectedList: TRootList<TRootItem>);
-begin
-  inherited Create(ASelectedList);
-  FExpertMode := False;
-end;
-
-procedure TSearchThread.DoExecute();
-begin
-  CoInitialize(nil);
-
-  try
-    Synchronize(DoNotifyOnStart);
-    FSelectedList.Search(FExpertMode);
-
-  finally
     CoUninitialize();
   end;  //of try
-end;
-
-
-{ TExportListThread }
-
-constructor TExportListThread.Create(ASelectedList: TRootList<TRootItem>;
-  const AFileName: string; APageControlIndex: Integer);
-begin
-  inherited Create(ASelectedList);
-  FFileName := AFileName;
-  FPageControlIndex := APageControlIndex;
-end;
-
-procedure TExportListThread.DoExecute();
-begin
-  Synchronize(DoNotifyOnStart);
-  FSelectedList.ExportList(FFileName);
 end;
 
 

@@ -184,28 +184,15 @@ type
     function GetSelectedListView(): TListView;
     function GetItemText(AItem: TRootItem): string;
     procedure Refresh(AIndex: Integer; ATotal: Boolean = True);
-    procedure OnContextSearchStart(Sender: TObject);
-    procedure OnContextSearchEnd(Sender: TObject);
     procedure OnContextListNotify(Sender: TObject; const AItem: TContextMenuListItem;
       AAction: TCollectionNotification);
     procedure OnContextCounterUpdate(Sender: TObject);
-    procedure OnExportListStart(Sender: TObject);
-    procedure OnExportListEnd(Sender: TObject);
-    procedure OnExportListError(Sender: TObject; const AErrorMessage: string);
-    procedure OnSearchError(Sender: TObject; const AErrorMessage: string);
-    procedure OnListLocked(Sender: TObject);
-    procedure OnStartupSearchStart(Sender: TObject);
-    procedure OnStartupSearchEnd(Sender: TObject);
     procedure OnStartupListNotify(Sender: TObject; const AItem: TStartupListItem;
       AAction: TCollectionNotification);
     procedure OnStartupCounterUpdate(Sender: TObject);
-    procedure OnServiceSearchStart(Sender: TObject);
-    procedure OnServiceSearchEnd(Sender: TObject);
     procedure OnServiceListNotify(Sender: TObject; const AItem: TServiceListItem;
       AAction: TCollectionNotification);
     procedure OnServiceCounterUpdate(Sender: TObject);
-    procedure OnTaskSearchStart(Sender: TObject);
-    procedure OnTaskSearchEnd(Sender: TObject);
     procedure OnTaskListNotify(Sender: TObject; const AItem: TTaskListItem;
       AAction: TCollectionNotification);
     procedure OnTaskCounterUpdate(Sender: TObject);
@@ -508,45 +495,56 @@ begin
       if RootList.IsExporting() then
         raise EListBlocked.Create(SOperationPending);
 
-      with TSearchThread.Create(RootList) do
-      begin
-        OnError := OnSearchError;
-        OnListLocked := Self.OnListLocked;
+      // Search pending?
+      if RootList.IsSearching() then
+        raise EListBlocked.Create(SOperationPending);
 
-        case AIndex of
-          0:
-            begin
-              OnStart := OnStartupSearchStart;
-              OnTerminate := OnStartupSearchEnd;
-              ExpertMode := cbRunOnce.Checked;
-              Start();
-            end;
+      TThread.CreateAnonymousThread(
+        procedure
+        begin
+          try
+            TThread.Synchronize(nil,
+              procedure
+              begin
+                ListView.Clear();
+                ShowOperationPendingUI(AIndex, True);
+              end);
 
-          1:
-            begin
-              OnStart := OnContextSearchStart;
-              OnTerminate := OnContextSearchEnd;
-              ExpertMode := cbContextExpert.Checked;
-              Start();
-            end;
+            try
+              case AIndex of
+                0: RootList.Search(cbRunOnce.Checked);
+                1: RootList.Search(cbContextExpert.Checked);
+                2: RootList.Search(cbServiceExpert.Checked);
+                3: RootList.Search(cbTaskExpert.Checked);
+                else raise EInvalidItem.Create(SNoItemSelected);
+              end;  //of case
 
-          2:
-            begin
-              OnStart := OnServiceSearchStart;
-              OnTerminate := OnServiceSearchEnd;
-              ExpertMode := cbServiceExpert.Checked;
-              Start();
-            end;
+            finally
+              TThread.Synchronize(nil,
+                procedure
+                begin
+                  SortList(ListView);
+                  ShowOperationPendingUI(AIndex, False);
+                end);
+            end;  //of try
 
-          3:
-            begin
-              OnStart := OnTaskSearchStart;
-              OnTerminate := OnTaskSearchEnd;
-              ExpertMode := cbTaskExpert.Checked;
-              Start();
-            end;
-        end;
-      end;  //of with
+          except
+            on E: EListBlocked do
+              TThread.Synchronize(nil,
+                procedure
+                begin
+                  MessageDlg(FLang.GetString([LID_OPERATION_PENDING1, LID_OPERATION_PENDING2]),
+                    mtWarning, [mbOK], 0);
+                end);
+
+            on E: Exception do
+              TThread.Synchronize(nil,
+                procedure
+                begin
+                  FLang.ShowException(FLang.GetString([LID_REFRESH, LID_IMPOSSIBLE]), Format('%s: %s', [RootList.ClassName, E.Message]));
+                end);
+          end;  //of try
+        end).Start();
     end  //of begin
     else
     begin
@@ -569,26 +567,6 @@ begin
         mtWarning, [mbOK], 0);
     end;
   end;  //of try
-end;
-
-{ private TMain.OnContextSearchStart
-
-  Event that is called when search starts. }
-
-procedure TMain.OnContextSearchStart(Sender: TObject);
-begin
-  lwContext.Clear();
-  ShowOperationPendingUI(1, True);
-end;
-
-{ private TMain.OnContextSearchEnd
-
-  Event that is called when search ends. }
-
-procedure TMain.OnContextSearchEnd(Sender: TObject);
-begin
-  SortList(lwContext);
-  ShowOperationPendingUI(1, False);
 end;
 
 { private TMain.OnContextCounterUpdate
@@ -629,51 +607,6 @@ begin
       end; //of with
     end;  //of begin
   end;  //of begin
-end;
-
-{ private TMain.OnExportListStart
-
-  Event that is called when export list starts. }
-
-procedure TMain.OnExportListStart(Sender: TObject);
-var
-  Index: Integer;
-
-begin
-  Index := (Sender as TExportListThread).PageControlIndex;
-  PageControl.Pages[Index].Cursor := crHourGlass;
-  GetListViewForIndex(Index).Cursor := crHourGlass;
-  ShowOperationPendingUI(Index, True);
-end;
-
-procedure TMain.OnListLocked(Sender: TObject);
-begin
-  MessageDlg(FLang.GetString([LID_OPERATION_PENDING1, LID_OPERATION_PENDING2]),
-    mtWarning, [mbOK], 0);
-end;
-
-{ private TMain.OnExportListEnd
-
-  Event that is called when export list ends. }
-
-procedure TMain.OnExportListEnd(Sender: TObject);
-var
-  Index: Integer;
-
-begin
-  Index := (Sender as TExportListThread).PageControlIndex;
-  PageControl.Pages[Index].Cursor := crDefault;
-  GetListViewForIndex(Index).Cursor := crDefault;
-  ShowOperationPendingUI(Index, False);
-end;
-
-{ private TMain.OnExportListError
-
-  Event method that is called when export thread has failed. }
-
-procedure TMain.OnExportListError(Sender: TObject; const AErrorMessage: string);
-begin
-  FLang.ShowException(FLang.GetString([LID_EXPORT, LID_IMPOSSIBLE]), AErrorMessage);
 end;
 
 { private TMain.OnStartupCounterUpdate
@@ -721,26 +654,6 @@ begin
       end;  //of with
     end;  //of begin
   end;  //of begin
-end;
-
-{ private TMain.OnStartupSearchStart
-
-  Event that is called when search starts. }
-
-procedure TMain.OnStartupSearchStart(Sender: TObject);
-begin
-  lwStartup.Clear();
-  ShowOperationPendingUI(0, True);
-end;
-
-{ private TMain.OnStartupSearchEnd
-
-  Event that is called when search ends. }
-
-procedure TMain.OnStartupSearchEnd(Sender: TObject);
-begin
-  SortList(lwStartup);
-  ShowOperationPendingUI(0, False);
 end;
 
 { private TMain.OnServiceCounterUpdate
@@ -800,35 +713,6 @@ begin
   end;  //of begin
 end;
 
-{ private TMain.OnServiceSearchStart
-
-  Event that is called when search starts. }
-
-procedure TMain.OnServiceSearchStart(Sender: TObject);
-begin
-  lwService.Clear();
-  ShowOperationPendingUI(2, True);
-end;
-
-{ private TMain.OnServiceSearchEnd
-
-  Event that is called when search ends. }
-
-procedure TMain.OnServiceSearchEnd(Sender: TObject);
-begin
-  SortList(lwService);
-  ShowOperationPendingUI(2, False);
-end;
-
-{ private TMain.OnSearchError
-
-  Event method that is called when search thread has failed. }
-
-procedure TMain.OnSearchError(Sender: TObject; const AErrorMessage: string);
-begin
-  FLang.ShowException(FLang.GetString([LID_REFRESH, LID_IMPOSSIBLE]), AErrorMessage);
-end;
-
 { private TMain.OnTaskCounterUpdate
 
   Event method that is called when item status has been changed. }
@@ -867,23 +751,7 @@ begin
   end;  //of begin
 end;
 
-procedure TMain.OnTaskSearchEnd(Sender: TObject);
-begin
-  SortList(lwTasks);
-  ShowOperationPendingUI(3, False);
-end;
-
-{ private TMain.OnTaskSearchStart
-
-  Event that is called when search starts. }
-
-procedure TMain.OnTaskSearchStart(Sender: TObject);
-begin
-  lwTasks.Clear();
-  ShowOperationPendingUI(3, True);
-end;
-
-{ private TMain.SetLanguage
+{ private TMain.LanguageChanged
 
   Updates all component captions with new language text. }
 
@@ -2441,6 +2309,7 @@ procedure TMain.mmExportClick(Sender: TObject);
 var
   SelectedList: TRootList<TRootItem>;
   FileName, Filter, DefaultExt: string;
+  PageIndex: Integer;
 
 begin
   try
@@ -2458,14 +2327,50 @@ begin
     if PromptForFileName(FileName, Filter, DefaultExt, StripHotkey(mmExport.Caption),
       '', True) then
     begin
-      with TExportListThread.Create(SelectedList, FileName, PageControl.ActivePageIndex) do
-      begin
-        OnStart := OnExportListStart;
-        OnTerminate := OnExportListEnd;
-        OnError := OnExportListError;
-        OnListLocked := Self.OnListLocked;
-        Start;
-      end;  //of with
+      PageIndex := PageControl.ActivePageIndex;
+
+      TThread.CreateAnonymousThread(
+        procedure
+        begin
+          try
+            TThread.Synchronize(nil,
+              procedure
+              begin
+                PageControl.Pages[PageIndex].Cursor := crHourGlass;
+                GetListViewForIndex(PageIndex).Cursor := crHourGlass;
+                ShowOperationPendingUI(PageIndex, True);
+              end);
+
+            try
+              SelectedList.ExportList(FileName);
+
+            finally
+              TThread.Synchronize(nil,
+                procedure
+                begin
+                  PageControl.Pages[PageIndex].Cursor := crDefault;
+                  GetListViewForIndex(PageIndex).Cursor := crDefault;
+                  ShowOperationPendingUI(PageIndex, False);
+                end);
+            end;  //of try
+
+          except
+            on E: EListBlocked do
+              TThread.Synchronize(nil,
+                procedure
+                begin
+                  MessageDlg(FLang.GetString([LID_OPERATION_PENDING1, LID_OPERATION_PENDING2]),
+                    mtWarning, [mbOK], 0);
+                end);
+
+            on E: Exception do
+              TThread.Synchronize(nil,
+                procedure
+                begin
+                  FLang.ShowException(FLang.GetString([LID_EXPORT, LID_IMPOSSIBLE]), E.Message);
+                end);
+          end;
+        end).Start();
     end;  //of begin
 
   except
