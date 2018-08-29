@@ -79,6 +79,20 @@ type
     function GetColumnIndex(AListView: TListView): Integer;
 
     /// <summary>
+    ///   Updates the displayed information inside a specified <see cref="TListView"/>.
+    /// </summary>
+    /// <param name="AListView">
+    ///   The <see cref="TListView"/>.
+    /// </param>
+    /// <param name="AItem">
+    ///   The item to update.
+    /// </param>
+    /// <param name="ANewContent">
+    ///   The new content.
+    /// </param>
+    procedure UpdateContent(AListView: TListView; AItem: TListItem; const ANewContent: string);
+
+    /// <summary>
     ///   Gets the column caption.
     /// </summary>
     /// <param name="ALanguageFile">
@@ -167,6 +181,21 @@ begin
     StartupType:      Result := ALanguageFile[LID_SERVICE_START];
     else              Result := '';
   end;  //of case
+end;
+
+procedure TClearasListColumnHelper.UpdateContent(AListView: TListView;
+  AItem: TListItem; const ANewContent: string);
+var
+  ColumnIndex: Integer;
+
+begin
+  if not Assigned(AItem) then
+    Exit;
+
+  ColumnIndex := GetColumnIndex(AListView);
+
+  if (ColumnIndex <> -1) then
+    AItem.SubItems[ColumnIndex - 1] := ANewContent;
 end;
 
 

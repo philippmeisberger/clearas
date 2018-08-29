@@ -1065,7 +1065,7 @@ begin
 
       // Confirm deletion of every erasable item
       Answer := TaskMessageDlg(FLang.Format([LID_ITEM_DELETE],
-        [SelectedListView.Items[i].SubItems[0]]), FLang.GetString([LID_FILE_DOES_NOT_EXIST,
+        [SelectedListView.Items[i].Caption]), FLang.GetString([LID_FILE_DOES_NOT_EXIST,
         LID_ITEM_ERASABLE]), mtWarning, mbYesNoCancel, 0);
 
       case Answer of
@@ -1138,7 +1138,7 @@ begin
     SelectedItem := GetSelectedItem();
 
     // Confirm deletion of item
-    if (TaskMessageDlg(FLang.Format([LID_ITEM_DELETE], [SelectedListView.ItemFocused.SubItems[0]]),
+    if (TaskMessageDlg(FLang.Format([LID_ITEM_DELETE], [SelectedListView.ItemFocused.Caption]),
       FLang.GetString([LID_ITEM_DELETE_CONFIRM1, LID_ITEM_DELETE_CONFIRM2]),
       mtWarning, mbYesNo, 0, mbNo) = idYes) then
     begin
@@ -1186,7 +1186,6 @@ var
   SelectedListView: TListView;
   SelectedList: TRootList<TRootItem>;
   SelectedItem: TRootItem;
-  ColumnIndex: Integer;
 
 begin
   try
@@ -1201,11 +1200,13 @@ begin
           bEnableStartupItem.Enabled := True;
           bDisableStartupItem.Enabled := False;
           pmChangeStatus.Caption := bEnableStartupItem.Caption;
-          ColumnIndex := TClearasListColumn.DeactivationDate.GetColumnIndex(lwStartup);
 
           // Append deactivation timestamp if necessary
-          if ((ColumnIndex <> -1) and ((SelectedItem as TStartupListItem).DeactivationTime <> 0)) then
-            lwStartup.ItemFocused.SubItems[ColumnIndex] := DateTimeToStr((SelectedItem as TStartupListItem).DeactivationTime);
+          if ((SelectedItem as TStartupListItem).DeactivationTime <> 0) then
+          begin
+            TClearasListColumn.DeactivationDate.UpdateContent(SelectedListView,
+              SelectedListView.ItemFocused, DateTimeToStr((SelectedItem as TStartupListItem).DeactivationTime));
+          end;  //of begin
         end;
 
       1:
@@ -1220,11 +1221,13 @@ begin
           bEnableServiceItem.Enabled := True;
           bDisableServiceItem.Enabled := False;
           pmChangeStatus.Caption := bEnableServiceItem.Caption;
-          ColumnIndex := TClearasListColumn.DeactivationDate.GetColumnIndex(lwService);
 
           // Append deactivation timestamp if necessary
-          if ((ColumnIndex <> -1) and ((SelectedItem as TServiceListItem).DeactivationTime <> 0)) then
-            lwService.ItemFocused.SubItems[ColumnIndex] := DateTimeToStr((SelectedItem as TServiceListItem).DeactivationTime);
+          if ((SelectedItem as TServiceListItem).DeactivationTime <> 0) then
+          begin
+            TClearasListColumn.DeactivationDate.UpdateContent(SelectedListView,
+              SelectedListView.ItemFocused, DateTimeToStr((SelectedItem as TServiceListItem).DeactivationTime));
+          end;  //of begin
         end;
 
       3:
@@ -1236,7 +1239,7 @@ begin
     end;  //of case
 
     // Change item visual status
-    SelectedListView.ItemFocused.Caption := FStatusText[SelectedItem.Enabled];
+    TClearasListColumn.Status.UpdateContent(SelectedListView, SelectedListView.ItemFocused, FStatusText[SelectedItem.Enabled]);
 
     // Item is erasable?
     if SelectedItem.Erasable then
@@ -1272,7 +1275,6 @@ var
   SelectedListView: TListView;
   SelectedList: TRootList<TRootItem>;
   SelectedItem: TRootItem;
-  ColumnIndex: Integer;
 
 begin
   try
@@ -1287,11 +1289,10 @@ begin
           bEnableStartupItem.Enabled := False;
           bDisableStartupItem.Enabled := True;
           pmChangeStatus.Caption := bDisableStartupItem.Caption;
-          ColumnIndex := TClearasListColumn.DeactivationDate.GetColumnIndex(lwStartup);
 
           // Delete deactivation timestamp if necessary
-          if (ColumnIndex <> -1) then
-            lwStartup.ItemFocused.SubItems[ColumnIndex] := '';
+          TClearasListColumn.DeactivationDate.UpdateContent(SelectedListView,
+            SelectedListView.ItemFocused, '');
         end;
 
       1:
@@ -1306,11 +1307,10 @@ begin
           bEnableServiceItem.Enabled := False;
           bDisableServiceItem.Enabled := True;
           pmChangeStatus.Caption := bDisableServiceItem.Caption;
-          ColumnIndex := TClearasListColumn.DeactivationDate.GetColumnIndex(lwService);
 
           // Delete deactivation timestamp if necessary
-          if (ColumnIndex <> -1) then
-            lwService.ItemFocused.SubItems[ColumnIndex] := '';
+          TClearasListColumn.DeactivationDate.UpdateContent(SelectedListView,
+            SelectedListView.ItemFocused, '');
         end;
 
       3:
@@ -1322,7 +1322,7 @@ begin
     end;  //of case
 
     // Change item visual status
-    SelectedListView.ItemFocused.Caption := FStatusText[SelectedItem.Enabled];
+    TClearasListColumn.Status.UpdateContent(SelectedListView, SelectedListView.ItemFocused, FStatusText[SelectedItem.Enabled]);
 
     // Item is erasable?
     if SelectedItem.Erasable then
@@ -1914,7 +1914,7 @@ begin
 
       // Names are visible instead of captions?
       if (not mmShowCaptions.Checked or (PageControl.ActivePageIndex in [1, 3])) then
-        GetSelectedListView().ItemFocused.SubItems[0] := Name;
+        GetSelectedListView().ItemFocused.Caption := Name;
     end;  //of begin
 
   except
@@ -2077,16 +2077,15 @@ begin
     GetSelectedList().ChangeCommand(SelectedItem, EnteredPath);
 
     // Update icon
-    if (PageControl.ActivePageIndex = 0) then
-      lwStartup.ItemFocused.ImageIndex := SelectedItem.ImageIndex;
+    if Assigned(SelectedListView.SmallImages) then
+      SelectedListView.ItemFocused.ImageIndex := SelectedItem.ImageIndex;
 
-    // Update file path in TListView
-    if (PageControl.ActivePageIndex <> 1) then
-      SelectedListView.ItemFocused.SubItems[1] := EnteredPath;
+    // Update command in TListView
+    TClearasListColumn.Command.UpdateContent(SelectedListView, SelectedListView.ItemFocused, EnteredPath);
 
     // Update caption
     if ((SelectedItem.Caption <> '') and mmShowCaptions.Checked) then
-      SelectedListView.ItemFocused.SubItems[0] := SelectedItem.Caption;
+      SelectedListView.ItemFocused.Caption := SelectedItem.Caption;
 
   except
     on E: EInvalidItem do
