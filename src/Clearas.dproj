@@ -123,6 +123,7 @@
             <Form>Main</Form>
         </DCCReference>
         <DCCReference Include="ClearasAPI.pas"/>
+        <DCCReference Include="Clearas.ListColumns.pas"/>
         <RcCompile Include="languages.rc">
             <Form>languages.res</Form>
         </RcCompile>
