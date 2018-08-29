@@ -626,9 +626,9 @@ type
     FEnabledItemsCount,
     FErasableItemsCount: Integer;
     FIcon: TIcon;
+    FImages: TCustomImageList;
     procedure NotifyOnCounterUpdate();
   protected
-    FImages: TCustomImageList;
     FSearchLock,
     FExportLock: TCriticalSection;
     procedure Notify(const Item: T; Action: TCollectionNotification); override;
@@ -743,7 +743,7 @@ type
     /// <exception cref="EWarning">
     ///   if <c>AItem</c> is already disabled.
     /// </exception>
-    procedure DisableItem(AItem: T);
+    procedure DisableItem(AItem: T); inline;
 
     /// <summary>
     ///   Enables an item.
@@ -760,7 +760,7 @@ type
     /// <exception cref="EWarning">
     ///   if <c>AItem</c> is already enabled.
     /// </exception>
-    procedure EnableItem(AItem: T);
+    procedure EnableItem(AItem: T); inline;
 
     /// <summary>
     ///   Exports an item as file.
