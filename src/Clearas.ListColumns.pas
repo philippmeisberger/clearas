@@ -194,8 +194,11 @@ begin
 
   ColumnIndex := GetColumnIndex(AListView);
 
-  if (ColumnIndex <> -1) then
-    AItem.SubItems[ColumnIndex - 1] := ANewContent;
+  if (ColumnIndex = 0) then
+    AItem.Caption := ANewContent
+  else
+    if (ColumnIndex > 0) then
+      AItem.SubItems[ColumnIndex - 1] := ANewContent;
 end;
 
 
