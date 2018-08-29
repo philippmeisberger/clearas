@@ -216,6 +216,22 @@ implementation
 {$I LanguageIDs.inc}
 {$R *.dfm}
 
+type
+  TDateTimeHelper = record helper for TDateTime
+    function ToString(): string; inline;
+  end;
+
+{ TDateTimeHelper }
+
+function TDateTimeHelper.ToString(): string;
+begin
+  if (Self <> 0) then
+    Result := DateTimeToStr(Self)
+  else
+    Result := '';
+end;
+
+
 { TMain }
 
 { TMain.FormCreate
@@ -655,15 +671,8 @@ begin
             Command:          SubItems.Append(AItem.Command);
             ItemType:         SubItems.Append(AItem.ToString());
             Location:         SubItems.Append(AItem.LocationFull);
-            DeactivationDate:
-              begin
-                if (AItem.DeactivationTime <> 0) then
-                  SubItems.Append(DateTimeToStr(AItem.DeactivationTime))
-                else
-                  SubItems.Append('');
-              end;
-            else
-              SubItems.Append('');
+            DeactivationDate: SubItems.Append(AItem.DeactivationTime.ToString());
+            else              SubItems.Append('');
           end;  //of case
         end;  //of for
       end;  //of with
@@ -719,15 +728,8 @@ begin
             ItemType:         SubItems.Append(AItem.ToString());
             Location:         SubItems.Append(AItem.LocationFull);
             StartupType:      SubItems.Append(GetServiceStartCaption(AItem.Start));
-            DeactivationDate:
-              begin
-                if (AItem.DeactivationTime <> 0) then
-                  SubItems.Append(DateTimeToStr(AItem.DeactivationTime))
-                else
-                  SubItems.Append('');
-              end;
-            else
-              SubItems.Append('');
+            DeactivationDate: SubItems.Append(AItem.DeactivationTime.ToString());
+            else              SubItems.Append('');
           end;  //of case
         end;  //of for
       end;  //of with
@@ -1202,11 +1204,8 @@ begin
           pmChangeStatus.Caption := bEnableStartupItem.Caption;
 
           // Append deactivation timestamp if necessary
-          if ((SelectedItem as TStartupListItem).DeactivationTime <> 0) then
-          begin
-            TClearasListColumn.DeactivationDate.UpdateContent(SelectedListView,
-              SelectedListView.ItemFocused, DateTimeToStr((SelectedItem as TStartupListItem).DeactivationTime));
-          end;  //of begin
+          TClearasListColumn.DeactivationDate.UpdateContent(SelectedListView,
+            SelectedListView.ItemFocused, (SelectedItem as TStartupListItem).DeactivationTime.ToString());
         end;
 
       1:
@@ -1223,11 +1222,8 @@ begin
           pmChangeStatus.Caption := bEnableServiceItem.Caption;
 
           // Append deactivation timestamp if necessary
-          if ((SelectedItem as TServiceListItem).DeactivationTime <> 0) then
-          begin
-            TClearasListColumn.DeactivationDate.UpdateContent(SelectedListView,
-              SelectedListView.ItemFocused, DateTimeToStr((SelectedItem as TServiceListItem).DeactivationTime));
-          end;  //of begin
+          TClearasListColumn.DeactivationDate.UpdateContent(SelectedListView,
+            SelectedListView.ItemFocused, (SelectedItem as TServiceListItem).DeactivationTime.ToString());
         end;
 
       3:
