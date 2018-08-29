@@ -1010,6 +1010,7 @@ begin
   if not Assigned(AListView) then
     Exit;
 
+  // TODO: Sort icon is lost
   if (AListView.Tag >= 0) then
     AListView.AlphaSort();
 
@@ -1031,7 +1032,7 @@ var
 begin
   try
   {$IFDEF WIN32}
-    if (TOSVersion.Architecture in [arIntelX64]) then
+    if (TOSVersion.Architecture = arIntelX64) then
     begin
       // Bitness of Clearas should match OS bitness as environment variables are expanded differently:
       // Expanding %PROGRAMFILES% from 64-bit application on 64-bit OS results in e.g. C:\Program Files
