@@ -158,7 +158,7 @@ end;
 function TClearasListColumnHelper.ToString(ALanguageFile: TLanguageFile): string;
 begin
   case Self of
-    ItemName:         Result := 'Name';  //TODO: LID
+    ItemName:         Result := ALanguageFile[LID_NAME];
     Command:          Result := ALanguageFile[LID_FILE];
     ItemType:         Result := ALanguageFile[LID_TYPE];
     Status:           Result := ALanguageFile[LID_ENABLED];

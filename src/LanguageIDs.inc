@@ -14,7 +14,7 @@ const
   LID_NOTHING_SELECTED                  = LID_LAST + 13;
   LID_ITEM_CHANGE_PATH                  = LID_LAST + 14;
   LID_RENAME                            = LID_LAST + 15;
-  LID_SERVICE_COUNTER                   = LID_LAST + 16;
+  LID_NAME                              = LID_LAST + 16;
   LID_SERVICE_ADD                       = LID_LAST + 17;
   LID_SERVICE_START                     = LID_LAST + 19;
   LID_SERVICES                          = LID_LAST + 20;
@@ -38,8 +38,6 @@ const
   LID_STARTUP                           = LID_LAST + 43;
   LID_CONTEXT_MENU                      = LID_LAST + 44;
   LID_CONTEXT_MENU_HEADLINE             = LID_LAST + 46;
-  LID_CONTEXT_MENU_COUNTER              = LID_LAST + 47;
-  LID_PROGRAM_COUNTER                   = LID_LAST + 48;
   LID_EXPERT_MODE                       = LID_LAST + 49;
   LID_LOCATION                          = LID_LAST + 50;
   LID_ENABLED                           = LID_LAST + 51;
@@ -64,7 +62,6 @@ const
   LID_CONTEXT_MENU_USER_CHOICE_RESET    = LID_LAST + 73;
   LID_TASKS                             = LID_LAST + 74;
   LID_TASKS_HEADLINE                    = LID_LAST + 75;
-  LID_TASKS_COUNTER                     = LID_LAST + 76;
   LID_TASKS_ADD                         = LID_LAST + 77;
   LID_FILTER_ZIP_FILES                  = LID_LAST + 79;
   LID_PROPERTIES                        = LID_LAST + 80;

@@ -538,7 +538,8 @@ begin
               TThread.Synchronize(nil,
                 procedure
                 begin
-                  FLang.ShowException(FLang.GetString([LID_REFRESH, LID_IMPOSSIBLE]), Format('%s: %s', [RootList.ClassName, E.Message]));
+                  FLang.ShowException(FLang.GetString([LID_REFRESH, LID_IMPOSSIBLE]),
+                    Format('%s: %s', [RootList.ClassName, E.Message]));
                 end);
           end;  //of try
         end).Start();
@@ -549,6 +550,10 @@ begin
 
       for i := 0 to RootList.Count - 1 do
         RootList.OnNotify(Self, RootList[i], cnAdded);
+
+      // Refresh counter label
+      if Assigned(RootList.OnCounterUpdate) then
+        RootList.OnCounterUpdate(Self);
 
       // Resort items
       SortList(ListView);
@@ -574,10 +579,7 @@ procedure TMain.OnContextCounterUpdate(Sender: TObject);
 begin
   // Refresh counter label
   if (not (csDestroying in ComponentState) and Assigned(FContext)) then
-  begin
-    lwContext.Columns[0].Caption := FLang.Format(LID_CONTEXT_MENU_COUNTER,
-      [FContext.EnabledItemsCount, FContext.Count]);
-  end;  //of begin
+    lContext.Caption := FLang.Format(LID_CONTEXT_MENU_HEADLINE, [FContext.EnabledItemsCount, FContext.Count]);
 end;
 
 procedure TMain.OnContextListNotify(Sender: TObject; const AItem: TContextMenuListItem;
@@ -599,7 +601,6 @@ begin
       with lwContext.Items.Add do
       begin
         Data := AItem;
-        ImageIndex := AItem.ImageIndex;
 
         for i := 0 to lwContext.Columns.Count - 1 do
         begin
@@ -625,10 +626,7 @@ procedure TMain.OnStartupCounterUpdate(Sender: TObject);
 begin
   // Refresh counter label
   if (not (csDestroying in ComponentState) and Assigned(FStartup)) then
-  begin
-    lwStartup.Columns[0].Caption := FLang.Format(LID_PROGRAM_COUNTER,
-      [FStartup.EnabledItemsCount, FStartup.Count]);
-  end;  //of begin
+    lStartup.Caption := FLang.Format(LID_STARTUP_HEADLINE, [FStartup.EnabledItemsCount, FStartup.Count]);
 end;
 
 procedure TMain.OnStartupListNotify(Sender: TObject; const AItem: TStartupListItem;
@@ -681,10 +679,7 @@ procedure TMain.OnServiceCounterUpdate(Sender: TObject);
 begin
   // Refresh counter label
   if (not (csDestroying in ComponentState) and Assigned(FService)) then
-  begin
-    lwService.Columns[0].Caption := FLang.Format(LID_SERVICE_COUNTER,
-      [FService.EnabledItemsCount, FService.Count]);
-  end;  //of begin
+    lService.Caption := FLang.Format(LID_STARTUP_HEADLINE, [FService.EnabledItemsCount, FService.Count]);
 end;
 
 procedure TMain.OnServiceListNotify(Sender: TObject;
@@ -748,10 +743,7 @@ procedure TMain.OnTaskCounterUpdate(Sender: TObject);
 begin
   // Refresh counter label
   if (not (csDestroying in ComponentState) and Assigned(FTasks)) then
-  begin
-    lwTasks.Columns[0].Caption := FLang.Format(LID_TASKS_COUNTER,
-      [FTasks.EnabledItemsCount, FTasks.Count]);
-  end;  //of begin
+    lTasks.Caption := FLang.Format(LID_TASKS_HEADLINE, [FTasks.EnabledItemsCount, FTasks.Count]);
 end;
 
 procedure TMain.OnTaskListNotify(Sender: TObject; const AItem: TTaskListItem;
@@ -843,8 +835,6 @@ begin
     bCloseStartup.Caption := mmClose.Caption;
 
     // "Startup" tab TListView labels
-    lStartup.Caption := GetString(LID_STARTUP_HEADLINE);
-
     for i := 0 to lwStartup.Columns.Count - 1 do
       lwStartup.Columns[i].Caption := TClearasListColumn(lwStartup.Columns[i].Tag).ToString(FLang);
 
@@ -862,8 +852,6 @@ begin
     eContextSearch.TextHint := GetString(LID_SEARCH);
 
     // "Context menu" tab TListView labels
-    lContext.Caption := GetString(LID_CONTEXT_MENU_HEADLINE);
-
     for i := 0 to lwContext.Columns.Count - 1 do
       lwContext.Columns[i].Caption := TClearasListColumn(lwContext.Columns[i].Tag).ToString(FLang);
 
@@ -871,7 +859,6 @@ begin
 
     // "Service" tab TButton labels
     tsService.Caption := GetString(LID_SERVICES);
-    lService.Caption := lStartup.Caption;
     bEnableServiceItem.Caption := bEnableStartupItem.Caption;
     bDisableServiceItem.Caption := bDisableStartupItem.Caption;
     bExportServiceItem.Caption := bExportStartupItem.Caption;
@@ -888,7 +875,6 @@ begin
 
     // "Tasks" tab TButton labels
     tsTasks.Caption := GetString(LID_TASKS);
-    lTasks.Caption := GetString(LID_TASKS_HEADLINE);
     bEnableTaskItem.Caption := bEnableStartupItem.Caption;
     bDisableTaskitem.Caption := bDisableStartupItem.Caption;
     bExportTaskItem.Caption := bExportStartupItem.Caption;
