@@ -19,13 +19,13 @@ type
     cNewTestArgument = '-o';
     cNewTestFileName = cNewTestExe +' '+ cNewTestArgument;
   strict private
-    FLockingSuccessful: Boolean;
+    {FLockingSuccessful: Boolean;
     FErrorMessage: string;
     procedure TestLocking_SearchStart(Sender: TObject);
     procedure TestLocking_SearchError(Sender: TObject; const AErrorMessage: string);
     procedure TestLocking_TestDelete();
     procedure TestLocking_ExportStart(Sender: TObject);
-    procedure TestLocking_ExportFinished(Sender: TObject);
+    procedure TestLocking_ExportFinished(Sender: TObject); }
     procedure EnsureFileExportedAndDelete(const AFileName: string);
   protected
     FRootList: TRootList<TRootItem>;
@@ -47,7 +47,7 @@ type
     procedure TestChangeItemCommands; virtual;
     procedure TestExportBackup;
     procedure TestExportItems;
-    procedure TestLocking;
+    //procedure TestLocking;
   end;
 
   TStartupListTest = class(TRootListTest)
@@ -374,7 +374,7 @@ begin
   EnsureFileExportedAndDelete(SelectedItem.Name + SelectedItem.GetBackupExtension());
 end;
 
-procedure TRootListTest.TestLocking_SearchError(Sender: TObject;
+{procedure TRootListTest.TestLocking_SearchError(Sender: TObject;
   const AErrorMessage: string);
 begin
   FErrorMessage := AErrorMessage;
@@ -456,7 +456,7 @@ begin
   CheckSynchronize();
   CheckEqualsString('', FErrorMessage, FErrorMessage);
   Check(FLockingSuccessful, 'List was not locked during search');
-end;
+end;}
 
 procedure TRootListTest.TestRename(const AItemName: string);
 var
@@ -673,7 +673,7 @@ begin
     cShellExGUID, cTestExe);
   FTestItems.Append(cShellExCMItem);
   AddShellNewCMTestItem(cShellFileExt, cShellNewCMItem, cShellNewCMItem, cTestExe, cTestExe);
-  TContextMenuList(FRootList).LoadContextmenu(cShellFileExt, False);
+  TContextMenuList(FRootList).LoadContextmenu(cShellFileExt);
   CheckEquals(FTestItems.Count, FRootList.Count, 'Count of items differs from expected');
 
   // Erasable items do not have a corresponding file
@@ -684,7 +684,7 @@ begin
   FErasableTestItems.Append(cShellExCMItemErasable);
   AddShellExCMTestItem(cShellFileExtErasable, cShellExCMItemErasable, cShellExCMItemErasable,
     cShellExGUIDErasable, cTestExeErasable);
-  TContextMenuList(FRootList).LoadContextmenu(cShellFileExtErasable, False);
+  TContextMenuList(FRootList).LoadContextmenu(cShellFileExtErasable);
   CheckEquals(FErasableTestItems.Count, FRootList.ErasableItemsCount, 'Count of erasable items differs from expected');
 end;
 
@@ -987,7 +987,7 @@ begin
     FTestItems.Append(Name);
   end;
 
-  TContextMenuList(FRootList).LoadContextmenu(cShellNotErasableFileExt, False);
+  TContextMenuList(FRootList).LoadContextmenu(cShellNotErasableFileExt);
   CheckEquals(ErasableItemsCount, FRootList.ErasableItemsCount, 'Count of erasable items differs from expected');
 end;
 
