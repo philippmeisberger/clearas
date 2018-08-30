@@ -38,7 +38,7 @@ const
 
 type
   /// <summary>
-  ///   Contains product version information.
+  ///   Contains file version information.
   /// </summary>
   TFileVersion = record
 
@@ -83,6 +83,84 @@ type
     /// </param>
     function ToString(const AFormat: string = '%d.%d.%d.%d'): string;
   end;
+
+{$IFDEF MSWINDOWS}
+  /// <summary>
+  ///   Contains information stored in a .exe file.
+  /// </summary>
+  TExeFileInformation = record
+    /// <summary>
+    ///   The comments field.
+    /// </summary>
+    Comments: string;
+
+    /// <summary>
+    ///   The internal name.
+    /// </summary>
+    InternalName: string;
+
+    /// <summary>
+    ///   The product name.
+    /// </summary>
+    ProductName: string;
+
+    /// <summary>
+    ///   The company name.
+    /// </summary>
+    CompanyName: string;
+
+    /// <summary>
+    ///   Copyright owner.
+    /// </summary>
+    LegalCopyright: string;
+
+    /// <summary>
+    ///   The product version.
+    /// </summary>
+    ProductVersion: string;
+
+    /// <summary>
+    ///   The file description.
+    /// </summary>
+    FileDescription: string;
+
+    /// <summary>
+    ///   Trademark information.
+    /// </summary>
+    LegalTrademarks: string;
+
+    /// <summary>
+    ///   Private build identifier.
+    /// </summary>
+    PrivateBuild: string;
+
+    /// <summary>
+    ///   The file version.
+    /// </summary>
+    FileVersion: string;
+
+    /// <summary>
+    ///   The original filename.
+    /// </summary>
+    OriginalFilename: string;
+
+    /// <summary>
+    ///   Special build identifier.
+    /// </summary>
+    SpecialBuild: string;
+
+    /// <summary>
+    ///   Reads the <see cref="TExeFileInformation"/> from a .exe file.
+    /// </summary>
+    /// <param name="AFileName">
+    ///   The .exe file.
+    /// </param>
+    /// <returns>
+    ///   <c>True</c> if information could be read or <c>False</c> otherwise.
+    /// </returns>
+    function FromFile(const AFileName: string): Boolean;
+  end;
+{$ENDIF}
 
 /// <summary>
 ///   Opens a given URL.
@@ -381,6 +459,82 @@ begin
   end;  //of with
 
   Result := ShellExecuteEx(@ShellExecuteInfo);
+end;
+
+
+{ TExeFileInformation }
+
+function TExeFileInformation.FromFile(const AFileName: string): Boolean;
+var
+  FileInfo: TSHFileInfo;
+  VersionSize, VersionHandle: DWORD;
+  BufferSize: UINT;
+  VersionInfo: PChar;
+  Buffer: Pointer;
+  ExeFileInfo: string;
+
+begin
+  // File is .exe file
+  if (SHGetFileInfo(PChar(AFileName), 0, FileInfo, SizeOf(FileInfo), SHGFI_EXETYPE) = 0) then
+    Exit(False);
+
+  VersionSize := GetFileVersionInfoSize(PChar(AFileName), VersionHandle);
+
+  if (VersionSize = 0) then
+    Exit(False);
+
+  GetMem(VersionInfo, VersionSize);
+
+  try
+    if not GetFileVersionInfo(PChar(AFileName), VersionHandle, VersionSize, VersionInfo) then
+      Exit(False);
+
+    if not VerQueryValue(VersionInfo, '\VarFileInfo\Translation', Buffer, BufferSize) then
+      Exit(False);
+
+    ExeFileInfo := Format('\StringFileInfo\%.4x%.4x\', [LoWord(DWORD(Buffer^)), HiWord(DWORD(Buffer^))]);
+
+    if VerQueryValue(VersionInfo, PChar(ExeFileInfo +'Comments'), Buffer, BufferSize) then
+      Comments := PChar(Buffer);
+
+    if VerQueryValue(VersionInfo, PChar(ExeFileInfo +'InternalName'), Buffer, BufferSize) then
+      InternalName := PChar(Buffer);
+
+    if VerQueryValue(VersionInfo, PChar(ExeFileInfo +'ProductName'), Buffer, BufferSize) then
+      ProductName := PChar(Buffer);
+
+    if VerQueryValue(VersionInfo, PChar(ExeFileInfo +'CompanyName'), Buffer, BufferSize) then
+      CompanyName := PChar(Buffer);
+
+    if VerQueryValue(VersionInfo, PChar(ExeFileInfo +'LegalCopyright'), Buffer, BufferSize) then
+      LegalCopyright := PChar(Buffer);
+
+    if VerQueryValue(VersionInfo, PChar(ExeFileInfo +'ProductVersion'), Buffer, BufferSize) then
+      ProductVersion := PChar(Buffer);
+
+    if VerQueryValue(VersionInfo, PChar(ExeFileInfo +'FileDescription'), Buffer, BufferSize) then
+      FileDescription := PChar(Buffer);
+
+    if VerQueryValue(VersionInfo, PChar(ExeFileInfo +'LegalTrademarks'), Buffer, BufferSize) then
+      LegalTrademarks := PChar(Buffer);
+
+    if VerQueryValue(VersionInfo, PChar(ExeFileInfo +'PrivateBuild'), Buffer, BufferSize) then
+      PrivateBuild := PChar(Buffer);
+
+    if VerQueryValue(VersionInfo, PChar(ExeFileInfo +'FileVersion'), Buffer, BufferSize) then
+      FileVersion := PChar(Buffer);
+
+    if VerQueryValue(VersionInfo, PChar(ExeFileInfo +'OriginalFilename'), Buffer, BufferSize) then
+      OriginalFilename := PChar(Buffer);
+
+    if VerQueryValue(VersionInfo, PChar(ExeFileInfo +'SpecialBuild'), Buffer, BufferSize) then
+      SpecialBuild := PChar(Buffer);
+
+    Result := True;
+
+  finally
+    FreeMem(VersionInfo, VersionSize);
+  end;  //of try
 end;
 {$ENDIF}
 

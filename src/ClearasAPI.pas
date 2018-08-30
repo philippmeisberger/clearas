@@ -3054,38 +3054,11 @@ end;
 
 function TRootItem.GetFileDescription(const AFileName: TFileName): string;
 var
-  FileInfo: TSHFileInfo;
-  VersionSize, VersionHandle: DWORD;
-  BufferSize: UINT;
-  Buffer: PChar;
-  Description: Pointer;
+  ExeFileInformation: TExeFileInformation;
 
 begin
-  if (SHGetFileInfo(PChar(AFileName), 0, FileInfo, SizeOf(FileInfo), SHGFI_EXETYPE) = 0) then
-    Exit;
-
-  VersionSize := GetFileVersionInfoSize(PChar(AFileName), VersionHandle);
-
-  if (VersionSize > 0) then
-  begin
-    GetMem(Buffer, VersionSize);
-
-    try
-      if not GetFileVersionInfo(PChar(AFileName), VersionHandle, VersionSize, Buffer) then
-        Exit;
-
-      if not VerQueryValue(Buffer, '\VarFileInfo\Translation', Description, BufferSize) then
-        Exit;
-
-      if VerQueryValue(Buffer, PChar(Format('\StringFileInfo\%.4x%.4x\%s',
-        [LoWord(DWORD(Description^)), HiWord(DWORD(Description^)),
-        'FileDescription'])), Description, BufferSize) then
-        Result := PChar(Description);
-
-    finally
-      FreeMem(Buffer, VersionSize);
-    end;  //of try
-  end;  //of begin
+  if ExeFileInformation.FromFile(AFileName) then
+    Result := ExeFileInformation.FileDescription;
 end;
 
 procedure TRootItem.Execute();
