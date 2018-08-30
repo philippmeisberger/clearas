@@ -660,6 +660,15 @@ end;
 
 procedure TMain.OnStartupListNotify(Sender: TObject; const AItem: TStartupListItem;
   AAction: TCollectionNotification);
+
+  function GetStartupType(): string;
+  begin
+    if (AItem is TStartupUserItem) then
+      Result := FLang[LID_FILESYSTEM]
+    else
+      Result := FLang[LID_REGISTRY];
+  end;
+
 var
   Text: string;
   i: Integer;
@@ -685,6 +694,7 @@ begin
             ItemType:         SubItems.Append(AItem.ToString());
             Location:         SubItems.Append(AItem.LocationFull);
             DeactivationDate: SubItems.Append(AItem.DeactivationTime.ToString());
+            StartupType:      SubItems.Append(GetStartupType());
             Publisher:        SubItems.Append(GetPublisher(AItem));
             else              SubItems.Append('');
           end;  //of case

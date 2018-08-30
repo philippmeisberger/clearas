@@ -50,7 +50,7 @@ type
     Location = 6,
 
     /// <summary>
-    ///   Shows the item startup type (services only).
+    ///   Shows the item startup type.
     /// </summary>
     StartupType = 7,
 
@@ -183,7 +183,7 @@ begin
     Status:           Result := ALanguageFile[LID_ENABLED];
     DeactivationDate: Result := ALanguageFile[LID_DATE_OF_DEACTIVATION];
     Location:         Result := ALanguageFile[LID_LOCATION];
-    StartupType:      Result := ALanguageFile[LID_SERVICE_START];
+    StartupType:      Result := ALanguageFile[LID_STARTUP_TYPE];
     Publisher:        Result := ALanguageFile[LID_PUBLISHER];
     else              Result := '';
   end;  //of case

@@ -17,7 +17,7 @@ const
   LID_NAME                              = LID_LAST + 16;
   LID_SERVICE_ADD                       = LID_LAST + 17;
   LID_PUBLISHER                         = LID_LAST + 18;
-  LID_SERVICE_START                     = LID_LAST + 19;
+  LID_STARTUP_TYPE                      = LID_LAST + 19;
   LID_SERVICES                          = LID_LAST + 20;
   LID_AUTOMATICALLY                     = LID_LAST + 21;
   LID_MANUALLY                          = LID_LAST + 22;
@@ -28,6 +28,8 @@ const
   LID_HIDE                              = LID_LAST + 28;
   LID_STARTUP_ADD                       = LID_LAST + 29;
   LID_IMPORT                            = LID_LAST + 30;
+  LID_FILESYSTEM                        = LID_LAST + 31;
+  LID_REGISTRY                          = LID_LAST + 32;
   LID_QUIT                              = LID_LAST + 33;
   LID_EDIT                              = LID_LAST + 34;
   LID_DESCRIPTION_SHOW                  = LID_LAST + 36;
