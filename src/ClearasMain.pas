@@ -799,7 +799,7 @@ begin
             Command:   SubItems.Append(AItem.Command);
             Location:  SubItems.Append(AItem.Location);  // TODO: Use LocationFull constantly
             ItemType:  SubItems.Append(AItem.ToString());
-            Publisher: SubItems.Append(GetPublisher(AItem));
+            Publisher: SubItems.Append(AItem.Definition.RegistrationInfo.Author);
             else       SubItems.Append('');
           end;  //of case
         end;  //of for
