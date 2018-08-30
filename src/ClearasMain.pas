@@ -16,7 +16,7 @@ uses
   Vcl.ClipBrd, Registry, System.ImageList, Winapi.CommCtrl, System.UITypes,
   System.Generics.Collections, Winapi.ShellAPI, Vcl.ImgList, ClearasAPI,
   PMCW.Dialogs.About, PMCW.LanguageFile, PMCW.SysUtils, PMCW.CA, PMCW.Dialogs.Updater,
-  ClearasDialogs, Winapi.Messages, PMCW.Registry, Clearas.ListColumns;
+  ClearasDialogs, Winapi.Messages, PMCW.Registry, Clearas.ListColumns, Winapi.Taskschd;
 
 type
   { TMain }
@@ -775,6 +775,31 @@ end;
 
 procedure TMain.OnTaskListNotify(Sender: TObject; const AItem: TTaskListItem;
   AAction: TCollectionNotification);
+
+  function GetStartupType(): string;
+  begin
+    if (AItem.Definition.Triggers.Count = 0) then
+      Exit('');
+
+    if (AItem.Definition.Triggers.Count > 1) then
+      Exit('Multiple');
+
+    case AItem.Definition.Triggers[1].TriggerType of
+      TASK_TRIGGER_EVENT:                Result := 'Event';
+      TASK_TRIGGER_TIME:                 Result := 'Time';
+      TASK_TRIGGER_DAILY:                Result := 'Daily';
+      TASK_TRIGGER_WEEKLY:               Result := 'Weekly';
+      TASK_TRIGGER_MONTHLY:              Result := 'Monthly';
+      TASK_TRIGGER_MONTHLYDOW:           Result := 'Monthly DOW';
+      TASK_TRIGGER_IDLE:                 Result := 'Idle';
+      TASK_TRIGGER_REGISTRATION:         Result := 'Registration';
+      TASK_TRIGGER_BOOT:                 Result := 'Boot';
+      TASK_TRIGGER_LOGON:                Result := 'Logon';
+      TASK_TRIGGER_SESSION_STATE_CHANGE: Result := 'Session state change';
+      else                               Result := 'Custom';
+    end;  //of case
+  end;
+
 var
   Text: string;
   i: Integer;
@@ -794,13 +819,14 @@ begin
         for i := 0 to lwTasks.Columns.Count - 1 do
         begin
           case TClearasListColumn(lwTasks.Columns[i].Tag) of
-            ItemName:  Caption := Text;
-            Status:    SubItems.Append(FStatusText[AItem.Enabled]);
-            Command:   SubItems.Append(AItem.Command);
-            Location:  SubItems.Append(AItem.Location);  // TODO: Use LocationFull constantly
-            ItemType:  SubItems.Append(AItem.ToString());
-            Publisher: SubItems.Append(AItem.Definition.RegistrationInfo.Author);
-            else       SubItems.Append('');
+            ItemName:    Caption := Text;
+            Status:      SubItems.Append(FStatusText[AItem.Enabled]);
+            Command:     SubItems.Append(AItem.Command);
+            Location:    SubItems.Append(AItem.Location);  // TODO: Use LocationFull constantly
+            ItemType:    SubItems.Append(AItem.ToString());
+            StartupType: SubItems.Append(GetStartupType());
+            Publisher:   SubItems.Append(AItem.Definition.RegistrationInfo.Author);
+            else         SubItems.Append('');
           end;  //of case
         end;  //of for
       end; //of with
