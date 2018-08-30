@@ -16,6 +16,7 @@ const
   LID_RENAME                            = LID_LAST + 15;
   LID_NAME                              = LID_LAST + 16;
   LID_SERVICE_ADD                       = LID_LAST + 17;
+  LID_PUBLISHER                         = LID_LAST + 18;
   LID_SERVICE_START                     = LID_LAST + 19;
   LID_SERVICES                          = LID_LAST + 20;
   LID_AUTOMATICALLY                     = LID_LAST + 21;

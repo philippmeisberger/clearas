@@ -52,7 +52,12 @@ type
     /// <summary>
     ///   Shows the item startup type (services only).
     /// </summary>
-    StartupType = 7
+    StartupType = 7,
+
+    /// <summary>
+    ///   Shows the publisher.
+    /// </summary>
+    Publisher = 8
   );
 
   TClearasListColumnHelper = record helper for TClearasListColumn
@@ -179,6 +184,7 @@ begin
     DeactivationDate: Result := ALanguageFile[LID_DATE_OF_DEACTIVATION];
     Location:         Result := ALanguageFile[LID_LOCATION];
     StartupType:      Result := ALanguageFile[LID_SERVICE_START];
+    Publisher:        Result := ALanguageFile[LID_PUBLISHER];
     else              Result := '';
   end;  //of case
 end;

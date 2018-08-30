@@ -185,6 +185,7 @@ type
     function GetSelectedList(): TRootList<TRootItem>;
     function GetSelectedListView(): TListView;
     function GetItemText(AItem: TRootItem): string;
+    function GetPublisher(AItem: TRootItem): string;
     procedure Refresh(AIndex: Integer; ATotal: Boolean = True);
     procedure OnContextListNotify(Sender: TObject; const AItem: TContextMenuListItem;
       AAction: TCollectionNotification);
@@ -445,6 +446,17 @@ begin
     raise EInvalidItem.CreateFmt('No ListView at index %d!', [AIndex]);
 end;
 
+function TMain.GetPublisher(AItem: TRootItem): string;
+var
+  ExeInformation: TExeFileInformation;
+
+begin
+  if ExeInformation.FromFile(AItem.Command.Expand.ExtractFileName()) then
+    Result := ExeInformation.CompanyName
+  else
+    Result := '';
+end;
+
 { private TMain.GetSelectedItem
 
   Returns the current selected TRootItem. }
@@ -621,12 +633,13 @@ begin
         for i := 0 to lwContext.Columns.Count - 1 do
         begin
           case TClearasListColumn(lwContext.Columns[i].Tag) of
-            ItemName: Caption := Text;
-            Status:   SubItems.Append(FStatusText[AItem.Enabled]);
-            Command:  SubItems.Append(AItem.Command);
-            ItemType: SubItems.Append(AItem.ToString());
-            Location: SubItems.Append(AItem.LocationRoot);  // TODO: Use LocationFull constantly
-            else      SubItems.Append('');
+            ItemName:  Caption := Text;
+            Status:    SubItems.Append(FStatusText[AItem.Enabled]);
+            Command:   SubItems.Append(AItem.Command);
+            ItemType:  SubItems.Append(AItem.ToString());
+            Location:  SubItems.Append(AItem.LocationRoot);  // TODO: Use LocationFull constantly
+            Publisher: SubItems.Append(GetPublisher(AItem));
+            else       SubItems.Append('');
           end;  //of case
         end;  //of for
       end; //of with
@@ -672,6 +685,7 @@ begin
             ItemType:         SubItems.Append(AItem.ToString());
             Location:         SubItems.Append(AItem.LocationFull);
             DeactivationDate: SubItems.Append(AItem.DeactivationTime.ToString());
+            Publisher:        SubItems.Append(GetPublisher(AItem));
             else              SubItems.Append('');
           end;  //of case
         end;  //of for
@@ -729,6 +743,7 @@ begin
             Location:         SubItems.Append(AItem.LocationFull);
             StartupType:      SubItems.Append(GetServiceStartCaption(AItem.Start));
             DeactivationDate: SubItems.Append(AItem.DeactivationTime.ToString());
+            Publisher:        SubItems.Append(GetPublisher(AItem));
             else              SubItems.Append('');
           end;  //of case
         end;  //of for
@@ -769,12 +784,13 @@ begin
         for i := 0 to lwTasks.Columns.Count - 1 do
         begin
           case TClearasListColumn(lwTasks.Columns[i].Tag) of
-            ItemName: Caption := Text;
-            Status:   SubItems.Append(FStatusText[AItem.Enabled]);
-            Command:  SubItems.Append(AItem.Command);
-            Location: SubItems.Append(AItem.Location);  // TODO: Use LocationFull constantly
-            ItemType: SubItems.Append(AItem.ToString());
-            else      SubItems.Append('');
+            ItemName:  Caption := Text;
+            Status:    SubItems.Append(FStatusText[AItem.Enabled]);
+            Command:   SubItems.Append(AItem.Command);
+            Location:  SubItems.Append(AItem.Location);  // TODO: Use LocationFull constantly
+            ItemType:  SubItems.Append(AItem.ToString());
+            Publisher: SubItems.Append(GetPublisher(AItem));
+            else       SubItems.Append('');
           end;  //of case
         end;  //of for
       end; //of with
