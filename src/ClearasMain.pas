@@ -887,7 +887,7 @@ begin
     pmCopyLocation.Caption := GetString(LID_LOCATION_COPY);
     pmChangeIcon.Caption := GetString(LID_CONTEXT_MENU_ICON_CHANGE);
     pmDeleteIcon.Caption := GetString(LID_CONTEXT_MENU_ICON_DELETE);
-    pmExtended.Caption := GetString(LID_EXTEND);
+    pmExtended.Caption := GetString(LID_HIDE);
     pmProperties.Caption := GetString(LID_PROPERTIES);
   end;  //of with
 

@@ -2,7 +2,7 @@ const
   LID_ITEM_ALREADY_EXISTS               = LID_LAST + 1;
   LID_DELETE_ERASABLE                   = LID_LAST + 2;
   LID_DELETE_ERASABLE_NO_ITEMS          = LID_LAST + 3;
-  LID_EXTEND                            = LID_LAST + 4;
+  LID_HIDE                              = LID_LAST + 4;
   LID_FILE_DOES_NOT_EXIST               = LID_LAST + 5;
   LID_ITEM_ERASABLE                     = LID_LAST + 6;
   LID_DELETE_ERASABLE_SUCCESS           = LID_LAST + 7;
@@ -24,7 +24,6 @@ const
   LID_INCOMPATIBLE_OS                   = LID_LAST + 24;
   LID_EXECUTE                           = LID_LAST + 25;
   LID_OPEN_IN_REGEDIT                   = LID_LAST + 26;
-  LID_HIDE                              = LID_LAST + 28;
   LID_STARTUP_ADD                       = LID_LAST + 29;
   LID_IMPORT                            = LID_LAST + 30;
   LID_QUIT                              = LID_LAST + 33;
