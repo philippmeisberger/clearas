@@ -16,12 +16,12 @@ uses
   Vcl.ClipBrd, Registry, System.ImageList, Winapi.CommCtrl, System.UITypes,
   System.Generics.Collections, Winapi.ShellAPI, Vcl.ImgList, ClearasAPI,
   PMCW.Dialogs.About, PMCW.LanguageFile, PMCW.SysUtils, PMCW.CA, PMCW.Dialogs.Updater,
-  ClearasDialogs, Winapi.Messages, PMCW.Registry;
+  ClearasDialogs, Winapi.Messages, PMCW.Registry, Clearas.ListColumns, Winapi.Taskschd;
 
 type
   { TMain }
   TMain = class(TForm, IChangeLanguageListener)
-    PopupMenu: TPopupMenu;
+    ContextMenu: TPopupMenu;
     pmChangeStatus: TMenuItem;
     N1: TMenuItem;
     pmExport: TMenuItem;
@@ -40,7 +40,6 @@ type
     mmClose: TMenuItem;
     mmAdd: TMenuItem;
     N4: TMenuItem;
-    mmDate: TMenuItem;
     mmImport: TMenuItem;
     N7: TMenuItem;
     N6: TMenuItem;
@@ -134,11 +133,9 @@ type
     procedure ListViewCustomDrawItem(Sender: TCustomListView; Item: TListItem;
       State: TCustomDrawState; var DefaultDraw: Boolean);
     procedure lwStartupDblClick(Sender: TObject);
-    procedure ListViewKeyPress(Sender: TObject; var Key: Char);
     procedure lwStartupSelectItem(Sender: TObject; Item: TListItem;
       Selected: Boolean);
     procedure mmAddClick(Sender: TObject);
-    procedure mmDateClick(Sender: TObject);
     procedure mmExportClick(Sender: TObject);
     procedure mmImportClick(Sender: TObject);
     procedure mmRefreshClick(Sender: TObject);
@@ -164,11 +161,13 @@ type
     procedure pmDeleteIconClick(Sender: TObject);
     procedure mmShowCaptionsClick(Sender: TObject);
     procedure mmDeleteErasableClick(Sender: TObject);
-    procedure PopupMenuPopup(Sender: TObject);
+    procedure ContextMenuPopup(Sender: TObject);
     procedure pmExecuteClick(Sender: TObject);
     procedure pmPropertiesClick(Sender: TObject);
     procedure pmExtendedClick(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
+    procedure ListViewColumnRightClick(Sender: TObject; Column: TListColumn;
+      Point: TPoint);
   private
     FStartup: TStartupList;
     FContext: TContextMenuList;
@@ -177,12 +176,15 @@ type
     FLang: TLanguageFile;
     FUpdateCheck: TUpdateCheck;
     FStatusText: array[Boolean] of string;
+    FColumnPopupMenu: TListViewColumnSelectionMenu;
+    procedure ColumnChanged(Sender: TObject);
     function GetListForIndex(AIndex: Integer): TRootList<TRootItem>;
     function GetListViewForIndex(AIndex: Integer): TListView;
     function GetSelectedItem(): TRootItem;
     function GetSelectedList(): TRootList<TRootItem>;
     function GetSelectedListView(): TListView;
     function GetItemText(AItem: TRootItem): string;
+    function GetPublisher(AItem: TRootItem): string;
     procedure Refresh(AIndex: Integer; ATotal: Boolean = True);
     procedure OnContextListNotify(Sender: TObject; const AItem: TContextMenuListItem;
       AAction: TCollectionNotification);
@@ -199,7 +201,6 @@ type
     procedure SortList(AListView: TListView);
     function ShowExportItemDialog(AItem: TRootItem): Boolean;
     procedure ShowOperationPendingUI(AIndex: Integer; AShow: Boolean);
-    procedure ShowColumnDate(AListView: TListView; AShow: Boolean = True);
     procedure OnUpdate(Sender: TObject; const ANewBuild: Cardinal);
     procedure OnException(Sender: TObject; E: Exception);
     procedure WMTimer(var Message: TWMTimer); message WM_TIMER;
@@ -215,9 +216,21 @@ implementation
 {$I LanguageIDs.inc}
 {$R *.dfm}
 
-const
-  SORT_ASCENDING  = 0;
-  SORT_DESCENDING = 1;
+type
+  TDateTimeHelper = record helper for TDateTime
+    function ToString(): string; inline;
+  end;
+
+{ TDateTimeHelper }
+
+function TDateTimeHelper.ToString(): string;
+begin
+  if (Self <> 0) then
+    Result := DateTimeToStr(Self)
+  else
+    Result := '';
+end;
+
 
 { TMain }
 
@@ -432,6 +445,17 @@ begin
     raise EInvalidItem.CreateFmt('No ListView at index %d!', [AIndex]);
 end;
 
+function TMain.GetPublisher(AItem: TRootItem): string;
+var
+  ExeInformation: TExeFileInformation;
+
+begin
+  if ExeInformation.FromFile(AItem.Command.Expand.ExtractFileName()) then
+    Result := ExeInformation.CompanyName
+  else
+    Result := '';
+end;
+
 { private TMain.GetSelectedItem
 
   Returns the current selected TRootItem. }
@@ -446,7 +470,7 @@ begin
   if not Assigned(SelectedListView.ItemFocused) then
     raise EInvalidItem.Create(SNoItemSelected);
 
-  Result := TRootItem(SelectedListView.ItemFocused.SubItems.Objects[0]);
+  Result := TRootItem(SelectedListView.ItemFocused.Data);
 
   if not Assigned(Result) then
     raise EInvalidItem.Create('No object attached!');
@@ -541,7 +565,8 @@ begin
               TThread.Synchronize(nil,
                 procedure
                 begin
-                  FLang.ShowException(FLang.GetString([LID_REFRESH, LID_IMPOSSIBLE]), Format('%s: %s', [RootList.ClassName, E.Message]));
+                  FLang.ShowException(FLang.GetString([LID_REFRESH, LID_IMPOSSIBLE]),
+                    Format('%s: %s', [RootList.ClassName, E.Message]));
                 end);
           end;  //of try
         end).Start();
@@ -552,6 +577,10 @@ begin
 
       for i := 0 to RootList.Count - 1 do
         RootList.OnNotify(Self, RootList[i], cnAdded);
+
+      // Refresh counter label
+      if Assigned(RootList.OnCounterUpdate) then
+        RootList.OnCounterUpdate(Self);
 
       // Resort items
       SortList(ListView);
@@ -577,16 +606,14 @@ procedure TMain.OnContextCounterUpdate(Sender: TObject);
 begin
   // Refresh counter label
   if (not (csDestroying in ComponentState) and Assigned(FContext)) then
-  begin
-    lwContext.Columns[1].Caption := FLang.Format(LID_CONTEXT_MENU_COUNTER,
-      [FContext.EnabledItemsCount, FContext.Count]);
-  end;  //of begin
+    lContext.Caption := FLang.Format(LID_CONTEXT_MENU_HEADLINE, [FContext.EnabledItemsCount, FContext.Count]);
 end;
 
 procedure TMain.OnContextListNotify(Sender: TObject; const AItem: TContextMenuListItem;
   AAction: TCollectionNotification);
 var
   Text: string;
+  i: Integer;
 
 begin
   if (AAction = cnAdded) then
@@ -600,10 +627,20 @@ begin
     begin
       with lwContext.Items.Add do
       begin
-        Caption := FStatusText[AItem.Enabled];
-        SubItems.AddObject(Text, AItem);
-        SubItems.Append(AItem.LocationRoot);
-        SubItems.Append(AItem.ToString());
+        Data := AItem;
+
+        for i := 0 to lwContext.Columns.Count - 1 do
+        begin
+          case TClearasListColumn(lwContext.Columns[i].Tag) of
+            ItemName:  Caption := Text;
+            Status:    SubItems.Append(FStatusText[AItem.Enabled]);
+            Command:   SubItems.Append(AItem.Command);
+            ItemType:  SubItems.Append(AItem.ToString());
+            Location:  SubItems.Append(AItem.LocationRoot);  // TODO: Use LocationFull constantly
+            Publisher: SubItems.Append(GetPublisher(AItem));
+            else       SubItems.Append('');
+          end;  //of case
+        end;  //of for
       end; //of with
     end;  //of begin
   end;  //of begin
@@ -617,16 +654,23 @@ procedure TMain.OnStartupCounterUpdate(Sender: TObject);
 begin
   // Refresh counter label
   if (not (csDestroying in ComponentState) and Assigned(FStartup)) then
-  begin
-    lwStartup.Columns[1].Caption := FLang.Format(LID_PROGRAM_COUNTER,
-      [FStartup.EnabledItemsCount, FStartup.Count]);
-  end;  //of begin
+    lStartup.Caption := FLang.Format(LID_STARTUP_HEADLINE, [FStartup.EnabledItemsCount, FStartup.Count]);
 end;
 
 procedure TMain.OnStartupListNotify(Sender: TObject; const AItem: TStartupListItem;
   AAction: TCollectionNotification);
+
+  function GetStartupType(): string;
+  begin
+    if (AItem is TStartupUserItem) then
+      Result := FLang[LID_FILESYSTEM]
+    else
+      Result := FLang[LID_REGISTRY];
+  end;
+
 var
   Text: string;
+  i: Integer;
 
 begin
   if (AAction = cnAdded) then
@@ -637,20 +681,23 @@ begin
     begin
       with lwStartup.Items.Add do
       begin
-        Caption := FStatusText[AItem.Enabled];
+        Data := AItem;
         ImageIndex := AItem.ImageIndex;
-        SubItems.AddObject(Text, AItem);
-        SubItems.Append(AItem.Command);
-        SubItems.Append(AItem.ToString());
 
-        // Show deactivation timestamp?
-        if mmDate.Checked then
+        for i := 0 to lwStartup.Columns.Count - 1 do
         begin
-          if (AItem.DeactivationTime <> 0) then
-            SubItems.Append(DateTimeToStr(AItem.DeactivationTime))
-          else
-            SubItems.Append('');
-        end;  //of begin
+          case TClearasListColumn(lwStartup.Columns[i].Tag) of
+            ItemName:         Caption := Text;
+            Status:           SubItems.Append(FStatusText[AItem.Enabled]);
+            Command:          SubItems.Append(AItem.Command);
+            ItemType:         SubItems.Append(AItem.ToString());
+            Location:         SubItems.Append(AItem.LocationFull);
+            DeactivationDate: SubItems.Append(AItem.DeactivationTime.ToString());
+            StartupType:      SubItems.Append(GetStartupType());
+            Publisher:        SubItems.Append(GetPublisher(AItem));
+            else              SubItems.Append('');
+          end;  //of case
+        end;  //of for
       end;  //of with
     end;  //of begin
   end;  //of begin
@@ -664,10 +711,7 @@ procedure TMain.OnServiceCounterUpdate(Sender: TObject);
 begin
   // Refresh counter label
   if (not (csDestroying in ComponentState) and Assigned(FService)) then
-  begin
-    lwService.Columns[1].Caption := FLang.Format(LID_SERVICE_COUNTER,
-      [FService.EnabledItemsCount, FService.Count]);
-  end;  //of begin
+    lService.Caption := FLang.Format(LID_STARTUP_HEADLINE, [FService.EnabledItemsCount, FService.Count]);
 end;
 
 procedure TMain.OnServiceListNotify(Sender: TObject;
@@ -684,6 +728,7 @@ procedure TMain.OnServiceListNotify(Sender: TObject;
 
 var
   Text: string;
+  i: Integer;
 
 begin
   if (AAction = cnAdded) then
@@ -695,19 +740,22 @@ begin
     begin
       with lwService.Items.Add do
       begin
-        Caption := FStatusText[AItem.Enabled];
-        SubItems.AddObject(Text, AItem);
-        SubItems.Append(AItem.Command);
-        SubItems.Append(GetServiceStartCaption(AItem.Start));
+        Data := AItem;
 
-        // Show deactivation timestamp?
-        if mmDate.Checked then
+        for i := 0 to lwService.Columns.Count - 1 do
         begin
-          if (AItem.DeactivationTime <> 0) then
-            SubItems.Append(DateTimeToStr(AItem.DeactivationTime))
-          else
-            SubItems.Append('');
-        end;  //of begin
+          case TClearasListColumn(lwService.Columns[i].Tag) of
+            ItemName:         Caption := Text;
+            Status:           SubItems.Append(FStatusText[AItem.Enabled]);
+            Command:          SubItems.Append(AItem.Command);
+            ItemType:         SubItems.Append(AItem.ToString());
+            Location:         SubItems.Append(AItem.LocationFull);
+            StartupType:      SubItems.Append(GetServiceStartCaption(AItem.Start));
+            DeactivationDate: SubItems.Append(AItem.DeactivationTime.ToString());
+            Publisher:        SubItems.Append(GetPublisher(AItem));
+            else              SubItems.Append('');
+          end;  //of case
+        end;  //of for
       end;  //of with
     end;  //of begin
   end;  //of begin
@@ -721,16 +769,39 @@ procedure TMain.OnTaskCounterUpdate(Sender: TObject);
 begin
   // Refresh counter label
   if (not (csDestroying in ComponentState) and Assigned(FTasks)) then
-  begin
-    lwTasks.Columns[1].Caption := FLang.Format(LID_TASKS_COUNTER, [FTasks.EnabledItemsCount,
-      FTasks.Count]);
-  end;  //of begin
+    lTasks.Caption := FLang.Format(LID_TASKS_HEADLINE, [FTasks.EnabledItemsCount, FTasks.Count]);
 end;
 
 procedure TMain.OnTaskListNotify(Sender: TObject; const AItem: TTaskListItem;
   AAction: TCollectionNotification);
+
+  function GetStartupType(): string;
+  begin
+    if (AItem.Definition.Triggers.Count = 0) then
+      Exit('');
+
+    if (AItem.Definition.Triggers.Count > 1) then
+      Exit('Multiple');
+
+    case AItem.Definition.Triggers[1].TriggerType of
+      TASK_TRIGGER_EVENT:                Result := 'Event';
+      TASK_TRIGGER_TIME:                 Result := 'Time';
+      TASK_TRIGGER_DAILY:                Result := 'Daily';
+      TASK_TRIGGER_WEEKLY:               Result := 'Weekly';
+      TASK_TRIGGER_MONTHLY:              Result := 'Monthly';
+      TASK_TRIGGER_MONTHLYDOW:           Result := 'Monthly DOW';
+      TASK_TRIGGER_IDLE:                 Result := 'Idle';
+      TASK_TRIGGER_REGISTRATION:         Result := 'Registration';
+      TASK_TRIGGER_BOOT:                 Result := 'Boot';
+      TASK_TRIGGER_LOGON:                Result := 'Logon';
+      TASK_TRIGGER_SESSION_STATE_CHANGE: Result := 'Session state change';
+      else                               Result := 'Custom';
+    end;  //of case
+  end;
+
 var
   Text: string;
+  i: Integer;
 
 begin
   if (AAction = cnAdded) then
@@ -742,10 +813,21 @@ begin
     begin
       with lwTasks.Items.Add do
       begin
-        Caption := FStatusText[AItem.Enabled];
-        SubItems.AddObject(Text, AItem);
-        SubItems.Append(AItem.Command);
-        SubItems.Append(AItem.Location);
+        Data := AItem;
+
+        for i := 0 to lwTasks.Columns.Count - 1 do
+        begin
+          case TClearasListColumn(lwTasks.Columns[i].Tag) of
+            ItemName:    Caption := Text;
+            Status:      SubItems.Append(FStatusText[AItem.Enabled]);
+            Command:     SubItems.Append(AItem.Command);
+            Location:    SubItems.Append(AItem.Location);  // TODO: Use LocationFull constantly
+            ItemType:    SubItems.Append(AItem.ToString());
+            StartupType: SubItems.Append(GetStartupType());
+            Publisher:   SubItems.Append(AItem.Definition.RegistrationInfo.Author);
+            else         SubItems.Append('');
+          end;  //of case
+        end;  //of for
       end; //of with
     end;  //of begin
   end;  //of begin
@@ -787,7 +869,6 @@ begin
     mmView.Caption := GetString(LID_VIEW);
     mmRefresh.Caption := GetString(LID_REFRESH);
     mmShowCaptions.Caption := GetString(LID_DESCRIPTION_SHOW);
-    mmDate.Caption := GetString(LID_DATE_OF_DEACTIVATION);
     cbRunOnce.Caption := GetString(LID_STARTUP_RUNONCE);
     mmLang.Caption := GetString(LID_SELECT_LANGUAGE);
 
@@ -807,14 +888,8 @@ begin
     bCloseStartup.Caption := mmClose.Caption;
 
     // "Startup" tab TListView labels
-    lStartup.Caption := GetString(LID_STARTUP_HEADLINE);
-    lwStartup.Columns[0].Caption := GetString(LID_ENABLED);
-    lwStartup.Columns[2].Caption := StripHotkey(mmFile.Caption);
-    lwStartup.Columns[3].Caption := GetString(LID_KEY);
-
-    // Date column visible?
-    if (lwStartup.Columns.Count > 4) then
-      lwStartup.Columns[4].Caption := GetString(LID_DATE_OF_DEACTIVATION);
+    for i := 0 to lwStartup.Columns.Count - 1 do
+      lwStartup.Columns[i].Caption := TClearasListColumn(lwStartup.Columns[i].Tag).ToString(FLang);
 
     lCopy1.Hint := GetString(LID_TO_WEBSITE);
     eStartupSearch.TextHint := GetString(LID_SEARCH);
@@ -830,15 +905,13 @@ begin
     eContextSearch.TextHint := GetString(LID_SEARCH);
 
     // "Context menu" tab TListView labels
-    lContext.Caption := GetString(LID_CONTEXT_MENU_HEADLINE);
-    lwContext.Columns[0].Caption := lwStartup.Columns[0].Caption;
-    lwContext.Columns[2].Caption := GetString(LID_LOCATION);
-    lwContext.Columns[3].Caption := lwStartup.Columns[3].Caption;
+    for i := 0 to lwContext.Columns.Count - 1 do
+      lwContext.Columns[i].Caption := TClearasListColumn(lwContext.Columns[i].Tag).ToString(FLang);
+
     lCopy2.Hint := lCopy1.Hint;
 
     // "Service" tab TButton labels
     tsService.Caption := GetString(LID_SERVICES);
-    lService.Caption := lStartup.Caption;
     bEnableServiceItem.Caption := bEnableStartupItem.Caption;
     bDisableServiceItem.Caption := bDisableStartupItem.Caption;
     bExportServiceItem.Caption := bExportStartupItem.Caption;
@@ -847,20 +920,14 @@ begin
     cbServiceExpert.Caption := cbContextExpert.Caption;
 
     // "Service" tab TListView labels
-    lwService.Columns[0].Caption := lwStartup.Columns[0].Caption;
-    lwService.Columns[2].Caption := lwStartup.Columns[2].Caption;
-    lwService.Columns[3].Caption := GetString(LID_SERVICE_START);
-
-    // Date column visible?
-    if (lwService.Columns.Count > 4) then
-      lwService.Columns[4].Caption := GetString(LID_DATE_OF_DEACTIVATION);
+    for i := 0 to lwService.Columns.Count - 1 do
+      lwService.Columns[i].Caption := TClearasListColumn(lwService.Columns[i].Tag).ToString(FLang);
 
     lCopy3.Hint := lCopy1.Hint;
     eServiceSearch.TextHint := eContextSearch.TextHint;
 
     // "Tasks" tab TButton labels
     tsTasks.Caption := GetString(LID_TASKS);
-    lTasks.Caption := GetString(LID_TASKS_HEADLINE);
     bEnableTaskItem.Caption := bEnableStartupItem.Caption;
     bDisableTaskitem.Caption := bDisableStartupItem.Caption;
     bExportTaskItem.Caption := bExportStartupItem.Caption;
@@ -869,9 +936,9 @@ begin
     cbTaskExpert.Caption := cbContextExpert.Caption;
 
     // "Tasks" tab TListView labels
-    lwTasks.Columns[0].Caption := lwStartup.Columns[0].Caption;
-    lwTasks.Columns[2].Caption := lwStartup.Columns[2].Caption;
-    lwTasks.Columns[3].Caption := lwContext.Columns[2].Caption;
+    for i := 0 to lwTasks.Columns.Count - 1 do
+      lwTasks.Columns[i].Caption := TClearasListColumn(lwTasks.Columns[i].Tag).ToString(FLang);
+
     lCopy4.Hint := lCopy1.Hint;
     eTaskSearch.TextHint := eContextSearch.TextHint;
 
@@ -897,28 +964,6 @@ begin
     for i := 0 to PageControl.PageCount - 1 do
       Refresh(i, False);
   end;  //of begin
-end;
-
-{ private TMain.ShowColumnDate
-
-  Adds or removes the date of deactivation column. }
-
-procedure TMain.ShowColumnDate(AListView: TListView; AShow: Boolean = True);
-begin
-  // Timestamp already shown?
-  if not AShow then
-  begin
-    if (AListView.Columns.Count = 5) then
-      AListView.Columns.Delete(4);
-  end  //of begin
-  else
-    if (AListView.Columns.Count = 4) then
-      with AListView.Columns.Add do
-      begin
-        Caption := FLang.GetString(LID_DATE_OF_DEACTIVATION);
-        Width := 120;
-        Refresh(PageControl.ActivePageIndex, False);
-      end;  //of with
 end;
 
 { private TMain.ShowExportItemDialog
@@ -1011,7 +1056,7 @@ begin
     Exit;
 
   // TODO: Sort icon is lost
-  if (AListView.Tag >= 0) then
+  if (AListView.Tag <> 0) then
     AListView.AlphaSort();
 
   if Assigned(AListView.ItemFocused) then
@@ -1062,7 +1107,7 @@ begin
     // to an AV if erasable items are not consecutive: Start at the end to avoid this
     for i := SelectedListView.Items.Count - 1 downto 0 do
     begin
-      SelectedItem := TRootItem(SelectedListView.Items[i].SubItems.Objects[0]);
+      SelectedItem := TRootItem(SelectedListView.Items[i].Data);
 
       if not SelectedItem.Erasable then
         Continue;
@@ -1074,7 +1119,7 @@ begin
 
       // Confirm deletion of every erasable item
       Answer := TaskMessageDlg(FLang.Format([LID_ITEM_DELETE],
-        [SelectedListView.Items[i].SubItems[0]]), FLang.GetString([LID_FILE_DOES_NOT_EXIST,
+        [SelectedListView.Items[i].Caption]), FLang.GetString([LID_FILE_DOES_NOT_EXIST,
         LID_ITEM_ERASABLE]), mtWarning, mbYesNoCancel, 0);
 
       case Answer of
@@ -1147,7 +1192,7 @@ begin
     SelectedItem := GetSelectedItem();
 
     // Confirm deletion of item
-    if (TaskMessageDlg(FLang.Format([LID_ITEM_DELETE], [SelectedListView.ItemFocused.SubItems[0]]),
+    if (TaskMessageDlg(FLang.Format([LID_ITEM_DELETE], [SelectedListView.ItemFocused.Caption]),
       FLang.GetString([LID_ITEM_DELETE_CONFIRM1, LID_ITEM_DELETE_CONFIRM2]),
       mtWarning, mbYesNo, 0, mbNo) = idYes) then
     begin
@@ -1210,9 +1255,9 @@ begin
           bDisableStartupItem.Enabled := False;
           pmChangeStatus.Caption := bEnableStartupItem.Caption;
 
-          // Append deactivation timestamp if necassary
-          if (mmDate.Enabled and mmDate.Checked and ((SelectedItem as TStartupListItem).DeactivationTime <> 0)) then
-            lwStartup.ItemFocused.SubItems[3] := DateTimeToStr((SelectedItem as TStartupListItem).DeactivationTime);
+          // Append deactivation timestamp if necessary
+          TClearasListColumn.DeactivationDate.UpdateContent(SelectedListView,
+            SelectedListView.ItemFocused, (SelectedItem as TStartupListItem).DeactivationTime.ToString());
         end;
 
       1:
@@ -1228,9 +1273,9 @@ begin
           bDisableServiceItem.Enabled := False;
           pmChangeStatus.Caption := bEnableServiceItem.Caption;
 
-          // Append deactivation timestamp if necassary
-          if (mmDate.Enabled and mmDate.Checked and ((SelectedItem as TServiceListItem).DeactivationTime <> 0)) then
-            lwService.ItemFocused.SubItems[3] := DateTimeToStr((SelectedItem as TServiceListItem).DeactivationTime);
+          // Append deactivation timestamp if necessary
+          TClearasListColumn.DeactivationDate.UpdateContent(SelectedListView,
+            SelectedListView.ItemFocused, (SelectedItem as TServiceListItem).DeactivationTime.ToString());
         end;
 
       3:
@@ -1242,7 +1287,7 @@ begin
     end;  //of case
 
     // Change item visual status
-    SelectedListView.ItemFocused.Caption := FStatusText[SelectedItem.Enabled];
+    TClearasListColumn.Status.UpdateContent(SelectedListView, SelectedListView.ItemFocused, FStatusText[SelectedItem.Enabled]);
 
     // Item is erasable?
     if SelectedItem.Erasable then
@@ -1293,9 +1338,9 @@ begin
           bDisableStartupItem.Enabled := True;
           pmChangeStatus.Caption := bDisableStartupItem.Caption;
 
-          // Delete deactivation timestamp if necassary
-          if (mmDate.Enabled and mmDate.Checked) then
-            lwStartup.ItemFocused.SubItems[3] := '';
+          // Delete deactivation timestamp if necessary
+          TClearasListColumn.DeactivationDate.UpdateContent(SelectedListView,
+            SelectedListView.ItemFocused, '');
         end;
 
       1:
@@ -1311,9 +1356,9 @@ begin
           bDisableServiceItem.Enabled := True;
           pmChangeStatus.Caption := bDisableServiceItem.Caption;
 
-          // Delete deactivation timestamp if necassary
-          if (mmDate.Enabled and mmDate.Checked) then
-            lwService.ItemFocused.SubItems[3] := '';
+          // Delete deactivation timestamp if necessary
+          TClearasListColumn.DeactivationDate.UpdateContent(SelectedListView,
+            SelectedListView.ItemFocused, '');
         end;
 
       3:
@@ -1325,7 +1370,7 @@ begin
     end;  //of case
 
     // Change item visual status
-    SelectedListView.ItemFocused.Caption := FStatusText[SelectedItem.Enabled];
+    TClearasListColumn.Status.UpdateContent(SelectedListView, SelectedListView.ItemFocused, FStatusText[SelectedItem.Enabled]);
 
     // Item is erasable?
     if SelectedItem.Erasable then
@@ -1410,7 +1455,7 @@ procedure TMain.ListViewCustomDrawItem(Sender: TCustomListView;
   Item: TListItem; State: TCustomDrawState; var DefaultDraw: Boolean);
 begin
   // Mark erasable items
-  if TRootItem(Item.SubItems.Objects[0]).Erasable then
+  if TRootItem(Item.Data).Erasable then
     Sender.Canvas.Font.Color := clGray
   else
     Sender.Canvas.Font.Color := clBlack;
@@ -1440,13 +1485,13 @@ begin
   if (Selected and Assigned(Item)) then
   begin
     // Change button states
-    bEnableContextItem.Enabled := not TRootItem(Item.SubItems.Objects[0]).Enabled;
+    bEnableContextItem.Enabled := not TRootItem(Item.Data).Enabled;
     bDisableContextItem.Enabled := not bEnableContextItem.Enabled;
     bDeleteContextItem.Enabled := True;
     bExportContextItem.Enabled := True;
 
     // Allow popup menu
-    PopupMenu.AutoPopup := True;
+    ContextMenu.AutoPopup := True;
   end  //of begin
   else
   begin
@@ -1458,7 +1503,7 @@ begin
     bExportContextItem.Enabled := False;
 
     // Disallow popup menu
-    PopupMenu.AutoPopup := False;
+    ContextMenu.AutoPopup := False;
   end;
 end;
 
@@ -1486,13 +1531,13 @@ begin
   if (Selected and Assigned(Item)) then
   begin
     // Change button states
-    bEnableServiceItem.Enabled := not TRootItem(Item.SubItems.Objects[0]).Enabled;
+    bEnableServiceItem.Enabled := not TRootItem(Item.Data).Enabled;
     bDisableServiceItem.Enabled := not bEnableServiceItem.Enabled;
     bDeleteServiceItem.Enabled := True;
     bExportServiceItem.Enabled := True;
 
     // Allow popup menu
-    PopupMenu.AutoPopup := True;
+    ContextMenu.AutoPopup := True;
   end  //of begin
   else
   begin
@@ -1504,7 +1549,7 @@ begin
     bExportServiceItem.Enabled := False;
 
     // Disallow popup menu
-    PopupMenu.AutoPopup := False;
+    ContextMenu.AutoPopup := False;
   end;  //of if
 end;
 
@@ -1532,13 +1577,13 @@ begin
   if (Selected and Assigned(Item)) then
   begin
     // Change button states
-    bEnableTaskItem.Enabled := not TRootItem(Item.SubItems.Objects[0]).Enabled;
+    bEnableTaskItem.Enabled := not TRootItem(Item.Data).Enabled;
     bDisableTaskitem.Enabled := not bEnableTaskItem.Enabled;
     bDeleteTaskItem.Enabled := True;
     bExportTaskItem.Enabled := True;
 
     // Allow popup menu
-    PopupMenu.AutoPopup := True;
+    ContextMenu.AutoPopup := True;
   end  //of begin
   else
   begin
@@ -1550,7 +1595,7 @@ begin
     bExportTaskItem.Enabled := False;
 
     // Disallow popup menu
-    PopupMenu.AutoPopup := False;
+    ContextMenu.AutoPopup := False;
   end;  //of if
 end;
 
@@ -1571,40 +1616,33 @@ begin
   ZeroMemory(@Item, SizeOf(Item));
   Item.Mask := HDI_FORMAT;
 
-  // Remove the sort ascending flags from columns
   for i := 0 to List.Columns.Count - 1 do
   begin
-    // Skip current column!
-    if (i = Column.Index) then
-      Continue;
-
-    Item.Mask := HDI_FORMAT;
     Header_GetItem(Header, i, Item);
-    Item.fmt := Item.fmt and not (HDF_SORTUP or HDF_SORTDOWN);
+
+    // Sort current column
+    if (i = Column.Index) then
+    begin
+      // Descending
+      if (Item.fmt and HDF_SORTUP <> 0) then
+      begin
+        Item.fmt := Item.fmt and not HDF_SORTUP or HDF_SORTDOWN;
+        List.Tag := -Column.Tag;
+      end  //of begin
+      else
+      begin
+        Item.fmt := Item.fmt and not HDF_SORTDOWN or HDF_SORTUP;
+        List.Tag := Column.Tag;
+      end;  //of if
+    end  //of begin
+    else
+      // Remove the sort icon from other column
+      Item.fmt := Item.fmt and not (HDF_SORTUP or HDF_SORTDOWN);
+
     Header_SetItem(Header, i, Item);
-    List.Columns[i].Tag := SORT_ASCENDING;
   end;  //of begin
 
-  // Current column
-  Header_GetItem(Header, Column.Index, Item);
-
-  // Sorted ascending?
-  if (Item.fmt and HDF_SORTUP <> 0) then
-  begin
-    Item.fmt := Item.fmt and not HDF_SORTUP or HDF_SORTDOWN;
-    Column.Tag := SORT_DESCENDING;
-  end  //of begin
-  else
-  begin
-    Item.fmt := Item.fmt and not HDF_SORTDOWN or HDF_SORTUP;
-    Column.Tag := SORT_ASCENDING;
-  end;  //of if
-
-  // Include sort icon
-  Header_SetItem(Header, Column.Index, Item);
-
   // Do the alphabetically sort
-  List.Tag := Column.Index;
   List.AlphaSort();
 end;
 
@@ -1616,41 +1654,65 @@ procedure TMain.ListViewCompare(Sender: TObject; Item1, Item2: TListItem;
   Data: Integer; var Compare: Integer);
 var
   List: TListView;
-  ColumnToSort: NativeInt;
+  ColumnIndex: Integer;
 
 begin
   List := (Sender as TListView);
-  ColumnToSort := List.Tag;
 
   // Nothing to sort
-  if (ColumnToSort < 0) then
+  if (List.Tag = 0) then
     Exit;
 
-  // Status column?
-  if (ColumnToSort = 0) then
+  // First column?
+  if (Abs(List.Tag) = 1) then
   begin
-    case List.Columns[ColumnToSort].Tag of
-      SORT_ASCENDING:  Compare := CompareText(Item1.Caption, Item2.Caption);
-      SORT_DESCENDING: Compare := CompareText(Item2.Caption, Item1.Caption);
-    end;  //of case
+    // Ascending
+    if (List.Tag > 0) then
+      Compare := CompareText(Item1.Caption, Item2.Caption)
+    else
+      Compare := CompareText(Item2.Caption, Item1.Caption);
   end  //of begin
   else
   begin
-    Data := ColumnToSort - 1;
+    ColumnIndex := TClearasListColumn(Abs(List.Tag)).GetColumnIndex(List);
 
-    if (Data < List.Columns.Count - 1) then
-    begin
-      case List.Columns[ColumnToSort].Tag of
-        SORT_ASCENDING:  Compare := CompareText(Item1.SubItems[Data], Item2.SubItems[Data]);
-        SORT_DESCENDING: Compare := CompareText(Item2.SubItems[Data], Item1.SubItems[Data]);
-      end;  //of case
-    end;  //of begin
+    if (ColumnIndex = -1) then
+      Exit;
+
+    if (ColumnIndex > 0) then
+      Dec(ColumnIndex);
+
+    // Ascending
+    if (List.Tag > 0) then
+      Compare := CompareText(Item1.SubItems[ColumnIndex], Item2.SubItems[ColumnIndex])
+    else
+      Compare := CompareText(Item2.SubItems[ColumnIndex], Item1.SubItems[ColumnIndex]);
   end;  //of begin
 end;
 
-{ TMain.lwStartupDblClick
+procedure TMain.ColumnChanged(Sender: TObject);
+begin
+  Refresh(PageControl.ActivePageIndex, False);
+end;
 
-  Event method that is called when user double clicks on TListView item. }
+procedure TMain.ListViewColumnRightClick(Sender: TObject; Column: TListColumn;
+  Point: TPoint);
+var
+  ScreenPoint: TPoint;
+
+begin
+  if not Assigned(FColumnPopupMenu) then
+  begin
+    FColumnPopupMenu := TListViewColumnSelectionMenu.Create(Sender as TListView, FLang);
+    FColumnPopupMenu.OnColumnChanged := ColumnChanged;
+  end  //of begin
+  else
+    FColumnPopupMenu.ListView := (Sender as TListView);
+
+  // Show column selection popup menu
+  ScreenPoint := (Sender as TListView).ClientToScreen(Point);
+  FColumnPopupMenu.Popup(ScreenPoint.X, ScreenPoint.Y);
+end;
 
 procedure TMain.lwStartupDblClick(Sender: TObject);
 begin
@@ -1659,37 +1721,6 @@ begin
   else
     if bDisableStartupItem.Enabled then
       bDisableStartupItem.Click;
-end;
-
-{ TMain.ListViewKeyPress
-
-  Event method that is called when user pushes a button inside TListView. }
-
-procedure TMain.ListViewKeyPress(Sender: TObject; var Key: Char);
-var
-  i, StartIndex: Integer;
-  List: TListView;
-
-begin
-  StartIndex := 0;
-  List := (Sender as TListView);
-
-  if not Assigned(List.ItemFocused) then
-    Exit;
-
-  // Current selected item already starts with key?
-  if List.ItemFocused.SubItems[0].StartsWith(Key, True) then
-    StartIndex := List.ItemFocused.Index + 1;
-
-  // Find next item whose first char starts with key
-  for i := StartIndex to List.Items.Count - 1 do
-    if List.Items[i].SubItems[0].StartsWith(Key, True) then
-    begin
-      List.ItemIndex := i;
-      List.ItemFocused := List.Items[i];
-      List.ItemFocused.MakeVisible(True);
-      Break;
-    end;  //of begin
 end;
 
 { TMain.lwStartupSelectItem
@@ -1703,13 +1734,13 @@ begin
   if (Selected and Assigned(Item)) then
   begin
     // Change button states
-    bEnableStartupItem.Enabled := not TRootItem(Item.SubItems.Objects[0]).Enabled;
+    bEnableStartupItem.Enabled := not TRootItem(Item.Data).Enabled;
     bDisableStartupItem.Enabled := not bEnableStartupItem.Enabled;
     bDeleteStartupItem.Enabled := True;
     bExportStartupItem.Enabled := True;
 
     // Allow popup menu
-    PopupMenu.AutoPopup := True;
+    ContextMenu.AutoPopup := True;
   end  //of begin
   else
   begin
@@ -1721,7 +1752,7 @@ begin
     bExportStartupItem.Enabled := False;
 
     // Disallow popup menu
-    PopupMenu.AutoPopup := False;
+    ContextMenu.AutoPopup := False;
   end;  //of if
 end;
 
@@ -1931,7 +1962,7 @@ begin
 
       // Names are visible instead of captions?
       if (not mmShowCaptions.Checked or (PageControl.ActivePageIndex in [1, 3])) then
-        GetSelectedListView().ItemFocused.SubItems[0] := Name;
+        GetSelectedListView().ItemFocused.Caption := Name;
     end;  //of begin
 
   except
@@ -1952,13 +1983,13 @@ begin
   end;  //of try
 end;
 
-procedure TMain.PopupMenuPopup(Sender: TObject);
+procedure TMain.ContextMenuPopup(Sender: TObject);
 var
   SelectedItem: TRootItem;
 
 begin
   // OnPopup also occurs when hotkeys are pressed
-  if not PopupMenu.AutoPopup then
+  if not ContextMenu.AutoPopup then
     Exit;
 
   // Since this point cannot be reached when no item is selected EInvalidItem is
@@ -2094,16 +2125,15 @@ begin
     GetSelectedList().ChangeCommand(SelectedItem, EnteredPath);
 
     // Update icon
-    if (PageControl.ActivePageIndex = 0) then
-      lwStartup.ItemFocused.ImageIndex := SelectedItem.ImageIndex;
+    if Assigned(SelectedListView.SmallImages) then
+      SelectedListView.ItemFocused.ImageIndex := SelectedItem.ImageIndex;
 
-    // Update file path in TListView
-    if (PageControl.ActivePageIndex <> 1) then
-      SelectedListView.ItemFocused.SubItems[1] := EnteredPath;
+    // Update command in TListView
+    TClearasListColumn.Command.UpdateContent(SelectedListView, SelectedListView.ItemFocused, EnteredPath);
 
     // Update caption
     if ((SelectedItem.Caption <> '') and mmShowCaptions.Checked) then
-      SelectedListView.ItemFocused.SubItems[0] := SelectedItem.Caption;
+      SelectedListView.ItemFocused.Caption := SelectedItem.Caption;
 
   except
     on E: EInvalidItem do
@@ -2273,33 +2303,6 @@ begin
         E.Message);
     end;
   end;  //of try
-end;
-
-{ TMain.mmDateClick
-
-  MainMenu entry to add or remove the deactivation timestamp column. }
-
-procedure TMain.mmDateClick(Sender: TObject);
-var
-  ListView: TListView;
-
-begin
-  case PageControl.ActivePageIndex of
-    0:   ListView := lwStartup;
-    2:   ListView := lwService;
-    else Exit;
-  end;  //of case
-
-  if (WindowState = wsNormal) then
-  begin
-    if mmDate.Checked then
-      Width := Width + 120
-    else
-      Width := Width - ListView.Columns[4].Width;
-  end;  //of begin
-
-  // Add or remove date column
-  ShowColumnDate(ListView, mmDate.Checked);
 end;
 
 { TMain.mmExportListClick
@@ -2574,28 +2577,22 @@ begin
   case PageControl.ActivePageIndex of
     0: begin
          mmAdd.Caption := FLang.GetString(LID_STARTUP_ADD);
-         mmDate.Enabled := True;
          mmShowCaptions.Enabled := True;
-         ShowColumnDate(lwStartup, mmDate.Checked);
        end;
 
     1: begin
          mmAdd.Caption := FLang.GetString(LID_CONTEXT_MENU_ADD);
          mmImport.Enabled := False;
-         mmDate.Enabled := False;
          mmShowCaptions.Enabled := True;
        end;
 
     2: begin
          mmAdd.Caption := FLang.GetString(LID_SERVICE_ADD);
-         mmDate.Enabled := True;
          mmShowCaptions.Enabled := True;
-         ShowColumnDate(lwService, mmDate.Checked);
        end;
 
     3: begin
          mmAdd.Caption := FLang.GetString(LID_TASKS_ADD);
-         mmDate.Enabled := False;
          mmShowCaptions.Enabled := False;
        end;
   end;  //of case
@@ -2610,7 +2607,7 @@ begin
     Refresh(PageControl.ActivePageIndex);
 
   // Only allow popup menu if item is focused
-  PopupMenu.AutoPopup := Assigned(GetSelectedListView().ItemFocused);
+  ContextMenu.AutoPopup := Assigned(GetSelectedListView().ItemFocused);
 end;
 
 { TMain.bCloseStartupClick

@@ -64,7 +64,6 @@ object Main: TMain
         ExplicitTop = 261
       end
       object lwStartup: TListView
-        Tag = -1
         Left = 22
         Top = 34
         Width = 400
@@ -72,33 +71,37 @@ object Main: TMain
         Anchors = [akLeft, akTop, akRight, akBottom]
         Columns = <
           item
-            Caption = 'Enabled'
-            Width = 53
-          end
-          item
             Caption = 'Program (0/0)'
+            Tag = 1
             Width = 130
           end
           item
             Caption = 'File'
+            Tag = 2
             Width = 121
           end
           item
             Caption = 'Key'
+            Tag = 3
             Width = 75
+          end
+          item
+            Caption = 'Enabled'
+            Tag = 4
+            Width = 53
           end>
         ReadOnly = True
         RowSelect = True
-        PopupMenu = PopupMenu
+        PopupMenu = ContextMenu
         ShowWorkAreas = True
         SmallImages = StartupImages
         TabOrder = 0
         ViewStyle = vsReport
         OnColumnClick = ListViewColumnClick
+        OnColumnRightClick = ListViewColumnRightClick
         OnCompare = ListViewCompare
         OnCustomDrawItem = ListViewCustomDrawItem
         OnDblClick = lwStartupDblClick
-        OnKeyPress = ListViewKeyPress
         OnSelectItem = lwStartupSelectItem
       end
       object bCloseStartup: TButton
@@ -186,6 +189,10 @@ object Main: TMain
     object tsContext: TTabSheet
       Caption = 'Context menu'
       ImageIndex = 1
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       DesignSize = (
         535
         262)
@@ -276,7 +283,6 @@ object Main: TMain
         OnClick = bEnableItemClick
       end
       object lwContext: TListView
-        Tag = -1
         Left = 22
         Top = 34
         Width = 400
@@ -284,31 +290,35 @@ object Main: TMain
         Anchors = [akLeft, akTop, akRight, akBottom]
         Columns = <
           item
-            Caption = 'Enabled'
-            Width = 53
-          end
-          item
             Caption = 'Item (0/0)'
+            Tag = 1
             Width = 161
           end
           item
             Caption = 'Location'
+            Tag = 6
             Width = 95
           end
           item
             Caption = 'Key'
+            Tag = 3
             Width = 70
+          end
+          item
+            Caption = 'Enabled'
+            Tag = 4
+            Width = 53
           end>
         ReadOnly = True
         RowSelect = True
-        PopupMenu = PopupMenu
+        PopupMenu = ContextMenu
         TabOrder = 0
         ViewStyle = vsReport
         OnColumnClick = ListViewColumnClick
+        OnColumnRightClick = ListViewColumnRightClick
         OnCompare = ListViewCompare
         OnCustomDrawItem = ListViewCustomDrawItem
         OnDblClick = lwContextDblClick
-        OnKeyPress = ListViewKeyPress
         OnSelectItem = lwContextSelectItem
       end
       object pbContextProgress: TProgressBar
@@ -352,6 +362,10 @@ object Main: TMain
     object tsService: TTabSheet
       Caption = 'Services'
       ImageIndex = 2
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       DesignSize = (
         535
         262)
@@ -394,7 +408,6 @@ object Main: TMain
         Visible = False
       end
       object lwService: TListView
-        Tag = -1
         Left = 22
         Top = 34
         Width = 400
@@ -402,31 +415,35 @@ object Main: TMain
         Anchors = [akLeft, akTop, akRight, akBottom]
         Columns = <
           item
-            Caption = 'Enabled'
-            Width = 53
-          end
-          item
             Caption = 'Service (0/0)'
+            Tag = 1
             Width = 128
           end
           item
             Caption = 'File'
+            Tag = 2
             Width = 123
           end
           item
             Caption = 'Type'
+            Tag = 7
             Width = 75
+          end
+          item
+            Caption = 'Enabled'
+            Tag = 4
+            Width = 53
           end>
         ReadOnly = True
         RowSelect = True
-        PopupMenu = PopupMenu
+        PopupMenu = ContextMenu
         TabOrder = 0
         ViewStyle = vsReport
         OnColumnClick = ListViewColumnClick
+        OnColumnRightClick = ListViewColumnRightClick
         OnCompare = ListViewCompare
         OnCustomDrawItem = ListViewCustomDrawItem
         OnDblClick = lwServiceDblClick
-        OnKeyPress = ListViewKeyPress
         OnSelectItem = lwServiceSelectItem
       end
       object bExportServiceItem: TButton
@@ -514,6 +531,10 @@ object Main: TMain
     object tsTasks: TTabSheet
       Caption = 'Tasks'
       ImageIndex = 3
+      ExplicitLeft = 0
+      ExplicitTop = 0
+      ExplicitWidth = 0
+      ExplicitHeight = 0
       DesignSize = (
         535
         262)
@@ -637,7 +658,6 @@ object Main: TMain
         OnRightButtonClick = eSearchRightButtonClick
       end
       object lwTasks: TListView
-        Tag = -1
         Left = 22
         Top = 34
         Width = 400
@@ -645,38 +665,42 @@ object Main: TMain
         Anchors = [akLeft, akTop, akRight, akBottom]
         Columns = <
           item
-            Caption = 'Enabled'
-            Width = 53
-          end
-          item
             Caption = 'Task (0/0)'
+            Tag = 1
             Width = 128
           end
           item
             Caption = 'File'
+            Tag = 2
             Width = 123
           end
           item
             Caption = 'Location'
+            Tag = 6
             Width = 75
+          end
+          item
+            Caption = 'Enabled'
+            Tag = 4
+            Width = 53
           end>
         ReadOnly = True
         RowSelect = True
-        PopupMenu = PopupMenu
+        PopupMenu = ContextMenu
         TabOrder = 0
         ViewStyle = vsReport
         OnColumnClick = ListViewColumnClick
+        OnColumnRightClick = ListViewColumnRightClick
         OnCompare = ListViewCompare
         OnCustomDrawItem = ListViewCustomDrawItem
         OnDblClick = lwTasksDblClick
-        OnKeyPress = ListViewKeyPress
         OnSelectItem = lwTasksSelectItem
       end
     end
   end
-  object PopupMenu: TPopupMenu
+  object ContextMenu: TPopupMenu
     AutoPopup = False
-    OnPopup = PopupMenuPopup
+    OnPopup = ContextMenuPopup
     Left = 440
     object pmChangeStatus: TMenuItem
       Caption = 'Disable'
@@ -801,11 +825,6 @@ object Main: TMain
         Checked = True
         OnClick = mmShowCaptionsClick
       end
-      object mmDate: TMenuItem
-        AutoCheck = True
-        Caption = 'Date of deactivation'
-        OnClick = mmDateClick
-      end
       object N6: TMenuItem
         Caption = '-'
       end
@@ -840,9 +859,9 @@ object Main: TMain
     end
   end
   object QuickSearchIconList: TImageList
-    Left = 360
+    Left = 352
     Bitmap = {
-      494C010103000800840210001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
+      494C010103000500040010001000FFFFFFFFFF10FFFFFFFFFFFFFFFF424D3600
       0000000000003600000028000000400000001000000001002000000000000010
       0000000000000000000000000000000000000000000000000000000000000000
       0000000000000000000000000000000000000000000000000000000000000000

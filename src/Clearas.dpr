@@ -8,7 +8,8 @@ uses
   PMCW.Application.Mutex,
 {$ENDIF}
   ClearasMain in 'ClearasMain.pas' {Main},
-  ClearasAPI in 'ClearasAPI.pas';
+  ClearasAPI in 'ClearasAPI.pas',
+  Clearas.ListColumns in 'Clearas.ListColumns.pas';
 
 {$R *.res}
 

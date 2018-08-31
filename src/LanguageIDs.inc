@@ -14,9 +14,10 @@ const
   LID_NOTHING_SELECTED                  = LID_LAST + 13;
   LID_ITEM_CHANGE_PATH                  = LID_LAST + 14;
   LID_RENAME                            = LID_LAST + 15;
-  LID_SERVICE_COUNTER                   = LID_LAST + 16;
+  LID_NAME                              = LID_LAST + 16;
   LID_SERVICE_ADD                       = LID_LAST + 17;
-  LID_SERVICE_START                     = LID_LAST + 19;
+  LID_PUBLISHER                         = LID_LAST + 18;
+  LID_STARTUP_TYPE                      = LID_LAST + 19;
   LID_SERVICES                          = LID_LAST + 20;
   LID_AUTOMATICALLY                     = LID_LAST + 21;
   LID_MANUALLY                          = LID_LAST + 22;
@@ -26,6 +27,8 @@ const
   LID_OPEN_IN_REGEDIT                   = LID_LAST + 26;
   LID_STARTUP_ADD                       = LID_LAST + 29;
   LID_IMPORT                            = LID_LAST + 30;
+  LID_FILESYSTEM                        = LID_LAST + 31;
+  LID_REGISTRY                          = LID_LAST + 32;
   LID_QUIT                              = LID_LAST + 33;
   LID_EDIT                              = LID_LAST + 34;
   LID_DESCRIPTION_SHOW                  = LID_LAST + 36;
@@ -37,12 +40,10 @@ const
   LID_STARTUP                           = LID_LAST + 43;
   LID_CONTEXT_MENU                      = LID_LAST + 44;
   LID_CONTEXT_MENU_HEADLINE             = LID_LAST + 46;
-  LID_CONTEXT_MENU_COUNTER              = LID_LAST + 47;
-  LID_PROGRAM_COUNTER                   = LID_LAST + 48;
   LID_EXPERT_MODE                       = LID_LAST + 49;
   LID_LOCATION                          = LID_LAST + 50;
   LID_ENABLED                           = LID_LAST + 51;
-  LID_KEY                               = LID_LAST + 52;
+  LID_TYPE                              = LID_LAST + 52;
   LID_ENABLE                            = LID_LAST + 53;
   LID_DISABLE                           = LID_LAST + 54;
   LID_EXPORT                            = LID_LAST + 55;
@@ -63,7 +64,6 @@ const
   LID_CONTEXT_MENU_USER_CHOICE_RESET    = LID_LAST + 73;
   LID_TASKS                             = LID_LAST + 74;
   LID_TASKS_HEADLINE                    = LID_LAST + 75;
-  LID_TASKS_COUNTER                     = LID_LAST + 76;
   LID_TASKS_ADD                         = LID_LAST + 77;
   LID_FILTER_ZIP_FILES                  = LID_LAST + 79;
   LID_PROPERTIES                        = LID_LAST + 80;

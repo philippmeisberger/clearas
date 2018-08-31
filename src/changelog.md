@@ -3,6 +3,17 @@ Clearas
 
 An open-source project by PM Code Works
 
+Version 5.1
+-----------
+
+- Added possibility to choose displayed columns
+  - Right-click on column header shows menu
+- Added column "Publisher"
+- First column is now "Name" instead of "Enabled"
+- Removed menu item "Show deactivation date"
+  - Replaced by column "Deactivation date"
+- Count of enabled items is now shown in tab header
+
 Version 5.0 [*02.04.18*]
 -----------
 
