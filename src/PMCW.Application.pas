@@ -314,16 +314,13 @@ procedure TMainForm.BuildLanguageMenu(AMenuItem: TMenuItem);
 var
   MenuItem: TMenuItem;
   i: Integer;
-{$IFDEF MSWINDOWS}
-  Locale: TLocale;
-{$ENDIF}
 
 begin
   FMenuLanguages := AMenuItem;
   FMenuLanguages.OnClick := UpdateSelectedLanguage;
 
   // Create submenu
-  for i := 0 to FLang.Languages.Count - 1 do
+  for i := 0 to FLang.Count - 1 do
   begin
     MenuItem := TMenuItem.Create(AMenuItem.Owner);
 
@@ -331,14 +328,8 @@ begin
     begin
       RadioItem := True;
       AutoCheck := True;
-    {$IFDEF MSWINDOWS}
-      Locale := StrToInt(FLang.Languages.Names[i]);
-      Tag := Locale;
-      Caption := Locale.DisplayName();
-    {$ELSE}
-      Hint := FLang.Languages.Names[i];
-      Caption := FLang.Languages.ValueFromIndex[i];
-    {$ENDIF}
+      {$IFDEF MSWINDOWS}Tag{$ELSE}Hint{$ENDIF} := FLang.Locales[i];
+      Caption := FLang.Names[i];
       OnClick := LanguageSelected;
     end;  //of with
 
