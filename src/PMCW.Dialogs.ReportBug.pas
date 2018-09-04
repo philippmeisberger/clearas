@@ -12,8 +12,8 @@ interface
 
 uses
   Winapi.Windows, System.SysUtils, System.Classes, Vcl.Forms, Vcl.Controls,
-  Vcl.StdCtrls, System.UITypes, System.Net.HttpClient, Vcl.Dialogs, PMCW.Controls,
-  PMCW.SysUtils, PMCW.LanguageFile;
+  Vcl.StdCtrls, System.UITypes, System.Net.HttpClient, Vcl.Dialogs, PMCW.SysUtils,
+  PMCW.LanguageFile;
 
 type
   /// <summary>
@@ -21,8 +21,7 @@ type
   /// </summary>
   TReportBugThread = class(TThread)
   private
-    FReport,
-    FFrom: string;
+    FReport: string;
     FHttpClient: THTTPClient;
   protected
     procedure Execute(); override;
@@ -33,10 +32,7 @@ type
     /// <param name="AReport">
     ///   The report to send.
     /// </param>
-    /// <param name="AFrom">
-    ///   The users mail address.
-    /// </param>
-    constructor Create(const AReport, AFrom: string);
+    constructor Create(const AReport: string);
 
     /// <summary>
     ///   Destructor for destroying a <c>TReportBugThread</c> instance.
@@ -50,7 +46,6 @@ type
   TReportBugDialog = class(TCommonDialog)
   private
     FForm: TForm;
-    FMail: TEdit;
     FReport: TMemo;
     FSubmit,
     FCancel: TButton;
@@ -115,12 +110,11 @@ implementation
 
 { TReportBugThread }
 
-constructor TReportBugThread.Create(const AReport, AFrom: string);
+constructor TReportBugThread.Create(const AReport: string);
 begin
   inherited Create(False);
   FreeOnTerminate := True;
   FReport := AReport;
-  FFrom := AFrom;
 
   // Initialize HTTP connection
   FHttpClient := THttpClient.Create;
@@ -141,15 +135,18 @@ end;
 procedure TReportBugThread.Execute;
 var
   Content: TStringList;
+  Response: IHTTPResponse;
 
 begin
   Content := TStringList.Create;
 
   try
     Content.Append('app='+ Application.Title);
-    Content.Append('user='+ FFrom);
     Content.Append('message='+ FReport);
-    FHttpClient.Post(URL_BASE +'report.php', Content);
+    Response := FHttpClient.Post(URL_BASE +'report.php', Content);
+
+    if (Response.StatusCode <> 200) then
+      raise ENetHTTPException.Create(Response.StatusText);
 
   finally
     FreeAndNil(Content);
@@ -180,27 +177,14 @@ begin
     Position := poScreenCenter;
   end;  //of with
 
-  FMail := TEdit.Create(FForm);
-
-  with FMail do
-  begin
-    Parent := FForm;
-    Left := 10;
-    Top := Left;
-    Width := FForm.Width - (2 * Left);
-    Height := 21;
-    Anchors := [akLeft, akTop, akRight];
-    TextHint := 'user@example.com';
-  end;  //of with
-
   FReport := TMemo.Create(FForm);
 
   with FReport do
   begin
     Parent := FForm;
-    Left := FMail.Left;
-    Top := FMail.Top + FMail.Height + cMarginTop;
-    Width := FMail.Width;
+    Top := 2 * cMarginTop;
+    Left := Top;
+    Width := FForm.Width - (2 * Left);
     Height := FForm.Height - Top - cButtonHeight - (2 * cMarginTop);
     Anchors := [akLeft, akTop, akRight, akBottom];
     ScrollBars := ssBoth;
@@ -250,7 +234,6 @@ end;
 
 destructor TReportBugDialog.Destroy;
 begin
-  FreeAndNil(FMail);
   FreeAndNil(FReport);
   FreeAndNil(FSubmit);
   FreeAndNil(FCancel);
@@ -263,7 +246,7 @@ begin
   Result := (FForm.ShowModal() = mrOk);
 
   if Result then
-    TReportBugThread.Create(FReport.Lines.Text, FMail.Text);
+    TReportBugThread.Create(FReport.Lines.Text);
 end;
 
 function TReportBugDialog.GetReport(): TStrings;
@@ -283,10 +266,7 @@ end;
 
 procedure TReportBugDialog.SubmitClick(Sender: TObject);
 begin
-  if (FMail.Text = '') then
-    FMail.ShowBalloonTip('', FLanguageFile[LID_REPORT_NO_MAIL]);
-
-  if ((FMail.Text = '') or (FReport.Lines.Text = '')) then
+  if (FReport.Lines.Text = '') then
     FForm.ModalResult := mrNone;
 end;
 

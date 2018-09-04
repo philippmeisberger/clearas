@@ -50,7 +50,6 @@ const
 
   { Report bug IDs }
   LID_REPORT_BUG                    = 26;
-  LID_REPORT_NO_MAIL                = 19;
   LID_REPORT_BUG_BODY               = 20;
   LID_REPORT_SENDING_FAILED         = 38;
   LID_REPORT_MANUAL                 = 39;
