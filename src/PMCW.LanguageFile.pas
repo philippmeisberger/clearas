@@ -56,6 +56,11 @@ const
   LID_FATAL_ERROR                   = 31;
   LID_TECHNICAL_DETAILS             = 32;
 
+  { Translate IDs }
+  LID_TRANSLATE                     = 34;
+  LID_TRANSLATE_SELECT              = 35;
+  LID_TRANSLATE_FINISHED            = 40;
+
   { Update language IDs }
   LID_UPDATE                        = 5;
   LID_UPDATE_SELECT_DIR             = 9;
@@ -260,6 +265,17 @@ type
     function GetString(const AIndices: array of TLanguageId): string; overload;
 
     /// <summary>
+    ///   Checks if a translation is available for a specified locale.
+    /// </summary>
+    /// <param name="ALocale">
+    ///   The locale to check.
+    /// </param>
+    /// <returns>
+    ///   <c>True</c> if translation is available or <c>False</c> otherwise.
+    /// </returns>
+    function IsTranslated(const ALocale: TLocale): Boolean; inline;
+
+    /// <summary>
     ///   Removes a listener from the notification list.
     /// </summary>
     /// <param name="AListener">
@@ -394,6 +410,15 @@ begin
   end;  //of for
 end;
 
+function TLanguageFile.IsTranslated(const ALocale: TLocale): Boolean;
+begin
+{$IFDEF MSWINDOWS}
+  Result := (FLanguages.Values[IntToStr(ALocale)] <> '');
+{$ELSE}
+  Result := (FLanguages.Values[ALocale] <> '');
+{$ENDIF}
+end;
+
 procedure TLanguageFile.Load({$IFDEF MSWINDOWS}const AInterval: Word = 200{$ENDIF});
 {$IFDEF MSWINDOWS}
 var
@@ -458,7 +483,7 @@ begin
   begin
   {$IFDEF MSWINDOWS}
     // Requested language not found?
-    if (FLanguages.Values[IntToStr(ALocale)] = '') then
+    if not IsTranslated(ALocale) then
     begin
       // Try primary language
       Locale := MAKELANGID(PRIMARYLANGID(ALocale), SUBLANG_DEFAULT);
@@ -481,7 +506,7 @@ begin
     FSection := StrToInt(FLanguages.Values[IntToStr(FLocale)]);
   {$ELSE}
     // Requested language not found?
-    if (FLanguages.Values[ALocale] = '') then
+    if not IsTranslated(ALocale) then
     begin
       MatchFound := False;
 
