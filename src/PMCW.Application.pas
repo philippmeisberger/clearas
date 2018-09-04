@@ -35,6 +35,7 @@ type
     FFileNameLocal,
     FFileNameRemote,
     FFileNameRemote64: string;
+    FMenuTranslate,
   {$ENDIF}
     FMenuLanguages,
     FMenuHelp,
@@ -42,7 +43,6 @@ type
     FMenuBreak1,
   {$IFDEF MSWINDOWS}
     FMenuInstallCert,
-    FMenuTranslate,
   {$ENDIF}
     FMenuReportBug,
     FMenuBreak2,
@@ -52,10 +52,10 @@ type
     procedure UpdateSelectedLanguage(Sender: TObject);
   {$IFNDEF FPC}
     procedure OnUpdate(Sender: TObject; const ANewBuild: Cardinal);
+    procedure TranslateClick(Sender: TObject);
   {$ENDIF}
   {$IFDEF MSWINDOWS}
     procedure InstallCertificateClick(Sender: TObject);
-    procedure TranslateClick(Sender: TObject);
   {$ENDIF}
     procedure ReportBugClick(Sender: TObject);
     procedure UpdateClick(Sender: TObject);
@@ -115,12 +115,12 @@ begin
   FreeAndNil(FMenuBreak1);
 {$IFDEF MSWINDOWS}
   FreeAndNil(FMenuInstallCert);
-  FreeAndNil(FMenuTranslate);
 {$ENDIF}
   FreeAndNil(FMenuReportBug);
   FreeAndNil(FMenuBreak2);
   FreeAndNil(FMenuAbout);
 {$IFNDEF FPC}
+  FreeAndNil(FMenuTranslate);
   FreeAndNil(FUpdateCheck);
 {$ENDIF}
   FreeAndNil(FLang);
@@ -142,7 +142,8 @@ begin
       MessageDlg(E.Message, mtError, [mbOK], 0);
   end;  //of try
 end;
-
+{$ENDIF}
+{$IFNDEF FPC}
 procedure TMainForm.TranslateClick(Sender: TObject);
 
   function FormatStringTableEntry(AIndex: TLanguageId; const ATranslatedString: string): string;
@@ -284,7 +285,8 @@ begin
   FMenuInstallCert.Caption := FLang[LID_CERTIFICATE_INSTALL];
   FMenuInstallCert.OnClick := InstallCertificateClick;
   AMenuItem.Add(FMenuInstallCert);
-
+{$ENDIF}
+{$IFNDEF FPC}
   // "Translate"
   FMenuTranslate := TMenuItem.Create(AMenuItem);
   FMenuTranslate.Caption := FLang[LID_TRANSLATE];
