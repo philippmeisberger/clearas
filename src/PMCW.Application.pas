@@ -22,7 +22,7 @@ uses
   System.UITypes, PMCW.Dialogs.Updater,
 {$ENDIF}
   SysUtils, Classes, Forms, Menus, Dialogs, PMCW.LanguageFile, PMCW.Dialogs,
-  PMCW.Dialogs.About;
+  PMCW.Dialogs.ReportBug, PMCW.Dialogs.About;
 
 type
   /// <summary>
@@ -148,7 +148,7 @@ procedure TMainForm.TranslateClick(Sender: TObject);
 
   function FormatStringTableEntry(AIndex: TLanguageId; const ATranslatedString: string): string;
   begin
-    Result := Format('  %d, "%s"', [FIRST_LANGUAGE_START_INDEX + AIndex, ATranslatedString.Replace('"', '\"')]);
+    Result := Format('  %d, "%s"', [FIRST_LANGUAGE_START_INDEX + (FLang.Count * 200) + AIndex, ATranslatedString.Replace('"', '\"')]);
   end;
 
 var
@@ -224,10 +224,13 @@ begin
       OriginString := FLang[i];
     end;  //of while
 
-    Translated.SaveToFile(TranslationFile);
+    Translated.SaveToFile(TranslationFile, TEncoding.ANSI);
 
     if not Canceled then
-      MessageDlg(FLang.Format([LID_TRANSLATE_FINISHED], [ExtractFilePath(Application.ExeName) + TranslationFile]), mtInformation, [mbOK], 0);
+    begin
+      if (MessageDlg(FLang.Format([LID_TRANSLATE_FINISHED, LID_TRANSLATE_SEND], [ExtractFilePath(Application.ExeName) + TranslationFile]), mtConfirmation, mbYesNo, 0) = idYes) then
+        TReportBugThread.Create(Translated.Text);
+    end;  //of begin
 
   finally
     FreeAndNil(Languages);
@@ -319,6 +322,7 @@ var
 
 begin
   FMenuLanguages := AMenuItem;
+  FMenuLanguages.Caption := FLang[LID_SELECT_LANGUAGE];
   FMenuLanguages.OnClick := UpdateSelectedLanguage;
 
   // Create submenu

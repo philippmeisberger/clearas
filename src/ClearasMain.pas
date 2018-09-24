@@ -2378,6 +2378,7 @@ begin
     Refresh(i, False);
 end;
 
+// TODO: Move hyperlink code to TMainForm
 { TMain.lCopyClick
 
   Opens the homepage of PM Code Works in a web browser. }

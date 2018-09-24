@@ -59,7 +59,8 @@ const
   { Translate IDs }
   LID_TRANSLATE                     = 34;
   LID_TRANSLATE_SELECT              = 35;
-  LID_TRANSLATE_FINISHED            = 40;
+  LID_TRANSLATE_FINISHED            = 39;
+  LID_TRANSLATE_SEND                = 40;
 
   { Update language IDs }
   LID_UPDATE                        = 5;
