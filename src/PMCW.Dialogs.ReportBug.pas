@@ -200,7 +200,7 @@ begin
     Left := FReport.Left + FReport.Width - Width;
     Top := FReport.Top + FReport.Height + cMarginTop;
     Anchors := [akRight, akBottom];
-    Caption := 'OK';
+    Caption := 'Submit';
     Default := True;
     ModalResult := mrOk;
     OnClick := SubmitClick;
@@ -229,6 +229,7 @@ begin
   Assert(Assigned(ALanguageFile), 'ALanguageFile is not assigned!');
   FLanguageFile := ALanguageFile;
   FCancel.Caption := FLanguageFile[LID_CANCEL];
+  FSubmit.Caption := FLanguageFile[LID_REPORT_SUBMIT];
   FForm.Caption := FLanguageFile[LID_REPORT_BUG];
 end;
 
