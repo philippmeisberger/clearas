@@ -219,6 +219,7 @@ var
 
 begin
   FMenuLanguages := AMenuItem;
+  FMenuLanguages.Caption := FLang[LID_SELECT_LANGUAGE];
   FMenuLanguages.OnClick := UpdateSelectedLanguage;
 
   // Create submenu
