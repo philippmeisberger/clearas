@@ -31,11 +31,6 @@ const
   /// </summary>
   MAIL_CONTACT = 'team@pm-codeworks.de';
 
-  /// <summary>
-  ///   URL to write a mail.
-  /// </summary>
-  URL_CONTACT  = 'mailto:'+ MAIL_CONTACT;
-
 type
   /// <summary>
   ///   Contains product version information.
