@@ -586,6 +586,9 @@ begin
       SortList(ListView);
     end;  //of if
 
+    // Close popup menu
+    ContextMenu.CloseMenu();
+
   except
     on E: EInvalidItem do
       MessageDlg(FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
