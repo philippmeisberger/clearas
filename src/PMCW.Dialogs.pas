@@ -94,7 +94,7 @@ end;
 procedure ReportBugDlg(ALanguageFile: TLanguageFile; const AMessage: string);
 {$IFDEF FPC}
 begin
-  OpenUrl(URL_CONTACT);
+  OpenUrl('mailto:'+ MAIL_CONTACT);
 {$ELSE}
 var
   ReportDialog: TReportBugDialog;
