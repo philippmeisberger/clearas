@@ -196,7 +196,7 @@ begin
       // Continue with previous started translation
       Translated.LoadFromFile(TranslationFile);
       InsertPos := Translated.IndexOf('END');
-      FirstIndex := StrToInt(Trim(Translated[InsertPos - 1].Substring(0, Translated[InsertPos - 1].IndexOf(',')))) - FIRST_LANGUAGE_START_INDEX + 1;
+      FirstIndex := StrToInt(Trim(Translated[InsertPos - 1].Substring(0, Translated[InsertPos - 1].IndexOf(',')))) - (FLang.Count * 200) - FIRST_LANGUAGE_START_INDEX + 1;
     end;  //of if
 
     // Translate all strings
