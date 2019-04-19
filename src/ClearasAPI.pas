@@ -5187,7 +5187,7 @@ begin
       raise EContextMenuException.Create(Reg.LastErrorMsg);
 
     // Invalid data type?
-    if (Reg.GetDataType(AValueName) <> rdString) then
+    if (Reg.ValueExists(AValueName) and (Reg.GetDataType(AValueName) <> rdString)) then
       raise EContextMenuException.Create('Invalid data type!');
 
     Reg.WriteString(AValueName, ANewCaption);
