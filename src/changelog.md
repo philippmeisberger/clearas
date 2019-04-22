@@ -14,6 +14,8 @@ Version 5.1
   - Replaced by column "Deactivation date"
 - Count of enabled items is now shown in tab header
 - Fixed exception when renaming a "Shell" item which has not a caption yet
+- Introduced sending bug reports without mail client
+- Introduced translation dialog (in menu "Help")
 
 Version 5.0 [*02.04.18*]
 -----------
