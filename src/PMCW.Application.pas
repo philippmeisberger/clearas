@@ -148,7 +148,7 @@ procedure TMainForm.TranslateClick(Sender: TObject);
 
   function FormatStringTableEntry(AIndex: TLanguageId; const ATranslatedString: string): string;
   begin
-    Result := Format('  %d, "%s"', [FIRST_LANGUAGE_START_INDEX + (FLang.Count * 200) + AIndex, ATranslatedString.Replace('"', '\"')]);
+    Result := Format('  %d, "%s"', [FIRST_LANGUAGE_START_INDEX + (FLang.Count * FLang.Interval) + AIndex, ATranslatedString.Replace('"', '\"')]);
   end;
 
 var
@@ -196,7 +196,7 @@ begin
       // Continue with previous started translation
       Translated.LoadFromFile(TranslationFile);
       InsertPos := Translated.IndexOf('END');
-      FirstIndex := StrToInt(Trim(Translated[InsertPos - 1].Substring(0, Translated[InsertPos - 1].IndexOf(',')))) - (FLang.Count * 200) - FIRST_LANGUAGE_START_INDEX + 1;
+      FirstIndex := StrToInt(Trim(Translated[InsertPos - 1].Substring(0, Translated[InsertPos - 1].IndexOf(',')))) - (FLang.Count * FLang.Interval) - FIRST_LANGUAGE_START_INDEX + 1;
     end;  //of if
 
     // Translate all strings

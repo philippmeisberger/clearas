@@ -128,6 +128,9 @@ type
     FLocale,
     FSection: TLocale;
     FLanguages: TStringList;
+  {$IFDEF MSWINDOWS}
+    FInterval: Integer;
+  {$ENDIF}
   {$IFDEF LINUX}
     FIni: TIniFile;
   {$ENDIF}
@@ -293,7 +296,12 @@ type
     ///   Gets the number of supported languages.
     /// </summary>
     property Count: Integer read GetCount;
-
+  {$IFDEF MSWINDOWS}
+    /// <summary>
+    ///   Gets the interval between languages.
+    /// </summary>
+    property Interval: Integer read FInterval;
+  {$ENDIF}
     /// <summary>
     ///   Gets or sets the current used locale for UI translation.
     /// </summary>
@@ -513,6 +521,7 @@ begin
   if (AInterval = 0) then
     raise EArgumentException.Create('Invalid interval!');
 
+  FInterval := AInterval;
   FLanguages.Clear();
   Language := FIRST_LANGUAGE_START_INDEX;
 
