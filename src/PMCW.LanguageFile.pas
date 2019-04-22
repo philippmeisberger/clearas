@@ -2,7 +2,7 @@
 {                                                                         }
 { PM Code Works Language File Unit v2.3                                   }
 {                                                                         }
-{ Copyright (c) 2011-2018 Philipp Meisberger (PM Code Works)              }
+{ Copyright (c) 2011-2019 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
 { *********************************************************************** }
 

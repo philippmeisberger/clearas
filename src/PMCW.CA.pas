@@ -2,7 +2,7 @@
 {                                                                         }
 { PM Code Works Certificate unit                                          }
 {                                                                         }
-{ Copyright (c) 2011-2018 Phlipp Meisberger (PM Code Works)               }
+{ Copyright (c) 2011-2019 Phlipp Meisberger (PM Code Works)               }
 {                                                                         }
 { *********************************************************************** }
 

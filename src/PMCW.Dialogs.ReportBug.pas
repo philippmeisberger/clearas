@@ -1,8 +1,8 @@
 { *********************************************************************** }
 {                                                                         }
-{ PM Code Works Report Bug v1.0                                           }
+{ PM Code Works Report Bug Unit v1.0                                      }
 {                                                                         }
-{ Copyright (c) 2011-2018 Philipp Meisberger (PM Code Works)              }
+{ Copyright (c) 2011-2019 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
 { *********************************************************************** }
 
