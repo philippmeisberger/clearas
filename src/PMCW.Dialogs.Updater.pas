@@ -14,7 +14,7 @@ uses
   Winapi.Windows, System.SysUtils, System.Classes, Vcl.Dialogs, Vcl.Forms,
   Vcl.StdCtrls, Vcl.ComCtrls, System.UITypes, Vcl.Consts, System.Net.HttpClient,
   System.NetConsts, System.Net.URLClient, Winapi.ShellAPI, PMCW.SysUtils,
-  PMCW.LanguageFile,
+  PMCW.LanguageFile, PMCW.Dialogs,
 {$WARN UNIT_PLATFORM OFF}
   Vcl.FileCtrl;
 {$WARN UNIT_PLATFORM ON}
@@ -310,11 +310,6 @@ type
     function Execute(AParentHwnd: HWND): Boolean; override;
 
     /// <summary>
-    ///   Launches the downloaded setup.
-    /// </summary>
-    procedure LaunchSetup();
-
-    /// <summary>
     ///   The downloaded file.
     /// </summary>
     property DownloadedFile: string read FFileName;
@@ -513,7 +508,7 @@ begin
 
   if (AResponseCode > 0) then
   begin
-    FLanguageFile.ShowException(FLanguageFile.GetString([LID_UPDATE_NO_CONNECTION,
+    ExceptionDlg(FLanguageFile, FLanguageFile.GetString([LID_UPDATE_NO_CONNECTION,
       LID_UPDATE_CHECK_CONNECTION]), AResponseText + Format(' (%d)', [AResponseCode]));
   end  //of begin
   else
@@ -740,7 +735,7 @@ begin
   end  //of begin
   else
   begin
-    FLanguageFile.ShowException(FLanguageFile.GetString([LID_UPDATE_DOWNLOAD,
+    ExceptionDlg(FLanguageFile, FLanguageFile.GetString([LID_UPDATE_DOWNLOAD,
       LID_IMPOSSIBLE]), Format('HTTP %d '+ AResponseText, [AResponseCode]));
   end;  //of if
 end;
@@ -752,6 +747,10 @@ begin
 
   // Download successful: Close form automatically
   FForm.ModalResult := mrOk;
+
+  // Launch setup?
+  if FRemoteFileName.Contains('setup') then
+    ShellExecute(0, 'open', PChar(FFileName), nil, nil, SW_SHOWNORMAL);
 end;
 
 procedure TUpdateDialog.Downloading(Sender: TObject; AContentLength, AReadCount: Int64);
@@ -829,11 +828,6 @@ begin
   FButtonFinished.Caption := FLanguageFile.GetString(LID_CANCEL);
   StartDownload(True);
   Result := (FForm.ShowModal() = mrOk);
-end;
-
-procedure TUpdateDialog.LaunchSetup();
-begin
-  ShellExecute(0, 'open', PChar(FFileName), nil, nil, SW_SHOWNORMAL);
 end;
 
 procedure TUpdateDialog.FormCloseQuery(Sender: TObject; var CanClose: Boolean);

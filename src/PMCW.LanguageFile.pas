@@ -1,6 +1,6 @@
 ﻿{ *********************************************************************** }
 {                                                                         }
-{ PM Code Works Language File Unit v2.2                                   }
+{ PM Code Works Language File Unit v2.3                                   }
 {                                                                         }
 { Copyright (c) 2011-2018 Philipp Meisberger (PM Code Works)              }
 {                                                                         }
@@ -13,9 +13,9 @@ unit PMCW.LanguageFile;
 interface
 
 uses
-  Classes, SysUtils, Menus, Dialogs, PMCW.SysUtils,
+  Classes, SysUtils,
 {$IFDEF MSWINDOWS}
-  Winapi.Windows, System.NetEncoding, System.UITypes, Vcl.Forms;
+  Windows, PMCW.SysUtils;
 {$ELSE}
   StrUtils, IniFiles;
 {$ENDIF}
@@ -50,8 +50,8 @@ const
 
   { Report bug IDs }
   LID_REPORT_BUG                    = 26;
-  LID_REPORT_BUG_SUBJECT            = 19;
   LID_REPORT_BUG_BODY               = 20;
+  LID_REPORT_SUBMIT                 = 19;
   LID_REPORT_SENDING_FAILED         = 38;
   LID_REPORT_MANUAL                 = 39;
   LID_FATAL_ERROR                   = 31;
@@ -139,10 +139,6 @@ type
     FIni: TIniFile;
   {$ENDIF}
     procedure SetLocale(const ALocale: TLocale);
-    procedure LanguageSelected(Sender: TObject);
-  {$IFDEF MSWINDOWS}
-    procedure HyperlinkClicked(Sender: TObject);
-  {$ENDIF}
   protected
   {$IFDEF MSWINDOWS}
     /// <summary>
@@ -211,14 +207,6 @@ type
     procedure AddListener(AListener: IChangeLanguageListener);
 
     /// <summary>
-    ///   Builds a select language menu based on available languages.
-    /// </summary>
-    /// <param name="AMainMenu">
-    ///   The menu item to create the submenu.
-    /// </param>
-    procedure BuildLanguageMenu(AMenuItem: TMenuItem);
-
-    /// <summary>
     ///   Embeds data into a single string by replacing a special flag starting
     ///   with <c>%</c> using a language ID.
     /// </summary>
@@ -281,23 +269,9 @@ type
     procedure RemoveListener(AListener: IChangeLanguageListener);
 
     /// <summary>
-    ///   Tries to send a bug report.
+    ///   Gets the available translations.
     /// </summary>
-    /// <param name="AMailToLink">
-    ///   Optional: A mailto link.
-    /// </param>
-    procedure ReportBug(const AMailToLink: string = URL_CONTACT);
-
-    /// <summary>
-    ///   Shows an exception message with additional information.
-    /// </summary>
-    /// <param name="AMessage">
-    ///   Text containing an error message.
-    /// </param>
-    /// <param name="ATechnicalDetails">
-    ///   Technical error details.
-    /// </param>
-    procedure ShowException(const AMessage, ATechnicalDetails: string);
+    property Languages: TStringList read FLanguages;
 
     /// <summary>
     ///   Gets or sets the current used locale for UI translation.
@@ -364,15 +338,6 @@ begin
   inherited Destroy;
 end;
 
-procedure TLanguageFile.LanguageSelected(Sender: TObject);
-begin
-{$IFDEF MSWINDOWS}
-  SetLocale((Sender as TMenuItem).Tag);
-{$ELSE}
-  SetLocale((Sender as TMenuItem).Hint);
-{$ENDIF}
-end;
-
 procedure TLanguageFile.AddListener(AListener: IChangeLanguageListener);
 begin
   if Assigned(AListener) then
@@ -380,41 +345,6 @@ begin
     FListeners.Add(AListener);
     AListener.LanguageChanged();
   end;  //of begin
-end;
-
-procedure TLanguageFile.BuildLanguageMenu(AMenuItem: TMenuItem);
-var
-  MenuItem: TMenuItem;
-  i: Integer;
-{$IFDEF MSWINDOWS}
-  Locale: TLocale;
-{$ENDIF}
-
-begin
-  // Create submenu
-  for i := 0 to FLanguages.Count - 1 do
-  begin
-    MenuItem := TMenuItem.Create(AMenuItem.Owner);
-
-    with MenuItem do
-    begin
-      RadioItem := True;
-      AutoCheck := True;
-    {$IFDEF MSWINDOWS}
-      Locale := StrToInt(FLanguages.Names[i]);
-      Tag := Locale;
-      Caption := Locale.DisplayName();
-      Checked := (FLocale = Tag);
-    {$ELSE}
-      Caption := FLanguages.ValueFromIndex[i];
-      Hint := FLanguages.Names[i];
-      Checked := (FLocale = Hint);
-    {$ENDIF}
-      OnClick := LanguageSelected;
-    end;  //of with
-
-    AMenuItem.Add(MenuItem);
-  end;  //of for
 end;
 
 function TLanguageFile.Format(const AIndex: TLanguageId; const AArgs: array of
@@ -593,85 +523,6 @@ begin
         Listener.LanguageChanged();
     end;  //of for
   end;  //of begin
-end;
-
-procedure TLanguageFile.ReportBug(const AMailToLink: string = URL_CONTACT);
-begin
-  // Try to send the report by mail client
-  if not OpenUrl(AMailToLink) then
-    MessageDlg(Format([LID_REPORT_SENDING_FAILED, LID_REPORT_MANUAL], [MAIL_CONTACT]), mtError, [mbOk], 0);
-end;
-
-{$IFDEF MSWINDOWS}
-procedure TLanguageFile.HyperlinkClicked(Sender: TObject);
-begin
-{$WARN SYMBOL_PLATFORM OFF}
-  if (Sender is TTaskDialog) then
-    ReportBug((Sender as TTaskDialog).URL);
-{$WARN SYMBOL_PLATFORM ON}
-end;
-{$ENDIF}
-
-procedure TLanguageFile.ShowException(const AMessage, ATechnicalDetails: string);
-{$IFDEF MSWINDOWS}
-{$WARN SYMBOL_PLATFORM OFF}
-const
-  URL_MAILTO = '<a href="%s?subject=%s&body=%s">%s</a>';
-
-var
-  TaskDialog: TTaskDialog;
-  MailSubject, MailBody: string;
-
-  function URLEncode(const AString: string): string;
-  begin
-    Result := TNetEncoding.URL.Encode(AString);
-
-    // Embarcadero encodes spaces as '+' which is generally correct but not in
-    // mailto hyperlinks: there it must be '%20' to generate a correct mail!
-    Result := Result.Replace('+', '%20');
-  end;
-
-begin
-  // TaskDialog only since Windows Vista
-  if (Win32MajorVersion < 6) then
-  begin
-    MessageDlg(GetString(LID_FATAL_ERROR) +': '+ AMessage + sLineBreak
-      + ATechnicalDetails, mtError, [mbClose], 0);
-    Exit;
-  end;  //of begin
-
-  TaskDialog := TTaskDialog.Create(nil);
-
-  try
-    with TaskDialog do
-    begin
-      Caption := Application.Title;
-      MainIcon := tdiError;
-      Title := GetString(LID_FATAL_ERROR);
-      Text := AMessage;
-      ExpandedText := ATechnicalDetails;
-      ExpandButtonCaption := GetString(LID_TECHNICAL_DETAILS);
-      MailSubject := URLEncode(Format(LID_REPORT_BUG_SUBJECT, [Application.Title]));
-      MailBody := URLEncode(Format(LID_REPORT_BUG_BODY, [AMessage, ATechnicalDetails]));
-      FooterText := SysUtils.Format(URL_MAILTO, [URL_CONTACT, MailSubject, MailBody,
-        GetString(LID_REPORT_BUG)]);
-      Flags := [tfExpandFooterArea, tfEnableHyperlinks];
-      CommonButtons := [tcbClose];
-      OnHyperlinkClicked := HyperlinkClicked;
-    end;  //of with
-
-    MessageBeep(MB_ICONERROR);
-    TaskDialog.Execute();
-
-  finally
-    TaskDialog.Free;
-  end;  //of try
-{$WARN SYMBOL_PLATFORM ON}
-{$ELSE}
-begin
-  MessageDlg(GetString(LID_FATAL_ERROR) +': '+ AMessage + sLineBreak
-    + ATechnicalDetails, mtError, [mbClose], 0);
-{$ENDIF}
 end;
 
 end.

@@ -834,28 +834,6 @@ object Main: TMain
     end
     object mmHelp: TMenuItem
       Caption = 'Help'
-      object mmUpdate: TMenuItem
-        Caption = 'Search for Update'
-        OnClick = mmUpdateClick
-      end
-      object N9: TMenuItem
-        Caption = '-'
-      end
-      object mmInstallCertificate: TMenuItem
-        Caption = 'Install certificate'
-        OnClick = mmInstallCertificateClick
-      end
-      object mmReport: TMenuItem
-        Caption = 'Report a bug'
-        OnClick = mmReportClick
-      end
-      object N10: TMenuItem
-        Caption = '-'
-      end
-      object mmAbout: TMenuItem
-        Caption = 'About Clearas'
-        OnClick = mmAboutClick
-      end
     end
   end
   object QuickSearchIconList: TImageList

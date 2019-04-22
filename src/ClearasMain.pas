@@ -11,16 +11,16 @@ unit ClearasMain;
 interface
 
 uses
-  Winapi.Windows, System.SysUtils, System.Classes, Vcl.Controls, Vcl.Forms,
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Classes, Vcl.Controls,
   Vcl.ComCtrls, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Dialogs, Vcl.Menus, Vcl.Graphics,
   Vcl.ClipBrd, Registry, System.ImageList, Winapi.CommCtrl, System.UITypes,
-  System.Generics.Collections, Winapi.ShellAPI, Vcl.ImgList, ClearasAPI,
-  PMCW.Dialogs.About, PMCW.LanguageFile, PMCW.SysUtils, PMCW.CA, PMCW.Dialogs.Updater,
-  ClearasDialogs, Winapi.Messages, PMCW.Registry, Clearas.ListColumns, Winapi.Taskschd;
+  Vcl.Forms, System.Generics.Collections, Winapi.ShellAPI, Vcl.ImgList, ClearasAPI,
+  ClearasDialogs, Clearas.ListColumns, Winapi.Taskschd, PMCW.Dialogs, PMCW.SysUtils,
+  PMCW.LanguageFile, PMCW.Registry, PMCW.Application;
 
 type
   { TMain }
-  TMain = class(TForm, IChangeLanguageListener)
+  TMain = class(TMainForm)
     ContextMenu: TPopupMenu;
     pmChangeStatus: TMenuItem;
     N1: TMenuItem;
@@ -32,7 +32,6 @@ type
     N2: TMenuItem;
     pmCopyLocation: TMenuItem;
     mmHelp: TMenuItem;
-    mmAbout: TMenuItem;
     mmEdit: TMenuItem;
     mmFile: TMenuItem;
     mmExport: TMenuItem;
@@ -63,12 +62,7 @@ type
     lContext: TLabel;
     pbContextProgress: TProgressBar;
     cbContextExpert: TCheckBox;
-    mmUpdate: TMenuItem;
-    N9: TMenuItem;
-    mmInstallCertificate: TMenuItem;
-    N10: TMenuItem;
     pmEditPath: TMenuItem;
-    mmReport: TMenuItem;
     pmOpenRegedit: TMenuItem;
     pmOpenExplorer: TMenuItem;
     tsService: TTabSheet;
@@ -139,10 +133,6 @@ type
     procedure mmExportClick(Sender: TObject);
     procedure mmImportClick(Sender: TObject);
     procedure mmRefreshClick(Sender: TObject);
-    procedure mmAboutClick(Sender: TObject);
-    procedure mmUpdateClick(Sender: TObject);
-    procedure mmInstallCertificateClick(Sender: TObject);
-    procedure mmReportClick(Sender: TObject);
     procedure PageControlChange(Sender: TObject);
     procedure pmChangeStatusClick(Sender: TObject);
     procedure pmCopyLocationClick(Sender: TObject);
@@ -173,8 +163,6 @@ type
     FContext: TContextMenuList;
     FService: TServiceList;
     FTasks: TTaskList;
-    FLang: TLanguageFile;
-    FUpdateCheck: TUpdateCheck;
     FStatusText: array[Boolean] of string;
     FColumnPopupMenu: TListViewColumnSelectionMenu;
     procedure ColumnChanged(Sender: TObject);
@@ -201,11 +189,10 @@ type
     procedure SortList(AListView: TListView);
     function ShowExportItemDialog(AItem: TRootItem): Boolean;
     procedure ShowOperationPendingUI(AIndex: Integer; AShow: Boolean);
-    procedure OnUpdate(Sender: TObject; const ANewBuild: Cardinal);
     procedure OnException(Sender: TObject; E: Exception);
     procedure WMTimer(var Message: TWMTimer); message WM_TIMER;
-    { IChangeLanguageListener }
-    procedure LanguageChanged();
+  protected
+    procedure LanguageChanged(); override;
   end;
 
 var
@@ -242,26 +229,21 @@ procedure TMain.FormCreate(Sender: TObject);
 begin
   // Setup languages
   FLang := TLanguageFile.Create;
+  FLang.AddListener(Self);
 
-  with FLang do
-  begin
-    AddListener(Self);
-    BuildLanguageMenu(mmLang);
-  end;  //of with
+  // Build menus
+  BuildLanguageMenu(mmLang);
+  BuildHelpMenu(mmHelp);
 
   // Use custom error dialog for possible uncatched exceptions
   Application.OnException := OnException;
 
   // Init update notificator
-  FUpdateCheck := TUpdateCheck.Create('Clearas', FLang);
-
-  with FUpdateCheck do
-  begin
-    OnUpdate := Self.OnUpdate;
-  {$IFNDEF DEBUG}
-    CheckForUpdate();
-  {$ENDIF}
-  end;  //of with
+{$IFDEF PORTABLE}
+  CheckForUpdate('Clearas', 'clearas.exe', 'clearas64.exe', 'Clearas.exe');
+{$ELSE}
+  CheckForUpdate('Clearas', 'clearas_setup.exe', '', 'Clearas Setup.exe');
+{$ENDIF}
 
   // Init lists
   FStartup := TStartupList.Create;
@@ -312,13 +294,11 @@ begin
   FreeAndNil(FService);
   FreeAndNil(FContext);
   FreeAndNil(FStartup);
-  FreeAndNil(FUpdateCheck);
-  FreeAndNil(FLang);
 end;
 
 procedure TMain.OnException(Sender: TObject; E: Exception);
 begin
-  FLang.ShowException('Uncatched exception', E.Message);
+  ExceptionDlg(FLang, 'Uncatched exception', E.Message);
 end;
 
 procedure TMain.FormShow(Sender: TObject);
@@ -357,56 +337,6 @@ begin
     on E: EInvalidItem do
       CanClose := True;
   end;  //of try
-end;
-
-{ private TMain.OnUpdate
-
-  Event that is called by TUpdateCheck when an update is available. }
-
-procedure TMain.OnUpdate(Sender: TObject; const ANewBuild: Cardinal);
-var
-  Updater: TUpdateDialog;
-
-begin
-  mmUpdate.Caption := FLang.GetString(LID_UPDATE_DOWNLOAD);
-
-  // Ask user to permit download
-  if (TaskMessageDlg(FLang.Format(LID_UPDATE_AVAILABLE, [ANewBuild]),
-    FLang[LID_UPDATE_CONFIRM_DOWNLOAD], mtConfirmation, mbYesNo, 0, mbYes) = idYes) then
-  begin
-    Updater := TUpdateDialog.Create(Self, FLang);
-
-    try
-      with Updater do
-      begin
-      {$IFDEF PORTABLE}
-        FileNameLocal := 'Clearas.exe';
-
-        // Download 64-Bit version?
-        if (TOSVersion.Architecture = arIntelX64) then
-          FileNameRemote := 'clearas64.exe'
-        else
-          FileNameRemote := 'clearas.exe';
-      {$ELSE}
-        FileNameLocal := 'Clearas Setup.exe';
-        FileNameRemote := 'clearas_setup.exe';
-      {$ENDIF}
-      end;  //of begin
-
-      // Successfully downloaded update?
-      if Updater.Execute() then
-      begin
-        mmUpdate.Caption := FLang.GetString(LID_UPDATE_SEARCH);
-        mmUpdate.Enabled := False;
-      {$IFNDEF PORTABLE}
-        Updater.LaunchSetup();
-      {$ENDIF}
-      end;  //of begin
-
-    finally
-      Updater.Free;
-    end;  //of try
-  end;  //of begin
 end;
 
 function TMain.GetItemText(AItem: TRootItem): string;
@@ -565,8 +495,7 @@ begin
               TThread.Synchronize(nil,
                 procedure
                 begin
-                  FLang.ShowException(FLang.GetString([LID_REFRESH, LID_IMPOSSIBLE]),
-                    Format('%s: %s', [RootList.ClassName, E.Message]));
+                  ExceptionDlg(FLang, FLang.GetString([LID_REFRESH, LID_IMPOSSIBLE]), Format('%s: %s', [RootList.ClassName, E.Message]));
                 end);
           end;  //of try
         end).Start();
@@ -845,6 +774,8 @@ var
   i: Integer;
 
 begin
+  inherited LanguageChanged();
+
   with FLang do
   begin
     // Cache status text
@@ -873,14 +804,6 @@ begin
     mmRefresh.Caption := GetString(LID_REFRESH);
     mmShowCaptions.Caption := GetString(LID_DESCRIPTION_SHOW);
     cbRunOnce.Caption := GetString(LID_STARTUP_RUNONCE);
-    mmLang.Caption := GetString(LID_SELECT_LANGUAGE);
-
-    // Help menu labels
-    mmHelp.Caption := GetString(LID_HELP);
-    mmUpdate.Caption := GetString(LID_UPDATE_SEARCH);
-    mmInstallCertificate.Caption := GetString(LID_CERTIFICATE_INSTALL);
-    mmReport.Caption := GetString(LID_REPORT_BUG);
-    mmAbout.Caption := Format(LID_ABOUT, [Application.Title]);
 
     // "Startup" tab TButton labels
     tsStartup.Caption := GetString(LID_STARTUP);
@@ -1021,7 +944,7 @@ begin
       MessageDlg(FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
 
     on E: Exception do
-      FLang.ShowException(FLang.GetString([LID_EXPORT, LID_IMPOSSIBLE]), E.Message);
+      ExceptionDlg(FLang, FLang.GetString([LID_EXPORT, LID_IMPOSSIBLE]), E.Message);
   end;  //of try
 end;
 
@@ -1168,7 +1091,7 @@ begin
     end;
 
     on E: Exception do
-      FLang.ShowException(FLang.GetString([LID_DELETE_ERASABLE, LID_IMPOSSIBLE]), E.Message);
+      ExceptionDlg(FLang, FLang.GetString([LID_DELETE_ERASABLE, LID_IMPOSSIBLE]), E.Message);
   end;  //of try
 end;
 
@@ -1230,7 +1153,7 @@ begin
       MessageDlg(E.Message, mtWarning, [mbOK], 0);
 
     on E: Exception do
-      FLang.ShowException(FLang.GetString([LID_DELETE, LID_IMPOSSIBLE]), E.Message);
+      ExceptionDlg(FLang, FLang.GetString([LID_DELETE, LID_IMPOSSIBLE]), E.Message);
   end;  //of try
 end;
 
@@ -1313,7 +1236,7 @@ begin
       MessageDlg(E.Message, mtWarning, [mbOK], 0);
 
     on E: Exception do
-      FLang.ShowException(FLang.GetString([LID_DISABLE, LID_IMPOSSIBLE]), E.Message);
+      ExceptionDlg(FLang, FLang.GetString([LID_DISABLE, LID_IMPOSSIBLE]), E.Message);
   end;  //of try
 end;
 
@@ -1396,7 +1319,7 @@ begin
       MessageDlg(E.Message, mtWarning, [mbOK], 0);
 
     on E: Exception do
-      FLang.ShowException(FLang.GetString([LID_ENABLE, LID_IMPOSSIBLE]), E.Message);
+      ExceptionDlg(FLang, FLang.GetString([LID_ENABLE, LID_IMPOSSIBLE]), E.Message);
   end;  //of try
 end;
 
@@ -1808,7 +1731,7 @@ begin
 
     on E: Exception do
     begin
-      FLang.ShowException(FLang.GetString([LID_CONTEXT_MENU_ICON_CHANGE,
+      ExceptionDlg(FLang, FLang.GetString([LID_CONTEXT_MENU_ICON_CHANGE,
         LID_IMPOSSIBLE]), E.Message);
     end;
   end;  //of try
@@ -1854,7 +1777,7 @@ begin
 
     on E: Exception do
     begin
-      FLang.ShowException(FLang.GetString([LID_CONTEXT_MENU_ICON_DELETE,
+      ExceptionDlg(FLang, FLang.GetString([LID_CONTEXT_MENU_ICON_DELETE,
         LID_IMPOSSIBLE]), E.Message);
     end;
   end;  //of try
@@ -1982,7 +1905,7 @@ begin
       MessageDlg(FLang.GetString(LID_ITEM_ALREADY_EXISTS), mtError, [mbOK], 0);
 
     on E: Exception do
-      FLang.ShowException(FLang.GetString([LID_RENAME, LID_IMPOSSIBLE]), E.Message);
+      ExceptionDlg(FLang, FLang.GetString([LID_RENAME, LID_IMPOSSIBLE]), E.Message);
   end;  //of try
 end;
 
@@ -2149,7 +2072,7 @@ begin
     end;
 
     on E: Exception do
-      FLang.ShowException(FLang.GetString([LID_PATH_EDIT, LID_IMPOSSIBLE]), E.Message);
+      ExceptionDlg(FLang, FLang.GetString([LID_PATH_EDIT, LID_IMPOSSIBLE]), E.Message);
   end;  //of try
 end;
 
@@ -2163,7 +2086,7 @@ begin
       MessageDlg(FLang.GetString(LID_NOTHING_SELECTED), mtWarning, [mbOK], 0);
 
     on E: Exception do
-      FLang.ShowException(FLang.GetString([LID_EXECUTE, LID_IMPOSSIBLE]), E.Message);
+      ExceptionDlg(FLang, FLang.GetString([LID_EXECUTE, LID_IMPOSSIBLE]), E.Message);
   end;  //of try
 end;
 
@@ -2193,7 +2116,7 @@ begin
     end;
 
     on E: Exception do
-      FLang.ShowException(FLang.GetString([LID_HIDE, LID_IMPOSSIBLE]), E.Message);
+      ExceptionDlg(FLang, FLang.GetString([LID_HIDE, LID_IMPOSSIBLE]), E.Message);
   end;  //of try
 end;
 
@@ -2302,7 +2225,7 @@ begin
 
     on E: Exception do
     begin
-      FLang.ShowException(StripHotKey(mmAdd.Caption) + FLang.GetString(LID_IMPOSSIBLE),
+      ExceptionDlg(FLang, StripHotKey(mmAdd.Caption) + FLang.GetString(LID_IMPOSSIBLE),
         E.Message);
     end;
   end;  //of try
@@ -2374,7 +2297,7 @@ begin
               TThread.Synchronize(nil,
                 procedure
                 begin
-                  FLang.ShowException(FLang.GetString([LID_EXPORT, LID_IMPOSSIBLE]), E.Message);
+                   ExceptionDlg(FLang, FLang.GetString([LID_EXPORT, LID_IMPOSSIBLE]), E.Message);
                 end);
           end;
         end).Start();
@@ -2434,7 +2357,7 @@ begin
 
     on E: Exception do
     begin
-      FLang.ShowException(FLang.GetString([LID_IMPORT, LID_IMPOSSIBLE]),
+      ExceptionDlg(FLang, FLang.GetString([LID_IMPORT, LID_IMPOSSIBLE]),
         E.Message);
     end;
   end;  //of try
@@ -2460,75 +2383,6 @@ var
 begin
   for i := 0 to PageControl.PageCount - 1 do
     Refresh(i, False);
-end;
-
-{ TMain.mmInstallCertificateClick
-
-  MainMenu entry that allows to install the PM Code Works certificate. }
-
-procedure TMain.mmInstallCertificateClick(Sender: TObject);
-begin
-  try
-    // Certificate already installed?
-    if CertificateExists() then
-    begin
-      MessageDlg(FLang.GetString(LID_CERTIFICATE_ALREADY_INSTALLED),
-        mtInformation, [mbOK], 0);
-    end  //of begin
-    else
-      InstallCertificate();
-
-  except
-    on E: EOSError do
-      MessageDlg(E.Message, mtError, [mbOK], 0);
-  end;
-end;
-
-{ TMain.mmUpdateClick
-
-  MainMenu entry that allows users to manually search for updates. }
-
-procedure TMain.mmUpdateClick(Sender: TObject);
-begin
-  FUpdateCheck.NotifyNoUpdate := True;
-  FUpdateCheck.CheckForUpdate();
-end;
-
-{ TMain.mmReportClick
-
-  MainMenu entry that allows users to easily report a bug by opening the web
-  browser and using the "report bug" formular. }
-
-procedure TMain.mmReportClick(Sender: TObject);
-begin
-  FLang.ReportBug();
-end;
-
-{ TMain.mmAboutClick
-
-  MainMenu entry that shows a info page with build number and version history. }
-
-procedure TMain.mmAboutClick(Sender: TObject);
-var
-  AboutDialog: TAboutDialog;
-  Description, Changelog: TResourceStream;
-
-begin
-  AboutDialog := TAboutDialog.Create(Self);
-  Description := TResourceStream.Create(HInstance, RESOURCE_DESCRIPTION, RT_RCDATA);
-  Changelog := TResourceStream.Create(HInstance, RESOURCE_CHANGELOG, RT_RCDATA);
-
-  try
-    AboutDialog.Title := StripHotkey(mmAbout.Caption);
-    AboutDialog.Description.LoadFromStream(Description);
-    AboutDialog.Changelog.LoadFromStream(Changelog);
-    AboutDialog.Execute();
-
-  finally
-    Changelog.Free;
-    Description.Free;
-    AboutDialog.Free;
-  end;  //of begin
 end;
 
 { TMain.lCopyClick
