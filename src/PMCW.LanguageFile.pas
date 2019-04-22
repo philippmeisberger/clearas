@@ -57,6 +57,12 @@ const
   LID_FATAL_ERROR                   = 31;
   LID_TECHNICAL_DETAILS             = 32;
 
+  { Translate IDs }
+  LID_TRANSLATE                     = 34;
+  LID_TRANSLATE_SELECT              = 35;
+  LID_TRANSLATE_FINISHED            = 39;
+  LID_TRANSLATE_SEND                = 40;
+
   { Update language IDs }
   LID_UPDATE                        = 5;
   LID_UPDATE_SELECT_DIR             = 9;
@@ -97,18 +103,6 @@ type
   /// </summary>
   TLocale = {$IFDEF MSWINDOWS}TLanguageId{$ELSE}string{$ENDIF};
 
-{$IFDEF MSWINDOWS}
-  TLocaleHelper = record helper for TLocale
-    /// <summary>
-    ///   Gets the name of the locale.
-    /// </summary>
-    /// <returns>
-    ///   The name.
-    /// </returns>
-    function DisplayName(): string;
-  end;
-{$ENDIF}
-
   /// <summary>
   ///   Receive notfication when user changes the language of the current
   ///   application. Must be implemented by classes that use the
@@ -135,10 +129,16 @@ type
     FLocale,
     FSection: TLocale;
     FLanguages: TStringList;
+  {$IFDEF MSWINDOWS}
+    FInterval: Integer;
+  {$ENDIF}
   {$IFDEF LINUX}
     FIni: TIniFile;
   {$ENDIF}
+    function GetCount(): Integer;
     procedure SetLocale(const ALocale: TLocale);
+    function GetLocale(AIndex: Integer): TLocale;
+    function GetName(AIndex: Integer): string;
   protected
   {$IFDEF MSWINDOWS}
     /// <summary>
@@ -261,6 +261,31 @@ type
     function GetString(const AIndices: array of TLanguageId): string; overload;
 
     /// <summary>
+    ///   Gets the translation for a specified locale.
+    /// </summary>
+    /// <param name="ALocale">
+    ///   The locale.
+    /// </param>
+    /// <returns>
+    ///   The translated locale.
+    /// </returns>
+    /// <exception href="ELanguageException">
+    ///   if no translation was found.
+    /// </exception>
+    function GetTranslation(const ALocale: TLocale): TLocale;
+
+    /// <summary>
+    ///   Checks if a translation is available for a specified locale.
+    /// </summary>
+    /// <param name="ALocale">
+    ///   The locale to check.
+    /// </param>
+    /// <returns>
+    ///   <c>True</c> if translation is available or <c>False</c> otherwise.
+    /// </returns>
+    function IsTranslated(const ALocale: TLocale): Boolean; inline;
+
+    /// <summary>
     ///   Removes a listener from the notification list.
     /// </summary>
     /// <param name="AListener">
@@ -269,14 +294,29 @@ type
     procedure RemoveListener(AListener: IChangeLanguageListener);
 
     /// <summary>
-    ///   Gets the available translations.
+    ///   Gets the number of supported languages.
     /// </summary>
-    property Languages: TStringList read FLanguages;
-
+    property Count: Integer read GetCount;
+  {$IFDEF MSWINDOWS}
+    /// <summary>
+    ///   Gets the interval between languages.
+    /// </summary>
+    property Interval: Integer read FInterval;
+  {$ENDIF}
     /// <summary>
     ///   Gets or sets the current used locale for UI translation.
     /// </summary>
     property Locale: TLocale read FLocale write SetLocale;
+
+    /// <summary>
+    ///   Gets the locale ID of a translation.
+    /// </summary>
+    property Locales[AIndex: Integer]: TLocale read GetLocale;
+
+    /// <summary>
+    ///   Gets the display name of a translation.
+    /// </summary>
+    property Names[AIndex: Integer]: string read GetName;
 
     /// <summary>
     ///   Loads a single string from the language file.
@@ -287,20 +327,12 @@ type
 implementation
 
 {$IFDEF MSWINDOWS}
+{$IFDEF FPC}
+{$R languages.rc}
+function GetUserDefaultUILanguage(): LANGID; stdcall; external kernel32 name 'GetUserDefaultUILanguage';
+{$ELSE}
 {$R languages.res}
-
-{ TLocaleHelper }
-
-function TLocaleHelper.DisplayName(): string;
-var
-  CopiedChars: DWORD;
-
-begin
-  SetLength(Result, 80);
-  CopiedChars := VerLanguageName(MAKELANGID(Self, SUBLANG_DEFAULT), PChar(Result),
-    Length(Result));
-  SetLength(Result, CopiedChars);
-end;
+{$ENDIF}
 {$ELSE}
 function GetUserDefaultUILanguage(): string;
 begin
@@ -379,6 +411,37 @@ begin
 {$ENDIF}
 end;
 
+function TLanguageFile.GetCount(): Integer;
+begin
+  Result := FLanguages.Count;
+end;
+
+function TLanguageFile.GetLocale(AIndex: Integer): TLocale;
+begin
+{$IFDEF MSWINDOWS}
+  Result := StrToInt(FLanguages.Names[AIndex]);
+{$ELSE}
+  Result := FLanguages.Names[AIndex];
+{$ENDIF}
+end;
+
+function TLanguageFile.GetName(AIndex: Integer): string;
+{$IFDEF MSWINDOWS}
+var
+  CopiedChars: DWORD;
+{$ENDIF}
+
+begin
+{$IFDEF MSWINDOWS}
+  SetLength(Result, 80);
+  CopiedChars := VerLanguageName(MAKELANGID(Locales[AIndex], SUBLANG_DEFAULT),
+    PChar(Result), Length(Result));
+  SetLength(Result, CopiedChars);
+{$ELSE}
+  Result := FLanguages.ValueFromIndex[AIndex];
+{$ENDIF}
+end;
+
 function TLanguageFile.GetString(const AIndices: array of TLanguageId): string;
 var
   LanguageId: TLanguageId;
@@ -395,6 +458,60 @@ begin
   end;  //of for
 end;
 
+function TLanguageFile.GetTranslation(const ALocale: TLocale): TLocale;
+{$IFNDEF MSWINDOWS}
+var
+  MatchFound: Boolean;
+  i: Integer;
+{$ENDIF}
+
+begin
+  Result := ALocale;
+
+  if not IsTranslated(Result) then
+  begin
+  {$IFDEF MSWINDOWS}
+    // Try primary language
+    Result := MAKELANGID(PRIMARYLANGID(ALocale), SUBLANG_DEFAULT);
+
+    if not IsTranslated(Result) then
+  {$ELSE}
+    MatchFound := False;
+
+    // Try primary language
+    for i := 0 to FLanguages.Count - 1 do
+    begin
+      Result := Locale[i];
+
+      if AnsiStartsText(Copy(ALocale, 1, 3), Result) then
+      begin
+        MatchFound := True;
+        Break;
+      end;  //of begin
+    end;  //of for
+
+    if not MatchFound then
+  {$ENDIF}
+    begin
+      // English as fallback
+      Result := {$IFDEF MSWINDOWS}MAKELANGID(LANG_ENGLISH, SUBLANG_DEFAULT){$ELSE}'en_US'{$ENDIF};
+
+      // Default language not found?
+      if not IsTranslated(Result) then
+        raise ELanguageException.Create('No default language found in language file!');
+    end;  //of begin
+  end;  //of begin
+end;
+
+function TLanguageFile.IsTranslated(const ALocale: TLocale): Boolean;
+begin
+{$IFDEF MSWINDOWS}
+  Result := (FLanguages.Values[IntToStr(ALocale)] <> '');
+{$ELSE}
+  Result := (FLanguages.Values[ALocale] <> '');
+{$ENDIF}
+end;
+
 procedure TLanguageFile.Load({$IFDEF MSWINDOWS}const AInterval: Word = 200{$ENDIF});
 {$IFDEF MSWINDOWS}
 var
@@ -405,6 +522,7 @@ begin
   if (AInterval = 0) then
     raise EArgumentException.Create('Invalid interval!');
 
+  FInterval := AInterval;
   FLanguages.Clear();
   Language := FIRST_LANGUAGE_START_INDEX;
 
@@ -416,23 +534,15 @@ begin
   end;  //of while
 {$ELSE}
 var
-  Languages: TStrings;
   i: Integer;
 
 begin
   FLanguages.Clear();
-  Languages := TStringList.Create;
+  FIni.ReadSections(FLanguages);
 
-  try
-    FIni.ReadSections(Languages);
-
-    // Load available languages
-    for i := 0 to Languages.Count - 1 do
-      FLanguages.Append(FIni.ReadString(Languages[i], IntToStr(FIRST_LANGUAGE_START_INDEX), '') +'='+ Languages[i]);
-
-  finally
-    Languages.Free;
-  end;  //of try
+  // Load available languages
+  for i := 0 to FLanguages.Count - 1 do
+    FLanguages[i] := FIni.ReadString(FLanguages[i], IntToStr(FIRST_LANGUAGE_START_INDEX), '') +'='+ FLanguages[i];
 {$ENDIF}
 
   // Try to set user prefered language
@@ -447,72 +557,16 @@ end;
 
 procedure TLanguageFile.SetLocale(const ALocale: TLocale);
 var
-  i: Integer;
   Listener: IChangeLanguageListener;
-  Locale: TLocale;
-{$IFNDEF MSWINDOWS}
-  MatchFound: Boolean;
-{$ENDIF}
+  i: Integer;
 
 begin
   if (FLocale <> ALocale) then
   begin
+    FLocale := GetTranslation(ALocale);
   {$IFDEF MSWINDOWS}
-    // Requested language not found?
-    if (FLanguages.Values[IntToStr(ALocale)] = '') then
-    begin
-      // Try primary language
-      Locale := MAKELANGID(PRIMARYLANGID(ALocale), SUBLANG_DEFAULT);
-
-      if (FLanguages.Values[IntToStr(Locale)] = '') then
-      begin
-        // English as fallback
-        Locale := MAKELANGID(LANG_ENGLISH, SUBLANG_DEFAULT);
-
-        // Default language not found?
-        if (FLanguages.Values[IntToStr(Locale)] = '') then
-          raise ELanguageException.Create('No default language found in language file!');
-
-        FLocale := Locale;
-      end;  //of begin
-    end  //of begin
-    else
-      FLocale := ALocale;
-
     FSection := StrToInt(FLanguages.Values[IntToStr(FLocale)]);
   {$ELSE}
-    // Requested language not found?
-    if (FLanguages.Values[ALocale] = '') then
-    begin
-      MatchFound := False;
-
-      // Try primary language
-      for i := 0 to FLanguages.Count - 1 do
-      begin
-        Locale := FIni.ReadString(FLanguages.ValueFromIndex[i], IntToStr(FIRST_LANGUAGE_START_INDEX), '');
-
-        if AnsiStartsText(Copy(ALocale, 1, 3), Locale) then
-        begin
-          MatchFound := True;
-          Break;
-        end;  //of begin
-      end;  //of for
-
-      if not MatchFound then
-      begin
-        // English as fallback
-        Locale := 'en_US';
-
-        // Default language not found?
-        if (FLanguages.Values[Locale] = '') then
-          raise ELanguageException.Create('No default language found in language file!');
-      end;  //of begin
-
-      FLocale := Locale;
-    end  //of begin
-    else
-      FLocale := ALocale;
-
     FSection := FLanguages.Values[FLocale];
   {$ENDIF}
 

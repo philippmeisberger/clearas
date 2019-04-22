@@ -15,7 +15,7 @@ interface
 uses
   SysUtils,
 {$IFDEF MSWINDOWS}
-  Winapi.Windows, Winapi.ShellAPI, Winapi.ShlObj, Winapi.ActiveX;
+  Windows, ShellAPI, ShlObj, ActiveX;
 {$ELSE}
   Process, Resource, ElfReader, VersionResource;
 {$ENDIF}
@@ -304,9 +304,14 @@ function Wow64RevertWow64FsRedirection(OldValue: BOOL): BOOL; stdcall;
 implementation
 
 {$IFDEF MSWINDOWS}
-function GetSystemWow64Directory(lpBuffer: LPTSTR; uSize: UINT): UINT; stdcall; external kernel32 name 'GetSystemWow64Directory'+{$IFDEF UNICODE}'W'{$ELSE}'A'{$ENDIF}; overload;
+function GetSystemWow64Directory(lpBuffer: LPTSTR; uSize: UINT): UINT; stdcall;
+  external kernel32 name 'GetSystemWow64Directory'+{$IFDEF UNICODE}'W'{$ELSE}'A'{$ENDIF}; overload;
 function Wow64DisableWow64FsRedirection; external kernel32 name 'Wow64DisableWow64FsRedirection';
 function Wow64RevertWow64FsRedirection; external kernel32 name 'Wow64RevertWow64FsRedirection';
+{$IFDEF FPC}
+function SHGetKnownFolderPath(const rfid: TIID; dwFlags: DWORD; hToken: THandle;
+  var ppszPath: LPWSTR): HRESULT; external shell32 name 'SHGetKnownFolderPath';
+{$ENDIF}
 
 function DisableWow64FsRedirection(): Boolean;
 {$IFDEF WIN32}
@@ -379,7 +384,7 @@ end;
 
 function GetKnownFolderPath(AFolderId: TGUID): string;
 var
-  Path: PChar;
+  Path: PWideChar;
 
 begin
   if Succeeded(SHGetKnownFolderPath(AFolderId, 0, 0, Path)) then
@@ -453,7 +458,7 @@ begin
     nShow := SW_SHOWDEFAULT;
   end;  //of with
 
-  Result := ShellExecuteEx(@ShellExecuteInfo);
+  Result := {$IFDEF UNICODE}ShellExecuteExW{$ELSE}ShellExecuteExA{$ENDIF}(@ShellExecuteInfo);
 end;
 
 

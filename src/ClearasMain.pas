@@ -15,8 +15,8 @@ uses
   Vcl.ComCtrls, Vcl.StdCtrls, Vcl.ExtCtrls, Vcl.Dialogs, Vcl.Menus, Vcl.Graphics,
   Vcl.ClipBrd, Registry, System.ImageList, Winapi.CommCtrl, System.UITypes,
   Vcl.Forms, System.Generics.Collections, Winapi.ShellAPI, Vcl.ImgList, ClearasAPI,
-  ClearasDialogs, Clearas.ListColumns, Winapi.Taskschd, PMCW.Dialogs, PMCW.SysUtils,
-  PMCW.LanguageFile, PMCW.Registry, PMCW.Application;
+  Clearas.ListColumns, Winapi.Taskschd, PMCW.Dialogs, PMCW.SysUtils, PMCW.LanguageFile,
+  PMCW.Registry, PMCW.Application;
 
 type
   { TMain }
@@ -2385,6 +2385,7 @@ begin
     Refresh(i, False);
 end;
 
+// TODO: Move hyperlink code to TMainForm
 { TMain.lCopyClick
 
   Opens the homepage of PM Code Works in a web browser. }
