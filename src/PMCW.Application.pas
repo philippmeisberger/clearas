@@ -371,6 +371,7 @@ begin
 {$IFNDEF FPC}
   FMenuTranslate.Caption := FLang[LID_TRANSLATE];
 {$ENDIF}
+  FMenuDonate.Caption := FLang[LID_DONATE];
   FMenuReportBug.Caption := FLang[LID_REPORT_BUG];
   FMenuAbout.Caption := FLang.Format(LID_ABOUT, [Application.Title]);
 end;
