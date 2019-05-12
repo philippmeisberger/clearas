@@ -22,7 +22,7 @@ uses
   System.UITypes, PMCW.Dialogs.Updater,
 {$ENDIF}
   SysUtils, Classes, Forms, Menus, Dialogs, PMCW.LanguageFile, PMCW.Dialogs,
-  PMCW.Dialogs.ReportBug, PMCW.Dialogs.About;
+  PMCW.Dialogs.ReportBug, PMCW.Dialogs.About, PMCW.SysUtils;
 
 type
   /// <summary>
@@ -45,6 +45,7 @@ type
     FMenuInstallCert,
   {$ENDIF}
     FMenuReportBug,
+    FMenuDonate,
     FMenuBreak2,
     FMenuAbout: TMenuItem;
     procedure AboutClick(Sender: TObject);
@@ -58,6 +59,7 @@ type
     procedure InstallCertificateClick(Sender: TObject);
   {$ENDIF}
     procedure ReportBugClick(Sender: TObject);
+    procedure DonateClick(Sender: TObject);
     procedure UpdateClick(Sender: TObject);
   protected
     FLang: TLanguageFile;
@@ -117,6 +119,7 @@ begin
   FreeAndNil(FMenuInstallCert);
 {$ENDIF}
   FreeAndNil(FMenuReportBug);
+  FreeAndNil(FMenuDonate);
   FreeAndNil(FMenuBreak2);
   FreeAndNil(FMenuAbout);
 {$IFNDEF FPC}
@@ -125,6 +128,11 @@ begin
 {$ENDIF}
   FreeAndNil(FLang);
   inherited Destroy;
+end;
+
+procedure TMainForm.DonateClick(Sender: TObject);
+begin
+  OpenUrl(URL_BASE +'donate.php');
 end;
 
 {$IFDEF MSWINDOWS}
@@ -296,6 +304,12 @@ begin
   FMenuTranslate.OnClick := TranslateClick;
   AMenuItem.Add(FMenuTranslate);
 {$ENDIF}
+
+  // "Donate"
+  FMenuDonate := TMenuItem.Create(AMenuItem);
+  FMenuDonate.Caption := FLang[LID_DONATE];
+  FMenuDonate.OnClick := DonateClick;
+  AMenuItem.Add(FMenuDonate);
 
   // "Report bug"
   FMenuReportBug := TMenuItem.Create(AMenuItem);

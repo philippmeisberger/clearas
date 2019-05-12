@@ -47,6 +47,7 @@ const
   LID_SELECT_LANGUAGE               = 25;
   LID_TO_WEBSITE                    = 29;
   LID_FILTER_REGISTRY_FILE          = 36;
+  LID_DONATE                        = 38;
 
   { Report bug IDs }
   LID_REPORT_BUG                    = 26;
