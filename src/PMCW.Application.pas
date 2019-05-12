@@ -16,13 +16,11 @@ uses
 {$IFDEF MSWINDOWS}
   Windows, PMCW.CA,
 {$ENDIF}
-{$IFDEF FPC}
-  PMCW.SysUtils,
-{$ELSE}
-  System.UITypes, PMCW.Dialogs.Updater,
+{$IFNDEF FPC}
+  System.UITypes, PMCW.Dialogs.Updater, PMCW.Dialogs.ReportBug,
 {$ENDIF}
   SysUtils, Classes, Forms, Menus, Dialogs, PMCW.LanguageFile, PMCW.Dialogs,
-  PMCW.Dialogs.ReportBug, PMCW.Dialogs.About, PMCW.SysUtils;
+  PMCW.Dialogs.About, PMCW.SysUtils;
 
 type
   /// <summary>
