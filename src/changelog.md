@@ -6,16 +6,17 @@ An open-source project by PM Code Works
 Version 5.1
 -----------
 
-- Added possibility to choose displayed columns
-  - Right-click on column header shows menu
-- Added column "Publisher"
-- First column is now "Name" instead of "Enabled"
-- Removed menu item "Show deactivation date"
-  - Replaced by column "Deactivation date"
-- Count of enabled items is now shown in tab header
-- Fixed exception when renaming a "Shell" item which has not a caption yet
-- Introduced sending bug reports without mail client
-- Introduced translation dialog (in menu "Help")
+* Added possibility to choose displayed columns
+  * Right-click on column header shows menu
+* Added column "Publisher"
+* First column is now "Name" instead of "Enabled"
+* Removed menu item "Show deactivation date"
+  * Replaced by column "Deactivation date"
+* Count of enabled items is now shown in tab header
+* Fixed exception when renaming a "Shell" item which has not a caption yet
+* Introduced sending bug reports without mail client
+* Introduced translation dialog (in menu "Help")
+* Introduced donate button (in menu "Help")
 
 Version 5.0 [*02.04.18*]
 -----------
