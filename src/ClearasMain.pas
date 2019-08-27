@@ -1633,7 +1633,7 @@ begin
     FColumnPopupMenu.ListView := (Sender as TListView);
 
   // Show column selection popup menu
-  FColumnPopupMenu.Popup(Mouse.CursorPos.X, Mouse.CursorPos.Y);
+  FColumnPopupMenu.Popup(Mouse.CursorPos.X, Mouse.CursorPos.Y, Column);
 end;
 
 procedure TMain.lwStartupDblClick(Sender: TObject);

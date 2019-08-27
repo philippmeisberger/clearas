@@ -189,10 +189,6 @@ object Main: TMain
     object tsContext: TTabSheet
       Caption = 'Context menu'
       ImageIndex = 1
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       DesignSize = (
         535
         262)
@@ -362,10 +358,6 @@ object Main: TMain
     object tsService: TTabSheet
       Caption = 'Services'
       ImageIndex = 2
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       DesignSize = (
         535
         262)
@@ -531,10 +523,6 @@ object Main: TMain
     object tsTasks: TTabSheet
       Caption = 'Tasks'
       ImageIndex = 3
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       DesignSize = (
         535
         262)

@@ -11,7 +11,7 @@ unit Clearas.ListColumns;
 interface
 
 uses
-  System.Classes, Vcl.Menus, Vcl.ComCtrls, PMCW.LanguageFile;
+  System.Classes, Vcl.Menus, Vcl.ComCtrls, Winapi.CommCtrl, PMCW.LanguageFile;
 
 type
   /// <summary>
@@ -115,9 +115,15 @@ type
   TListViewColumnSelectionMenu = class(TPopupMenu)
   private
     FListView: TListView;
+    FAutoSizeColumn,
+    FAutoSizeColumns,
+    FAutoSizeColumnSeparator: TMenuItem;
+    FColumn: TListColumn;
     FLanguageFile: TLanguageFile;
     FOnColumnChanged: TNotifyEvent;
     procedure ColumnMenuItemClick(Sender: TObject);
+    procedure AutoSizeColumnClick(Sender: TObject);
+    procedure AutoSizeColumnsClick(Sender: TObject);
   public
     /// <summary>
     ///   Constructor for creating a <c>TListViewColumnSelectionMenu</c> instance.
@@ -136,7 +142,18 @@ type
     /// <param name="x,y">
     ///   The coordinates.
     /// </param>
-    procedure Popup(X, Y: Integer); override;
+    procedure Popup(X, Y: Integer); overload; override;
+
+    /// <summary>
+    ///   Shows the popup menu at the specified location and allows column auto-size.
+    /// </summary>
+    /// <param name="x,y">
+    ///   The coordinates.
+    /// </param>
+    /// <param name="AColumn">
+    ///   The clicked column.
+    /// </param>
+    procedure Popup(X, Y: Integer; AColumn: TListColumn); reintroduce; overload;
 
     /// <summary>
     ///   Occurs if column should be shown or hidden.
@@ -221,6 +238,33 @@ begin
   FListView := AListView;
   FLanguageFile := ALanguageFile;
 
+  // Auto-size this colummn
+  FAutoSizeColumn := TMenuItem.Create(Self);
+
+  with FAutoSizeColumn do
+  begin
+    Caption := FLanguageFile[LID_ADJUST_COLUMN];
+    OnClick := AutoSizeColumnClick;
+  end;  //of with
+
+  Items.Add(FAutoSizeColumn);
+
+  // Auto-size all columns
+  FAutoSizeColumns := TMenuItem.Create(Self);
+
+  with FAutoSizeColumns do
+  begin
+    Caption := FLanguageFile[LID_ADJUST_COLUMNS];
+    OnClick := AutoSizeColumnsClick;
+  end;  //of with
+
+  Items.Add(FAutoSizeColumns);
+
+  // Separator
+  FAutoSizeColumnSeparator := TMenuItem.Create(Self);
+  FAutoSizeColumnSeparator.Caption := '-';
+  Items.Add(FAutoSizeColumnSeparator);
+
   // Create a menu with all available columns
   for ListColumn := Low(TClearasListColumn) to High(TClearasListColumn) do
   begin
@@ -237,6 +281,23 @@ begin
 
     Items.Add(MenuItem);
   end;  //of for
+end;
+
+procedure TListViewColumnSelectionMenu.AutoSizeColumnClick(Sender: TObject);
+begin
+  // Auto-size selected column
+  if Assigned(FColumn) then
+    FColumn.Width := LVSCW_AUTOSIZE;
+end;
+
+procedure TListViewColumnSelectionMenu.AutoSizeColumnsClick(Sender: TObject);
+var
+  i: Integer;
+
+begin
+  // Auto-size all columns
+  for i := 0 to FListView.Columns.Count - 1 do
+    FListView.Column[i].Width := LVSCW_AUTOSIZE;
 end;
 
 procedure TListViewColumnSelectionMenu.ColumnMenuItemClick(Sender: TObject);
@@ -276,7 +337,16 @@ begin
   for i := 0 to Items.Count - 1 do
     Items[i].Checked := TClearasListColumn(Items[i].Tag).IsVisible(FListView);
 
+  FAutoSizeColumn.Visible := Assigned(FColumn);
+  FAutoSizeColumns.Visible := Assigned(FColumn);
+  FAutoSizeColumnSeparator.Visible := Assigned(FColumn);
   inherited Popup(X, Y);
+end;
+
+procedure TListViewColumnSelectionMenu.Popup(X, Y: Integer; AColumn: TListColumn);
+begin
+  FColumn := AColumn;
+  Popup(X, Y);
 end;
 
 end.

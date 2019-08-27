@@ -25,6 +25,8 @@ const
   LID_INCOMPATIBLE_OS                   = LID_LAST + 24;
   LID_EXECUTE                           = LID_LAST + 25;
   LID_OPEN_IN_REGEDIT                   = LID_LAST + 26;
+  LID_ADJUST_COLUMN                     = LID_LAST + 27;
+  LID_ADJUST_COLUMNS                    = LID_LAST + 28;
   LID_STARTUP_ADD                       = LID_LAST + 29;
   LID_IMPORT                            = LID_LAST + 30;
   LID_FILESYSTEM                        = LID_LAST + 31;
