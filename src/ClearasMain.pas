@@ -1623,9 +1623,6 @@ end;
 
 procedure TMain.ListViewColumnRightClick(Sender: TObject; Column: TListColumn;
   Point: TPoint);
-var
-  ScreenPoint: TPoint;
-
 begin
   if not Assigned(FColumnPopupMenu) then
   begin
@@ -1636,8 +1633,7 @@ begin
     FColumnPopupMenu.ListView := (Sender as TListView);
 
   // Show column selection popup menu
-  ScreenPoint := (Sender as TListView).ClientToScreen(Point);
-  FColumnPopupMenu.Popup(ScreenPoint.X, ScreenPoint.Y);
+  FColumnPopupMenu.Popup(Mouse.CursorPos.X, Mouse.CursorPos.Y);
 end;
 
 procedure TMain.lwStartupDblClick(Sender: TObject);
