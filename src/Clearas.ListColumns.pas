@@ -115,9 +115,7 @@ type
   TListViewColumnSelectionMenu = class(TPopupMenu)
   private
     FListView: TListView;
-    FAutoSizeColumn,
-    FAutoSizeColumns,
-    FAutoSizeColumnSeparator: TMenuItem;
+    FAutoSizeColumn: TMenuItem;
     FColumn: TListColumn;
     FLanguageFile: TLanguageFile;
     FOnColumnChanged: TNotifyEvent;
@@ -250,20 +248,20 @@ begin
   Items.Add(FAutoSizeColumn);
 
   // Auto-size all columns
-  FAutoSizeColumns := TMenuItem.Create(Self);
+  MenuItem := TMenuItem.Create(Self);
 
-  with FAutoSizeColumns do
+  with MenuItem do
   begin
     Caption := FLanguageFile[LID_ADJUST_COLUMNS];
     OnClick := AutoSizeColumnsClick;
   end;  //of with
 
-  Items.Add(FAutoSizeColumns);
+  Items.Add(MenuItem);
 
   // Separator
-  FAutoSizeColumnSeparator := TMenuItem.Create(Self);
-  FAutoSizeColumnSeparator.Caption := '-';
-  Items.Add(FAutoSizeColumnSeparator);
+  MenuItem := TMenuItem.Create(Self);
+  MenuItem.Caption := '-';
+  Items.Add(MenuItem);
 
   // Create a menu with all available columns
   for ListColumn := Low(TClearasListColumn) to High(TClearasListColumn) do
@@ -338,8 +336,6 @@ begin
     Items[i].Checked := TClearasListColumn(Items[i].Tag).IsVisible(FListView);
 
   FAutoSizeColumn.Visible := Assigned(FColumn);
-  FAutoSizeColumns.Visible := Assigned(FColumn);
-  FAutoSizeColumnSeparator.Visible := Assigned(FColumn);
   inherited Popup(X, Y);
 end;
 
