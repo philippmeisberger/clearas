@@ -14,7 +14,7 @@ interface
 
 uses
 {$IFDEF FPC}
-  PMCW.SysUtils, Controls,
+  PMCW.SysUtils, Controls, UITypes,
 {$ELSE}
   System.UITypes, PMCW.Dialogs.ReportBug,
 {$ENDIF}
@@ -156,8 +156,9 @@ begin
 {$WARN SYMBOL_PLATFORM ON}
 {$ELSE}
 begin
-  MessageDlg(ALanguageFile[LID_FATAL_ERROR] +': '+ AMessage + sLineBreak
-    + ADetails, mtError, [mbClose], 0);
+  if (MessageDlg(ALanguageFile[LID_FATAL_ERROR], AMessage +': '+ ADetails + sLineBreak +
+    ALanguageFile[LID_REPORT_BUG]+'?', mtError, [mbYes, mbClose], 0) = mrYes) then
+    ReportBugDlg(ALanguageFile, AMessage);
 {$ENDIF}
 end;
 
