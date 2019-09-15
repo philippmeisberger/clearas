@@ -1,5 +1,5 @@
 #define MyAppName "Clearas"
-#define MyAppURL "http://www.pm-codeworks.de"
+#define MyAppURL "https://www.pm-codeworks.de"
 #define MyAppExeName "Clearas.exe"
 #define MyAppExePath32 "..\bin\Win32\Release\"
 #define MyAppExePath64 "..\bin\Win64\Release\"
@@ -38,7 +38,6 @@ Name: "german"; MessagesFile: "compiler:Languages\German.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
-Name: "quicklaunchicon"; Description: "{cm:CreateQuickLaunchIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 Name: "ContextMenuRecycleBin"; Description: "{cm:ContextMenuRecycleBin}"; GroupDescription: "{cm:ContextMenu}"; Flags: unchecked
 
 [Files]
