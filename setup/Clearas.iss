@@ -37,8 +37,8 @@ Name: "french"; MessagesFile: "compiler:Languages\French.isl"
 Name: "german"; MessagesFile: "compiler:Languages\German.isl"
 
 [Tasks]
-Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
-Name: "ContextMenuRecycleBin"; Description: "{cm:ContextMenuRecycleBin}"; GroupDescription: "{cm:ContextMenu}"; Flags: unchecked
+Name: "ContextMenuRecycleBin"; Description: "{cm:ContextMenu}"; Flags: unchecked
+Name: "DesktopIcon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 
 [Files]
 Source: "{#MyAppExePath32}{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion; Check: not Is64BitInstallMode
@@ -47,22 +47,23 @@ Source: "{#MyAppExePath64}{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversi
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
-Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+Name: "{commondesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: DesktopIcon
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}"; Flags: postinstall shellexec
 
 [Registry]
-Root: HKCR; Subkey: "CLSID\{{645FF040-5081-101B-9F08-00AA002F954E}\shell\{#MyAppName}"; Flags: uninsdeletekey; Tasks: "ContextMenuRecycleBin"
-Root: HKCR; Subkey: "CLSID\{{645FF040-5081-101B-9F08-00AA002F954E}\shell\{#MyAppName}"; ValueType: string; ValueName: ""; ValueData: "{cm:LaunchProgram,{#MyAppName}}"; Tasks: "ContextMenuRecycleBin"
-Root: HKCR; Subkey: "CLSID\{{645FF040-5081-101B-9F08-00AA002F954E}\shell\{#MyAppName}\command"; ValueType: string; ValueName: ""; ValueData: "{app}\{#MyAppExeName}"; Tasks: "ContextMenuRecycleBin"
+Root: HKCR; Subkey: "CLSID\{{645FF040-5081-101B-9F08-00AA002F954E}\shell\{#MyAppName}"; Flags: uninsdeletekey; Tasks: ContextMenuRecycleBin
+Root: HKCR; Subkey: "CLSID\{{645FF040-5081-101B-9F08-00AA002F954E}\shell\{#MyAppName}"; ValueType: string; ValueName: ""; ValueData: "{cm:LaunchProgram,{#MyAppName}}"; Tasks: ContextMenuRecycleBin
+Root: HKCR; Subkey: "CLSID\{{645FF040-5081-101B-9F08-00AA002F954E}\shell\{#MyAppName}\command"; ValueType: string; ValueName: ""; ValueData: "{app}\{#MyAppExeName}"; Tasks: ContextMenuRecycleBin
 
 [Messages]
 BeveledLabel=Inno Setup
 
 [CustomMessages]
-ContextMenu=Integrate {#MyAppName} into contextmenu
-ContextMenuRecycleBin=Recycle Bin
+english.ContextMenu=Add to recycle bin context menu
+french.ContextMenu=Ajouter au menu contextuel de la corbeille
+german.ContextMenu=Zum Papierkorb-Kontextmenü hinzufügen
 
 [Code]
 procedure UrlLabelClick(Sender: TObject);
