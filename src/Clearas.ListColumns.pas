@@ -112,16 +112,20 @@ type
   /// <summary>
   ///   A popup menu used to show/hide columns inside a <see cref="TListView"/>.
   /// </summary>
-  TListViewColumnSelectionMenu = class(TPopupMenu)
+  TListViewColumnSelectionMenu = class(TPopupMenu, IChangeLanguageListener)
   private
     FListView: TListView;
-    FAutoSizeColumn: TMenuItem;
+    FAutoSizeColumn,
+    FAutoSizeAllColumns: TMenuItem;
     FColumn: TListColumn;
     FLanguageFile: TLanguageFile;
     FOnColumnChanged: TNotifyEvent;
     procedure ColumnMenuItemClick(Sender: TObject);
     procedure AutoSizeColumnClick(Sender: TObject);
     procedure AutoSizeColumnsClick(Sender: TObject);
+  protected
+    { IChangeLanguageListener }
+    procedure LanguageChanged();
   public
     /// <summary>
     ///   Constructor for creating a <c>TListViewColumnSelectionMenu</c> instance.
@@ -235,6 +239,7 @@ begin
   inherited Create(AListView);
   FListView := AListView;
   FLanguageFile := ALanguageFile;
+  ALanguageFile.AddListener(Self);
 
   // Auto-size this colummn
   FAutoSizeColumn := TMenuItem.Create(Self);
@@ -248,15 +253,15 @@ begin
   Items.Add(FAutoSizeColumn);
 
   // Auto-size all columns
-  MenuItem := TMenuItem.Create(Self);
+  FAutoSizeAllColumns := TMenuItem.Create(Self);
 
-  with MenuItem do
+  with FAutoSizeAllColumns do
   begin
     Caption := FLanguageFile[LID_ADJUST_COLUMNS];
     OnClick := AutoSizeColumnsClick;
   end;  //of with
 
-  Items.Add(MenuItem);
+  Items.Add(FAutoSizeAllColumns);
 
   // Separator
   MenuItem := TMenuItem.Create(Self);
@@ -278,6 +283,24 @@ begin
     end;  //of with
 
     Items.Add(MenuItem);
+  end;  //of for
+end;
+
+procedure TListViewColumnSelectionMenu.LanguageChanged;
+var
+  MenuItem: TMenuItem;
+
+begin
+  if Assigned(FAutoSizeColumn) then
+    FAutoSizeColumn.Caption := FLanguageFile[LID_ADJUST_COLUMN];
+
+  if Assigned(FAutoSizeAllColumns) then
+    FAutoSizeAllColumns.Caption := FLanguageFile[LID_ADJUST_COLUMNS];
+
+  for MenuItem in Items do
+  begin
+    if (MenuItem.Tag <> 0) then
+      MenuItem.Caption := TClearasListColumn(MenuItem.Tag).ToString(FLanguageFile);
   end;  //of for
 end;
 
