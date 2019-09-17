@@ -10,7 +10,7 @@ BDSDIR=C:\Program Files (x86)\Embarcadero\Studio\16.0
 MSBUILD=C:\Windows\Microsoft.NET\Framework\v3.5\MSBUILD.exe
 SIGNTOOL="C:\Program Files (x86)\Windows Kits\10\bin\x64\signtool.exe"
 SIGN=$(SIGNTOOL) sign /v /n "PM Code Works" /tr http://timestamp.globalsign.com/scripts/timstamp.dll /td SHA256 /fd SHA256
-INNOSETUP="C:\Program Files (x86)\Inno Setup 5\ISCC.exe"
+INNOSETUP="C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
 
 build: win32 win64
 
