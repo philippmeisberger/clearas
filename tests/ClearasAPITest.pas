@@ -272,7 +272,7 @@ begin
   CheckEquals(ErasableItems, FRootList.ErasableItemsCount, 'After changing commands of erasable items to a valid path ErasableItemsCount differs from expected');
 
   // Turn normal items to erasable items back
-  for i := 0 to ErasableItems - 1 do
+  for i := 0 to FErasableTestItems.Count - 1 do
   begin
     TestChangeCommand(FErasableTestItems[i], cNewTestExe, cTestExeErasable);
     Inc(ErasableItems);
