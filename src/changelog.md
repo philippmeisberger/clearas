@@ -3,7 +3,7 @@ Clearas
 
 An open-source project by PM Code Works
 
-Version 5.1
+Version 5.1 [*22.09.19*]
 -----------
 
 * Added possibility to choose displayed columns
@@ -12,6 +12,7 @@ Version 5.1
 * First column is now "Name" instead of "Enabled"
 * Removed menu item "Show deactivation date"
   * Replaced by column "Deactivation date"
+* Changed column order
 * Count of enabled items is now shown in tab header
 * Fixed exception when renaming a "Shell" item which has not a caption yet
 * Introduced sending bug reports without mail client
