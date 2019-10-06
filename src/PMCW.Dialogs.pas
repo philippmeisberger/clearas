@@ -14,7 +14,7 @@ interface
 
 uses
 {$IFDEF FPC}
-  PMCW.SysUtils, Controls, UITypes,
+  PMCW.SysUtils, Controls,
 {$ELSE}
   System.UITypes, PMCW.Dialogs.ReportBug,
 {$ENDIF}
